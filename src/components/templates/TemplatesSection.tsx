@@ -126,7 +126,7 @@ export function TemplatesSection() {
       ) : (
         <div className="grid grid-cols-2 gap-4">
           {filtered.map(t => (
-            <div key={t.id} className="card p-5 group">
+            <div key={t.id} className="bg-white/80 backdrop-blur-xl border border-stone-200/80 shadow-[0_4px_20px_rgb(0,0,0,0.04)] rounded-2xl p-5 group hover:-translate-y-1 hover:shadow-lg hover:border-stone-300 transition-all duration-300">
               <div className="flex items-start justify-between mb-2">
                 <div>
                   <span className="text-base mr-1">{PLATFORMS[t.platform].icon}</span>
@@ -138,7 +138,7 @@ export function TemplatesSection() {
                 </div>
               </div>
               <div className="text-xs text-[#9b9a97] mb-3">{t.description || 'Sin descripción'}</div>
-              <div className="bg-[#f7f7f5] rounded-lg p-3 font-mono text-[10px] text-[#9b9a97] max-h-24 overflow-hidden relative">
+              <div className="bg-[#f7f7f5] rounded-xl p-3 font-mono text-[10px] text-[#9b9a97] max-h-24 overflow-hidden relative border border-[#e9e9e7]/50">
                 {t.systemPrompt.slice(0, 200)}…
                 <div className="absolute inset-x-0 bottom-0 h-8 bg-gradient-to-t from-[#f7f7f5]" />
               </div>

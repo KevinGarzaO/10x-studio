@@ -118,9 +118,9 @@ export function SubstackPublish() {
         ))}
       </div>
 
-      <div className="card mb-5">
-        <div className="px-6 py-4 border-b border-[#e9e9e7] font-bold flex items-center justify-between">
-          <span>Contenido</span>
+      <div className="bg-white border border-[#e9e9e7] rounded-2xl mb-5 overflow-hidden shadow-sm">
+        <div className="bg-[#1a1a1a] border-b border-[#2e2e2e] px-6 py-4 flex items-center justify-between">
+          <span className="text-sm font-semibold text-white uppercase tracking-wide">Contenido</span>
           {substackHistory.length > 0 && (
             <select className="input w-52 text-xs py-1" onChange={e => {
               const entry = history.find(h => h.id === e.target.value)
@@ -195,9 +195,9 @@ export function SubstackPublish() {
 
       {/* Scheduled queue */}
       {pendingQueue.length > 0 && (
-        <div className="card mb-5">
-          <div className="bg-[#1a1a1a] border-b border-[#2e2e2e] px-5 py-3 flex items-center justify-between flex items-center justify-between">
-            <span>📅 Cola de publicaciones ({pendingQueue.length})</span>
+        <div className="bg-white border border-[#e9e9e7] rounded-2xl mb-5 overflow-hidden shadow-sm">
+          <div className="bg-[#1a1a1a] border-b border-[#2e2e2e] px-5 py-3 flex items-center justify-between">
+            <span className="text-sm font-semibold text-white uppercase tracking-wide">📅 Cola de publicaciones ({pendingQueue.length})</span>
             <button onClick={loadQueue} className="btn btn-secondary btn-sm">🔄</button>
           </div>
           <div className="divide-y divide-[#e9e9e7]">
@@ -218,8 +218,10 @@ export function SubstackPublish() {
 
       {/* Recent published */}
       {recentQueue.length > 0 && (
-        <div className="card">
-          <div className="bg-[#1a1a1a] border-b border-[#2e2e2e] px-5 py-3 flex items-center justify-between">Publicaciones recientes</div>
+        <div className="bg-white border border-[#e9e9e7] rounded-2xl overflow-hidden shadow-sm">
+          <div className="bg-[#1a1a1a] border-b border-[#2e2e2e] px-5 py-3 flex items-center justify-between">
+            <span className="text-sm font-semibold text-white uppercase tracking-wide">Publicaciones recientes</span>
+          </div>
           <div className="divide-y divide-[#e9e9e7]">
             {recentQueue.reverse().map(p => (
               <div key={p.id} className="px-5 py-3 flex items-center gap-3">

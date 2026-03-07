@@ -118,11 +118,11 @@ export function IntegrationsSection() {
 
       {/* WordPress */}
       <div className="bg-white border border-[#e9e9e7] rounded-2xl mb-5 overflow-hidden shadow-sm">
-        <div className="px-6 py-4 border-b border-[#e9e9e7] flex items-center justify-between bg-stone-50/60">
+        <div className="bg-[#1a1a1a] border-b border-[#2e2e2e] px-6 py-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <span className="text-2xl">🌐</span>
+            <span className="text-2xl drop-shadow-md">🌐</span>
             <div>
-              <span className="font-bold text-stone-900">WordPress</span>
+              <span className="text-sm font-semibold text-white uppercase tracking-wide">WordPress</span>
               <p className="text-xs text-stone-400 mt-0.5">REST API / Application Password</p>
             </div>
           </div>
@@ -176,11 +176,11 @@ export function IntegrationsSection() {
 
       {/* LinkedIn */}
       <div className="bg-white border border-[#e9e9e7] rounded-2xl mb-5 overflow-hidden shadow-sm">
-        <div className="px-6 py-4 border-b border-[#e9e9e7] flex items-center justify-between bg-stone-50/60">
+        <div className="bg-[#1a1a1a] border-b border-[#2e2e2e] px-6 py-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <span className="text-2xl">💼</span>
+            <span className="text-2xl drop-shadow-md">💼</span>
             <div>
-              <span className="font-bold text-stone-900">LinkedIn</span>
+              <span className="text-sm font-semibold text-white uppercase tracking-wide">LinkedIn</span>
               <p className="text-xs text-stone-400 mt-0.5">OAuth 2.0 Access Token</p>
             </div>
           </div>
@@ -213,12 +213,14 @@ export function IntegrationsSection() {
 
       {/* Webhooks */}
       <div className="bg-white border border-[#e9e9e7] rounded-2xl overflow-hidden shadow-sm">
-        <div className="px-6 py-4 border-b border-[#e9e9e7] flex items-center justify-between bg-stone-50/60">
+        <div className="bg-[#1a1a1a] border-b border-[#2e2e2e] px-6 py-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <span className="text-2xl">🔗</span>
+            <span className="text-2xl drop-shadow-md">🔗</span>
             <div>
-              <span className="font-bold text-stone-900">Webhooks</span>
-              {webhooks.length > 0 && <span className="ml-2 text-xs bg-stone-100 text-stone-500 px-2 py-0.5 rounded-full border border-stone-200">{webhooks.length}</span>}
+              <div className="flex items-center gap-2">
+                <span className="text-sm font-semibold text-white uppercase tracking-wide">Webhooks</span>
+                {webhooks.length > 0 && <span className="text-[10px] font-bold bg-white/20 text-white px-2 py-0.5 rounded-full">{webhooks.length}</span>}
+              </div>
               <p className="text-xs text-stone-400 mt-0.5">Zapier, Make, n8n, etc.</p>
             </div>
           </div>

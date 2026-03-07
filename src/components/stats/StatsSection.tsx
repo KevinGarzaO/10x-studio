@@ -77,118 +77,134 @@ export function StatsSection() {
       </div>
 
       {/* KPI cards */}
-      <div className="grid grid-cols-4 gap-4 mb-8">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
         {[
-          { label: 'Artículos generados', value: history.length,           color: 'text-black' },
-          { label: 'Palabras totales',    value: stats.totalWords.toLocaleString(), color: 'text-green-700' },
-          { label: 'Temas en banco',      value: topics.length,            color: 'text-[#191919]' },
-          { label: 'Días con contenido',  value: stats.activeDays,         color: 'text-[#2d6fa4]' },
+          { label: 'Artículos generados', value: history.length },
+          { label: 'Palabras totales',    value: stats.totalWords.toLocaleString() },
+          { label: 'Temas en banco',      value: topics.length },
+          { label: 'Días con contenido',  value: stats.activeDays },
         ].map(k => (
-          <div key={k.label} className="card p-5">
-            <div className={`text-3xl font-bold ${k.color}`}>{k.value}</div>
-            <div className="text-xs text-[#9b9a97] mt-1">{k.label}</div>
+          <div key={k.label} className="bg-white/80 backdrop-blur-xl border border-stone-200/80 shadow-[0_4px_20px_rgb(0,0,0,0.04)] rounded-2xl px-5 py-5 hover:-translate-y-1 hover:shadow-lg hover:border-stone-300 transition-all duration-300 cursor-default">
+            <div className="text-[10px] font-bold text-stone-400 uppercase tracking-widest mb-3">{k.label}</div>
+            <div className="text-[36px] font-black text-stone-900 leading-none tracking-tight">{k.value}</div>
           </div>
         ))}
       </div>
 
-      <div className="grid grid-cols-2 gap-6 mb-6">
+      <div className="grid grid-cols-2 gap-4 mb-4">
         {/* By platform */}
-        <div className="card p-5">
-          <h2 className="font-bold text-base mb-4">📊 Artículos por plataforma</h2>
-          {history.length === 0 ? (
-            <p className="text-sm text-[#9b9a97] py-4 text-center">Aún sin datos</p>
-          ) : (
-            <div className="space-y-3">
-              {ALL_PLATFORMS.map(p => (
-                <div key={p}>
-                  <div className="flex items-center justify-between mb-1">
-                    <span className="text-xs font-medium">{PLATFORMS[p].icon} {PLATFORMS[p].label}</span>
+        <div className="bg-white border border-[#e9e9e7] rounded-2xl overflow-hidden shadow-sm">
+          <div className="bg-[#1a1a1a] border-b border-[#2e2e2e] px-5 py-3 flex items-center gap-2">
+            <i className="pi pi-chart-bar text-white/80"></i>
+            <span className="text-xs font-semibold text-white uppercase tracking-wide">Artículos por plataforma</span>
+          </div>
+          <div className="p-5">
+            {history.length === 0 ? (
+              <p className="text-sm text-[#9b9a97] py-4 text-center">Aún sin datos</p>
+            ) : (
+              <div className="space-y-3">
+                {ALL_PLATFORMS.map(p => (
+                  <div key={p}>
+                    <div className="flex items-center justify-between mb-1">
+                      <span className="text-xs font-medium">{PLATFORMS[p].icon} {PLATFORMS[p].label}</span>
+                    </div>
+                    <Bar value={stats.byPlatform[p] || 0} max={maxPlatform} color={platformColors[p]} />
                   </div>
-                  <Bar value={stats.byPlatform[p] || 0} max={maxPlatform} color={platformColors[p]} />
-                </div>
-              ))}
-            </div>
-          )}
+                ))}
+              </div>
+            )}
+          </div>
         </div>
 
         {/* By month */}
-        <div className="card p-5">
-          <h2 className="font-bold text-base mb-4">📅 Artículos por mes</h2>
-          {stats.months.length === 0 ? (
-            <p className="text-sm text-[#9b9a97] py-4 text-center">Aún sin datos</p>
-          ) : (
-            <div className="space-y-3">
-              {stats.months.map(([key, count]) => (
-                <div key={key}>
-                  <div className="flex items-center justify-between mb-1">
-                    <span className="text-xs font-medium capitalize">{fmtMonth(key)}</span>
+        <div className="bg-white border border-[#e9e9e7] rounded-2xl overflow-hidden shadow-sm">
+          <div className="bg-[#1a1a1a] border-b border-[#2e2e2e] px-5 py-3 flex items-center gap-2">
+            <i className="pi pi-calendar-times text-white/80"></i>
+            <span className="text-xs font-semibold text-white uppercase tracking-wide">Artículos por mes</span>
+          </div>
+          <div className="p-5">
+            {stats.months.length === 0 ? (
+              <p className="text-sm text-[#9b9a97] py-4 text-center">Aún sin datos</p>
+            ) : (
+              <div className="space-y-3">
+                {stats.months.map(([key, count]) => (
+                  <div key={key}>
+                    <div className="flex items-center justify-between mb-1">
+                      <span className="text-xs font-medium capitalize">{fmtMonth(key)}</span>
+                    </div>
+                    <Bar value={count} max={maxMonth} color="#3b82f6" />
                   </div>
-                  <Bar value={count} max={maxMonth} color="#c9963a" />
-                </div>
-              ))}
-            </div>
-          )}
+                ))}
+              </div>
+            )}
+          </div>
         </div>
       </div>
 
-      <div className="grid grid-cols-2 gap-6">
+      <div className="grid grid-cols-2 gap-4">
         {/* Topics by status */}
-        <div className="card p-5">
-          <h2 className="font-bold text-base mb-4">💡 Temas por estado</h2>
-          <div className="grid grid-cols-2 gap-3">
+        <div className="bg-white border border-[#e9e9e7] rounded-2xl overflow-hidden shadow-sm">
+          <div className="bg-[#1a1a1a] border-b border-[#2e2e2e] px-5 py-3 flex items-center gap-2">
+            <i className="pi pi-tags text-white/80"></i>
+            <span className="text-xs font-semibold text-white uppercase tracking-wide">Temas por estado</span>
+          </div>
+          <div className="grid grid-cols-2 gap-3 p-5">
             {[
-              { key: 'idea',    label: 'Ideas',       color: 'bg-yellow-100 text-yellow-800' },
-              { key: 'ready',   label: 'Listos',      color: 'bg-green-100 text-green-800' },
-              { key: 'writing', label: 'Escribiendo', color: 'bg-blue-100 text-blue-800' },
-              { key: 'done',    label: 'Hechos',      color: 'bg-gray-100 text-gray-600' },
+              { key: 'idea',    label: 'Ideas',       color: 'bg-yellow-50 text-yellow-800 border border-yellow-200' },
+              { key: 'ready',   label: 'Listos',      color: 'bg-green-50 text-green-800 border border-green-200' },
+              { key: 'writing', label: 'Escribiendo', color: 'bg-blue-50 text-blue-800 border border-blue-200' },
+              { key: 'done',    label: 'Hechos',      color: 'bg-gray-50 text-gray-800 border border-gray-200' },
             ].map(s => (
-              <div key={s.key} className={`rounded-lg p-4 ${s.color}`}>
-                <div className="text-[28px] font-bold tracking-tight text-black">{stats.byStatus[s.key as keyof typeof stats.byStatus]}</div>
-                <div className="text-xs mt-0.5">{s.label}</div>
+              <div key={s.key} className={`rounded-xl p-4 shadow-sm ${s.color}`}>
+                <div className="text-[28px] font-bold tracking-tight">{stats.byStatus[s.key as keyof typeof stats.byStatus]}</div>
+                <div className="text-xs mt-0.5 font-semibold text-current/80 uppercase tracking-widest">{s.label}</div>
               </div>
             ))}
           </div>
         </div>
 
         {/* Highlights */}
-        <div className="card p-5">
-          <h2 className="font-bold text-base mb-4">🏆 Highlights</h2>
-          <div className="space-y-3">
+        <div className="bg-white border border-[#e9e9e7] rounded-2xl overflow-hidden shadow-sm">
+          <div className="bg-[#1a1a1a] border-b border-[#2e2e2e] px-5 py-3 flex items-center gap-2">
+            <i className="pi pi-star text-white/80"></i>
+            <span className="text-xs font-semibold text-white uppercase tracking-wide">Highlights</span>
+          </div>
+          <div className="space-y-4 p-5">
             {stats.bestMonth && (
-              <div className="flex items-start gap-2">
-                <span className="text-lg">📅</span>
+              <div className="flex items-start gap-4">
+                <span className="text-2xl mt-0.5">📅</span>
                 <div>
-                  <div className="text-sm font-medium">Mes más productivo</div>
-                  <div className="text-xs text-[#9b9a97]">{fmtMonth(stats.bestMonth[0])} — {stats.bestMonth[1]} artículo{stats.bestMonth[1] !== 1 ? 's' : ''}</div>
+                  <div className="text-sm font-semibold text-[#191919]">Mes más productivo</div>
+                  <div className="text-xs text-[#9b9a97] mt-0.5">{fmtMonth(stats.bestMonth[0])} — {stats.bestMonth[1]} artículo{stats.bestMonth[1] !== 1 ? 's' : ''}</div>
                 </div>
               </div>
             )}
             {(() => {
               const topPlat = ALL_PLATFORMS.reduce((a, b) => (stats.byPlatform[a] || 0) >= (stats.byPlatform[b] || 0) ? a : b)
               return stats.byPlatform[topPlat] > 0 ? (
-                <div className="flex items-start gap-2">
-                  <span className="text-lg">{PLATFORMS[topPlat].icon}</span>
+                <div className="flex items-start gap-4">
+                  <span className="text-2xl mt-0.5">{PLATFORMS[topPlat].icon}</span>
                   <div>
-                    <div className="text-sm font-medium">Plataforma favorita</div>
-                    <div className="text-xs text-[#9b9a97]">{PLATFORMS[topPlat].label} — {stats.byPlatform[topPlat]} artículos</div>
+                    <div className="text-sm font-semibold text-[#191919]">Plataforma favorita</div>
+                    <div className="text-xs text-[#9b9a97] mt-0.5">{PLATFORMS[topPlat].label} — {stats.byPlatform[topPlat]} artículos</div>
                   </div>
                 </div>
               ) : null
             })()}
-            <div className="flex items-start gap-2">
-              <span className="text-lg">✍️</span>
+            <div className="flex items-start gap-4">
+              <span className="text-2xl mt-0.5">✍️</span>
               <div>
-                <div className="text-sm font-medium">Promedio por artículo</div>
-                <div className="text-xs text-[#9b9a97]">
+                <div className="text-sm font-semibold text-[#191919]">Promedio por artículo</div>
+                <div className="text-xs text-[#9b9a97] mt-0.5">
                   {history.length > 0 ? Math.round(stats.totalWords / history.length).toLocaleString() : 0} palabras
                 </div>
               </div>
             </div>
-            <div className="flex items-start gap-2">
-              <span className="text-lg">🎯</span>
+            <div className="flex items-start gap-4">
+              <span className="text-2xl mt-0.5">🎯</span>
               <div>
-                <div className="text-sm font-medium">Temas completados</div>
-                <div className="text-xs text-[#9b9a97]">
+                <div className="text-sm font-semibold text-[#191919]">Temas completados</div>
+                <div className="text-xs text-[#9b9a97] mt-0.5">
                   {topics.length > 0 ? Math.round((stats.byStatus.done / topics.length) * 100) : 0}% del banco
                 </div>
               </div>
@@ -199,15 +215,18 @@ export function StatsSection() {
 
       {/* Recent activity */}
       {history.length > 0 && (
-        <div className="card mt-6 p-5">
-          <h2 className="font-bold text-base mb-4">🕐 Actividad reciente</h2>
-          <div className="space-y-2">
+        <div className="bg-white border border-[#e9e9e7] rounded-2xl overflow-hidden shadow-sm mt-4">
+          <div className="bg-[#1a1a1a] border-b border-[#2e2e2e] px-5 py-3 flex items-center gap-2">
+            <i className="pi pi-history text-white/80"></i>
+            <span className="text-xs font-semibold text-white uppercase tracking-wide">Actividad reciente</span>
+          </div>
+          <div>
             {[...history].sort((a, b) => b.date.localeCompare(a.date)).slice(0, 8).map(h => (
-              <div key={h.id} className="flex items-center gap-3 py-1.5 border-b border-[#e9e9e7] last:border-0">
-                <span className="text-xs text-[#9b9a97] min-w-[72px]">{fmtDate(h.date)}</span>
-                <span className="text-sm flex-1 truncate">{h.topic}</span>
+              <div key={h.id} className="flex items-center gap-3 px-5 py-3 border-b border-[#f0f0f0] last:border-0 hover:bg-[#f7f7f5] transition-colors">
+                <span className="text-xs text-[#9b9a97] min-w-[72px] font-mono">{fmtDate(h.date)}</span>
+                <span className="text-sm font-medium flex-1 truncate text-[#37352f]">{h.topic}</span>
                 <div className="flex gap-1">{h.platforms.map(p => <span key={p} title={PLATFORMS[p].label}>{PLATFORMS[p].icon}</span>)}</div>
-                <span className="text-xs text-[#9b9a97]">{(h.wordCount || 0).toLocaleString()} pal.</span>
+                <span className="text-xs font-medium text-[#9b9a97]">{(h.wordCount || 0).toLocaleString()} pal.</span>
               </div>
             ))}
           </div>
