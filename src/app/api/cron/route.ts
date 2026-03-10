@@ -1,5 +1,7 @@
 import { NextResponse } from 'next/server'
 import { db } from '@/lib/storage'
+
+export const dynamic = 'force-dynamic'
 import { publishNote, publishArticle } from '@/lib/substackPublisher'
 
 // This route is called every hour by the cron job (instrumented.ts)

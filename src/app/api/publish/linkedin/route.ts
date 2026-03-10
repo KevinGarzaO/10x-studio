@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/storage'
 
+export const dynamic = 'force-dynamic'
+
 export async function POST(req: NextRequest) {
   const { content, title, type } = await req.json()
   // type: 'post' (short) | 'article' (long-form)

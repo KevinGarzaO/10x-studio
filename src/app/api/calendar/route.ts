@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/storage'
 import type { CalendarEvent } from '@/types'
 
+export const dynamic = 'force-dynamic'
+
 export async function GET() {
   const events = await db.calendar.getAll()
   return NextResponse.json(events)

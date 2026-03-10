@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/storage'
 
+export const dynamic = 'force-dynamic'
+
 function substackHeaders(cookie: string) {
   return {
     'Cookie': `connect.sid=${cookie}`,

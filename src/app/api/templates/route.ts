@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/storage'
 import type { PromptTemplate } from '@/types'
 
+export const dynamic = 'force-dynamic'
+
 export async function GET() {
   const all = await db.templates.getAll()
   return NextResponse.json(all)

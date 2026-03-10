@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/storage'
 import type { Topic } from '@/types'
 
+export const dynamic = 'force-dynamic'
+
 export async function GET() {
   const topics = await db.topics.getAll()
   return NextResponse.json(topics)

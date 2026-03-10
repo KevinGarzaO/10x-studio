@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/storage'
+
+export const dynamic = 'force-dynamic'
 import type { Platform } from '@/types'
 
 export async function POST(req: NextRequest) {

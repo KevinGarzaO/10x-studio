@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/storage'
 
+export const dynamic = 'force-dynamic'
+
 export async function GET() {
   const cfg = await db.integrations.get()
   // Mask sensitive fields before sending to client

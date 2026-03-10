@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/storage'
 
+export const dynamic = 'force-dynamic'
+
 function substackHeaders(cookiesObj: any, ua: string, referer: string = 'https://substack.com/') {
   const cookieStr = cookiesObj 
      ? Object.entries(cookiesObj).map(([k,v]) => `${k}=${v}`).join('; ')
