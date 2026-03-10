@@ -1,5 +1,5 @@
 'use client'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 
 interface StatsData {
   publication: { name: string; subdomain: string; url: string }
@@ -15,12 +15,9 @@ export function SubstackStats() {
   const [loading, setLoading] = useState(true)
   const [error,   setError]   = useState('')
 
-  useEffect(() => { loadStats() }, [])
-
-  let extensionCheckTimeout: NodeJS.Timeout;
-  
-  async function loadStats() {
+  const loadStats = useCallback(async () => {
     setLoading(true); setError('')
+    let extensionCheckTimeout: any;
     try {
       // 1. Get the current pubId and pubSlug from our backend settings
       const infoRes = await fetch('/api/substack/connect')
@@ -93,7 +90,9 @@ export function SubstackStats() {
       
     } catch (e) { setError(String(e)) }
     setLoading(false)
-  }
+  }, []);
+
+  useEffect(() => { loadStats() }, [loadStats])
 
   if (loading) return (
     <div className="flex items-center justify-center py-16">

@@ -30,7 +30,7 @@ async function getCollection<T extends { id: string }>(table: string): Promise<T
     .select('data')
   
   if (error || !data) return []
-  return data.map(item => item.data as T)
+  return data.map((item: any) => item.data as T)
 }
 
 async function saveCollection<T extends { id: string }>(table: string, data: T[]): Promise<void> {

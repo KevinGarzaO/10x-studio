@@ -106,6 +106,7 @@ export function SubstackSection() {
             {/* Avatar */}
             <div className="flex-shrink-0">
               {profile.avatar ? (
+                /* eslint-disable-next-line @next/next/no-img-element */
                 <img src={profile.avatar} alt={profile.name}
                   className="w-28 h-28 md:w-32 md:h-32 rounded-full object-cover border-4 border-white shadow-md ring-1 ring-black/5"
                   onError={(e) => { (e.target as HTMLImageElement).style.display = 'none' }} />
@@ -131,6 +132,7 @@ export function SubstackSection() {
                       <a href={`https://${profile.primaryPublication?.subdomain || profile.handle}.substack.com`} target="_blank" rel="noopener noreferrer" 
                          className="flex items-center gap-1.5 text-xs font-bold text-amber-900 px-3 py-1 bg-gradient-to-r from-amber-100 to-orange-50 hover:from-amber-200 hover:to-orange-100 border border-amber-200 rounded-full shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all duration-300">
                         {profile.pubLogo ? (
+                          /* eslint-disable-next-line @next/next/no-img-element */
                           <img src={profile.pubLogo} className="w-4 h-4 rounded-sm object-cover shadow-sm" alt="Pub Logo" />
                         ) : (
                           <span className="text-sm">🗞️</span>
