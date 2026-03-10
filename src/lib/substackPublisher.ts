@@ -3,8 +3,8 @@ import { db } from './storage'
 const BYLINE_ID = 280221962
 
 // Build Cookie header from all stored Substack cookies
-export function buildCookieHeader(): string {
-  const settings = db.settings.get() as any
+export async function buildCookieHeader(): Promise<string> {
+  const settings = await db.settings.get() as any
   const cookies  = settings.substackCookies as Record<string, string> | undefined
 
   if (cookies && Object.keys(cookies).length > 0) {
@@ -65,7 +65,7 @@ function mdToProseMirror(md: string): object[] {
 }
 
 export async function publishNote(content: string): Promise<{ id: string; url: string | null }> {
-  const cookie  = buildCookieHeader()
+  const cookie  = await buildCookieHeader()
   const headers = substackHeaders(cookie)
 
   const res = await fetch('https://substack.com/api/v1/comment/feed', {
@@ -87,10 +87,10 @@ export async function publishArticle(
   subtitle = '',
   scheduleAt: string | null = null
 ): Promise<{ id: string; scheduled: boolean }> {
-  const cookie = buildCookieHeader()
+  const cookie = await buildCookieHeader()
 
   // Get publication subdomain
-  const settings = db.settings.get() as any
+  const settings = await db.settings.get() as any
   let pubSlug: string = settings.substackSubdomain
 
   // Fallback: fetch from profile

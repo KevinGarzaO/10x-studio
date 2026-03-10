@@ -2,10 +2,12 @@ import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/storage'
 import { publishNote, publishArticle, buildCookieHeader } from '@/lib/substackPublisher'
 
+export const dynamic = 'force-dynamic'
+
 export async function POST(req: NextRequest) {
   const { type, content, title, subtitle, scheduleAt } = await req.json()
 
-  const cookie = buildCookieHeader()
+  const cookie = await buildCookieHeader()
   if (!cookie) return NextResponse.json({ error: 'Substack no conectado. Usa la extensión de Chrome para conectar.' }, { status: 401 })
   if (!content?.trim()) return NextResponse.json({ error: 'El contenido no puede estar vacío' }, { status: 400 })
   if (type === 'article' && !title?.trim()) return NextResponse.json({ error: 'El título es requerido para artículos' }, { status: 400 })

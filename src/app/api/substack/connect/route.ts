@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/storage'
 
+export const dynamic = 'force-dynamic'
+
 function corsHeaders(req: NextRequest) {
   const origin = req.headers.get('origin') || ''
   const allowed = origin.startsWith('chrome-extension://') || origin.includes('localhost')
@@ -90,8 +92,8 @@ export async function POST(req: NextRequest) {
   const connectedAt = new Date().toISOString()
   const expiresAt   = new Date(Date.now() + 55 * 24 * 60 * 60 * 1000).toISOString() // ~55 days
 
-  const settings = db.settings.get()
-  db.settings.save({
+  const settings = await db.settings.get()
+  await db.settings.save({
     ...settings,
     substackCookies:     cookies,
     substackCookie:      cookies['substack.sid'] || cookies['connect.sid'] || cookies['substack-sid'] || '',
@@ -135,7 +137,7 @@ export async function POST(req: NextRequest) {
 }
 
 export async function GET(req: NextRequest) {
-  const settings = db.settings.get() as any
+  const settings = await db.settings.get() as any
   return NextResponse.json({
     connected:   !!(settings.substackCookie || settings.substackCookies),
     publication: settings.substackPublication || '',
@@ -144,12 +146,12 @@ export async function GET(req: NextRequest) {
 }
 
 export async function DELETE(req: NextRequest) {
-  const settings = db.settings.get() as any
+  const settings = await db.settings.get() as any
   const clean    = { ...settings }
   delete clean.substackCookie
   delete clean.substackCookies
   delete clean.substackPublication
   delete clean.substackProfile
-  db.settings.save(clean)
+  await db.settings.save(clean)
   return NextResponse.json({ ok: true }, { headers: corsHeaders(req) })
 }
