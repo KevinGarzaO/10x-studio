@@ -5,7 +5,7 @@ import type { Platform } from '@/types'
 export async function POST(req: NextRequest) {
   const { webhookId, title, content, platform, topic, wordCount } = await req.json()
 
-  const cfg      = db.integrations.get()
+  const cfg      = await db.integrations.get()
   const webhooks = cfg.webhooks || []
   const webhook  = webhookId
     ? webhooks.find(w => w.id === webhookId)

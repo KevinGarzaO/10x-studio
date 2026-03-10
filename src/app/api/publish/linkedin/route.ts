@@ -5,7 +5,7 @@ export async function POST(req: NextRequest) {
   const { content, title, type } = await req.json()
   // type: 'post' (short) | 'article' (long-form)
 
-  const cfg = db.integrations.get()
+  const cfg = await db.integrations.get()
   if (!cfg.linkedinToken)
     return NextResponse.json({ error: 'LinkedIn no configurado. Ve a Integraciones → LinkedIn.' }, { status: 401 })
   if (!content?.trim()) return NextResponse.json({ error: 'El contenido es requerido' }, { status: 400 })
@@ -26,7 +26,7 @@ export async function POST(req: NextRequest) {
       const me = await meRes.json()
       personId  = me.sub   // OpenID Connect sub = person URN suffix
       // Save it for next time
-      db.integrations.save({ ...cfg, linkedinPersonId: personId })
+      await db.integrations.save({ ...cfg, linkedinPersonId: personId })
     }
 
     const authorUrn = `urn:li:person:${personId}`

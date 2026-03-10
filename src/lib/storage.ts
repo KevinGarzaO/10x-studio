@@ -1,32 +1,83 @@
-import fs from 'fs'
-import path from 'path'
+import { supabase } from './supabase'
 import type { Topic, HistoryEntry, CalendarEvent, AppSettings, PromptTemplate, Campaign, ScheduledPost, IntegrationSettings } from '@/types'
 
-const DATA_DIR = path.join(process.cwd(), 'data')
-
-function ensureDir() {
-  if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true })
+/**
+ * Utility for singular objects stored as a single row in Supabase
+ */
+async function getSingular<T>(table: string, fallback: T): Promise<T> {
+  const { data, error } = await supabase
+    .from(table)
+    .select('data')
+    .eq('id', 1)
+    .single()
+  
+  if (error || !data) return fallback
+  return data.data as T
 }
 
-function readJSON<T>(filename: string, fallback: T): T {
-  ensureDir()
-  const file = path.join(DATA_DIR, filename)
-  if (!fs.existsSync(file)) return fallback
-  try { return JSON.parse(fs.readFileSync(file, 'utf-8')) as T } catch { return fallback }
+async function saveSingular<T>(table: string, data: T): Promise<void> {
+  await supabase
+    .from(table)
+    .upsert({ id: 1, data, updated_at: new Date().toISOString() })
 }
 
-function writeJSON<T>(filename: string, data: T): void {
-  ensureDir()
-  fs.writeFileSync(path.join(DATA_DIR, filename), JSON.stringify(data, null, 2))
+/**
+ * Utility for collections stored as multiple rows
+ */
+async function getCollection<T extends { id: string }>(table: string): Promise<T[]> {
+  const { data, error } = await supabase
+    .from(table)
+    .select('data')
+  
+  if (error || !data) return []
+  return data.map(item => item.data as T)
+}
+
+async function saveCollection<T extends { id: string }>(table: string, data: T[]): Promise<void> {
+  // Simple approach: Delete all and re-insert (sync behavior similar to writeFileSync)
+  // For better performance, this should be partial updates, but this matches original logic
+  await supabase.from(table).delete().neq('id', '0')
+  
+  if (data.length > 0) {
+    const rows = data.map(item => ({
+      id: item.id,
+      data: item
+    }))
+    await supabase.from(table).insert(rows)
+  }
 }
 
 export const db = {
-  topics:       { getAll: () => readJSON<Topic[]>('topics.json', []),              save: (d: Topic[])              => writeJSON('topics.json', d) },
-  history:      { getAll: () => readJSON<HistoryEntry[]>('history.json', []),      save: (d: HistoryEntry[])       => writeJSON('history.json', d) },
-  calendar:     { getAll: () => readJSON<CalendarEvent[]>('calendar.json', []),    save: (d: CalendarEvent[])      => writeJSON('calendar.json', d) },
-  settings:     { get:    () => readJSON<AppSettings>('settings.json', { apiKey: '', niche: '', audience: '' }), save: (d: AppSettings) => writeJSON('settings.json', d) },
-  templates:    { getAll: () => readJSON<PromptTemplate[]>('templates.json', []),  save: (d: PromptTemplate[])     => writeJSON('templates.json', d) },
-  campaigns:    { getAll: () => readJSON<Campaign[]>('campaigns.json', []),        save: (d: Campaign[])           => writeJSON('campaigns.json', d) },
-  scheduled:    { getAll: () => readJSON<ScheduledPost[]>('scheduled.json', []),   save: (d: ScheduledPost[])      => writeJSON('scheduled.json', d) },
-  integrations: { get:    () => readJSON<IntegrationSettings>('integrations.json', {}), save: (d: IntegrationSettings) => writeJSON('integrations.json', d) },
+  topics: { 
+    getAll: () => getCollection<Topic>('topics'), 
+    save: (d: Topic[]) => saveCollection<Topic>('topics', d) 
+  },
+  history: { 
+    getAll: () => getCollection<HistoryEntry>('history'), 
+    save: (d: HistoryEntry[]) => saveCollection<HistoryEntry>('history', d) 
+  },
+  calendar: { 
+    getAll: () => getCollection<CalendarEvent>('calendar'), 
+    save: (d: CalendarEvent[]) => saveCollection<CalendarEvent>('calendar', d) 
+  },
+  settings: { 
+    get: () => getSingular<AppSettings>('settings', { apiKey: '', niche: '', audience: '' } as AppSettings), 
+    save: (d: AppSettings) => saveSingular<AppSettings>('settings', d) 
+  },
+  templates: { 
+    getAll: () => getCollection<PromptTemplate>('templates'), 
+    save: (d: PromptTemplate[]) => saveCollection<PromptTemplate>('templates', d) 
+  },
+  campaigns: { 
+    getAll: () => getCollection<Campaign>('campaigns'), 
+    save: (d: Campaign[]) => saveCollection<Campaign>('campaigns', d) 
+  },
+  scheduled: { 
+    getAll: () => getCollection<ScheduledPost>('scheduled'), 
+    save: (d: ScheduledPost[]) => saveCollection<ScheduledPost>('scheduled', d) 
+  },
+  integrations: { 
+    get: () => getSingular<IntegrationSettings>('integrations', {} as IntegrationSettings), 
+    save: (d: IntegrationSettings) => saveSingular<IntegrationSettings>('integrations', d) 
+  },
 }

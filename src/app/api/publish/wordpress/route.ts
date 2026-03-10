@@ -21,7 +21,7 @@ function mdToHtml(md: string): string {
 
 export async function POST(req: NextRequest) {
   const { title, content, excerpt, status, tags, categories } = await req.json()
-  const cfg = db.integrations.get()
+  const cfg = await db.integrations.get()
 
   if (!cfg.wpUrl || !cfg.wpUsername || !cfg.wpAppPassword)
     return NextResponse.json({ error: 'WordPress no configurado. Ve a Integraciones → WordPress.' }, { status: 401 })

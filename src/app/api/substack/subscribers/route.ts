@@ -30,8 +30,8 @@ function mapSubscriber(s: any) {
 }
 
 export async function GET(req: NextRequest) {
-  const settings = db.settings.get()
-  const cookie = (settings as any).substackCookies ? Object.entries((settings as any).substackCookies).map(([k,v]:any) => `${k}=${v}`).join('; ') : settings.substackCookie
+  const settings = await db.settings.get()
+  const cookie = (settings as any).substackCookies ? Object.entries((settings as any).substackCookies).map(([k,v]:any) => `${k}=${v}`).join('; ') : (settings as any).substackCookie
   if (!cookie) return NextResponse.json({ error: 'Substack no conectado' }, { status: 401 })
 
   const { searchParams } = new URL(req.url)
@@ -78,8 +78,8 @@ export async function GET(req: NextRequest) {
 }
 
 export async function POST(req: NextRequest) {
-  const settings = db.settings.get()
-  const cookie = (settings as any).substackCookies ? Object.entries((settings as any).substackCookies).map(([k,v]:any) => `${k}=${v}`).join('; ') : settings.substackCookie
+  const settings = await db.settings.get()
+  const cookie = (settings as any).substackCookies ? Object.entries((settings as any).substackCookies).map(([k,v]:any) => `${k}=${v}`).join('; ') : (settings as any).substackCookie
   if (!cookie) return NextResponse.json({ error: 'Substack no conectado' }, { status: 401 })
 
   const { subscribers } = await req.json() as { subscribers: { email: string; name?: string }[] }

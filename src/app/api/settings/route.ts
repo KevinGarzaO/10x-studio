@@ -3,11 +3,12 @@ import { db } from '@/lib/storage'
 import type { AppSettings } from '@/types'
 
 export async function GET() {
-  return NextResponse.json(db.settings.get())
+  const settings = await db.settings.get()
+  return NextResponse.json(settings)
 }
 
 export async function POST(req: NextRequest) {
   const settings = (await req.json()) as AppSettings
-  db.settings.save(settings)
+  await db.settings.save(settings)
   return NextResponse.json(settings)
 }

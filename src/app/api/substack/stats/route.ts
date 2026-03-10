@@ -23,7 +23,7 @@ async function tryFetch(url: string, cookiesObj: any, ua: string, referer?: stri
 }
 
 export async function GET(req: NextRequest) {
-  const settings = db.settings.get() as any
+  const settings = (await db.settings.get()) as any
   const cookiesObj = settings.substackCookies
   const ua = settings.substackUa || req.headers.get('user-agent') || ''
   

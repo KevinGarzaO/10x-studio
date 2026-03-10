@@ -5,9 +5,9 @@ import { publishNote, publishArticle } from '@/lib/substackPublisher'
 // This route is called every hour by the cron job (instrumented.ts)
 // It also accepts manual GET calls for testing: /api/cron
 export async function GET() {
-  const settings  = db.settings.get()
+  const settings  = await db.settings.get()
   const cookie    = settings.substackCookie
-  const scheduled = db.scheduled.getAll()
+  const scheduled = await db.scheduled.getAll()
   const now       = new Date()
 
   // Find all pending posts whose scheduleAt is in the past
@@ -35,12 +35,13 @@ export async function GET() {
 
       // Mark as published
       const updated = { ...post, status: 'published' as const, publishedAt: new Date().toISOString() }
-      db.scheduled.save(db.scheduled.getAll().map(p => p.id === post.id ? updated : p))
+      const currentScheduled = await db.scheduled.getAll()
+      await db.scheduled.save(currentScheduled.map(p => p.id === post.id ? updated : p))
 
       // Update calendar event status if linked
       if (post.calendarEventId) {
-        const calEvents = db.calendar.getAll()
-        db.calendar.save(calEvents.map(e =>
+        const calEvents = await db.calendar.getAll()
+        await db.calendar.save(calEvents.map(e =>
           e.id === post.calendarEventId ? { ...e, status: 'published' as const } : e
         ))
       }
@@ -49,7 +50,8 @@ export async function GET() {
     } catch (e) {
       // Mark as error but keep retrying next run
       const updated = { ...post, status: 'error' as const, errorMsg: String(e) }
-      db.scheduled.save(db.scheduled.getAll().map(p => p.id === post.id ? updated : p))
+      const currentScheduled = await db.scheduled.getAll()
+      await db.scheduled.save(currentScheduled.map(p => p.id === post.id ? updated : p))
       results.push({ id: post.id, ok: false, error: String(e) })
     }
   }
