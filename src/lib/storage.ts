@@ -91,7 +91,7 @@ export const db = {
         return data as UserRow | null
       },
       upsert: async (user: Partial<UserRow>) => {
-        const { data, error } = await supabase.from('users').upsert(user).select().maybeSingle()
+        const { data, error } = await supabase.from('users').upsert(user, { onConflict: 'substack_user_id' }).select().maybeSingle()
         if (error) throw error
         return data as UserRow
       }
@@ -111,7 +111,7 @@ export const db = {
         return (data || []) as PostRow[]
       },
       upsertMany: async (posts: Partial<PostRow>[]) => {
-        await supabase.from('posts').upsert(posts)
+        await supabase.from('posts').upsert(posts, { onConflict: 'user_id,post_id' })
       }
     },
     stats: {
@@ -120,7 +120,7 @@ export const db = {
         return data as StatRow | null
       },
       upsert: async (stat: Partial<StatRow>) => {
-        await supabase.from('stats').upsert(stat)
+        await supabase.from('stats').upsert(stat, { onConflict: 'user_id,date' })
       }
     }
   }
