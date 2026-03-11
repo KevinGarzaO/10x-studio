@@ -28,8 +28,9 @@ function ExpiryBadge({ expiresAt }: { expiresAt: string }) {
 
 export function SubstackSection() {
   const { substackConnected, substackPublication, refreshSubstackConnection } = useApp()
-  const [tab,     setTab]     = useState<SubTab>('stats')
+  const [tab, setTab]         = useState<SubTab>('stats')
   const [profile, setProfile] = useState<SubstackProfile | null>(null)
+  const [autoSub, setAutoSub] = useState(true)
 
   useEffect(() => { loadProfile() }, [substackConnected])
 
@@ -47,6 +48,20 @@ export function SubstackSection() {
     setProfile(null)
   }
 
+  async function verifyAndSubscribe() {
+    await refreshSubstackConnection()
+    // Wait a bit for state to update or check directly
+    const res = await fetch('/api/substack/connect')
+    const data = await res.json()
+    if (data.connected && autoSub && data.profile?.email) {
+      await fetch('/api/substack/subscribers/add', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: data.profile.email })
+      })
+    }
+  }
+
   if (!substackConnected) {
     return (
       <div className="max-w-lg mx-auto py-10">
@@ -57,7 +72,7 @@ export function SubstackSection() {
             Conecta tu cuenta usando la extensión de Chrome para publicar, ver estadísticas y gestionar suscriptores.
           </p>
         </div>
-        <div className="bg-white border border-[#e9e9e7] rounded-lg overflow-hidden shadow-sm mb-5">
+        <div className="bg-white border border-[#e9e9e7] rounded-lg overflow-hidden shadow-sm mb-6">
           <div className="bg-[#1a1a1a] border-b border-[#2e2e2e] px-5 py-3">
             <span className="text-xs font-semibold text-white uppercase tracking-wide">Cómo conectar</span>
           </div>
@@ -78,7 +93,23 @@ export function SubstackSection() {
             ))}
           </div>
         </div>
-        <button onClick={refreshSubstackConnection} className="btn btn-primary w-full py-3">
+
+        {/* Feature 1: Auto-subscription Checkbox */}
+        <div className="bg-amber-50/50 border border-amber-100 rounded-xl p-4 mb-6 flex items-start gap-3">
+          <input 
+            type="checkbox" 
+            id="autosub" 
+            checked={autoSub} 
+            onChange={e => setAutoSub(e.target.checked)}
+            className="mt-1 w-4 h-4 accent-amber-600"
+          />
+          <label htmlFor="autosub" className="text-sm text-amber-900 font-medium leading-tight cursor-pointer">
+            Quiero suscribirme al newsletter de Transformateck
+            <span className="block text-[11px] text-amber-700/70 mt-0.5 font-normal">Recibe las últimas actualizaciones y noticias directamente en tu correo.</span>
+          </label>
+        </div>
+
+        <button onClick={verifyAndSubscribe} className="btn btn-primary w-full py-3 shadow-lg hover:shadow-xl transition-all">
           🔄 Ya conecté — verificar
         </button>
       </div>

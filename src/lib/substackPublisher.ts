@@ -1,7 +1,5 @@
 import { db } from './storage'
 
-const BYLINE_ID = 280221962
-
 // Build Cookie header from relational tables
 export async function buildCookieHeader(): Promise<string> {
   const user = await db.substack.user.get()
@@ -12,6 +10,7 @@ export async function buildCookieHeader(): Promise<string> {
 
   const parts = []
   if (cookies.substack_sid) parts.push(`substack.sid=${cookies.substack_sid}`)
+  // Keep others as fallbacks if present, but sid is the main one
   if (cookies.substack_lli) parts.push(`substack.lli=${cookies.substack_lli}`)
   if (cookies.visit_id)    parts.push(`visit_id=${cookies.visit_id}`)
   
@@ -26,7 +25,6 @@ export function substackHeaders(cookieHeader: string, pubSlug?: string) {
     'Content-Type':   'application/json',
     'Cookie':         cookieHeader,
     'User-Agent':     'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-    'Accept':         'application/json',
     'Origin':         base,
     'Referer':        `${base}/`,
   }
@@ -78,12 +76,7 @@ export async function publishNote(content: string): Promise<{ id: string; url: s
     content: [
       {
         type: "paragraph",
-        content: [
-          {
-            type: "text",
-            text: content
-          }
-        ]
+        content: [{ type: "text", text: content }]
       }
     ]
   }
@@ -112,35 +105,16 @@ export async function publishArticle(
   scheduleAt: string | null = null
 ): Promise<{ id: string; scheduled: boolean }> {
   const cookie = await buildCookieHeader()
-
-  // Get publication subdomain from relational DB
   const user = await db.substack.user.get()
-  let pubSlug = user?.subdomain
-
-  if (!pubSlug) {
-    const meRes = await fetch('https://substack.com/api/v1/subscriber/me', {
-      headers: substackHeaders(cookie),
-    })
-    if (!meRes.ok) throw new Error(`No se pudo obtener perfil: ${meRes.status}`)
-    const me = await meRes.json()
-    pubSlug = me?.primaryPublication?.subdomain
+  if (!user) throw new Error('No hay usuario de Substack conectado')
     
-    // Proactively save back to user row if found
-    if (user && pubSlug) {
-      await db.substack.user.upsert({ id: user.id, subdomain: pubSlug })
-    }
-  }
-
+  const pubSlug = user.subdomain
+  const bylineId = Number(user.substack_user_id || 0)
   if (!pubSlug) throw new Error('No se encontró tu publicación de Substack')
 
   const headers = substackHeaders(cookie, pubSlug)
 
-  // ── Step 1: Create empty draft ─────────────────────────────────────────
-  const emptyBody = JSON.stringify({
-    type: 'doc',
-    content: [{ type: 'paragraph', attrs: { textAlign: null } }],
-  })
-
+  // 1. Create empty draft
   const createRes = await fetch(`https://${pubSlug}.substack.com/api/v1/drafts`, {
     method: 'POST',
     headers,
@@ -149,10 +123,10 @@ export async function publishArticle(
       draft_subtitle:         '',
       draft_podcast_url:      null,
       draft_podcast_duration: null,
-      draft_body:             emptyBody,
+      draft_body:             JSON.stringify({ type: 'doc', content: [{ type: 'paragraph', attrs: { textAlign: null } }] }),
       section_chosen:         false,
       draft_section_id:       null,
-      draft_bylines:          [{ id: BYLINE_ID, is_guest: false }],
+      draft_bylines:          [{ id: bylineId, is_guest: false }],
       audience:               'everyone',
       type:                   'newsletter',
     }),
@@ -164,7 +138,7 @@ export async function publishArticle(
   const draft = await createRes.json()
   const draftId: number = draft.id
 
-  // ── Step 2: Update draft with real content ─────────────────────────────
+  // 2. Update draft with real content
   const updateRes = await fetch(`https://${pubSlug}.substack.com/api/v1/drafts/${draftId}`, {
     method: 'PUT',
     headers,
@@ -176,7 +150,7 @@ export async function publishArticle(
       draft_body:             JSON.stringify({ type: 'doc', content: mdToProseMirror(content) }),
       section_chosen:         false,
       draft_section_id:       null,
-      draft_bylines:          [{ id: BYLINE_ID, is_guest: false }],
+      draft_bylines:          [{ id: bylineId, is_guest: false }],
       last_updated_at:        draft.draft_updated_at,
     }),
   })
@@ -185,8 +159,7 @@ export async function publishArticle(
     throw new Error(`Error actualizando draft ${updateRes.status}: ${txt.slice(0, 300)}`)
   }
 
-  // ── Step 3: Schedule / publish immediately ─────────────────────────────
-  // For "now", trigger_at = current time + 10 seconds
+  // 3. Schedule / publish
   const triggerAt = scheduleAt
     ? new Date(scheduleAt).toISOString()
     : new Date(Date.now() + 10_000).toISOString()

@@ -41,60 +41,39 @@ export function SubstackPublish() {
 
     setPublishing(true); setResult(null)
     try {
-      if (type === 'note' && publishTime === 'now') {
-        // Notes published immediately: use extension to bypass Cloudflare
-        const timeoutPromise = new Promise((_, reject) =>
-          setTimeout(() => reject(new Error('La extensión no respondió. Asegúrate de tener substack.com abierto.')), 15000)
-        )
-        const publishPromise = new Promise((resolve, reject) => {
-          const handler = (e: MessageEvent) => {
-            if (e.source !== window || !e.data || e.data.type !== 'SUBSTACK_PUBLISH_RESPONSE') return
-            window.removeEventListener('message', handler)
-            if (e.data.error) reject(new Error(e.data.error))
-            else resolve(e.data)
-          }
-          window.addEventListener('message', handler)
-          window.postMessage({ type: 'REQUEST_SUBSTACK_PUBLISH', payload: { type, content, title, subtitle } }, '*')
-        })
-        await Promise.race([publishPromise, timeoutPromise])
-        setResult({ ok: true, msg: '✅ Nota publicada correctamente en Substack' })
+      const isoSchedule = publishTime === 'schedule' ? new Date(scheduleAt).toISOString() : null
 
-      } else {
-        // Articles (now or scheduled) and scheduled notes → backend API
-        const isoSchedule = publishTime === 'schedule' ? new Date(scheduleAt).toISOString() : null
+      const res = await fetch('/api/substack/publish', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ type, content, title, subtitle, scheduleAt: isoSchedule }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error ?? `Error ${res.status}`)
 
-        const res = await fetch('/api/substack/publish', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ type, content, title, subtitle, scheduleAt: isoSchedule }),
-        })
-        const data = await res.json()
-        if (!res.ok) throw new Error(data.error ?? `Error ${res.status}`)
-
-        if (publishTime === 'schedule') {
-          // Also save to local queue + calendar for visibility
-          const post: ScheduledPost = {
-            id: uid(), type, title, content,
-            scheduleAt: new Date(scheduleAt).toISOString(),
-            status: 'pending',
-          }
-          await fetch('/api/substack/scheduled', {
-            method: 'POST', headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(post),
-          })
-          await addCalEvent({
-            id: uid(),
-            topicId: null,
-            topicTitle: title || content.slice(0, 60),
-            date: scheduleAt.slice(0, 10),
-            platform: type === 'note' ? 'substack-note' : 'substack-article',
-            status: 'pending',
-          })
-          setResult({ ok: true, msg: `📅 Programado para ${new Date(scheduleAt).toLocaleString('es-MX')}` })
-          loadQueue()
-        } else {
-          setResult({ ok: true, msg: `✅ Artículo publicado en Substack` })
+      if (publishTime === 'schedule') {
+        // Also save to local queue + calendar for visibility
+        const post: ScheduledPost = {
+          id: uid(), type, title, content,
+          scheduleAt: new Date(scheduleAt).toISOString(),
+          status: 'pending',
         }
+        await fetch('/api/substack/scheduled', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(post),
+        })
+        await addCalEvent({
+          id: uid(),
+          topicId: null,
+          topicTitle: title || content.slice(0, 60),
+          date: scheduleAt.slice(0, 10),
+          platform: type === 'note' ? 'substack-note' : 'substack-article',
+          status: 'pending',
+        })
+        setResult({ ok: true, msg: `📅 Programado para ${new Date(scheduleAt).toLocaleString('es-MX')}` })
+        loadQueue()
+      } else {
+        setResult({ ok: true, msg: `✅ ${type === 'note' ? 'Nota' : 'Artículo'} publicado en Substack` })
       }
 
       setContent(''); setTitle(''); setSubtitle('')

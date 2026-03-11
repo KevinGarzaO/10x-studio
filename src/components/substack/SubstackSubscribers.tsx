@@ -83,64 +83,46 @@ export function SubstackSubscribers() {
     try {
       const infoRes = await fetch('/api/substack/connect')
       const info = await infoRes.json()
-      const pubId = info.profile?.pubId || info.profile?.primaryPublication?.id
-      const pubSlug = info.profile?.primaryPublication?.subdomain || info.publication
-
-      if (!pubId || !pubSlug) {
-        throw new Error('No se pudo encontrar tu ID o subdominio de publicación. Intenta reconectar la extensión.')
+      
+      if (!info || !info.connected) {
+        throw new Error('No estás conectado a Substack.')
       }
 
       // First request to get the total count
-      let extensionTimeout: NodeJS.Timeout;
-      const getChunk = (limit: number, offset: number) => {
-        return new Promise<any>((resolve, reject) => {
-          const timeout = setTimeout(() => reject(new Error('La extensión no respondió a tiempo. ')), 15000);
-          const handleResponse = (event: MessageEvent) => {
-            if (event.source !== window || !event.data || event.data.type !== 'SUBSTACK_SUBSCRIBERS_RESPONSE') return;
-            window.removeEventListener('message', handleResponse);
-            clearTimeout(timeout);
-            
-            if (event.data.error) reject(new Error(event.data.error));
-            else resolve(event.data.data);
-          };
-          window.addEventListener('message', handleResponse);
-          
-          const params = { limit, offset, orderField: "subscription_created_at", dir: "desc" };
-          window.postMessage({ type: 'REQUEST_SUBSTACK_SUBSCRIBERS_GET', pubId, pubSlug, params }, '*');
-        });
-      };
+      const firstRes = await fetch('/api/substack/subscribers?limit=1&offset=0')
+      const firstData = await firstRes.json()
+      if (firstData.error) throw new Error(firstData.error)
 
-      setProgressText('Calculando el total de suscriptores...');
-      const firstData = await getChunk(1, 0);
-      const totalCount = firstData.total || 1000;
+      const totalCount = firstData.total || 0;
       setTotal(totalCount);
 
       if (!isMounted) return;
 
-      // Attempt to fetch all remaining in one go or chunked if totalCount is enormous to avoid stalling/400.
       let fetchedSubs: Subscriber[] = [];
       let off = 0;
-      const CHUNK_SIZE = 50; // Use small chunk size as Substack may rigidly enforce max 50 page limits on this endpoint
+      const CHUNK_SIZE = 100;
 
       while (isMounted && off < totalCount) {
         setProgressText(`Cargados ${fetchedSubs.length} de ${totalCount} suscriptores...`);
-        const limitToFetch = Math.min(CHUNK_SIZE, totalCount - off);
         
         try {
-           const chunkData = await getChunk(limitToFetch, off);
-           const raw = chunkData.subscribers || chunkData || [];
+           const res = await fetch(`/api/substack/subscribers?limit=${CHUNK_SIZE}&offset=${off}`);
+           const data = await res.json();
+           if (data.error) throw new Error(data.error)
+
+           const raw = data.subscribers || [];
            const chunk = Array.isArray(raw) ? raw.map(mapSubscriber) : [];
            
            fetchedSubs = [...fetchedSubs, ...chunk];
            setSubscribers([...fetchedSubs]); // Update progress live
            
-           if (chunk.length === 0) break; // Reached end unexpectedly
+           if (chunk.length === 0) break;
         } catch (err) {
            console.error("Chunk failed at offset", off, err);
-           throw err; // propagate to show error
+           throw err;
         }
         
-        off += limitToFetch;
+        off += CHUNK_SIZE;
       }
     } catch (e: any) { 
       if (isMounted) setError(String(e.message || e)) 
@@ -171,7 +153,6 @@ export function SubstackSubscribers() {
 
   // CSV export — includes all engagement fields for CRM
   function exportCSV() {
-    // Basic CSV export logic mapping current table output
     const rows = [
       ['Email','Nombre','Tipo','País','Fecha suscripción','Estrellas','Aperturas 7d','Aperturas 30d','Aperturas 6m','Revenue USD','Fuente'],
       ...subscribers.map(s => [
@@ -181,14 +162,14 @@ export function SubstackSubscribers() {
       ]),
     ]
     const csv  = rows.map(r => r.map(c => `"${c}"`).join(',')).join('\n')
-    const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8' })  // BOM for Excel
+    const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8' })
     const url  = URL.createObjectURL(blob)
     const a    = document.createElement('a'); a.href = url
     a.download = `suscriptores-substack-${new Date().toISOString().slice(0,10)}.csv`
     a.click(); URL.revokeObjectURL(url)
   }
 
-  // CSV import
+  // CSV import via backend
   async function handleImportCSV(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]; if (!file) return
     setImporting(true); setImportResult('')
@@ -205,32 +186,15 @@ export function SubstackSubscribers() {
         return { email: cols[emailIdx], name: nameIdx >= 0 ? cols[nameIdx] : '' }
       }).filter(s => s.email?.includes('@'))
 
-      const infoRes = await fetch('/api/substack/connect')
-      const info = await infoRes.json()
-      const pubId = info.profile?.pubId || info.profile?.primaryPublication?.id
-      const pubSlug = info.profile?.primaryPublication?.subdomain || info.publication
-      if (!pubId || !pubSlug) throw new Error('No se pudo encontrar tu información de publicación.')
+      const res = await fetch('/api/substack/subscribers', {
+         method: 'POST',
+         headers: { 'Content-Type': 'application/json' },
+         body: JSON.stringify({ subscribers: subs })
+      })
+      const data = await res.json()
+      if (data.error) throw new Error(data.error)
 
-      let extensionTimeout: NodeJS.Timeout;
-      const timeoutPromise = new Promise((_, reject) => 
-        extensionTimeout = setTimeout(() => reject(new Error('La extensión no respondió a tiempo.')), 15000)
-      );
-
-      const importPromise = new Promise<any>((resolve, reject) => {
-        const handleResponse = (event: MessageEvent) => {
-          if (event.source !== window || !event.data || event.data.type !== 'SUBSTACK_SUBSCRIBERS_IMPORT_RESPONSE') return;
-          window.removeEventListener('message', handleResponse);
-          clearTimeout(extensionTimeout);
-          if (event.data.error) reject(new Error(event.data.error));
-          else resolve(event.data.data);
-        };
-        window.addEventListener('message', handleResponse);
-        window.postMessage({ type: 'REQUEST_SUBSTACK_SUBSCRIBERS_IMPORT', pubId, pubSlug, subscribers: subs }, '*');
-      });
-
-      const data = await Promise.race([importPromise, timeoutPromise]) as any;
-
-      const importedCount = data.count ?? data.imported ?? subs.length
+      const importedCount = data.imported ?? subs.length
       setImportResult(`✅ ${importedCount} suscriptores importados correctamente`)
       loadAll()
     } catch (err) { setImportResult(`❌ ${String(err)}`) }

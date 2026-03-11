@@ -87,18 +87,18 @@ export const db = {
         const query = supabase.from('users').select('*')
         if (substack_user_id) query.eq('substack_user_id', substack_user_id)
         else query.order('created_at', { ascending: false }).limit(1)
-        const { data } = await query.single()
+        const { data } = await query.maybeSingle()
         return data as UserRow | null
       },
       upsert: async (user: Partial<UserRow>) => {
-        const { data, error } = await supabase.from('users').upsert(user).select().single()
+        const { data, error } = await supabase.from('users').upsert(user).select().maybeSingle()
         if (error) throw error
         return data as UserRow
       }
     },
     cookies: {
       get: async (user_id: string) => {
-        const { data } = await supabase.from('cookies').select('*').eq('user_id', user_id).order('updated_at', { ascending: false }).limit(1).single()
+        const { data } = await supabase.from('cookies').select('*').eq('user_id', user_id).order('updated_at', { ascending: false }).limit(1).maybeSingle()
         return data as CookieRow | null
       },
       upsert: async (cookie: Partial<CookieRow>) => {
@@ -116,7 +116,7 @@ export const db = {
     },
     stats: {
       getLatest: async (user_id: string) => {
-        const { data } = await supabase.from('stats').select('*').eq('user_id', user_id).order('date', { ascending: false }).limit(1).single()
+        const { data } = await supabase.from('stats').select('*').eq('user_id', user_id).order('date', { ascending: false }).limit(1).maybeSingle()
         return data as StatRow | null
       },
       upsert: async (stat: Partial<StatRow>) => {
