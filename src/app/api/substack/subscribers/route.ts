@@ -41,35 +41,57 @@ export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url)
   const offset   = parseInt(searchParams.get('offset') || '0')
   const limit    = parseInt(searchParams.get('limit')  || '50')
-  const type     = searchParams.get('type')    || 'all'
-  const order    = searchParams.get('order')   || 'created_at'
-  const direction = searchParams.get('dir')    || 'desc'
 
   try {
-    const pubId = user.publication_id
-    if (!pubId) throw new Error('No se encontró ID de publicación')
+    const pubSlug = user.subdomain
+    if (!pubSlug) throw new Error('No se encontró slug de publicación')
 
-    const params = new URLSearchParams({
-      limit:     String(limit),
-      offset:    String(offset),
-      order_by:  order,
-      order_dir: direction,
-      ...(type !== 'all' ? { type } : {}),
+    // Verified endpoint by user
+    const url = `https://${pubSlug}.substack.com/api/v1/subscriber-stats`
+    
+    const subRes = await fetch(url, {
+      method: 'POST',
+      headers: { 
+        ...substackHeaders(cookie),
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        filters: {
+          order_by_desc_nulls_last: "subscription_created_at"
+        },
+        limit,
+        offset
+      })
     })
 
-    const subRes = await fetch(
-      `https://substack.com/api/v1/publication/${pubId}/subscribers?${params}`,
-      { headers: substackHeaders(cookie) }
-    )
-    if (!subRes.ok) throw new Error(`Error obteniendo suscriptores: ${subRes.status}`)
+    if (!subRes.ok) {
+      const errTxt = await subRes.text()
+      console.error(`Substack API error (subscribers): ${subRes.status} ${errTxt}`)
+      throw new Error(`Error obteniendo suscriptores: ${subRes.status}`)
+    }
+
     const data = await subRes.json()
 
-    const raw         = data.subscribers || data || []
-    const subscribers = Array.isArray(raw) ? raw.map(mapSubscriber) : []
+    const raw         = data.subscribers || []
+    const subscribers = Array.isArray(raw) ? raw.map((s: any) => ({
+      id:           String(s.subscription_id || s.user_id),
+      email:        s.user_email_address || '',
+      name:         s.user_name || '',
+      type:         s.subscription_interval || 'free',
+      createdAt:    s.subscription_created_at ? s.subscription_created_at.slice(0, 10) : '',
+      country:      s.country || '',
+      active:       s.is_subscribed !== false,
+      stars:        s.activity_rating ?? null,
+      opens7d:      null, // Not in this response
+      opens30d:     null,
+      opens6m:      null,
+      revenue:      s.total_revenue_generated ?? null,
+      source:       s.source ?? '',
+    })) : []
 
     return NextResponse.json({
       subscribers,
-      total:  data.total ?? subscribers.length,
+      total:  data.count ?? subscribers.length,
       offset,
       limit,
     })

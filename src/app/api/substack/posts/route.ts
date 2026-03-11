@@ -40,8 +40,20 @@ export async function GET() {
 
     const substackPosts = await res.json()
     
+    // Ensure we have an array
+    const postsArray = Array.isArray(substackPosts) 
+      ? substackPosts 
+      : (substackPosts?.posts && Array.isArray(substackPosts.posts))
+        ? substackPosts.posts
+        : []
+
+    if (postsArray.length === 0 && !Array.isArray(substackPosts)) {
+      console.warn('Substack API returned non-array:', substackPosts)
+      return NextResponse.json(postsInDb)
+    }
+
     // Map and save to Supabase
-    const postsToUpsert = substackPosts.map((p: any) => ({
+    const postsToUpsert = postsArray.map((p: any) => ({
       user_id: user.id,
       post_id: String(p.id),
       title: p.title,
@@ -53,7 +65,9 @@ export async function GET() {
       synced_at: new Date().toISOString()
     }))
 
-    await db.substack.posts.upsertMany(postsToUpsert)
+    if (postsToUpsert.length > 0) {
+      await db.substack.posts.upsertMany(postsToUpsert)
+    }
 
     return NextResponse.json(postsToUpsert)
   } catch (error) {

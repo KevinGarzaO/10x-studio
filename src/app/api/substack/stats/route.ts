@@ -42,11 +42,14 @@ export async function GET() {
 
     const statsData = await res.json()
     
-    // Update Supabase
+    // Update Supabase - Using verified fields from user response
+    const subscriberCount = statsData.count ?? statsData.chartCounts?.totalEmail ?? 0
+    const followerCount = statsData.follower_count ?? 0
+
     const newStat = {
       user_id: user.id,
-      subscriber_count: statsData.subscriber_count || 0,
-      follower_count: statsData.follower_count || 0,
+      subscriber_count: subscriberCount,
+      follower_count: followerCount,
       date: new Date().toISOString().split('T')[0]
     }
 
