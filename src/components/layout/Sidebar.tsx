@@ -1,89 +1,246 @@
 'use client'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useApp } from './AppProvider'
 import type { NavSection } from '@/app/page'
 import { Button } from 'primereact/button'
 import { InputText } from 'primereact/inputtext'
 
-type NavItem = {
+type SubmenuItem = {
   id: NavSection;
-  icon: string;
   label: string;
+  pro?: boolean;
+  soon?: boolean;
+}
+
+type MenuCategory = {
+  label: string;
+  icon?: string;
+  items: SubmenuItem[];
+  pro?: boolean;
   soon?: boolean;
 }
 
 type NavModule = {
+  id: string;
   title: string;
-  headerIcon: string;
-  items: NavItem[];
+  icon: string;
+  categories: MenuCategory[];
+  pro?: boolean;
 }
 
-const MENU_MODULES: NavModule[] = [
+const ERP_MENU: NavModule[] = [
   {
-    title: 'Estrategia',
-    headerIcon: 'pi pi-compass', // O pi-map
-    items: [
-      { id: 'dashboard', icon: '⊞', label: 'Dashboard' },
-      { id: 'calendar', icon: '📅', label: 'Calendario Editorial' },
-      { id: 'stats', icon: '📈', label: 'Auditoría & Análisis' },
+    id: 'core',
+    title: 'CORE',
+    icon: 'pi pi-cog',
+    categories: [
+      {
+        label: 'Dashboard',
+        icon: 'pi pi-home',
+        items: [
+          { id: 'dashboard', label: 'Resumen general' },
+          { id: 'recent-activity', label: 'Actividad reciente' },
+          { id: 'notifications', label: 'Notificaciones' },
+        ]
+      },
+      {
+        label: 'Mi Perfil',
+        icon: 'pi pi-user',
+        items: [
+          { id: 'profile-data', label: 'Datos personales' },
+          { id: 'photo-brand', label: 'Foto & marca' },
+          { id: 'preferences', label: 'Preferencias' },
+        ]
+      },
+      {
+        label: 'Facturación',
+        icon: 'pi pi-credit-card',
+        items: [
+          { id: 'billing-plan', label: 'Plan actual' },
+          { id: 'payment-history', label: 'Historial de pagos' },
+          { id: 'change-plan', label: 'Cambiar plan' },
+        ]
+      },
+      {
+        label: 'Seguridad',
+        icon: 'pi pi-lock',
+        items: [
+          { id: 'security-password', label: 'Contraseña' },
+          { id: 'active-sessions', label: 'Sesiones activas' },
+          { id: 'api-keys', label: 'API Keys' },
+        ]
+      },
+      {
+        label: 'Ayuda',
+        icon: 'pi pi-question-circle',
+        items: [
+          { id: 'help-docs', label: 'Documentación' },
+          { id: 'tutorials', label: 'Tutoriales' },
+          { id: 'support', label: 'Soporte' },
+          { id: 'feedback', label: 'Dar feedback' },
+        ]
+      }
     ]
   },
   {
-    title: 'Content Ops',
-    headerIcon: 'pi pi-briefcase',
-    items: [
-      { id: 'topics', icon: '💡', label: 'Banco de Temas' },
-      { id: 'redactor', icon: '✍️', label: 'Redactor IA' },
-      { id: 'templates', icon: '🗂', label: 'Plantillas & Formatos' },
-      { id: 'history', icon: '📚', label: 'Historial' },
+    id: 'cms',
+    title: 'CMS',
+    icon: 'pi pi-compass',
+    categories: [
+      {
+        label: 'Estrategia',
+        icon: 'pi pi-chart-bar',
+        items: [
+          { id: 'cms-dashboard', label: 'Dashboard CMS' },
+          { id: 'calendar-month', label: 'Calendario editorial' },
+          { id: 'content-report', label: 'Auditoría & análisis' },
+          { id: 'ai-chat', label: 'Co-pilot de Negocio', pro: true },
+        ]
+      },
+      {
+        label: 'Content Ops',
+        icon: 'pi pi-pencil',
+        items: [
+          { id: 'topics-all', label: 'Banco de temas' },
+          { id: 'redactor-new', label: 'Redactor IA' },
+          { id: 'templates-mine', label: 'Plantillas & formatos' },
+          { id: 'history-all', label: 'Historial' },
+          { id: 'auto-gen-style', label: 'Generador automático', pro: true },
+        ]
+      },
+      {
+        label: 'Canales',
+        icon: 'pi pi-send',
+        items: [
+          { id: 'substack-dash', label: 'Substack' },
+          { id: 'wp-dash', label: 'WordPress', soon: true },
+          { id: 'li-dash', label: 'LinkedIn', soon: true },
+          { id: 'x-dash', label: 'X / Twitter', soon: true },
+          { id: 'multichannel-create', label: 'Multicanal', pro: true },
+        ]
+      },
+      {
+        label: 'Automatización',
+        icon: 'pi pi-bolt',
+        items: [
+          { id: 'webhooks-mine', label: 'Webhooks' },
+          { id: 'zapier-connections', label: 'Zapier / Make' },
+          { id: 'integrations-wp', label: 'Integraciones' },
+          { id: 'flows-mine', label: 'Flujos automáticos', pro: true },
+        ]
+      }
     ]
   },
   {
-    title: 'Canales',
-    headerIcon: 'pi pi-send',
-    items: [
-      { id: 'substack', icon: '📰', label: 'Substack' },
-      { id: 'wordpress', icon: '📝', label: 'WordPress', soon: true },
-      { id: 'linkedin', icon: '👔', label: 'LinkedIn', soon: true },
-      { id: 'x', icon: '🐦', label: 'X (Twitter)', soon: true },
+    id: 'crm',
+    title: 'CRM',
+    icon: 'pi pi-users',
+    categories: [
+      {
+        label: 'Audiencia',
+        icon: 'pi pi-list',
+        items: [
+          { id: 'crm-contacts', label: 'Contactos' },
+          { id: 'crm-lists', label: 'Listas & segmentos' },
+          { id: 'crm-pipelines', label: 'Pipelines' },
+        ]
+      },
+      {
+        label: 'Leads',
+        icon: 'pi pi-target',
+        pro: true,
+        items: [
+          { id: 'leads-active', label: 'Leads activos' },
+          { id: 'providers-dir', label: 'Proveedores' },
+          { id: 'leads-history-date', label: 'Historial de leads' },
+        ]
+      },
+      {
+        label: 'Co-pilot de Negocio',
+        icon: 'pi pi-android',
+        pro: true,
+        items: [
+          { id: 'copilot-chat-new', label: 'Chat con IA' },
+          { id: 'rec-active', label: 'Recomendaciones' },
+          { id: 'biz-report', label: 'Análisis de negocio' },
+        ]
+      }
     ]
   },
   {
-    title: 'Audiencia',
-    headerIcon: 'pi pi-users',
-    items: [
-      { id: 'contacts', icon: '👥', label: 'Contactos', soon: true },
-      { id: 'lists', icon: '📋', label: 'Listas & Segmentos', soon: true },
-      { id: 'pipelines', icon: '🎯', label: 'Pipelines', soon: true },
+    id: 'finanzas',
+    title: 'FINANZAS',
+    icon: 'pi pi-money-bill',
+    pro: true,
+    categories: [
+      {
+        label: 'Mi Cartera',
+        icon: 'pi pi-wallet',
+        items: [
+          { id: 'fin-balance', label: 'Estado de cuenta' },
+          { id: 'fin-history', label: 'Historial financiero' },
+        ]
+      },
+      {
+        label: 'Préstamos',
+        icon: 'pi pi-percentage',
+        items: [
+          { id: 'loan-active', label: 'Mi préstamo activo' },
+          { id: 'loan-request', label: 'Solicitar préstamo' },
+          { id: 'loan-history', label: 'Historial de préstamos' },
+        ]
+      },
+      {
+        label: 'Pagos',
+        icon: 'pi pi-credit-card',
+        items: [
+          { id: 'pay-next', label: 'Próximos pagos' },
+          { id: 'pay-now', label: 'Pagar ahora' },
+          { id: 'pay-vouchers', label: 'Comprobantes' },
+        ]
+      }
     ]
   },
   {
-    title: 'Automatización',
-    headerIcon: 'pi pi-bolt',
-    items: [
-      { id: 'webhooks', icon: '⚡', label: 'Webhooks', soon: true },
-      { id: 'zapier', icon: '🔄', label: 'Zapier / Make', soon: true },
-      { id: 'integrations', icon: '🔌', label: 'Integraciones' },
-    ]
-  },
-  {
-    title: 'Transformateck',
-    headerIcon: 'pi pi-star',
-    items: [
-      { id: 'analyzer', icon: '🔍', label: 'El Analizador', soon: true },
-      { id: 'community', icon: '💬', label: 'Comunidad', soon: true },
-      { id: 'book', icon: '📖', label: 'Recursos', soon: true },
-      { id: 'directory', icon: '🌍', label: 'Directorio', soon: true },
-    ]
-  },
-  {
-    title: 'Configuración',
-    headerIcon: 'pi pi-cog',
-    items: [
-      { id: 'settings', icon: '⚙️', label: 'Mi Workspace' },
-      { id: 'profile', icon: '👤', label: 'Perfil & Facturación', soon: true },
-      { id: 'helpdesk', icon: '🆘', label: 'Centro de Ayuda', soon: true },
-      { id: 'feedback', icon: '✨', label: 'Dar Feedback', soon: true },
+    id: 'transformateck',
+    title: 'TRANSFORMATECK',
+    icon: 'pi pi-star',
+    categories: [
+      {
+        label: 'El Analizador',
+        icon: 'pi pi-search',
+        pro: true,
+        items: [
+          { id: 'trans-analyzer', label: 'Analizar mi negocio' },
+          { id: 'trans-reports', label: 'Reportes' },
+          { id: 'trans-recommendations', label: 'Recomendaciones' },
+        ]
+      },
+      {
+        label: 'Comunidad',
+        icon: 'pi pi-comments',
+        items: [
+          { id: 'trans-feed', label: 'Feed' },
+          { id: 'trans-groups', label: 'Grupos' },
+          { id: 'trans-events', label: 'Eventos' },
+        ]
+      },
+      {
+        label: 'Recursos',
+        icon: 'pi pi-book',
+        items: [
+          { id: 'trans-library', label: 'Biblioteca' },
+          { id: 'trans-tutorials', label: 'Tutoriales' },
+        ]
+      },
+      {
+        label: 'Directorio',
+        icon: 'pi pi-map-marker',
+        items: [
+          { id: 'trans-providers', label: 'Proveedores' },
+          { id: 'trans-members', label: 'Miembros' },
+        ]
+      }
     ]
   }
 ]
@@ -93,151 +250,162 @@ interface Props {
   onNav: (s: NavSection) => void;
   collapsed: boolean;
   onToggleCollapse: () => void;
+  mobileOpen: boolean;
+  onMobileClose: () => void;
 }
 
-export function Sidebar({ active, onNav, collapsed, onToggleCollapse }: Props) {
-  const { settings, saveSettings } = useApp()
-  const [editing, setEditing] = useState(false)
-  const [niche,   setNiche]   = useState('')
-  
-  // Track ONLY the active module to ensure all others are closed
-  const [expandedModule, setExpandedModule] = useState<string | null>(() => {
-    const activeModule = MENU_MODULES.find(m => m.items.some(i => i.id === active))
-    return activeModule ? activeModule.title : null
-  })
+export function Sidebar({ active, onNav, collapsed, onToggleCollapse, mobileOpen, onMobileClose }: Props) {
+  const { settings } = useApp()
+  const [activeModule, setActiveModule] = useState<string>('core')
+  const [expandedCats, setExpandedCats] = useState<Record<string, boolean>>({})
 
-  // Whenever 'active' changes externally, ensure that module opens
-  // (Optional: You can use a useEffect for this if active can change outside the Sidebar)
-  
-  const toggleModule = (title: string) => {
-    if (collapsed) {
-      onToggleCollapse();
-      setExpandedModule(title)
-    } else {
-      setExpandedModule(prev => prev === title ? null : title)
+  // Sync state when active section changes from external sources
+  useEffect(() => {
+    const mod = ERP_MENU.find(m => m.categories.some(c => c.items.some(i => i.id === active)))
+    if (mod) {
+      setActiveModule(mod.id)
+      ERP_MENU.forEach(m => {
+        m.categories.forEach(c => {
+          if (c.items.some(i => i.id === active)) {
+            setExpandedCats(prev => ({ ...prev, [`${m.id}-${c.label}`]: true }))
+          }
+        })
+      })
     }
+  }, [active])
+
+  const toggleCat = (modId: string, label: string) => {
+    const key = `${modId}-${label}`
+    setExpandedCats(prev => ({ ...prev, [key]: !prev[key] }))
   }
 
-  function startEdit() { setNiche(settings.niche); setEditing(true) }
-  async function saveNiche() {
-    await saveSettings({ ...settings, niche: niche.trim() })
-    setEditing(false)
-  }
-
-  const sidebarWidth = collapsed ? 'w-[70px]' : 'w-[260px]' // Slightly wider to fit longer names
+  const sidebarWidth = collapsed ? 'w-[70px]' : 'w-[280px]'
 
   return (
-    <aside className={`${sidebarWidth} bg-[#191919] flex flex-col flex-shrink-0 h-screen transition-all duration-300 relative group`}>
-      
-      {/* Collapse Toggle Button */}
-      <button 
-        onClick={onToggleCollapse}
-        className="absolute -right-3 top-6 bg-[#2a2a2a] border-2 border-[#191919] text-white w-6 h-6 rounded-full flex items-center justify-center text-[10px] opacity-0 group-hover:opacity-100 transition-opacity z-10 hover:bg-[#444]"
-        title={collapsed ? "Expandir panel" : "Colapsar panel"}
-      >
-        <i className={`pi ${collapsed ? 'pi-chevron-right' : 'pi-chevron-left'} !text-[10px]`}></i>
-      </button>
+    <>
+      {/* Backdrop for mobile */}
+      {mobileOpen && (
+        <div 
+          className="fixed inset-0 bg-black/60 backdrop-blur-sm z-40 md:hidden animate-fadein" 
+          onClick={onMobileClose}
+        />
+      )}
 
-      {/* Logo */}
-      <div className={`flex items-center px-4 pt-4 pb-5 ${collapsed ? 'justify-center !px-2' : 'gap-1'}`}>
-        <span className="text-[22px] font-extrabold text-white leading-none tracking-[-1.5px]">10</span>
-        <span className="text-[22px] font-extrabold text-white leading-none tracking-[-1px]">X</span>
-        {!collapsed && <span className="text-[13px] font-normal text-[#666] ml-1 mt-0.5 whitespace-nowrap overflow-hidden transition-all duration-300">Studio</span>}
-      </div>
+      <aside className={`
+        ${sidebarWidth} bg-[#121212] flex flex-col flex-shrink-0 h-screen transition-all duration-300 group z-50
+        ${mobileOpen ? 'fixed left-0 top-0 bottom-0 translate-x-0 shadow-2xl' : 'fixed -translate-x-full md:relative md:translate-x-0'}
+      `}>
+        
+        {/* Collapse Toggle (Desktop only) */}
+        <button 
+          onClick={onToggleCollapse}
+          className="absolute -right-3 top-6 bg-[#2a2a2a] border-2 border-[#121212] text-white w-6 h-6 rounded-full hidden md:flex items-center justify-center text-[10px] opacity-0 group-hover:opacity-100 transition-opacity z-10 hover:bg-[#444]"
+        >
+          <i className={`pi ${collapsed ? 'pi-chevron-right' : 'pi-chevron-left'} !text-[10px]`}></i>
+        </button>
 
-      {/* Nav */}
-      <nav className={`flex-1 ${collapsed ? 'px-2' : 'px-3'} overflow-x-hidden overflow-y-auto no-scrollbar pb-6`}>
-        {MENU_MODULES.map((module, idx) => {
-          const isExpanded = expandedModule === module.title
-          const hasActiveItem = module.items.some(i => i.id === active)
-          
-          return (
-            <div key={module.title} className={`${idx > 0 && !collapsed ? 'mt-3' : 'mt-1'}`}>
-              
-              {/* Module Header */}
-              {!collapsed ? (
-                <button 
-                  onClick={() => toggleModule(module.title)}
-                  className={`w-full flex items-center justify-between text-[11px] font-semibold uppercase tracking-[.05em] py-2 mb-1 transition-colors px-2 rounded-md ${hasActiveItem && !isExpanded ? 'text-white bg-[#222]' : 'text-[#777] hover:text-[#aaa] hover:bg-[#222]'}`}
-                >
-                  <div className="flex items-center gap-2">
-                    <i className={`${module.headerIcon} text-[10px]`}></i>
-                    <span className="whitespace-nowrap overflow-hidden">{module.title}</span>
-                  </div>
-                  <i className={`pi ${isExpanded ? 'pi-chevron-down' : 'pi-chevron-right'} text-[9px]`}></i>
-                </button>
-              ) : (
-                <div className="w-full flex justify-center py-2 mb-1 text-[#555] cursor-pointer hover:text-[#888] transition-colors" title={module.title} onClick={() => toggleModule(module.title)}>
-                  <i className={`${module.headerIcon} text-sm`}></i>
-                </div>
-              )}
+        {/* Logo */}
+        <div className={`flex items-center px-6 pt-6 pb-6 ${collapsed ? 'justify-center !px-2' : ''}`}>
+          <div className="w-8 h-8 bg-gradient-to-br from-white to-stone-400 rounded-lg flex items-center justify-center text-black font-black text-xl mr-3">10</div>
+          {!collapsed && <div className="flex flex-col"><span className="text-white font-bold leading-none tracking-tight">10X STUDIO</span><span className="text-[10px] text-stone-500 font-bold uppercase tracking-widest mt-0.5">Scale Platform</span></div>}
+        </div>
 
-              {/* Module Items */}
-              <div className={`overflow-hidden transition-all duration-300 ${!collapsed && !isExpanded ? 'max-h-0 opacity-0' : 'max-h-[500px] opacity-100'}`}>
-                {module.items.map(item => {
-                  const isActive = active === item.id
-                  return (
-                    <button
-                      key={item.id}
-                      onClick={() => !item.soon && onNav(item.id)}
-                      title={collapsed ? item.label : undefined}
-                      disabled={item.soon}
-                      className={`w-full flex items-center ${collapsed ? 'justify-center px-0' : 'gap-2.5 px-3'} py-[8px] text-[13.5px] rounded-[6px] mb-0.5 transition-all text-left ${
-                        isActive
-                          ? 'bg-[#2f2f2f] text-white font-medium shadow-sm'
-                          : item.soon 
-                            ? 'text-[#555] cursor-not-allowed opacity-60'
-                            : 'text-[#aaa] hover:bg-[#2a2a2a] hover:text-[#e8e8e8]'
-                      }`}>
-                      <span className={`text-[16px] flex items-center justify-center flex-shrink-0 ${isActive ? 'opacity-100' : 'opacity-80'} ${collapsed ? 'w-full' : 'w-5'}`}>
-                        {item.icon}
-                      </span>
-                      {!collapsed && (
-                        <div className="flex-1 flex items-center justify-between whitespace-nowrap overflow-hidden min-w-0">
-                          <span className="truncate">{item.label}</span>
-                          {item.soon && <span className="text-[9px] uppercase tracking-wider bg-[#222] text-[#666] px-1.5 py-0.5 rounded ml-2">Pronto</span>}
-                        </div>
-                      )}
+        {/* Modules Strip (Level 1) */}
+        <div className={`flex border-b border-white/5 bg-white/5 ${collapsed ? 'flex-col gap-2 p-2' : 'px-2 py-2 gap-1 overflow-x-auto no-scrollbar'}`}>
+          {ERP_MENU.map(mod => (
+            <button
+              key={mod.id}
+              onClick={() => setActiveModule(mod.id)}
+              className={`
+                flex items-center justify-center p-2 rounded-xl transition-all relative group/mod
+                ${activeModule === mod.id ? 'bg-white text-black' : 'text-stone-500 hover:text-stone-300 hover:bg-white/10'}
+                ${collapsed ? 'w-10 h-10' : 'flex-1 min-w-[40px] h-10'}
+              `}
+              title={mod.title}
+            >
+              <i className={`${mod.icon} ${collapsed ? 'text-lg' : 'text-base'}`}></i>
+              {!collapsed && <span className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-1 h-1 bg-white rounded-full opacity-0 scale-0 transition-all group-hover/mod:opacity-100 group-hover/mod:scale-100"></span>}
+            </button>
+          ))}
+        </div>
+
+        {/* Categories & Submenus (Level 2 & 3) */}
+        <nav className={`flex-1 overflow-y-auto no-scrollbar py-4 ${collapsed ? 'px-2' : 'px-4'}`}>
+          {!collapsed ? (
+            <div className="space-y-4">
+              {ERP_MENU.find(m => m.id === activeModule)?.categories.map(cat => {
+                const key = `${activeModule}-${cat.label}`
+                const expanded = expandedCats[key]
+                return (
+                  <div key={cat.label} className="space-y-1">
+                    <button 
+                      onClick={() => toggleCat(activeModule, cat.label)}
+                      className="w-full flex items-center justify-between text-[11px] font-bold text-stone-500 uppercase tracking-widest py-2 px-2 hover:text-stone-300 transition-colors"
+                    >
+                      <div className="flex items-center gap-3">
+                         {cat.icon && <i className={cat.icon}></i>}
+                         <span>{cat.label}</span>
+                         {cat.pro && <span className="text-[10px]">🔒</span>}
+                         {cat.soon && <span className="text-[8px] bg-stone-800 px-1 rounded ml-1">🔜</span>}
+                      </div>
+                      <i className={`pi pi-chevron-${expanded ? 'down' : 'right'} text-[8px]`}></i>
                     </button>
-                  )
-                })}
-              </div>
-
+                    
+                    <div className={`space-y-0.5 ml-2 border-l border-white/5 pl-2 overflow-hidden transition-all duration-300 ${expanded ? 'max-h-[500px] opacity-100 mt-2' : 'max-h-0 opacity-0'}`}>
+                      {cat.items.map(item => (
+                        <button
+                          key={item.id}
+                          onClick={() => { onNav(item.id); onMobileClose(); }}
+                          disabled={item.soon}
+                          className={`
+                            w-full text-left px-3 py-2 rounded-lg text-[13px] transition-all flex items-center justify-between
+                            ${active === item.id ? 'bg-white/10 text-white font-semibold' : 'text-stone-500 hover:text-stone-300 hover:bg-white/5'}
+                            ${item.soon ? 'opacity-40 cursor-not-allowed' : ''}
+                          `}
+                        >
+                          <span>{item.label}</span>
+                          {item.pro && <span className="text-[10px]">🔒</span>}
+                          {item.soon && <span className="text-[8px] bg-white/10 px-1 rounded">🔜</span>}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )
+              })}
             </div>
-          )
-        })}
-      </nav>
+          ) : (
+            <div className="flex flex-col items-center gap-4">
+               {ERP_MENU.find(m => m.id === activeModule)?.categories.map(cat => (
+                 <div key={cat.label} className="w-10 h-10 rounded-xl bg-white/5 flex items-center justify-center text-stone-500 group/cat relative">
+                    <i className={cat.icon || 'pi pi-folder'}></i>
+                    {/* Tooltip or Side Popover could go here */}
+                 </div>
+               ))}
+            </div>
+          )}
+        </nav>
 
-      {/* Footer — Settings / Niche */}
-      <div className={`py-4 border-t border-[#2a2a2a] ${collapsed ? 'px-2 flex flex-col items-center' : 'px-3'} mt-auto bg-[#191919] z-10`}>
-        {!collapsed && <p className="text-[10px] text-[#555] uppercase tracking-wider font-semibold mb-1.5 whitespace-nowrap overflow-hidden">Nicho activo</p>}
-        {editing && !collapsed ? (
-          <div className="flex gap-1 w-full">
-            <InputText
-              value={niche}
-              onChange={e => setNiche(e.target.value)}
-              onKeyDown={e => e.key === 'Enter' && saveNiche()}
-              className="p-inputtext-sm w-full !bg-[#2a2a2a] !border-[#444] text-white !px-2 !py-1 !font-mono focus:!border-[#666]"
-              autoFocus
-            />
-            <Button onClick={saveNiche} icon="pi pi-check" className="p-button-sm !px-2 !py-1 !bg-white !text-black !border-none" />
-          </div>
-        ) : (
-          <button
-            onClick={() => !collapsed && startEdit()}
-            title={collapsed ? `Nicho: ${settings.niche || 'Sin definir'}` : undefined}
-            className={`flex items-center text-[12px] text-[#888] hover:text-[#ccc] transition-colors bg-[#222] border border-[#333] rounded py-1.5 w-full ${collapsed ? 'justify-center px-0' : 'gap-1.5 px-2.5'}`}>
-            <span>🏷</span>
-            {!collapsed && (
-              <>
-                <span className="truncate whitespace-nowrap flex-1 text-left">{settings.niche || 'Sin definir'}</span>
-                <span className="text-[10px] ml-1">✏️</span>
-              </>
-            )}
-          </button>
-        )}
-      </div>
-    </aside>
+        {/* User / Niche Footer */}
+        <div className={`p-4 border-t border-white/5 ${collapsed ? 'items-center' : ''}`}>
+           {!collapsed && (
+             <div className="bg-[#1a1a1a] rounded-2xl p-3 flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-stone-700 to-stone-800 flex items-center justify-center text-white font-bold">
+                  {settings.niche ? settings.niche[0].toUpperCase() : 'N'}
+                </div>
+                <div className="flex flex-col min-w-0">
+                  <span className="text-[12px] text-stone-300 font-bold truncate">{settings.niche || 'Productor'}</span>
+                  <span className="text-[10px] text-stone-500 font-medium">Plan gratuito</span>
+                </div>
+             </div>
+           )}
+           {collapsed && (
+             <div className="w-10 h-10 rounded-xl bg-[#1a1a1a] flex items-center justify-center text-stone-500">
+                <i className="pi pi-user"></i>
+             </div>
+           )}
+        </div>
+      </aside>
+    </>
   )
 }
 

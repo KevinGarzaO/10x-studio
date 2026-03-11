@@ -126,11 +126,11 @@ export function SubstackSection() {
                     {profile.handle && <span className="text-stone-500 font-semibold mt-0.5 text-sm tracking-wide">@{profile.handle}</span>}
                   </a>
                   
-                  <div className="flex items-center gap-2 mt-3">
-                    {profile.email && <span className="text-xs text-stone-600 px-2.5 py-1 bg-white/80 backdrop-blur-sm rounded-full border border-stone-200 shadow-sm font-medium">{profile.email}</span>}
+                  <div className="flex flex-wrap items-center gap-2 mt-3">
+                    {profile.email && <span className="text-xs text-stone-600 px-2.5 py-1 bg-white/80 backdrop-blur-sm rounded-full border border-stone-200 shadow-sm font-medium truncate max-w-[200px]">{profile.email}</span>}
                     {substackPublication && (
                       <a href={`https://${profile.primaryPublication?.subdomain || profile.handle}.substack.com`} target="_blank" rel="noopener noreferrer" 
-                         className="flex items-center gap-1.5 text-xs font-bold text-amber-900 px-3 py-1 bg-gradient-to-r from-amber-100 to-orange-50 hover:from-amber-200 hover:to-orange-100 border border-amber-200 rounded-full shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all duration-300">
+                         className="flex items-center gap-1.5 text-xs font-bold text-amber-900 px-3 py-1 bg-gradient-to-r from-amber-100 to-orange-50 hover:from-amber-200 hover:to-orange-100 border border-amber-200 rounded-full shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all duration-300 whitespace-nowrap">
                         {profile.pubLogo ? (
                           /* eslint-disable-next-line @next/next/no-img-element */
                           <img src={profile.pubLogo} className="w-4 h-4 rounded-sm object-cover shadow-sm" alt="Pub Logo" />
@@ -144,9 +144,9 @@ export function SubstackSection() {
                 </div>
                 
                 {/* Actions */}
-                <div className="flex flex-col gap-2.5 items-end">
+                <div className="flex flex-col gap-2.5 items-start md:items-end w-full md:w-auto mt-4 md:mt-0">
                   {profile.expiresAt && <ExpiryBadge expiresAt={profile.expiresAt} />}
-                  <button onClick={disconnect} className="text-[11px] font-bold px-4 py-1.5 rounded-full border border-red-200 text-red-600 bg-white/50 hover:bg-red-50 hover:border-red-300 transition-colors shadow-sm">
+                  <button onClick={disconnect} className="text-[11px] font-bold px-4 py-1.5 rounded-full border border-red-200 text-red-600 bg-white/50 hover:bg-red-50 hover:border-red-300 transition-colors shadow-sm w-full md:w-auto">
                     Desconectar
                   </button>
                 </div>
@@ -208,15 +208,15 @@ export function SubstackSection() {
       )}
 
       {/* Modern Pill Tabs */}
-      <div className="flex mb-8">
-        <div className="inline-flex bg-stone-100/80 backdrop-blur-md p-1.5 rounded-2xl shadow-inner border border-stone-200/50">
+      <div className="flex mb-8 overflow-x-auto no-scrollbar pb-2">
+        <div className="inline-flex bg-stone-100/80 backdrop-blur-md p-1.5 rounded-2xl shadow-inner border border-stone-200/50 whitespace-nowrap">
           {([
             ['stats',       '📰 Publicaciones'],
             ['subscribers', '👥 Suscriptores'],
             ['publish',     '✍️ Publicar'],
           ] as [SubTab, string][]).map(([t, label]) => (
             <button key={t} onClick={() => setTab(t)}
-              className={`relative px-6 py-2.5 text-sm font-bold rounded-xl transition-all duration-300 ${tab === t ? 'text-stone-900 bg-white shadow-sm ring-1 ring-black/5' : 'text-stone-500 hover:text-stone-800 hover:bg-stone-200/50'}`}>
+              className={`relative px-4 md:px-6 py-2.5 text-sm font-bold rounded-xl transition-all duration-300 ${tab === t ? 'text-stone-900 bg-white shadow-sm ring-1 ring-black/5' : 'text-stone-500 hover:text-stone-800 hover:bg-stone-200/50'}`}>
               {label}
             </button>
           ))}

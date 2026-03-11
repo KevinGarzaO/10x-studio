@@ -319,17 +319,17 @@ export function SubstackSubscribers() {
       )}
 
       {/* KPI strip Dashboard style */}
-      <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-8">
+      <div className="grid grid-cols-2 lg:grid-cols-5 gap-3 md:gap-4 mb-8">
         {[
           { label: 'Total DB',       value: total.toLocaleString(),              color: 'text-stone-900' },
           { label: 'De pago',        value: subscribers.filter(s=>s.type==='paid').length.toLocaleString(), color: 'text-emerald-600' },
           { label: 'Gratuitos',      value: subscribers.filter(s=>s.type==='free').length.toLocaleString(), color: 'text-stone-600' },
           { label: '⭐ Avg Estrellas', value: avgStars,                                color: 'text-stone-900' },
-          { label: '🔥 Top leads (4-5★)', value: String(hotLeads),                    color: 'text-amber-600' },
+          { label: '🔥 Top leads',   value: String(hotLeads),                         color: 'text-amber-600' },
         ].map(k => (
-          <div key={k.label} className="bg-white/80 backdrop-blur-xl border border-stone-200/80 shadow-[0_4px_20px_rgb(0,0,0,0.03)] rounded-2xl p-4 text-center hover:-translate-y-0.5 hover:shadow-md hover:border-stone-300 transition-all duration-300">
-            <div className={`text-2xl font-black tracking-tight ${k.color}`}>{k.value}</div>
-            <div className="text-[10px] font-bold text-stone-500 uppercase tracking-widest mt-1.5">{k.label}</div>
+          <div key={k.label} className="bg-white/80 backdrop-blur-xl border border-stone-200/80 shadow-[0_4px_20px_rgb(0,0,0,0.03)] rounded-2xl p-3 md:p-4 text-center hover:-translate-y-0.5 hover:shadow-md hover:border-stone-300 transition-all duration-300">
+            <div className={`text-xl md:text-2xl font-black tracking-tight ${k.color}`}>{k.value}</div>
+            <div className="text-[9px] md:text-[10px] font-bold text-stone-500 uppercase tracking-widest mt-1 md:mt-1.5">{k.label}</div>
           </div>
         ))}
       </div>
@@ -357,7 +357,7 @@ export function SubstackSubscribers() {
           <span className="text-sm font-medium text-stone-600">{progressText || 'Cargando suscriptores...'}</span>
         </div>
       ) : (
-        <div className="bg-white border border-stone-200/80 rounded-2xl shadow-sm overflow-hidden p-0 mb-6">
+        <div className="bg-white border border-stone-200/80 rounded-2xl shadow-sm overflow-x-auto mb-6 no-scrollbar">
           <DataTable 
             value={subscribers} 
             paginator 
@@ -368,13 +368,13 @@ export function SubstackSubscribers() {
             globalFilterFields={['name', 'email']} 
             header={renderHeader()}
             emptyMessage="No se encontraron suscriptores."
-            className="p-datatable-sm !text-sm"
+            className="p-datatable-sm !text-xs md:!text-sm"
             style={{ minHeight: '400px' }}
             stripedRows
             removableSort
             paginatorTemplate="RowsPerPageDropdown FirstPageLink PrevPageLink CurrentPageReport NextPageLink LastPageLink"
             currentPageReportTemplate="{first} a {last} de {totalRecords}"
-            tableStyle={{ minWidth: '60rem' }}
+            tableStyle={{ minWidth: '800px' }}
           >
             <Column field="email" header="Usuario" body={userTemplate} sortable style={{ width: '25%' }}></Column>
             <Column field="type" header="Tipo" body={typeTemplate} sortable style={{ width: '10%' }}></Column>

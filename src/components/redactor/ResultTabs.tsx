@@ -115,21 +115,27 @@ export function ResultTabs({ results, topic }: Props) {
 
       {/* Toolbar */}
       {current?.status === 'done' && (
-        <div className="px-6 pb-5 border-t border-[#e9e9e7] pt-4 flex items-center gap-2 flex-wrap">
-          <button onClick={copy} className="btn btn-secondary btn-sm">{copied ? '✅ Copiado' : '📋 Copiar'}</button>
-          <button onClick={exportPDF}  className="btn btn-secondary btn-sm">📄 PDF</button>
-          <button onClick={exportDOCX} className="btn btn-secondary btn-sm">📝 Word</button>
-          <div className="h-4 w-px bg-[#e9e9e7] mx-1" />
-          <span className="text-xs text-[#9b9a97]">Publicar en:</span>
-          <button onClick={() => publishTo('wordpress')} disabled={!!publishing} className="btn btn-ghost btn-sm text-xs">
-            {publishing === 'wordpress' ? '⏳' : '🌐'} WordPress
-          </button>
-          <button onClick={() => publishTo('linkedin')} disabled={!!publishing} className="btn btn-ghost btn-sm text-xs">
-            {publishing === 'linkedin' ? '⏳' : '💼'} LinkedIn
-          </button>
-          <button onClick={() => publishTo('webhook')} disabled={!!publishing} className="btn btn-ghost btn-sm text-xs">
-            {publishing === 'webhook' ? '⏳' : '🔗'} Webhook
-          </button>
+        <div className="px-6 pb-5 border-t border-[#e9e9e7] pt-4 flex items-center gap-2 flex-wrap min-h-[60px]">
+          <div className="flex items-center gap-2 w-full md:w-auto">
+            <button onClick={copy} className="btn btn-secondary btn-sm flex-1 md:flex-none justify-center">{copied ? '✅ Copiado' : '📋 Copiar'}</button>
+            <button onClick={exportPDF}  className="btn btn-secondary btn-sm flex-1 md:flex-none justify-center">📄 PDF</button>
+            <button onClick={exportDOCX} className="btn btn-secondary btn-sm flex-1 md:flex-none justify-center">📝 Word</button>
+          </div>
+          
+          <div className="hidden md:block h-4 w-px bg-[#e9e9e7] mx-1" />
+          
+          <div className="flex items-center gap-2 w-full md:w-auto overflow-x-auto no-scrollbar py-1">
+            <span className="text-[10px] sm:text-xs text-[#9b9a97] whitespace-nowrap uppercase font-bold tracking-widest">Publicar:</span>
+            <button onClick={() => publishTo('wordpress')} disabled={!!publishing} className="btn btn-ghost btn-sm text-[10px] sm:text-xs flex-1 md:flex-none whitespace-nowrap">
+              {publishing === 'wordpress' ? '⏳' : '🌐'} WordPress
+            </button>
+            <button onClick={() => publishTo('linkedin')} disabled={!!publishing} className="btn btn-ghost btn-sm text-[10px] sm:text-xs flex-1 md:flex-none whitespace-nowrap">
+              {publishing === 'linkedin' ? '⏳' : '💼'} LinkedIn
+            </button>
+            <button onClick={() => publishTo('webhook')} disabled={!!publishing} className="btn btn-ghost btn-sm text-[10px] sm:text-xs flex-1 md:flex-none whitespace-nowrap">
+              {publishing === 'webhook' ? '⏳' : '🔗'} Webhook
+            </button>
+          </div>
         </div>
       )}
 

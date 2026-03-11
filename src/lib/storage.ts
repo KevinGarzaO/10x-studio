@@ -1,5 +1,5 @@
 import { supabase } from './supabase'
-import type { Topic, HistoryEntry, CalendarEvent, AppSettings, PromptTemplate, Campaign, ScheduledPost, IntegrationSettings } from '@/types'
+import type { Topic, HistoryEntry, CalendarEvent, AppSettings, PromptTemplate, Campaign, ScheduledPost, IntegrationSettings, UserRow, CookieRow, PostRow, StatRow } from '@/types'
 
 /**
  * Utility for singular objects stored as a single row in Supabase
@@ -80,4 +80,48 @@ export const db = {
     get: () => getSingular<IntegrationSettings>('integrations', {} as IntegrationSettings), 
     save: (d: IntegrationSettings) => saveSingular<IntegrationSettings>('integrations', d) 
   },
+  // ── New Relational Tables ──────────────────────────────
+  substack: {
+    user: {
+      get: async (substack_user_id?: string) => {
+        const query = supabase.from('users').select('*')
+        if (substack_user_id) query.eq('substack_user_id', substack_user_id)
+        else query.order('created_at', { ascending: false }).limit(1)
+        const { data } = await query.single()
+        return data as UserRow | null
+      },
+      upsert: async (user: Partial<UserRow>) => {
+        const { data, error } = await supabase.from('users').upsert(user).select().single()
+        if (error) throw error
+        return data as UserRow
+      }
+    },
+    cookies: {
+      get: async (user_id: string) => {
+        const { data } = await supabase.from('cookies').select('*').eq('user_id', user_id).order('updated_at', { ascending: false }).limit(1).single()
+        return data as CookieRow | null
+      },
+      upsert: async (cookie: Partial<CookieRow>) => {
+        await supabase.from('cookies').upsert(cookie)
+      }
+    },
+    posts: {
+      getAll: async (user_id: string) => {
+        const { data } = await supabase.from('posts').select('*').eq('user_id', user_id).order('published_at', { ascending: false })
+        return (data || []) as PostRow[]
+      },
+      upsertMany: async (posts: Partial<PostRow>[]) => {
+        await supabase.from('posts').upsert(posts)
+      }
+    },
+    stats: {
+      getLatest: async (user_id: string) => {
+        const { data } = await supabase.from('stats').select('*').eq('user_id', user_id).order('date', { ascending: false }).limit(1).single()
+        return data as StatRow | null
+      },
+      upsert: async (stat: Partial<StatRow>) => {
+        await supabase.from('stats').upsert(stat)
+      }
+    }
+  }
 }

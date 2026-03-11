@@ -24,25 +24,25 @@ export function Dashboard({ onNav }: { onNav: (s: NavSection) => void }) {
     <div className="max-w-4xl mx-auto pb-20">
       <div className="flex items-end justify-between mb-8 flex-wrap gap-3 border-b border-[#e9e9e7] pb-4">
         <div>
-          <h1 className="text-[28px] font-bold tracking-tight text-black flex items-center gap-3">
+          <h1 className="text-2xl md:text-[28px] font-bold tracking-tight text-black flex items-center gap-3">
             <i className="pi pi-home text-[#9b9a97]"></i> Dashboard
           </h1>
           <p className="text-sm text-[#9b9a97] mt-1">Resumen de tu estrategia de contenido</p>
         </div>
-        <button className="btn btn-primary" onClick={() => onNav('redactor')}>+ Nuevo artículo</button>
+        <button className="btn btn-primary w-full md:w-auto" onClick={() => onNav('redactor-new')}>+ Nuevo artículo</button>
       </div>
 
       {/* KPI grid */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
         {stats.map((s, i) => (
           <div key={s.label} className="bg-white/80 backdrop-blur-xl border border-stone-200/80 shadow-[0_4px_20px_rgb(0,0,0,0.04)] rounded-2xl px-5 py-5 hover:-translate-y-1 hover:shadow-lg hover:border-stone-300 transition-all duration-300 cursor-default">
             <div className="text-[10px] font-bold text-stone-400 uppercase tracking-widest mb-3">{s.label}</div>
-            <div className="text-[36px] font-black text-stone-900 leading-none tracking-tight">{s.value}</div>
+            <div className="text-2xl md:text-[36px] font-black text-stone-900 leading-none tracking-tight">{s.value}</div>
           </div>
         ))}
       </div>
 
-      <div className="grid grid-cols-2 gap-4 mb-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
         {/* Upcoming */}
         <div className="bg-white border border-[#e9e9e7] rounded-2xl overflow-hidden shadow-sm">
           <div className="bg-[#1a1a1a] border-b border-[#2e2e2e] px-5 py-3 flex items-center justify-between">

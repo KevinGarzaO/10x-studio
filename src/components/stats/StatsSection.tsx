@@ -91,7 +91,7 @@ export function StatsSection() {
         ))}
       </div>
 
-      <div className="grid grid-cols-2 gap-4 mb-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
         {/* By platform */}
         <div className="bg-white border border-[#e9e9e7] rounded-2xl overflow-hidden shadow-sm">
           <div className="bg-[#1a1a1a] border-b border-[#2e2e2e] px-5 py-3 flex items-center gap-2">
@@ -141,7 +141,7 @@ export function StatsSection() {
         </div>
       </div>
 
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {/* Topics by status */}
         <div className="bg-white border border-[#e9e9e7] rounded-2xl overflow-hidden shadow-sm">
           <div className="bg-[#1a1a1a] border-b border-[#2e2e2e] px-5 py-3 flex items-center gap-2">

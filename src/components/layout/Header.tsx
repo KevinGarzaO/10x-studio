@@ -16,11 +16,22 @@ const SECTION_LABELS: Partial<Record<NavSection, string>> = {
   integrations: 'Integraciones',
 }
 
-interface Props { activeSection: NavSection }
+interface Props { 
+  activeSection: NavSection;
+  onMenuClick?: () => void;
+}
 
-export function Header({ activeSection }: Props) {
+export function Header({ activeSection, onMenuClick }: Props) {
   return (
-    <header className="h-[46px] bg-[#191919] border-b border-[#2a2a2a] flex items-center px-8 gap-4 flex-shrink-0 transition-all duration-300">
+    <header className="h-[56px] bg-[#1a1a1a] border-b border-[#2a2a2a] flex items-center px-4 md:px-8 gap-3 flex-shrink-0 transition-all duration-300">
+      {/* Mobile Menu Button */}
+      <button 
+        onClick={onMenuClick}
+        className="md:hidden p-2 text-stone-400 hover:text-white transition-colors"
+      >
+        <i className="pi pi-bars text-lg"></i>
+      </button>
+
       {/* Breadcrumb */}
       <div className="flex items-center gap-2 text-sm max-w-[50%] overflow-hidden overflow-ellipsis whitespace-nowrap">
         <span className="text-[#555] font-semibold">10X Studio</span>

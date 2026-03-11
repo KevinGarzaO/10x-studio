@@ -183,7 +183,7 @@ export function RedactorSection({ prefill }: Props) {
         </button>
         {transOpen && (
           <div className="px-5 pb-5 border-t border-[#e9e9e7] pt-4">
-            <div className="grid grid-cols-2 gap-4 mb-3">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-3">
               <div>
                 <label className="label block mb-1.5">Texto original</label>
                 <textarea
@@ -196,7 +196,7 @@ export function RedactorSection({ prefill }: Props) {
               </div>
               <div>
                 <label className="label block mb-1.5">Traducción</label>
-                <div className="w-full !rounded-xl border border-[#e9e9e7] bg-[#f7f7f5] p-3 text-sm h-[138px] overflow-y-auto">
+                <div className="w-full !rounded-xl border border-[#e9e9e7] bg-[#f7f7f5] p-3 text-sm min-h-[138px] overflow-y-auto">
                   {translating ? <span className="text-[#9b9a97] animate-pulse flex items-center gap-2"><i className="pi pi-spin pi-spinner"></i> Traduciendo...</span> : (translated || <span className="text-[#9b9a97]">La traducción aparecerá aquí</span>)}
                 </div>
               </div>
@@ -237,7 +237,7 @@ export function RedactorSection({ prefill }: Props) {
           {/* Platforms */}
           <div>
             <label className="label block mb-3">Plataformas <span className="text-[#9b9a97] font-normal normal-case tracking-normal">— selecciona una o varias</span></label>
-            <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3">
               {ALL_PLATFORMS.map(p => {
                 const sel = selectedPlatforms.has(p)
                 return (
@@ -361,9 +361,9 @@ export function RedactorSection({ prefill }: Props) {
 
       {/* Results */}
       {mode === 'compare' && (results.length > 0 || results2.length > 0) ? (
-        <div className="grid grid-cols-2 gap-4">
-          <div><div className="text-xs font-semibold text-[#9b9a97] uppercase tracking-wider mb-2">Versión A</div><ResultTabs results={results} topic={topic} /></div>
-          <div><div className="text-xs font-semibold text-[#9b9a97] uppercase tracking-wider mb-2">Versión B</div><ResultTabs results={results2} topic={topic} /></div>
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <div className="space-y-2"><div className="text-xs font-bold text-[#9b9a97] uppercase tracking-widest pl-1">Versión A</div><ResultTabs results={results} topic={topic} /></div>
+          <div className="space-y-2"><div className="text-xs font-bold text-[#9b9a97] uppercase tracking-widest pl-1">Versión B</div><ResultTabs results={results2} topic={topic} /></div>
         </div>
       ) : results.length > 0 ? (
         <ResultTabs results={results} topic={topic} />

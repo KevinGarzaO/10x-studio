@@ -100,17 +100,17 @@ export function HistorySection({ onRewrite }: { onRewrite: (topic: string) => vo
                   </div>
                   <div className="text-xs text-[#9b9a97]">{h.wordCount ? `${h.wordCount.toLocaleString()} palabras · ` : ''}{fmtDate(h.date)}</div>
                 </div>
-                <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity flex-wrap justify-end">
+                <div className="flex gap-2 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity flex-wrap justify-end mt-2 sm:mt-0 w-full sm:w-auto border-t sm:border-0 pt-2 sm:pt-0">
                   {substackConnected && hasSubstack && (
                     <button
-                      className="btn btn-ghost btn-sm text-[10px]"
+                      className="btn btn-ghost btn-sm text-[10px] flex-1 sm:flex-none justify-center"
                       onClick={() => setPubModal({ id: h.id, topic: h.topic, platform: h.platforms.find(isSubstackPlatform)! })}
                       disabled={pubState?.id === h.id && pubState.status === 'publishing'}
                     >
                       📰 Publicar
                     </button>
                   )}
-                  <button className="btn btn-secondary btn-sm" onClick={() => onRewrite(h.topic)}>🔄 Regenerar</button>
+                  <button className="btn btn-secondary btn-sm flex-1 sm:flex-none justify-center" onClick={() => onRewrite(h.topic)}>🔄 Regenerar</button>
                   <button className="btn btn-danger btn-sm" onClick={() => deleteHistory(h.id)}>🗑️</button>
                 </div>
               </div>

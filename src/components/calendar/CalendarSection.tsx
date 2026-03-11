@@ -80,37 +80,39 @@ export function CalendarSection() {
     for (let i = 1; i <= rem; i++) cells.push(new Date(y, m + 1, i))
 
     return (
-      <div>
-        <div className="grid grid-cols-7 gap-1 mb-1">
-          {DAYS.map(d => <div key={d} className="text-center text-xs font-semibold text-[#9b9a97] uppercase tracking-wider py-1">{d}</div>)}
+        <div className="overflow-x-auto no-scrollbar -mx-4 px-4 sm:mx-0 sm:px-0">
+          <div className="min-w-[600px] sm:min-w-0">
+            <div className="grid grid-cols-7 gap-1 mb-1">
+              {DAYS.map(d => <div key={d} className="text-center text-xs font-semibold text-[#9b9a97] uppercase tracking-wider py-1">{d}</div>)}
+            </div>
+            <div className="grid grid-cols-7 gap-1">
+              {cells.map((date, i) => {
+                const ds = dateStr(date)
+                const isCurrentMonth = date.getMonth() === m
+                const isToday = ds === today
+                const dayEvents = allEvents.filter(e => e.date === ds)
+                return (
+                  <div key={i}
+                    onClick={() => openAddEvent(ds)}
+                    className={`min-h-[80px] rounded-lg p-1.5 cursor-pointer border transition-all group ${isToday ? 'border-gold-DEFAULT bg-black/[0.04]' : 'border-[#e9e9e7] bg-white hover:border-gold-light'} ${!isCurrentMonth ? 'opacity-35' : ''}`}>
+                    <div className={`text-xs font-semibold mb-1 ${isToday ? 'text-gold-dark' : 'text-ink'}`}>{date.getDate()}</div>
+                    {dayEvents.map(ev => {
+                      const t = topics.find(t => t.id === ev.topicId)
+                      const isSug = ev.id.startsWith('sug-')
+                      return (
+                        <div key={ev.id}
+                          onClick={e => { e.stopPropagation(); if (!isSug) openEditEvent(ev) }}
+                          className={`text-[10px] px-1.5 py-0.5 rounded mb-0.5 truncate cursor-pointer ${ev.status === 'published' ? 'bg-green-100 text-green-800' : isSug ? 'bg-indigo-50 text-indigo-700 border border-dashed border-indigo-200' : 'bg-yellow-50 text-yellow-800'}`}>
+                          {PLATFORMS[ev.platform]?.icon} {t?.title?.substring(0, 18) || 'Evento'}
+                        </div>
+                      )
+                    })}
+                  </div>
+                )
+              })}
+            </div>
+          </div>
         </div>
-        <div className="grid grid-cols-7 gap-1">
-          {cells.map((date, i) => {
-            const ds = dateStr(date)
-            const isCurrentMonth = date.getMonth() === m
-            const isToday = ds === today
-            const dayEvents = allEvents.filter(e => e.date === ds)
-            return (
-              <div key={i}
-                onClick={() => openAddEvent(ds)}
-                className={`min-h-[80px] rounded-lg p-1.5 cursor-pointer border transition-all group ${isToday ? 'border-gold-DEFAULT bg-black/[0.04]' : 'border-[#e9e9e7] bg-white hover:border-gold-light'} ${!isCurrentMonth ? 'opacity-35' : ''}`}>
-                <div className={`text-xs font-semibold mb-1 ${isToday ? 'text-gold-dark' : 'text-ink'}`}>{date.getDate()}</div>
-                {dayEvents.map(ev => {
-                  const t = topics.find(t => t.id === ev.topicId)
-                  const isSug = ev.id.startsWith('sug-')
-                  return (
-                    <div key={ev.id}
-                      onClick={e => { e.stopPropagation(); if (!isSug) openEditEvent(ev) }}
-                      className={`text-[10px] px-1.5 py-0.5 rounded mb-0.5 truncate cursor-pointer ${ev.status === 'published' ? 'bg-green-100 text-green-800' : isSug ? 'bg-indigo-50 text-indigo-700 border border-dashed border-indigo-200' : 'bg-yellow-50 text-yellow-800'}`}>
-                      {PLATFORMS[ev.platform]?.icon} {t?.title?.substring(0, 18) || 'Evento'}
-                    </div>
-                  )
-                })}
-              </div>
-            )
-          })}
-        </div>
-      </div>
     )
   }
 

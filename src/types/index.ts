@@ -182,3 +182,53 @@ export interface PublishResult {
   id?: string
   error?: string
 }
+
+// ── New Relational Schema Types ──────────────────────────
+
+export interface UserRow {
+  id: string
+  substack_user_id: string
+  substack_slug: string
+  name: string
+  handle: string
+  photo_url: string
+  bio: string
+  publication_id: string
+  subdomain: string
+  subscriber_count: number
+  created_at: string
+  updated_at: string
+}
+
+export interface CookieRow {
+  id: string
+  user_id: string
+  substack_sid: string
+  substack_lli: string
+  visit_id: string
+  expires_at: string
+  created_at: string
+  updated_at: string
+}
+
+export interface PostRow {
+  id: string
+  user_id: string
+  post_id: string
+  title: string
+  subtitle: string
+  cover_image_url: string
+  published_at: string
+  audience: string
+  is_published: boolean
+  synced_at: string
+}
+
+export interface StatRow {
+  id: string
+  user_id: string
+  subscriber_count: number
+  follower_count: number
+  date: string
+  created_at: string
+}

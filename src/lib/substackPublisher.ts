@@ -2,29 +2,31 @@ import { db } from './storage'
 
 const BYLINE_ID = 280221962
 
-// Build Cookie header from all stored Substack cookies
+// Build Cookie header from relational tables
 export async function buildCookieHeader(): Promise<string> {
-  const settings = await db.settings.get() as any
-  const cookies  = settings.substackCookies as Record<string, string> | undefined
+  const user = await db.substack.user.get()
+  if (!user) return ''
 
-  if (cookies && Object.keys(cookies).length > 0) {
-    return Object.entries(cookies).map(([k, v]) => `${k}=${v}`).join('; ')
-  }
-  // Fallback for legacy single cookie
-  if (settings.substackCookie) return `substack.sid=${settings.substackCookie}`
-  return ''
+  const cookies = await db.substack.cookies.get(user.id)
+  if (!cookies) return ''
+
+  const parts = []
+  if (cookies.substack_sid) parts.push(`substack.sid=${cookies.substack_sid}`)
+  if (cookies.substack_lli) parts.push(`substack.lli=${cookies.substack_lli}`)
+  if (cookies.visit_id)    parts.push(`visit_id=${cookies.visit_id}`)
+  
+  return parts.join('; ')
 }
 
 export function substackHeaders(cookieHeader: string, pubSlug?: string) {
   const base = pubSlug
     ? `https://${pubSlug}.substack.com`
-    : 'https://substack.com'
+    : 'https://transformateck.substack.com'
   return {
     'Content-Type':   'application/json',
     'Cookie':         cookieHeader,
     'User-Agent':     'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
     'Accept':         'application/json',
-    'Accept-Language': 'es-MX,es;q=0.9,en;q=0.8',
     'Origin':         base,
     'Referer':        `${base}/`,
   }
@@ -66,13 +68,35 @@ function mdToProseMirror(md: string): object[] {
 
 export async function publishNote(content: string): Promise<{ id: string; url: string | null }> {
   const cookie  = await buildCookieHeader()
-  const headers = substackHeaders(cookie)
+  const user    = await db.substack.user.get()
+  const pubSlug = user?.subdomain || 'transformateck'
+  const headers = substackHeaders(cookie, pubSlug)
 
-  const res = await fetch('https://substack.com/api/v1/comment/feed', {
+  const bodyJson = {
+    type: "doc",
+    attrs: { schemaVersion: "v1" },
+    content: [
+      {
+        type: "paragraph",
+        content: [
+          {
+            type: "text",
+            text: content
+          }
+        ]
+      }
+    ]
+  }
+
+  const res = await fetch(`https://${pubSlug}.substack.com/api/v1/comment/feed`, {
     method: 'POST',
     headers,
-    body: JSON.stringify({ body: content, type: 'feed' }),
+    body: JSON.stringify({ 
+      bodyJson,
+      replyMinimumRole: "everyone"
+    }),
   })
+  
   if (!res.ok) {
     const txt = await res.text()
     throw new Error(`Substack ${res.status}: ${txt.slice(0, 200)}`)
@@ -89,11 +113,10 @@ export async function publishArticle(
 ): Promise<{ id: string; scheduled: boolean }> {
   const cookie = await buildCookieHeader()
 
-  // Get publication subdomain
-  const settings = await db.settings.get() as any
-  let pubSlug: string = settings.substackSubdomain
+  // Get publication subdomain from relational DB
+  const user = await db.substack.user.get()
+  let pubSlug = user?.subdomain
 
-  // Fallback: fetch from profile
   if (!pubSlug) {
     const meRes = await fetch('https://substack.com/api/v1/subscriber/me', {
       headers: substackHeaders(cookie),
@@ -101,6 +124,11 @@ export async function publishArticle(
     if (!meRes.ok) throw new Error(`No se pudo obtener perfil: ${meRes.status}`)
     const me = await meRes.json()
     pubSlug = me?.primaryPublication?.subdomain
+    
+    // Proactively save back to user row if found
+    if (user && pubSlug) {
+      await db.substack.user.upsert({ id: user.id, subdomain: pubSlug })
+    }
   }
 
   if (!pubSlug) throw new Error('No se encontró tu publicación de Substack')

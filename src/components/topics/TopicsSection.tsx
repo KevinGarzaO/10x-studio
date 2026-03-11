@@ -91,25 +91,25 @@ export function TopicsSection({ onWriteTopic }: Props) {
   }
 
   return (
-    <div className="max-w-4xl mx-auto pb-20">
-      <div className="flex items-end justify-between mb-8 border-b border-[#e9e9e7] pb-4">
+    <div className="max-w-4xl mx-auto pb-20 px-4 sm:px-0">
+      <div className="flex items-end justify-between mb-8 flex-wrap gap-4 border-b border-[#e9e9e7] pb-4">
         <div>
-          <h1 className="text-[28px] font-bold tracking-tight text-black flex items-center gap-3">
+          <h1 className="text-2xl md:text-[28px] font-bold tracking-tight text-black flex items-center gap-3">
             <i className="pi pi-lightbulb text-[#9b9a97]"></i> Banco de Temas
           </h1>
           <p className="text-sm text-[#9b9a97] mt-1">Gestiona tus ideas de contenido</p>
         </div>
-        <div className="flex gap-2 flex-wrap">
-          <button className="btn btn-ghost btn-sm" onClick={() => { setEditingCampaign(null); setCampaignModal(true) }}>🏷️ Campaña</button>
-          <label className="btn btn-ghost btn-sm cursor-pointer">📥 CSV <input type="file" accept=".csv" className="hidden" onChange={handleImportCSV} /></label>
-          <button className="btn btn-ghost btn-sm" onClick={handleSuggest} disabled={suggesting}>{suggesting ? '⏳ Generando...' : '✦ Sugerir IA'}</button>
-          <button className="btn btn-primary btn-sm" onClick={() => { setEditingTopic(null); setTopicModal(true) }}>+ Agregar</button>
+        <div className="flex gap-2 flex-wrap w-full md:w-auto">
+          <button className="btn btn-ghost btn-sm flex-1 md:flex-none" onClick={() => { setEditingCampaign(null); setCampaignModal(true) }}>🏷️ Campaña</button>
+          <label className="btn btn-ghost btn-sm cursor-pointer flex-1 md:flex-none justify-center">📥 CSV <input type="file" accept=".csv" className="hidden" onChange={handleImportCSV} /></label>
+          <button className="btn btn-ghost btn-sm flex-1 md:flex-none" onClick={handleSuggest} disabled={suggesting}>{suggesting ? '⏳...' : '✦ Sugerir'}</button>
+          <button className="btn btn-primary btn-sm flex-1 md:flex-none justify-center" onClick={() => { setEditingTopic(null); setTopicModal(true) }}>+ Agregar</button>
         </div>
       </div>
 
       {/* Campaigns strip */}
       {campaigns.length > 0 && (
-        <div className="flex gap-2 mb-4 flex-wrap">
+        <div className="flex gap-2 mb-4 overflow-x-auto no-scrollbar pb-2 whitespace-nowrap">
           <button onClick={() => setCampaignFilter('all')}
             className={`px-3 py-1 rounded text-xs font-medium border transition-all ${campaignFilter === 'all' ? 'border-black text-black bg-black/5' : 'border-[#e9e9e7] text-[#9b9a97] hover:border-[#ccc]'}`}>
             Todas
@@ -128,21 +128,15 @@ export function TopicsSection({ onWriteTopic }: Props) {
 
       {/* Toolbar */}
       <div className="flex gap-3 mb-5 flex-wrap items-center">
-        <div className="relative flex-1 min-w-[180px]">
+        <div className="relative flex-1 min-w-[200px]">
           <i className="pi pi-search absolute left-3 top-1/2 -translate-y-1/2 text-stone-400 text-sm pointer-events-none" />
           <input type="text" value={search} onChange={e => setSearch(e.target.value)} placeholder="Buscar temas..." className="input !pl-9" />
         </div>
-        <div className="flex gap-1.5 flex-wrap">
+        <div className="flex gap-1.5 overflow-x-auto no-scrollbar pb-2 md:pb-0 w-full md:w-auto">
           {(['all', 'idea', 'ready', 'writing', 'done'] as const).map(f => (
             <button key={f} onClick={() => setStatusFilter(f)}
-              className={`px-3 py-1.5 rounded-lg text-xs font-bold border transition-all ${statusFilter === f ? 'border-stone-900 text-stone-900 bg-stone-900/5 shadow-sm' : 'border-[#e9e9e7] text-[#9b9a97] hover:border-[#ccc]'}`}>
+              className={`px-3 py-1.5 rounded-lg text-xs font-bold border transition-all whitespace-nowrap ${statusFilter === f ? 'border-stone-900 text-stone-900 bg-stone-900/5 shadow-sm' : 'border-[#e9e9e7] text-[#9b9a97] hover:border-[#ccc]'}`}>
               {f === 'all' ? 'Todos' : STATUS_LABELS[f]}
-            </button>
-          ))}
-          {([1, 2, 3] as TopicPriority[]).map(p => (
-            <button key={p} onClick={() => setPriorityFilter(priorityFilter === p ? 'all' : p)}
-              className={`px-3 py-1.5 rounded-lg text-xs font-bold border transition-all ${priorityFilter === p ? 'border-stone-900 text-stone-900 bg-stone-900/5 shadow-sm' : 'border-[#e9e9e7] text-[#9b9a97]'}`}>
-              {PRIORITY_LABELS[p].label}
             </button>
           ))}
         </div>
@@ -156,50 +150,52 @@ export function TopicsSection({ onWriteTopic }: Props) {
           <button className="btn btn-primary" onClick={() => setTopicModal(true)}>+ Agregar tema</button>
         </div>
       ) : (
-        <div className="flex flex-col gap-2">
+        <div className="flex flex-col gap-3">
           {filtered.map(t => {
             const donePlats = new Set(history.filter(h => h.topicId === t.id || h.topic.toLowerCase() === t.title.toLowerCase()).flatMap(h => h.platforms))
             const campaign  = campaigns.find(c => c.id === t.campaignId)
             return (
-              <div key={t.id} className="bg-white border border-[#e9e9e7] rounded-xl px-4 py-3 flex items-center gap-3 group hover:bg-[#f7f7f5] hover:shadow-md hover:-translate-y-0.5 transition-all duration-200 shadow-sm">
-                <div className={`w-2 h-2 rounded-full flex-shrink-0 ${STATUS_DOT[t.status || 'idea']}`} />
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2">
-                    <span className="text-sm font-semibold truncate text-[#37352f]">{t.title}</span>
-                    {campaign && <span className="text-[10px] px-2 py-0.5 rounded font-medium" style={{ background: campaign.color + '18', color: campaign.color }}>{campaign.name}</span>}
+              <div key={t.id} className="bg-white border border-[#e9e9e7] rounded-xl px-4 py-4 flex flex-col sm:flex-row sm:items-center gap-3 group hover:bg-[#f7f7f5] hover:shadow-md hover:-translate-y-0.5 transition-all duration-200 shadow-sm relative">
+                <div className={`hidden sm:block w-2 h-2 rounded-full flex-shrink-0 ${STATUS_DOT[t.status || 'idea']}`} />
+                <div className="flex-1 min-w-0 pr-10 sm:pr-0">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="text-sm font-bold text-[#37352f] leading-tight">{t.title}</span>
+                    {campaign && <span className="text-[10px] px-2 py-0.5 rounded font-black uppercase tracking-wider" style={{ background: campaign.color + '18', color: campaign.color }}>{campaign.name}</span>}
                   </div>
-                  <div className="flex gap-1 mt-1 flex-wrap items-center">
-                    {t.tags.map(tg => <span key={tg} className="text-xs bg-[#f1f1ef] text-[#9b9a97] px-2 py-0.5 rounded">{tg}</span>)}
-                    {t.seoKeyword && <span className="text-[10px] bg-blue-50 text-blue-600 px-2 py-0.5 rounded">🔍 {t.seoKeyword}</span>}
-                    {t.seoVolume  && <span className="text-[10px] bg-purple-50 text-purple-600 px-2 py-0.5 rounded">📊 {t.seoVolume}</span>}
+                  <div className="flex gap-1.5 mt-2 flex-wrap items-center">
+                    <span className={`sm:hidden w-2 h-2 rounded-full ${STATUS_DOT[t.status || 'idea']}`} />
+                    <span className={`${STATUS_BADGE[t.status || 'idea']} !text-[10px] sm:!text-xs`}>{STATUS_LABELS[t.status || 'idea']}</span>
+                    {t.tags.map(tg => <span key={tg} className="text-[10px] bg-[#f1f1ef] text-[#9b9a97] px-2 py-0.5 rounded font-medium">{tg}</span>)}
+                    {t.seoKeyword && <span className="text-[10px] bg-blue-50 text-blue-600 px-2 py-0.5 rounded font-bold">🔍 {t.seoKeyword}</span>}
+                    {t.priority && <span className={`badge border !text-[9px] font-black uppercase tracking-tighter ${PRIORITY_LABELS[t.priority].color}`}>{PRIORITY_LABELS[t.priority].label}</span>}
                   </div>
                 </div>
-                <div className="flex gap-1 items-center">
-                  {ALL_PLATFORMS.map(p => (
-                    <span key={p} title={`${PLATFORMS[p].label} — ${donePlats.has(p) ? 'Generado' : 'Sin generar'}`}
-                      className="text-base" style={{ opacity: donePlats.has(p) ? 1 : 0.18, filter: donePlats.has(p) ? 'none' : 'grayscale(1)' }}>
-                      {PLATFORMS[p].icon}
-                    </span>
-                  ))}
-                  {donePlats.size > 0 && <span className="text-xs text-green-600 ml-1">{donePlats.size}/5</span>}
+                <div className="flex items-center justify-between sm:justify-end gap-4 mt-2 sm:mt-0 border-t sm:border-0 pt-3 sm:pt-0">
+                  <div className="flex gap-1.5 items-center">
+                    {ALL_PLATFORMS.map(p => (
+                      <span key={p} title={`${PLATFORMS[p].label} — ${donePlats.has(p) ? 'Generado' : 'Sin generar'}`}
+                        className="text-base" style={{ opacity: donePlats.has(p) ? 1 : 0.15, filter: donePlats.has(p) ? 'none' : 'grayscale(1)' }}>
+                        {PLATFORMS[p].icon}
+                      </span>
+                    ))}
+                    {donePlats.size > 0 && <span className="text-[10px] font-bold text-green-600 ml-0.5">{donePlats.size}/5</span>}
+                  </div>
+                  <div className="flex gap-1 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
+                    <button className="w-8 h-8 rounded-lg bg-black text-white flex items-center justify-center hover:bg-stone-800 transition-all font-bold" onClick={() => onWriteTopic({ title: t.title, notes: t.notes })}>✍️</button>
+                    <button className="w-8 h-8 rounded-lg bg-stone-100 text-stone-600 flex items-center justify-center hover:bg-stone-200" onClick={() => setResearchTopic(t)}>🔬</button>
+                    <button className="w-8 h-8 rounded-lg bg-stone-100 text-stone-600 flex items-center justify-center hover:bg-stone-200" onClick={() => { setEditingTopic(t); setTopicModal(true) }}>✏️</button>
+                    <button className="w-8 h-8 rounded-lg bg-red-50 text-red-500 flex items-center justify-center hover:bg-red-100" onClick={() => deleteTopic(t.id)}>🗑️</button>
+                  </div>
                 </div>
-                {t.priority && <span className={`badge border text-[10px] ${PRIORITY_LABELS[t.priority].color}`}>{PRIORITY_LABELS[t.priority].label}</span>}
-                <span className={STATUS_BADGE[t.status || 'idea']}>{STATUS_LABELS[t.status || 'idea']}</span>
-                <span className="text-xs text-[#9b9a97] font-mono whitespace-nowrap">{fmtDate(t.created)}</span>
-                <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                  <button className="btn btn-primary btn-sm" title="Escribir" onClick={() => onWriteTopic({ title: t.title, notes: t.notes })}>✍️</button>
-                  <button className="btn btn-ghost btn-sm" title="Investigar" onClick={() => setResearchTopic(t)}>🔬</button>
-                  <button className="btn btn-ghost btn-sm" title="Editar" onClick={() => { setEditingTopic(t); setTopicModal(true) }}>✏️</button>
-                  <button className="btn btn-danger btn-sm" title="Eliminar" onClick={() => deleteTopic(t.id)}>🗑️</button>
-                </div>
+                <span className="absolute top-4 right-4 sm:relative sm:top-0 sm:right-0 text-[10px] text-[#9b9a97] font-mono whitespace-nowrap opacity-60">{fmtDate(t.created)}</span>
               </div>
             )
           })}
         </div>
       )}
 
-      {topicModal    && <TopicModal open topic={editingTopic} campaigns={campaigns} onClose={() => { setTopicModal(false); setEditingTopic(null) }} onSave={handleSaveTopic} />}
-      {campaignModal && <CampaignModal open campaign={editingCampaign} onClose={() => { setCampaignModal(false); setEditingCampaign(null) }} onSave={handleSaveCampaign} onDelete={editingCampaign ? () => { deleteCampaign(editingCampaign.id); setCampaignModal(false) } : undefined} />}
+      {topicModal    && <TopicModal open={true} topic={editingTopic} campaigns={campaigns} onClose={() => { setTopicModal(false); setEditingTopic(null) }} onSave={handleSaveTopic} />}
+      {campaignModal && <CampaignModal open={true} campaign={editingCampaign} onClose={() => { setCampaignModal(false); setEditingCampaign(null) }} onSave={handleSaveCampaign} onDelete={editingCampaign ? () => { deleteCampaign(editingCampaign.id); setCampaignModal(false) } : undefined} />}
       {researchTopic && <ResearchModal topic={researchTopic} apiKey={settings.apiKey} niche={settings.niche} audience={settings.audience} onClose={() => setResearchTopic(null)} onSave={handleResearchSave} />}
     </div>
   )

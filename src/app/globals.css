@@ -139,12 +139,12 @@
   border-radius: 4px;
 }
 
-.scrollbar-hide {
+.scrollbar-hide, .no-scrollbar {
   scrollbar-width: none;
   -ms-overflow-style: none;
 }
 
-.scrollbar-hide::-webkit-scrollbar {
+.scrollbar-hide::-webkit-scrollbar, .no-scrollbar::-webkit-scrollbar {
   display: none;
 }
 
