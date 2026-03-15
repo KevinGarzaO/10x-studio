@@ -1,0 +1,61 @@
+{
+  "apiKey": "",
+  "niche": "",
+  "audience": "",
+  "substackSubdomain": "transformateck",
+  "substackCookies": {
+    "substack.sid": "s%3A6j5o20Z59qYJExNk1M7buBWTKw3ajbdk.quOE%2Bz9aS0gyH6fAWe3SGG8ibA8VN2rbn8e10x2Q3HY",
+    "__cf_bm": "KjD24hMO06hgkpZtik.t05OBXFwIyeJc7FNNsdWVeRc-1772856884-1.0.1.1-blMQenijm0DCx4mzejYfJinen1hbPbs17IC58cTN21Lu6Ma7dtIQQhqpYCaY0GbO7WQVIlJr1HStmx1w.v2JOBdQjaP0tg5rU_vlipl2tgk",
+    "substack.lli": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOjI4MDIyMTk2MiwiaWF0IjoxNzcyODU3NjIyLCJleHAiOjE3NzU0NDk2MjIsImF1ZCI6Imxpa2VseS1sb2dnZWQtaW4ifQ.PQKVLXqjh7AGHZ6mcQDvgoAiCPy2MoVBtNUyJwfX55s",
+    "visit_id": "%7B%22id%22%3A%22e6e2fd94-98f8-4892-aa6b-b3c643d3880a%22%2C%22timestamp%22%3A%222026-03-07T04%3A27%3A02.695Z%22%7D",
+    "ajs_anonymous_id": "%22cd48dc72-4d77-46c9-9633-83ff887d8b57%22"
+  },
+  "substackCookie": "s%3A6j5o20Z59qYJExNk1M7buBWTKw3ajbdk.quOE%2Bz9aS0gyH6fAWe3SGG8ibA8VN2rbn8e10x2Q3HY",
+  "substackPublication": "Transformateck",
+  "substackProfile": {
+    "name": "Kevin Garza",
+    "handle": "kevingarza",
+    "bio": "🧠 Construyo productos y estrategias con Inteligencia Artificial para negocios reales. ✍️Escribo un newsletter diario sobre IA, tecnología y crecimiento para emprendedores y builders. 🚀 Founder Transformateck.",
+    "email": "",
+    "avatar": "https://substack-post-media.s3.amazonaws.com/public/images/1503e71c-e3a8-4a54-b268-19722a85278f_800x800.png",
+    "pubLogo": "https://substack-post-media.s3.amazonaws.com/public/images/1503e71c-e3a8-4a54-b268-19722a85278f_800x800.png",
+    "subCount": 596,
+    "followerCount": 599,
+    "links": [
+      {
+        "id": 4129213,
+        "value": "https://x.com/kgarzaortiz",
+        "url": "https://x.com/kgarzaortiz",
+        "type": "twitter",
+        "label": "X"
+      },
+      {
+        "id": 4112351,
+        "value": "https://www.linkedin.com/in/rusogarzao/",
+        "url": "https://www.linkedin.com/in/rusogarzao/",
+        "type": "linkedin",
+        "label": "LinkedIn"
+      },
+      {
+        "id": 4112348,
+        "value": "https://transformateck.com/",
+        "url": "https://transformateck.com/",
+        "type": null,
+        "label": "Website"
+      }
+    ],
+    "pubId": 7999333,
+    "primaryPublication": {
+      "name": "Transformateck",
+      "subdomain": "transformateck"
+    },
+    "connectedAt": "2026-03-07T04:27:08.649Z",
+    "expiresAt": "2026-05-01T04:27:08.649Z"
+  },
+  "textModel": "deepseek",
+  "imgModel": "nanobanana",
+  "apiKeys": {
+    "claude": ""
+  },
+  "modelVersions": {}
+}

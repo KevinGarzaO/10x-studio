@@ -1,0 +1,133 @@
+import { Request, Response } from 'express'
+import { supabase } from '../services/supabase.service'
+import { SubstackService } from '../services/substack.service'
+
+export const getProfile = async (req: Request, res: Response) => {
+  try {
+    const { data, error } = await supabase.from('users').select('*').single()
+    if (error) return res.status(404).json({ error: 'Perfil no encontrado' })
+    res.json(data)
+  } catch {
+    res.status(500).json({ error: 'Error al obtener perfil' })
+  }
+}
+
+export const getPosts = async (req: Request, res: Response) => {
+  try {
+    const { data: user } = await supabase.from('users').select('id').single()
+    if (!user) return res.status(404).json({ error: 'Usuario no encontrado' })
+
+    const { data, error } = await supabase
+      .from('posts')
+      .select('*')
+      .eq('user_id', user.id)
+      .order('published_at', { ascending: false })
+    
+    if (error) throw error
+    res.json(data)
+  } catch {
+    res.status(500).json({ error: 'Error al obtener posts' })
+  }
+}
+
+export const getSubscribers = async (req: Request, res: Response) => {
+  try {
+    const { data: user } = await supabase.from('users').select('id').single()
+    if (!user) return res.status(404).json({ error: 'Usuario no encontrado' })
+
+    const { data, error } = await supabase
+      .from('subscribers')
+      .select('*')
+      .eq('user_id', user.id)
+      .order('synced_at', { ascending: false })
+    
+    if (error) throw error
+    res.json({ subscribers: data, total: data.length })
+  } catch {
+    res.status(500).json({ error: 'Error al obtener suscriptores' })
+  }
+}
+
+export const getStats = async (req: Request, res: Response) => {
+  try {
+    const { data: user } = await supabase.from('users').select('id').single()
+    if (!user) return res.status(404).json({ error: 'Usuario no encontrado' })
+
+    const { data, error } = await supabase
+      .from('stats')
+      .select('*')
+      .eq('user_id', user.id)
+      .order('date', { ascending: false })
+      .limit(1)
+      .single()
+    
+    if (error) throw error
+    res.json(data)
+  } catch {
+    res.status(500).json({ error: 'Error al obtener estadísticas' })
+  }
+}
+
+export const createNote = async (req: Request, res: Response) => {
+  try {
+    const { data: user } = await supabase.from('users').select('id').single()
+    if (!user) return res.status(404).json({ error: 'Usuario no encontrado' })
+
+    const { content } = req.body
+    const result = await SubstackService.publishNote(user.id, content)
+    res.json(result)
+  } catch {
+    res.status(500).json({ error: 'Error al crear nota' })
+  }
+}
+
+export const createDraft = async (req: Request, res: Response) => {
+  try {
+    const { data: user } = await supabase.from('users').select('id').single()
+    if (!user) return res.status(404).json({ error: 'Usuario no encontrado' })
+
+    const result = await SubstackService.createDraft(user.id, req.body)
+    res.json(result)
+  } catch {
+    res.status(500).json({ error: 'Error al crear draft' })
+  }
+}
+
+export const updateDraft = async (req: Request, res: Response) => {
+  try {
+    const { data: user } = await supabase.from('users').select('id').single()
+    if (!user) return res.status(404).json({ error: 'Usuario no encontrado' })
+
+    const { id } = req.params
+    const result = await SubstackService.updateDraft(user.id, id, req.body)
+    res.json(result)
+  } catch {
+    res.status(500).json({ error: 'Error al actualizar draft' })
+  }
+}
+
+export const scheduleDraft = async (req: Request, res: Response) => {
+  try {
+    const { data: user } = await supabase.from('users').select('id').single()
+    if (!user) return res.status(404).json({ error: 'Usuario no encontrado' })
+
+    const { id, scheduleAt } = req.body
+    const result = await SubstackService.scheduleDraft(user.id, id, scheduleAt)
+    res.json(result)
+  } catch {
+    res.status(500).json({ error: 'Error al programar draft' })
+  }
+}
+
+export const addSubscriber = async (req: Request, res: Response) => {
+  try {
+    const { data: user } = await supabase.from('users').select('id').single()
+    if (!user) return res.status(404).json({ error: 'Usuario no encontrado' })
+
+    const { email } = req.body
+    const result = await SubstackService.addSubscriber(user.id, email)
+    res.json(result)
+  } catch {
+    res.status(500).json({ error: 'Error al añadir suscriptor' })
+  }
+}
