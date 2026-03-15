@@ -36,8 +36,6 @@ export function SubstackSection() {
   const [isRefreshing, setIsRefreshing] = useState(false)
   const [hasAutoRefreshed, setHasAutoRefreshed] = useState(false)
 
-  useEffect(() => { loadProfile() }, [substackConnected, loadProfile])
-
   const loadProfile = useCallback(async () => {
     try {
       const data = await api<any>('/api/substack/connect')
@@ -63,6 +61,8 @@ export function SubstackSection() {
       setIsRefreshing(false)
     }
   }, [loadProfile])
+
+  useEffect(() => { loadProfile() }, [substackConnected, loadProfile])
 
   // Auto-refresh on mount (F5 / First visit)
   useEffect(() => {
