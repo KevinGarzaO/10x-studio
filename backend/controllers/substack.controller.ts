@@ -4,10 +4,27 @@ import { SubstackService } from '../services/substack.service'
 
 export const getProfile = async (req: Request, res: Response) => {
   try {
-    const { data, error } = await supabase.from('users').select('*').single()
+    const { data: user, error } = await supabase
+      .from('users')
+      .select(`
+        *,
+        cookies (
+          expires_at
+        )
+      `)
+      .single()
+
     if (error) return res.status(404).json({ error: 'Perfil no encontrado' })
-    res.json(data)
-  } catch {
+    
+    // Devolvemos el perfil con la fecha de expiración de la tabla cookies
+    const profile = {
+      ...user,
+      expires_at: user.cookies?.[0]?.expires_at || null
+    }
+
+    res.json(profile)
+  } catch (err) {
+    console.error('[SubstackController] Error en getProfile:', err)
     res.status(500).json({ error: 'Error al obtener perfil' })
   }
 }
@@ -197,33 +214,39 @@ export const upsertCookies = async (req: Request, res: Response) => {
     
     await supabase.from('cookies').upsert(cookieData, { onConflict: 'user_id' })
 
-    // 3. Sincronización INMEDIATA (no esperar al cron)
+    // 3. Sincronización INMEDIATA (no esperar al cron para lo esencial)
     const finalSlug = user.substack_slug || profile?.slug || profile?.handle || ''
     const substackUserId = String(profile?.id || '')
 
     console.log(`[SubstackController] Iniciando sincronización inmediata para ${finalSlug}...`)
     
-    // Ejecutamos en segundo plano
-    const syncInBg = async () => {
-      try {
-        await SubstackService.syncProfile(user!.id, substackUserId, finalSlug)
-        await SubstackService.syncStats(user!.id, finalSlug)
-        await SubstackService.syncPosts(user!.id, finalSlug)
-        await SubstackService.syncSubscribers(user!.id, finalSlug)
-        console.log(`[SubstackController] Sincronización inmediata completada con éxito.`)
-      } catch (err) {
-        console.error(`[SubstackController] Error en sincronización inmediata:`, err)
+    try {
+      // Await essential data for the first response
+      await SubstackService.syncProfile(user.id, substackUserId, finalSlug)
+      await SubstackService.syncStats(user.id, finalSlug)
+      
+      // Background the heavier syncs
+      const syncRemaining = async () => {
+        try {
+          await SubstackService.syncPosts(user!.id, finalSlug)
+          await SubstackService.syncSubscribers(user!.id, finalSlug)
+          console.log(`[SubstackController] Sincronización de fondo completada.`)
+        } catch (err) {
+          console.error(`[SubstackController] Error en sincronización de fondo:`, err)
+        }
       }
+      syncRemaining()
+    } catch (err) {
+      console.error(`[SubstackController] Error en sincronización inicial:`, err)
     }
-    syncInBg()
 
-    // 4. Devolver datos enriquecidos para la extensión
+    // 4. Devolver datos enriquecidos GARANTIZADOS para la extensión
     const { data: finalUser } = await supabase.from('users').select('*').eq('id', user.id).single()
 
     res.json({ 
       ok: true, 
       publication: finalUser?.subdomain || profile?.primaryPublication?.subdomain, 
-      name: finalUser?.name || profile?.primaryPublication?.name || profile?.name,
+      name: finalUser?.publication_name || finalUser?.name || profile?.primaryPublication?.name || profile?.name,
       avatar: finalUser?.photo_url || profile?.photo_url,
       subCount: finalUser?.subscriber_count || profile?.primaryPublication?.subscriber_count || 0,
       expiresAt: expiresAt.toISOString()

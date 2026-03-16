@@ -55,6 +55,7 @@ export class SubstackService {
     const extraFields: any = {
       follower_count: profile.followerCount || 0,
       publication_logo: profile.primaryPublication?.logo_url,
+      publication_name: profile.primaryPublication?.name, // Nueva columna
       hero_text: profile.primaryPublication?.hero_text,
       social_links: profile.userLinks || []
     }

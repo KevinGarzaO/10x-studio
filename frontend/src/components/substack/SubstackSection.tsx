@@ -13,6 +13,7 @@ interface SubstackProfile {
   subCount: number; followerCount: number; connectedAt: string; expiresAt: string;
   links: { url: string; type: string; label: string }[];
   pubLogo?: string;
+  publication_name?: string;
   primaryPublication?: { subdomain: string; name: string };
 }
 
@@ -37,7 +38,6 @@ export function SubstackSection() {
     try {
       const sub = await api<any>('/api/substack/profile')
       if (sub && !sub.error) {
-        const isPubTitle = sub.name?.toLowerCase().includes('transformateck') || !sub.substack_slug;
         setProfile({
           name: sub.name || '',
           handle: sub.handle || '',
@@ -50,9 +50,10 @@ export function SubstackSection() {
           expiresAt: sub.expires_at || sub.updated_at || '', 
           links: sub.social_links || [],
           pubLogo: sub.publication_logo || '',
+          publication_name: sub.publication_name || '',
           primaryPublication: { 
             subdomain: sub.substack_slug || sub.subdomain || '', 
-            name: sub.name || sub.substack_slug || '' 
+            name: sub.publication_name || sub.name || sub.substack_slug || '' 
           }
         })
       }
