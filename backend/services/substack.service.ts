@@ -40,23 +40,27 @@ export class SubstackService {
     
     const profile = await res.json()
     
+    // Extract publication info from the new array structure if primaryPublication is missing
+    const pubUser = profile.publicationUsers?.find((pu: any) => pu.is_primary) || profile.publicationUsers?.[0]
+    const pub = profile.primaryPublication || pubUser?.publication
+
     const updatedUser: any = {
       name: profile.name || profile.display_name,
       handle: profile.handle,
       photo_url: profile.photo_url || profile.profile_photo_url,
       bio: profile.bio,
       substack_slug: profile.slug,
-      publication_id: String(profile.primaryPublication?.id || ''),
-      publication_name: profile.primaryPublication?.name || '',
-      subdomain: profile.primaryPublication?.subdomain || '',
-      subscriber_count: profile.subscriberCountNumber || profile.primaryPublication?.subscriber_count || 0,
+      publication_id: String(pub?.id || ''),
+      publication_name: pub?.name || '',
+      subdomain: pub?.subdomain || '',
+      subscriber_count: profile.subscriberCountNumber || pub?.subscriber_count || 0,
       updated_at: new Date().toISOString()
     }
 
     const extraFields: any = {
       follower_count: profile.followerCount || 0,
-      publication_logo: profile.primaryPublication?.logo_url,
-      hero_text: profile.primaryPublication?.hero_text,
+      publication_logo: pub?.logo_url,
+      hero_text: pub?.hero_text,
       social_links: profile.userLinks || []
     }
 
