@@ -28,8 +28,8 @@ const swaggerOptions = {
       description: 'API de 10X Studio - Migrada de Next.js API Routes'
     },
     servers: [
-      { url: `http://localhost:${PORT}` },
-      { url: 'https://tu-app.railway.app' }
+      { url: '/', description: 'Servidor Actual' },
+      { url: `http://localhost:${PORT}`, description: 'Localhost' }
     ]
   },
   apis: ['./routes/*.ts', './routes/*.js']
