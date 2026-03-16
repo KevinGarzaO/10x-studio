@@ -1,0 +1,10 @@
+{
+  "name": "10x-studio-root",
+  "version": "1.0.0",
+  "description": "Root package to help Railway/Nixpacks detection",
+  "scripts": {
+    "install": "cd backend && npm install",
+    "build": "cd backend && npm run build",
+    "start": "cd backend && npm start"
+  }
+}
