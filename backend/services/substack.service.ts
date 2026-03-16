@@ -33,58 +33,30 @@ export class SubstackService {
     const cookie = await this.getCookieHeader(userId)
     if (!cookie) throw new Error('No cookies found')
 
-    // Intentar primero con el endpoint "me" que es universal para el usuario autenticado
-    const endpoints = [
-      'https://substack.com/api/v1/me',
-      `https://substack.com/api/v1/user/${substackUserId}-${substackSlug}/public_profile/self`,
-      `https://substack.com/api/v1/user/${substackUserId}/public_profile/self`
-    ]
-
-    let profile: any = null
-    let lastError: any = null
-
-    for (const url of endpoints) {
-      try {
-        console.log(`[Substack] Intentando sync con: ${url}`)
-        const res = await fetch(url, { headers: this.getHeaders(cookie) })
-        if (res.ok) {
-          profile = await res.json()
-          console.log(`[Substack] Perfil obtenido con éxito de: ${url}`)
-          break
-        }
-        lastError = `Status ${res.status} para ${url}`
-      } catch (err) {
-        lastError = err
-      }
-    }
-
-    if (!profile) {
-      throw new Error(`No se pudo obtener el perfil de Substack después de varios intentos. Último error: ${lastError}`)
-    }
+    const url = `https://substack.com/api/v1/user/${substackUserId}-${substackSlug}/public_profile/self`
+    const res = await fetch(url, { headers: this.getHeaders(cookie) })
     
-    // El objeto de /api/v1/me o public_profile/self puede variar ligeramente, normalizamos:
-    // En /me a veces los datos están en el nivel raíz o bajo 'user'
-    const userData = profile.user || profile
-    const primaryPub = userData.primaryPublication || profile.primaryPublication
-
+    if (!res.ok) throw new Error(`Substack API error: ${res.status} para ${url}`)
+    
+    const profile = await res.json()
+    
     const updatedUser: any = {
-      name: userData.name || userData.display_name,
-      handle: userData.handle,
-      photo_url: userData.photo_url || userData.profile_photo_url,
-      bio: userData.bio,
-      substack_slug: userData.slug, // Sincronizar el slug correcto (p. ej. kevin-garza)
-      substack_user_id: String(userData.id), // Actualizar el ID por si acaso
-      publication_id: String(primaryPub?.id || ''),
-      subdomain: primaryPub?.subdomain || '',
-      subscriber_count: userData.subscriberCountNumber || primaryPub?.subscriber_count || 0,
+      name: profile.name || profile.display_name,
+      handle: profile.handle,
+      photo_url: profile.photo_url || profile.profile_photo_url,
+      bio: profile.bio,
+      substack_slug: profile.slug,
+      publication_id: String(profile.primaryPublication?.id || ''),
+      subdomain: profile.primaryPublication?.subdomain || '',
+      subscriber_count: profile.subscriberCountNumber || profile.primaryPublication?.subscriber_count || 0,
       updated_at: new Date().toISOString()
     }
 
     const extraFields: any = {
-      follower_count: userData.followerCount || 0,
-      publication_logo: primaryPub?.logo_url,
-      hero_text: primaryPub?.hero_text,
-      social_links: userData.userLinks || []
+      follower_count: profile.followerCount || 0,
+      publication_logo: profile.primaryPublication?.logo_url,
+      hero_text: profile.primaryPublication?.hero_text,
+      social_links: profile.userLinks || []
     }
 
     await supabase.from('users').update({ ...updatedUser, ...extraFields }).eq('id', userId)

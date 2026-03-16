@@ -165,10 +165,41 @@ export const getCookies = async (req: Request, res: Response) => {
 
 export const upsertCookies = async (req: Request, res: Response) => {
   try {
-    const { error } = await supabase.from('cookies').upsert(req.body)
-    if (error) throw error
-    res.json({ ok: true })
-  } catch {
-    res.status(500).json({ error: 'Error al guardar cookies' })
+    const { cookies, profile } = req.body
+    
+    // 1. Guardar Cookies
+    const { data: user } = await supabase.from('users').select('id').single()
+    if (!user) throw new Error('No user found')
+
+    const cookieData = {
+      user_id: user.id,
+      substack_sid: cookies['substack.sid'] || cookies['substack-sid'] || cookies['connect.sid'],
+      substack_lli: cookies['substack.lli'],
+      visit_id: cookies['visit_id'],
+      updated_at: new Date().toISOString()
+    }
+    
+    await supabase.from('cookies').upsert(cookieData, { onConflict: 'user_id' })
+
+    // 2. Guardar Perfil Inicial (enviado por la extensión)
+    // Esto permite que el Cron tenga el substack_user_id y substack_slug desde el minuto 0
+    if (profile) {
+      const initialUser = {
+        name: profile.name,
+        handle: profile.handle,
+        substack_user_id: String(profile.id),
+        substack_slug: profile.slug,
+        photo_url: profile.photo_url,
+        bio: profile.bio,
+        subdomain: profile.primaryPublication?.subdomain,
+        publication_id: String(profile.primaryPublication?.id),
+        updated_at: new Date().toISOString()
+      }
+      await supabase.from('users').update(initialUser).eq('id', user.id)
+    }
+
+    res.json({ ok: true, publication: profile?.primaryPublication?.subdomain, name: profile?.name })
+  } catch (err: any) {
+    res.status(500).json({ error: err.message || 'Error al guardar cookies' })
   }
 }
