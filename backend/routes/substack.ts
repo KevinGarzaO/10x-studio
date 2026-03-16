@@ -119,4 +119,34 @@ router.post('/drafts/schedule', SubstackController.scheduleDraft)
  */
 router.post('/subscriber/add', SubstackController.addSubscriber)
 
+/**
+ * @swagger
+ * /api/substack/publish:
+ *   post:
+ *     summary: Publicar un artículo completo (Draft + Schedule)
+ *     tags: [Substack]
+ *     responses:
+ *       200:
+ *         description: Artículo publicado/programado
+ */
+router.post('/publish', SubstackController.publishArticle)
+
+/**
+ * @swagger
+ * /api/substack/cookies/{userId}:
+ *   get:
+ *     summary: Obtener cookies de un usuario
+ *     tags: [Substack]
+ */
+router.get('/cookies/:userId', SubstackController.getCookies)
+
+/**
+ * @swagger
+ * /api/substack/cookies:
+ *   post:
+ *     summary: Guardar o actualizar cookies
+ *     tags: [Substack]
+ */
+router.post('/cookies', SubstackController.upsertCookies)
+
 export default router

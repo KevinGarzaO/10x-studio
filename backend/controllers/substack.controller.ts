@@ -131,3 +131,40 @@ export const addSubscriber = async (req: Request, res: Response) => {
     res.status(500).json({ error: 'Error al añadir suscriptor' })
   }
 }
+
+export const publishArticle = async (req: Request, res: Response) => {
+  try {
+    const { data: user } = await supabase.from('users').select('id').single()
+    if (!user) return res.status(404).json({ error: 'Usuario no encontrado' })
+
+    const { title, content, subtitle, scheduleAt } = req.body
+    if (!title || !content) return res.status(400).json({ error: 'Título y contenido son requeridos' })
+
+    const result = await SubstackService.publishArticle(user.id, title, content, subtitle, scheduleAt)
+    res.json(result)
+  } catch (err: any) {
+    console.error('[SubstackController] Publish error:', err)
+    res.status(500).json({ error: err.message || 'Error al publicar artículo' })
+  }
+}
+
+export const getCookies = async (req: Request, res: Response) => {
+  try {
+    const { userId } = req.params
+    const { data, error } = await supabase.from('cookies').select('*').eq('user_id', userId).maybeSingle()
+    if (error) throw error
+    res.json(data)
+  } catch {
+    res.status(500).json({ error: 'Error al obtener cookies' })
+  }
+}
+
+export const upsertCookies = async (req: Request, res: Response) => {
+  try {
+    const { error } = await supabase.from('cookies').upsert(req.body)
+    if (error) throw error
+    res.json({ ok: true })
+  } catch {
+    res.status(500).json({ error: 'Error al guardar cookies' })
+  }
+}

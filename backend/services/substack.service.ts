@@ -222,4 +222,56 @@ export class SubstackService {
     if (!res.ok) throw new Error(`Substack API error: ${res.status}`)
     return await res.json()
   }
+
+  static mdToProseMirror(md: string): any[] {
+    const nodes: any[] = []
+    for (const line of md.split('\n')) {
+      const clean = line
+        .replace(/\*\*(.+?)\*\*/g, '$1')
+        .replace(/\*(.+?)\*/g, '$1')
+        .replace(/`(.+?)`/g, '$1')
+      if (!line.trim()) {
+        nodes.push({ type: 'paragraph', attrs: { textAlign: null } })
+      } else if (line.startsWith('# ')) {
+        nodes.push({ type: 'heading', attrs: { level: 1, id: null }, content: [{ type: 'text', text: line.replace(/^# /, '') }] })
+      } else if (line.startsWith('## ')) {
+        nodes.push({ type: 'heading', attrs: { level: 2, id: null }, content: [{ type: 'text', text: line.replace(/^## /, '') }] })
+      } else if (line.startsWith('### ')) {
+        nodes.push({ type: 'heading', attrs: { level: 3, id: null }, content: [{ type: 'text', text: line.replace(/^### /, '') }] })
+      } else if (line.startsWith('- ') || line.startsWith('* ')) {
+        nodes.push({
+          type: 'bullet_list',
+          content: [{
+            type: 'list_item',
+            content: [{
+              type: 'paragraph',
+              attrs: { textAlign: null },
+              content: [{ type: 'text', text: clean.replace(/^[-*] /, '') }],
+            }],
+          }],
+        })
+      } else {
+        nodes.push({ type: 'paragraph', attrs: { textAlign: null }, content: [{ type: 'text', text: clean }] })
+      }
+    }
+    return nodes
+  }
+
+  static async publishArticle(userId: string, title: string, content: string, subtitle = '', scheduleAt: string | null = null) {
+    // 1. Create Draft
+    const draft = await this.createDraft(userId, {
+      draft_title: title.trim(),
+      draft_subtitle: subtitle.trim(),
+      draft_body: JSON.stringify({ type: 'doc', content: this.mdToProseMirror(content) })
+    })
+
+    const draftId = draft.id
+
+    // 2. Schedule
+    const triggerAt = scheduleAt
+      ? new Date(scheduleAt).toISOString()
+      : new Date(Date.now() + 10_000).toISOString()
+
+    return await this.scheduleDraft(userId, String(draftId), triggerAt)
+  }
 }
