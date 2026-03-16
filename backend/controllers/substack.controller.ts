@@ -32,9 +32,13 @@ export const getProfile = async (req: Request, res: Response) => {
       publication_name: primaryPub?.name,
       subdomain: primaryPub?.subdomain,
       publication_logo: primaryPub?.logo_url,
-      publications
+      publications,
+      _debug: {
+        userCount: (await supabase.from('users').select('id', { count: 'exact' })).count,
+        pubCount: (await supabase.from('publications').select('id', { count: 'exact' })).count
+      }
     }
-    console.log('[DEBUG] Final response name:', responseData.name)
+    console.log('[DEBUG] Final response name:', responseData.name, 'Debug Info:', responseData._debug)
     res.json(responseData)
   } catch (err) {
     console.error('[SubstackController] Error en getProfile:', err)
