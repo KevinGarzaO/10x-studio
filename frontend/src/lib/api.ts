@@ -1,4 +1,7 @@
 const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || ''
+if (!BACKEND_URL) {
+  console.error('[API] CRITICAL: NEXT_PUBLIC_BACKEND_URL is not defined! Calls will fail or target local domain.')
+}
 
 export async function api<T>(path: string, options?: RequestInit): Promise<T> {
   const url = path.startsWith('http') ? path : `${BACKEND_URL}${path}`
