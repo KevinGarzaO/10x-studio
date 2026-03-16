@@ -196,6 +196,10 @@ export interface UserRow {
   publication_id: string
   subdomain: string
   subscriber_count: number
+  follower_count?: number
+  publication_logo?: string
+  hero_text?: string
+  social_links?: any[]
   created_at: string
   updated_at: string
 }

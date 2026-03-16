@@ -33,25 +33,54 @@ export class SubstackService {
     const cookie = await this.getCookieHeader(userId)
     if (!cookie) throw new Error('No cookies found')
 
-    const url = `https://substack.com/api/v1/user/${substackUserId}-${substackSlug}/public_profile/self`
-    const res = await fetch(url, { headers: this.getHeaders(cookie) })
+    // Probar primero con el slug guardado, si falla probaremos con el ID solo o el slug del user
+    let url = `https://substack.com/api/v1/user/${substackUserId}-${substackSlug}/public_profile/self`
+    let res = await fetch(url, { headers: this.getHeaders(cookie) })
     
-    if (!res.ok) throw new Error(`Substack API error: ${res.status}`)
+    // Si da 404, intentar con un formato más genérico o solo ID si la API lo permite
+    if (res.status === 404) {
+      console.warn(`[Substack] 404 with slug ${substackSlug}, trying fallback...`)
+      // Algunos perfiles usan un formato diferente o el slug cambió
+      // Intentamos con el formato que el usuario sugirió si es diferente
+      const fallbackUrl = `https://substack.com/api/v1/user/${substackUserId}/public_profile/self`
+      const resFallback = await fetch(fallbackUrl, { headers: this.getHeaders(cookie) })
+      if (resFallback.ok) {
+        res = resFallback
+      } else {
+        throw new Error(`Substack API error: ${res.status} (Tried fallback: ${resFallback.status})`)
+      }
+    } else if (!res.ok) {
+      throw new Error(`Substack API error: ${res.status}`)
+    }
     
     const profile = await res.json()
     
-    const updatedUser = {
+    const updatedUser: any = {
       name: profile.name || profile.display_name,
+      handle: profile.handle,
       photo_url: profile.photo_url || profile.profile_photo_url,
       bio: profile.bio,
+      substack_slug: profile.slug, // Sincronizar el slug correcto
       publication_id: String(profile.primaryPublication?.id),
       subdomain: profile.primaryPublication?.subdomain,
-      subscriber_count: profile.primaryPublication?.subscriber_count,
+      subscriber_count: profile.subscriberCountNumber || profile.primaryPublication?.subscriber_count || 0,
       updated_at: new Date().toISOString()
     }
 
-    await supabase.from('users').update(updatedUser).eq('id', userId)
-    return updatedUser
+    // Campos adicionales si existen en la tabla (asumiendo que el usuario los añadirá)
+    // O los guardamos en un objeto de metadata si preferimos
+    const extraFields: any = {
+      follower_count: profile.followerCount || 0,
+      publication_logo: profile.primaryPublication?.logo_url,
+      hero_text: profile.primaryPublication?.hero_text,
+      social_links: profile.userLinks || []
+    }
+
+    // Intentamos actualizar con los campos extra, Supabase ignorará los que no existan
+    // o podemos mapearlos a un campo 'metadata' JSONB si existe.
+    await supabase.from('users').update({ ...updatedUser, ...extraFields }).eq('id', userId)
+    
+    return { ...updatedUser, ...extraFields }
   }
 
   static async syncPosts(userId: string, subdomain: string) {
