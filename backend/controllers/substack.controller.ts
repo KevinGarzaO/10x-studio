@@ -167,10 +167,24 @@ export const upsertCookies = async (req: Request, res: Response) => {
   try {
     const { cookies, profile } = req.body
     
-    // 1. Guardar Cookies
-    const { data: user } = await supabase.from('users').select('id').single()
-    if (!user) throw new Error('No user found')
+    // 1. Obtener o Crear Usuario
+    // Usamos maybeSingle() para que no explote si la tabla está vacía tras un TRUNCATE
+    let { data: user } = await supabase.from('users').select('id').maybeSingle()
+    
+    if (!user) {
+      console.log('[SubstackController] No se encontró usuario, creando uno nuevo...')
+      const { data: newUser, error: insertError } = await supabase.from('users').insert({
+        name: profile?.name || 'Usuario',
+        updated_at: new Date().toISOString()
+      }).select('id').single()
+      
+      if (insertError) throw insertError
+      user = newUser
+    }
 
+    if (!user) throw new Error('No se pudo determinar el ID del usuario')
+
+    // 2. Guardar Cookies
     const cookieData = {
       user_id: user.id,
       substack_sid: cookies['substack.sid'] || cookies['substack-sid'] || cookies['connect.sid'],
@@ -181,18 +195,17 @@ export const upsertCookies = async (req: Request, res: Response) => {
     
     await supabase.from('cookies').upsert(cookieData, { onConflict: 'user_id' })
 
-    // 2. Guardar Perfil Inicial (enviado por la extensión)
-    // Esto permite que el Cron tenga el substack_user_id y substack_slug desde el minuto 0
+    // 3. Guardar Perfil Inicial (enviado por la extensión)
     if (profile) {
       const initialUser = {
         name: profile.name,
         handle: profile.handle,
-        substack_user_id: String(profile.id),
+        substack_user_id: String(profile.id || ''),
         substack_slug: profile.slug,
         photo_url: profile.photo_url,
         bio: profile.bio,
         subdomain: profile.primaryPublication?.subdomain,
-        publication_id: String(profile.primaryPublication?.id),
+        publication_id: String(profile.primaryPublication?.id || profile.pubId || ''),
         updated_at: new Date().toISOString()
       }
       await supabase.from('users').update(initialUser).eq('id', user.id)
@@ -200,6 +213,7 @@ export const upsertCookies = async (req: Request, res: Response) => {
 
     res.json({ ok: true, publication: profile?.primaryPublication?.subdomain, name: profile?.name })
   } catch (err: any) {
+    console.error('[SubstackController] Error en upsertCookies:', err)
     res.status(500).json({ error: err.message || 'Error al guardar cookies' })
   }
 }

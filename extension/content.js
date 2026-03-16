@@ -83,6 +83,8 @@
             return {
               ok: true,
               profile: {
+                id: pubData.id || request.userId,
+                slug: pubData.slug || handle,
                 name: pubData.name || 'Usuario',
                 handle: handle,
                 bio: bio,
@@ -91,7 +93,7 @@
                 primaryPublication: { subdomain, name: publicationName, subscriber_count: subCount, logo_url: pubLogo },
                 links: links,
                 followerCount: followerCount,
-                pubId: pubData.primaryPublication?.id || request.userId
+                pubId: pubData.primaryPublication?.id || 0
               }
             };
           }
