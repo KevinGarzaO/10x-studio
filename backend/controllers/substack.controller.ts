@@ -15,22 +15,27 @@ export const getProfile = async (req: Request, res: Response) => {
 
     if (error) return res.status(404).json({ error: 'Perfil no encontrado' })
     
+    console.log('[DEBUG] User fetched from DB:', { id: user.id, name: user.name, substack_user_id: user.substack_user_id })
+    const publications = (user as any).publications || []
+    console.log('[DEBUG] Publications fetched:', publications.map((p: any) => ({ name: p.name, is_primary: p.is_primary })))
+
     const cookiesArr = (user as any).cookies 
     const expiresAt = Array.isArray(cookiesArr) && cookiesArr.length > 0 
       ? cookiesArr[0].expires_at 
       : null
 
-    const publications = (user as any).publications || []
     const primaryPub = publications.find((p: any) => p.is_primary) || publications[0]
 
-    res.json({
+    const responseData = {
       ...user,
       expires_at: expiresAt,
       publication_name: primaryPub?.name,
       subdomain: primaryPub?.subdomain,
       publication_logo: primaryPub?.logo_url,
       publications
-    })
+    }
+    console.log('[DEBUG] Final response name:', responseData.name)
+    res.json(responseData)
   } catch (err) {
     console.error('[SubstackController] Error en getProfile:', err)
     res.status(500).json({ error: 'Error al obtener perfil' })

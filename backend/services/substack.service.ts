@@ -38,6 +38,12 @@ export class SubstackService {
     
     if (!res.ok) throw new Error(`Substack API error: ${res.status} para ${url}`)
     const profile = await res.json()
+    console.log('[DEBUG] Substack API Profile Response:', { 
+      id: profile.id, 
+      name: profile.name, 
+      handle: profile.handle, 
+      primaryPub: profile.primaryPublication?.name 
+    })
 
     // 1. Guardar perfil en tabla 'users'
     const userData = {
