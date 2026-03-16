@@ -8,7 +8,7 @@ export const getProfile = async (req: Request, res: Response) => {
       .from('users')
       .select(`
         *,
-        cookies (
+        cookies:cookies (
           expires_at
         )
       `)
@@ -16,13 +16,16 @@ export const getProfile = async (req: Request, res: Response) => {
 
     if (error) return res.status(404).json({ error: 'Perfil no encontrado' })
     
-    // Devolvemos el perfil con la fecha de expiración de la tabla cookies
-    const profile = {
-      ...user,
-      expires_at: user.cookies?.[0]?.expires_at || null
-    }
+    // El join devuelve un array en Supabase JS
+    const cookiesArr = (user as any).cookies 
+    const expiresAt = Array.isArray(cookiesArr) && cookiesArr.length > 0 
+      ? cookiesArr[0].expires_at 
+      : null
 
-    res.json(profile)
+    res.json({
+      ...user,
+      expires_at: expiresAt
+    })
   } catch (err) {
     console.error('[SubstackController] Error en getProfile:', err)
     res.status(500).json({ error: 'Error al obtener perfil' })
@@ -214,42 +217,38 @@ export const upsertCookies = async (req: Request, res: Response) => {
     
     await supabase.from('cookies').upsert(cookieData, { onConflict: 'user_id' })
 
-    // 3. Sincronización INMEDIATA (no esperar al cron para lo esencial)
-    const finalSlug = user.substack_slug || profile?.slug || profile?.handle || ''
+    // 3. Sincronización INMEDIATA (ESPERAMOS A TODO para el segundo 1)
     const substackUserId = String(profile?.id || '')
+    const finalSlug = profile?.primaryPublication?.subdomain || user.substack_slug || profile?.slug || profile?.handle || ''
 
-    console.log(`[SubstackController] Iniciando sincronización inmediata para ${finalSlug}...`)
+    console.log(`[SubstackController] Iniciando sincronización total inmediata para ${finalSlug}...`)
     
     try {
-      // Await essential data for the first response
-      await SubstackService.syncProfile(user.id, substackUserId, finalSlug)
-      await SubstackService.syncStats(user.id, finalSlug)
-      
-      // Background the heavier syncs
-      const syncRemaining = async () => {
-        try {
-          await SubstackService.syncPosts(user!.id, finalSlug)
-          await SubstackService.syncSubscribers(user!.id, finalSlug)
-          console.log(`[SubstackController] Sincronización de fondo completada.`)
-        } catch (err) {
-          console.error(`[SubstackController] Error en sincronización de fondo:`, err)
-        }
-      }
-      syncRemaining()
+      // Await ALL to guarantee data "desde el segundo 1"
+      await Promise.all([
+        SubstackService.syncProfile(user.id, substackUserId, finalSlug),
+        SubstackService.syncStats(user.id, finalSlug),
+        SubstackService.syncPosts(user.id, finalSlug),
+        SubstackService.syncSubscribers(user.id, finalSlug)
+      ])
+      console.log(`[SubstackController] Sincronización completa ok.`)
     } catch (err) {
-      console.error(`[SubstackController] Error en sincronización inicial:`, err)
+      console.error(`[SubstackController] Error en sincronización inicial completa:`, err)
     }
 
-    // 4. Devolver datos enriquecidos GARANTIZADOS para la extensión
-    const { data: finalUser } = await supabase.from('users').select('*').eq('id', user.id).single()
+    // 4. Devolver datos actualizados
+    const { data: finalUser } = await supabase.from('users').select(`
+      *,
+      cookies:cookies (expires_at)
+    `).eq('id', user.id).single()
 
     res.json({ 
       ok: true, 
-      publication: finalUser?.subdomain || profile?.primaryPublication?.subdomain, 
-      name: finalUser?.publication_name || finalUser?.name || profile?.primaryPublication?.name || profile?.name,
+      publication: finalUser?.subdomain || finalSlug, 
+      name: finalUser?.publication_name || finalUser?.name || profile?.primaryPublication?.name,
       avatar: finalUser?.photo_url || profile?.photo_url,
-      subCount: finalUser?.subscriber_count || profile?.primaryPublication?.subscriber_count || 0,
-      expiresAt: expiresAt.toISOString()
+      subCount: finalUser?.subscriber_count || 0,
+      expiresAt: (finalUser as any).cookies?.[0]?.expires_at || expiresAt.toISOString()
     })
   } catch (err: any) {
     console.error('[SubstackController] Error en upsertCookies:', err)
