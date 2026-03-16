@@ -7,8 +7,13 @@ export async function api<T>(path: string, options?: RequestInit): Promise<T> {
     throw new Error(errorMsg)
   }
 
-  const url = path.startsWith('http') ? path : `${BACKEND_URL}${path}`
-  console.log(`%c[API] Calling Railway: ${url}`, 'color: #0b57d0; font-weight: bold;')
+  // Normalize path to prevent double /api if BACKEND_URL already has it
+  const cleanPath = path.startsWith('/api') && BACKEND_URL.endsWith('/api') 
+    ? path.slice(4) 
+    : path
+
+  const url = path.startsWith('http') ? path : `${BACKEND_URL}${cleanPath}`
+  console.log(`%c[API] Request: ${url}`, 'color: #0b57d0; font-weight: bold;')
   
   const res = await fetch(url, { 
     headers: { 

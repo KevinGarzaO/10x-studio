@@ -83,9 +83,9 @@ export function SubstackSubscribers({ refreshKey = 0 }: { refreshKey?: number })
     setLoading(true); setError(''); setProgressText('Iniciando carga de suscriptores...')
     let isMounted = true;
     try {
-      const info = await api<{ connected: boolean }>('/api/substack/connect')
+      const sub = await api<any>('/api/substack/profile')
       
-      if (!info || !info.connected) {
+      if (!sub || sub.error) {
         throw new Error('No estás conectado a Substack.')
       }
 

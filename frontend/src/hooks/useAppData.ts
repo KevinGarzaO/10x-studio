@@ -23,12 +23,12 @@ export function useAppData() {
       api<AppSettings>('/api/settings'),
       api<PromptTemplate[]>('/api/templates'),
       api<Campaign[]>('/api/campaigns'),
-      api<{ connected: boolean; publication: string }>('/api/substack/connect'),
+      api<any>('/api/substack/profile'),
     ]).then(([t, h, c, s, tmpl, camp, sub]) => {
       setTopics(t); setHistory(h); setCalendar(c)
       setSettingsState(s); setTemplates(tmpl); setCampaigns(camp)
-      setSubstackConnected(sub.connected)
-      setSubstackPublication(sub.publication)
+      setSubstackConnected(!!sub && !sub.error)
+      setSubstackPublication(sub?.substack_slug || sub?.publication || '')
     }).finally(() => setLoading(false))
   }, [])
 

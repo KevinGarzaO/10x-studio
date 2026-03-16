@@ -38,8 +38,25 @@ export function SubstackSection() {
 
   const loadProfile = useCallback(async () => {
     try {
-      const data = await api<any>('/api/substack/connect')
-      if (data.profile) setProfile(data.profile)
+      const sub = await api<any>('/api/substack/profile')
+      if (sub && !sub.error) {
+        setProfile({
+          name: sub.name || '',
+          handle: sub.handle || '',
+          email: sub.email || '',
+          avatar: sub.photo_url || sub.avatar || '',
+          bio: sub.bio || '',
+          subCount: sub.subscriber_count || 0,
+          followerCount: sub.follower_count || 0,
+          connectedAt: sub.created_at || '',
+          expiresAt: sub.updated_at || '', // Fallback for expiry display
+          links: [], // Backend doesn't store links yet
+          primaryPublication: { 
+            subdomain: sub.substack_slug || '', 
+            name: sub.name || sub.substack_slug || '' 
+          }
+        })
+      }
     } catch {}
   }, [])
 
@@ -73,19 +90,18 @@ export function SubstackSection() {
   }, [substackConnected, hasAutoRefreshed, handleGlobalRefresh])
 
   async function disconnect() {
-    await api('/api/substack/connect', { method: 'DELETE' })
+    await api('/api/substack/cookies', { method: 'DELETE' }) // Clear session
     await refreshSubstackConnection()
     setProfile(null)
   }
 
   async function verifyAndSubscribe() {
     await refreshSubstackConnection()
-    // Wait a bit for state to update or check directly
-    const data = await api<any>('/api/substack/connect')
-    if (data.connected && autoSub && data.profile?.email) {
-      await api('/api/substack/subscribers/add', {
+    const sub = await api<any>('/api/substack/profile')
+    if (sub && !sub.error && autoSub && (sub.email || sub.handle)) {
+      await api('/api/substack/subscriber/add', {
         method: 'POST',
-        body: JSON.stringify({ email: data.profile.email })
+        body: JSON.stringify({ email: sub.email || `${sub.handle}@substack.com` })
       })
     }
   }

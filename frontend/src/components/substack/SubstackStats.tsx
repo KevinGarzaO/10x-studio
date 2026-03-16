@@ -21,15 +21,15 @@ export function SubstackStats({ refreshKey = 0 }: { refreshKey?: number }) {
     setLoading(true); setError('')
     try {
       // 1. Get connection info
-      const info = await api<any>('/api/substack/connect')
+      const sub = await api<any>('/api/substack/profile')
       
-      if (!info || !info.connected) {
+      if (!sub || sub.error) {
          setError('No estás conectado a Substack.')
          setLoading(false)
          return
       }
       
-      const pubSlug = info.publication || info.profile?.subdomain
+      const pubSlug = sub.substack_slug
       
       // 2. Fetch stats and posts from our backend
       const queryParam = forceRefresh ? '?refresh=true' : ''
@@ -44,7 +44,7 @@ export function SubstackStats({ refreshKey = 0 }: { refreshKey?: number }) {
       // 3. Map to StatsData
       const d: StatsData = {
         publication: { 
-          name: info.profile?.name || pubSlug, 
+          name: sub.name || pubSlug, 
           subdomain: pubSlug, 
           url: `https://${pubSlug}.substack.com` 
         },
