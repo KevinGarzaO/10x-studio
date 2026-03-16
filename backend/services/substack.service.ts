@@ -47,7 +47,7 @@ export class SubstackService {
       bio: profile.bio,
       substack_slug: profile.slug,
       publication_id: String(profile.primaryPublication?.id || ''),
-      publication_name: profile.primaryPublication?.name,
+      publication_name: profile.primaryPublication?.name || '',
       subdomain: profile.primaryPublication?.subdomain || '',
       subscriber_count: profile.subscriberCountNumber || profile.primaryPublication?.subscriber_count || 0,
       updated_at: new Date().toISOString()
@@ -146,8 +146,10 @@ export class SubstackService {
       }
       
       const data = await res.json()
-      const subs = data.subscribers || []
-      console.log(`[Substack] Offset ${offset}: Obtenidos ${subs.length} subs`)
+      // The API often returns { subscribers: [...] } or just [...]
+      const subs = Array.isArray(data) ? data : (data.subscribers || [])
+      
+      console.log(`[Substack] Offset ${offset}: Obtenidos ${subs.length} subs de un total reportado de ${data.count || '?'}`)
       if (subs.length === 0) break
       
       allSubscribers = allSubscribers.concat(subs)
