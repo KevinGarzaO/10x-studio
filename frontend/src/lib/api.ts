@@ -2,6 +2,7 @@ const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || ''
 
 export async function api<T>(path: string, options?: RequestInit): Promise<T> {
   const url = path.startsWith('http') ? path : `${BACKEND_URL}${path}`
+  console.log(`[API] Fetching: ${url} (Backend URL: ${BACKEND_URL})`)
   const res = await fetch(url, { 
     headers: { 
       'Content-Type': 'application/json' 
