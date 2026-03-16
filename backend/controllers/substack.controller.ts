@@ -8,23 +8,28 @@ export const getProfile = async (req: Request, res: Response) => {
       .from('users')
       .select(`
         *,
-        cookies:cookies (
-          expires_at
-        )
+        cookies:cookies (expires_at),
+        publications:publications (*)
       `)
       .single()
 
     if (error) return res.status(404).json({ error: 'Perfil no encontrado' })
     
-    // El join devuelve un array en Supabase JS
     const cookiesArr = (user as any).cookies 
     const expiresAt = Array.isArray(cookiesArr) && cookiesArr.length > 0 
       ? cookiesArr[0].expires_at 
       : null
 
+    const publications = (user as any).publications || []
+    const primaryPub = publications.find((p: any) => p.is_primary) || publications[0]
+
     res.json({
       ...user,
-      expires_at: expiresAt
+      expires_at: expiresAt,
+      publication_name: primaryPub?.name,
+      subdomain: primaryPub?.subdomain,
+      publication_logo: primaryPub?.logo_url,
+      publications
     })
   } catch (err) {
     console.error('[SubstackController] Error en getProfile:', err)
@@ -248,15 +253,18 @@ export const upsertCookies = async (req: Request, res: Response) => {
       ? cookiesArr[0].expires_at 
       : expiresAt.toISOString()
 
+    const publications = (finalUser as any).publications || []
+    const primaryPub = publications.find((p: any) => p.is_primary) || publications[0]
+
     res.json({ 
       ok: true, 
-      publication: finalUser?.subdomain || finalSlug, 
-      publication_name: finalUser?.publication_name || profile?.primaryPublication?.name || profile?.publicationUsers?.[0]?.publication?.name,
+      publication: finalUser?.subdomain || primaryPub?.subdomain || finalSlug, 
+      publication_name: finalUser?.publication_name || primaryPub?.name || profile?.primaryPublication?.name,
       name: finalUser?.name || profile?.name,
       avatar: finalUser?.photo_url || profile?.photo_url,
       subCount: finalUser?.subscriber_count || 0,
       expiresAt: finalExpiresAt,
-      publications: (finalUser as any).publications || []
+      publications
     })
   } catch (err: any) {
     console.error('[SubstackController] Error en upsertCookies:', err)

@@ -36,55 +36,43 @@ export class SubstackService {
     const url = `https://substack.com/api/v1/user/${substackUserId}-${substackSlug}/public_profile/self`
     const res = await fetch(url, { headers: this.getHeaders(cookie) })
     
+    if (!res.ok) throw new Error(`Substack API error: ${res.status} para ${url}`)
     const profile = await res.json()
 
-    // Extract publication info robustly
-    const pubUser = profile.publicationUsers?.find((pu: any) => pu.is_primary) || profile.publicationUsers?.[0]
-    const primaryPub = profile.primaryPublication || pubUser?.publication
-
-    // 1. Update User Profile dynamically
-    const updatedUser: any = {
-      name: profile.name || profile.display_name, // Dynamic from root
-      handle: profile.handle,
-      photo_url: profile.photo_url || profile.profile_photo_url,
-      bio: profile.bio,
-      substack_slug: profile.slug,
-      publication_id: String(primaryPub?.id || ''),
-      publication_name: primaryPub?.name || '',
-      subdomain: primaryPub?.subdomain || '',
-      subscriber_count: profile.subscriberCountNumber || primaryPub?.subscriber_count || 0,
+    // 1. Guardar perfil en tabla 'users'
+    const userData = {
+      substack_user_id: profile.id,                    // 280221962
+      substack_slug: `${profile.id}-${profile.slug}`,  // 280221962-kevin-garza
+      name: profile.name,                              // "Kevin Garza"
+      handle: profile.handle,                          // "kevingarza"
+      photo_url: profile.photo_url,                    // URL de la foto
+      bio: profile.bio,                                // Texto del bio
+      subscriber_count: profile.subscriberCountNumber, // 269
+      follower_count: profile.followerCount,           // 273
       updated_at: new Date().toISOString()
     }
 
-    const extraFields: any = {
-      follower_count: profile.followerCount || 0,
-      publication_logo: primaryPub?.logo_url,
-      hero_text: primaryPub?.hero_text,
-      social_links: profile.userLinks || []
-    }
+    await supabase.from('users').upsert(userData, { onConflict: 'substack_user_id' })
 
-    await supabase.from('users').update({ ...updatedUser, ...extraFields }).eq('id', userId)
-
-    // 2. Sync all publications to the 'publications' table
-    if (profile.publicationUsers && Array.isArray(profile.publicationUsers)) {
-      const publicationsToUpsert = profile.publicationUsers.map((pu: any) => ({
-        id: String(pu.publication?.id),
-        user_id: userId,
-        name: pu.publication?.name,
-        subdomain: pu.publication?.subdomain,
-        logo_url: pu.publication?.logo_url,
-        role: pu.role,
-        is_primary: pu.is_primary || (primaryPub && String(pu.publication?.id) === String(primaryPub.id)),
-        subscriber_count: pu.publication?.subscriber_count || 0,
-        synced_at: new Date().toISOString()
-      }))
-
-      if (publicationsToUpsert.length > 0) {
-        await supabase.from('publications').upsert(publicationsToUpsert, { onConflict: 'user_id,subdomain' })
+    // 2. Guardar publicación en tabla 'publications'
+    if (profile.primaryPublication) {
+      const pubData = {
+        publication_id: profile.primaryPublication.id,          // 7999333
+        name: profile.primaryPublication.name,                  // "Transformateck"
+        subdomain: profile.primaryPublication.subdomain,        // "transformateck"
+        logo_url: profile.primaryPublication.logo_url,          // URL del logo
+        hero_text: profile.publicationUsers?.[0]?.publication?.hero_text || profile.primaryPublication.hero_text, // Descripción
+        language: profile.primaryPublication.language,          // "es"
+        payments_state: profile.primaryPublication.payments_state,    // "disabled"
+        community_enabled: profile.publicationUsers?.[0]?.publication?.community_enabled ?? profile.primaryPublication.community_enabled, // true
+        author_id: profile.primaryPublication.author_id,        // 280221962
+        updated_at: new Date().toISOString()
       }
+
+      await supabase.from('publications').upsert(pubData, { onConflict: 'publication_id' })
     }
     
-    return { ...updatedUser, ...extraFields, publications: profile.publicationUsers }
+    return { profile }
   }
 
   static async syncPosts(userId: string, subdomain: string) {
