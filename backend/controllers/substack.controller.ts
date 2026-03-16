@@ -250,7 +250,7 @@ export const upsertCookies = async (req: Request, res: Response) => {
     res.json({ 
       ok: true, 
       publication: finalUser?.subdomain || finalSlug, 
-      publication_name: finalUser?.publication_name || profile?.primaryPublication?.name,
+      publication_name: finalUser?.publication_name || profile?.primaryPublication?.name || profile?.publicationUsers?.[0]?.publication?.name,
       name: finalUser?.name || profile?.name,
       avatar: finalUser?.photo_url || profile?.photo_url,
       subCount: finalUser?.subscriber_count || 0,
