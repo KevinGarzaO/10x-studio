@@ -233,7 +233,7 @@ export const upsertCookies = async (req: Request, res: Response) => {
 
     // 3. Sincronización INMEDIATA TOTAL (Esperamos a todo para el primer segundo)
     const substackUserId = String(profile?.id || '')
-    const finalSlug = profile?.primaryPublication?.subdomain || user.substack_slug || profile?.slug || profile?.handle || ''
+    const finalSlug = user.substack_slug || profile?.slug || profile?.handle || profile?.primaryPublication?.subdomain || ''
 
     console.log(`[SubstackController] Iniciando sincronización total inmediata para ${finalSlug}...`)
     
