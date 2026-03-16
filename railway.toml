@@ -1,0 +1,11 @@
+[build]
+builder = "nixpacks"
+
+[deploy]
+startCommand = "npm start"
+healthcheckPath = "/"
+healthcheckTimeout = 100
+
+# This file helps Railway recognize the project, 
+# but you MUST set the 'Root Directory' in Railway settings 
+# to either 'backend' or 'frontend' for each service.
