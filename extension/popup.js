@@ -31,7 +31,7 @@ function renderProfile(profile, publication) {
   // Avatar
   const avatarWrap = document.getElementById('avatarWrap')
   if (profile.avatar) {
-    avatarWrap.innerHTML = `<img src="${profile.avatar}" class="avatar" onerror="this.style.display='none'" />`
+    avatarWrap.innerHTML = `<img src="${profile.avatar}" class="avatar-img" />`
   } else {
     const initial = (profile.name || publication || '?')[0].toUpperCase()
     avatarWrap.innerHTML = `<div class="avatar-placeholder">${initial}</div>`
@@ -39,7 +39,14 @@ function renderProfile(profile, publication) {
 
   document.getElementById('profileName').textContent = profile.name || 'Usuario Substack'
   document.getElementById('profileEmail').textContent = profile.email || ''
-  document.getElementById('profilePub').textContent = publication ? `📰 ${publication}` : ''
+  
+  // Publication Logo + Name
+  const pubEl = document.getElementById('profilePub')
+  if (profile.publicationLogo) {
+    pubEl.innerHTML = `<img src="${profile.publicationLogo}" style="width:14px; height:14px; border-radius:2px; vertical-align:middle; margin-right:4px;" /> ${publication}`
+  } else {
+    pubEl.textContent = publication ? `📰 ${publication}` : ''
+  }
 
   // Stats
   document.getElementById('statSubs').textContent = profile.subCount != null
@@ -170,7 +177,14 @@ async function grabCookiesAndSend() {
     chrome.storage.local.set({
       substackConnected: true,
       substackPublication: data.publication,
-      substackProfile: { name: data.name, email: data.email, avatar: data.avatar, subCount: data.subCount, expiresAt: data.expiresAt },
+      substackProfile: { 
+        name: data.name, 
+        email: data.email, 
+        avatar: data.avatar, 
+        subCount: data.subCount, 
+        expiresAt: data.expiresAt,
+        publicationLogo: profile?.primaryPublication?.logo_url 
+      },
     })
 
     // Update badge
@@ -178,7 +192,14 @@ async function grabCookiesAndSend() {
 
     // Render profile in popup
     renderProfile(
-      { name: data.name, email: data.email, avatar: data.avatar, subCount: data.subCount, expiresAt: data.expiresAt },
+      { 
+        name: data.name, 
+        email: data.email, 
+        avatar: data.avatar, 
+        subCount: data.subCount, 
+        expiresAt: data.expiresAt,
+        publicationLogo: profile?.primaryPublication?.logo_url
+      },
       data.publication
     )
 

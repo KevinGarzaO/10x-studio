@@ -32,10 +32,6 @@ export function SubstackSection() {
   const [tab, setTab]         = useState<SubTab>('stats')
   const [profile, setProfile] = useState<SubstackProfile | null>(null)
   const [autoSub, setAutoSub] = useState(true)
-  const [refreshKey, setRefreshKey] = useState(0)
-  const [isRefreshing, setIsRefreshing] = useState(false)
-  const [hasAutoRefreshed, setHasAutoRefreshed] = useState(false)
-
   const loadProfile = useCallback(async () => {
     try {
       const sub = await api<any>('/api/substack/profile')
@@ -49,8 +45,9 @@ export function SubstackSection() {
           subCount: sub.subscriber_count || 0,
           followerCount: sub.follower_count || 0,
           connectedAt: sub.created_at || '',
-          expiresAt: sub.updated_at || '', // Fallback for expiry display
-          links: [], // Backend doesn't store links yet
+          expiresAt: sub.expires_at || sub.updated_at || '', 
+          links: sub.social_links || [],
+          pubLogo: sub.publication_logo || '',
           primaryPublication: { 
             subdomain: sub.substack_slug || '', 
             name: sub.name || sub.substack_slug || '' 
@@ -60,34 +57,7 @@ export function SubstackSection() {
     } catch {}
   }, [])
 
-  const handleGlobalRefresh = useCallback(async () => {
-    setIsRefreshing(true)
-    try {
-      // Sincronizar todo en paralelo para máxima velocidad
-      await Promise.all([
-        api('/api/substack/profile?refresh=true'),
-        api('/api/substack/stats?refresh=true'),
-        api('/api/substack/posts?refresh=true')
-      ])
-      
-      await loadProfile()
-      setRefreshKey(prev => prev + 1)
-    } catch (e) {
-      console.error("Global refresh error:", e)
-    } finally {
-      setIsRefreshing(false)
-    }
-  }, [loadProfile])
-
   useEffect(() => { loadProfile() }, [substackConnected, loadProfile])
-
-  // Auto-refresh on mount (F5 / First visit)
-  useEffect(() => {
-    if (substackConnected && !hasAutoRefreshed) {
-      setHasAutoRefreshed(true)
-      handleGlobalRefresh()
-    }
-  }, [substackConnected, hasAutoRefreshed, handleGlobalRefresh])
 
   async function disconnect() {
     await api('/api/substack/cookies', { method: 'DELETE' }) // Clear session
@@ -222,10 +192,6 @@ export function SubstackSection() {
                 <div className="flex flex-col gap-2.5 items-start md:items-end w-full md:w-auto mt-4 md:mt-0">
                   {profile.expiresAt && <ExpiryBadge expiresAt={profile.expiresAt} />}
                   <div className="flex items-center gap-2 w-full md:w-auto">
-                    <button onClick={handleGlobalRefresh} disabled={isRefreshing} className="flex items-center gap-1.5 text-[11px] font-bold px-4 py-1.5 rounded-full border border-stone-200 text-stone-700 bg-white hover:bg-stone-50 transition-colors shadow-sm disabled:opacity-50">
-                      <i className={`pi pi-sync ${isRefreshing ? 'animate-spin' : ''}`}></i>
-                      Sincronizar
-                    </button>
                     <button onClick={disconnect} className="text-[11px] font-bold px-4 py-1.5 rounded-full border border-red-200 text-red-600 bg-white/50 hover:bg-red-50 hover:border-red-300 transition-colors shadow-sm">
                       Desconectar
                     </button>
@@ -304,8 +270,8 @@ export function SubstackSection() {
         </div>
       </div>
 
-      {tab === 'stats'       && <SubstackStats refreshKey={refreshKey} />}
-      {tab === 'subscribers' && <SubstackSubscribers refreshKey={refreshKey} />}
+      {tab === 'stats'       && <SubstackStats />}
+      {tab === 'subscribers' && <SubstackSubscribers />}
       {tab === 'publish'     && <SubstackPublish />}
     </div>
   )

@@ -59,13 +59,13 @@ function mapSubscriber(s: any): Subscriber {
   }
 }
 
-export function SubstackSubscribers({ refreshKey = 0 }: { refreshKey?: number }) {
+export function SubstackSubscribers() {
   const [subscribers,  setSubscribers]  = useState<Subscriber[]>([])
   const [total,        setTotal]        = useState(0)
   const [loading,      setLoading]      = useState(true)
   const [progressText, setProgressText]  = useState('')
   const [error,        setError]        = useState('')
-  const [lastRefreshKey, setLastRefreshKey] = useState(refreshKey)
+  const [lastRefreshKey, setLastRefreshKey] = useState(0)
   
   // Datatable State
   const [globalFilterValue, setGlobalFilterValue] = useState('')
@@ -79,7 +79,7 @@ export function SubstackSubscribers({ refreshKey = 0 }: { refreshKey?: number })
   const [importing,    setImporting]    = useState(false)
   const [importResult, setImportResult] = useState('')
 
-  const loadAll = useCallback(async (forceRefresh = false) => {
+  const loadAll = useCallback(async () => {
     setLoading(true); setError(''); setProgressText('Iniciando carga de suscriptores...')
     let isMounted = true;
     try {
@@ -90,7 +90,7 @@ export function SubstackSubscribers({ refreshKey = 0 }: { refreshKey?: number })
       }
 
       // First request to get the total count
-      const firstData = await api<any>(`/api/substack/subscribers?limit=1&offset=0${forceRefresh ? '&refresh=true' : ''}`)
+      const firstData = await api<any>(`/api/substack/subscribers?limit=1&offset=0`)
       if (firstData.error) throw new Error(firstData.error)
 
       const totalCount = firstData.total || 0;
@@ -106,7 +106,7 @@ export function SubstackSubscribers({ refreshKey = 0 }: { refreshKey?: number })
         setProgressText(`Cargados ${fetchedSubs.length} de ${totalCount} suscriptores...`);
         
         try {
-           const data = await api<any>(`/api/substack/subscribers?limit=${CHUNK_SIZE}&offset=${off}${forceRefresh ? '&refresh=true' : ''}`);
+           const data = await api<any>(`/api/substack/subscribers?limit=${CHUNK_SIZE}&offset=${off}`);
            if (data.error) throw new Error(data.error)
 
            const raw = data.subscribers || [];
@@ -133,14 +133,7 @@ export function SubstackSubscribers({ refreshKey = 0 }: { refreshKey?: number })
     }
   }, [])
 
-  useEffect(() => { loadAll(false) }, [loadAll])
-
-  useEffect(() => {
-    if (refreshKey !== lastRefreshKey) {
-      setLastRefreshKey(refreshKey)
-      loadAll(true)
-    }
-  }, [refreshKey, lastRefreshKey, loadAll])
+  useEffect(() => { loadAll() }, [loadAll])
 
   const onGlobalFilterChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const value = e.target.value;

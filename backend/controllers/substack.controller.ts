@@ -168,11 +168,9 @@ export const upsertCookies = async (req: Request, res: Response) => {
     const { cookies, profile } = req.body
     
     // 1. Obtener o Crear Usuario
-    // Usamos maybeSingle() para que no explote si la tabla está vacía tras un TRUNCATE
     let { data: user } = await supabase.from('users').select('id').maybeSingle()
     
     if (!user) {
-      console.log('[SubstackController] No se encontró usuario, creando uno nuevo...')
       const { data: newUser, error: insertError } = await supabase.from('users').insert({
         name: profile?.name || 'Usuario',
         updated_at: new Date().toISOString()
@@ -184,18 +182,23 @@ export const upsertCookies = async (req: Request, res: Response) => {
 
     if (!user) throw new Error('No se pudo determinar el ID del usuario')
 
-    // 2. Guardar Cookies
+    // 2. Guardar Cookies con Expiración de 90 días
+    const expiresAt = new Date()
+    expiresAt.setDate(expiresAt.getDate() + 90)
+
     const cookieData = {
       user_id: user.id,
       substack_sid: cookies['substack.sid'] || cookies['substack-sid'] || cookies['connect.sid'],
       substack_lli: cookies['substack.lli'],
       visit_id: cookies['visit_id'],
+      expires_at: expiresAt.toISOString(), // Guardar la fecha real
       updated_at: new Date().toISOString()
     }
     
     await supabase.from('cookies').upsert(cookieData, { onConflict: 'user_id' })
 
-    // 3. Guardar Perfil Inicial (enviado por la extensión)
+    // 3. Guardar Perfil Inicial
+    let finalProfile = profile
     if (profile) {
       const initialUser = {
         name: profile.name,
@@ -208,10 +211,18 @@ export const upsertCookies = async (req: Request, res: Response) => {
         publication_id: String(profile.primaryPublication?.id || profile.pubId || ''),
         updated_at: new Date().toISOString()
       }
-      await supabase.from('users').update(initialUser).eq('id', user.id)
+      const { data: updated } = await supabase.from('users').update(initialUser).eq('id', user.id).select().single()
+      if (updated) finalProfile = { ...profile, ...updated }
     }
 
-    res.json({ ok: true, publication: profile?.primaryPublication?.subdomain, name: profile?.name })
+    res.json({ 
+      ok: true, 
+      publication: profile?.primaryPublication?.subdomain, 
+      name: profile?.name,
+      avatar: profile?.photo_url,
+      subCount: profile?.primaryPublication?.subscriber_count || 0,
+      expiresAt: expiresAt.toISOString()
+    })
   } catch (err: any) {
     console.error('[SubstackController] Error en upsertCookies:', err)
     res.status(500).json({ error: err.message || 'Error al guardar cookies' })

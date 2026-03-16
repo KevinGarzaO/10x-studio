@@ -11,13 +11,12 @@ interface StatsData {
   }[]
 }
 
-export function SubstackStats({ refreshKey = 0 }: { refreshKey?: number }) {
+export function SubstackStats() {
   const [data,    setData]    = useState<StatsData | null>(null)
   const [loading, setLoading] = useState(true)
   const [error,   setError]   = useState('')
-  const [lastRefreshKey, setLastRefreshKey] = useState(refreshKey)
 
-  const loadStats = useCallback(async (forceRefresh = false) => {
+  const loadStats = useCallback(async () => {
     setLoading(true); setError('')
     try {
       // 1. Get connection info
@@ -32,10 +31,9 @@ export function SubstackStats({ refreshKey = 0 }: { refreshKey?: number }) {
       const pubSlug = sub.substack_slug
       
       // 2. Fetch stats and posts from our backend
-      const queryParam = forceRefresh ? '?refresh=true' : ''
       const [stats, posts] = await Promise.all([
-        api<any>(`/api/substack/stats${queryParam}`),
-        api<any>(`/api/substack/posts${queryParam}`)
+        api<any>(`/api/substack/stats`),
+        api<any>(`/api/substack/posts`)
       ])
 
       if (stats.error) throw new Error(stats.error)
@@ -73,14 +71,7 @@ export function SubstackStats({ refreshKey = 0 }: { refreshKey?: number }) {
     setLoading(false)
   }, []);
 
-  useEffect(() => { loadStats(false) }, [loadStats])
-
-  useEffect(() => {
-    if (refreshKey !== lastRefreshKey) {
-      setLastRefreshKey(refreshKey)
-      loadStats(true)
-    }
-  }, [refreshKey, lastRefreshKey, loadStats])
+  useEffect(() => { loadStats() }, [loadStats])
 
   if (loading) return (
     <div className="flex items-center justify-center py-16">
@@ -95,7 +86,7 @@ export function SubstackStats({ refreshKey = 0 }: { refreshKey?: number }) {
         <span className="text-xl">⚠️</span>
         <div className="font-medium">{error}</div>
       </div>
-      <button onClick={() => loadStats(true)} className="px-5 py-2 bg-white border border-red-200 text-red-700 rounded-xl font-bold hover:bg-red-50 active:scale-95 transition-all shadow-sm">
+      <button onClick={() => loadStats()} className="px-5 py-2 bg-white border border-red-200 text-red-700 rounded-xl font-bold hover:bg-red-50 active:scale-95 transition-all shadow-sm">
         Reintentar
       </button>
     </div>

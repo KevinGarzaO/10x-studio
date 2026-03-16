@@ -130,6 +130,7 @@ export class SubstackService {
     const cookie = await this.getCookieHeader(userId)
     if (!cookie) throw new Error('No cookies found')
 
+    console.log(`[Substack] Iniciando sync de subscriptores para ${subdomain}...`)
     let allSubscribers: any[] = []
     let offset = 0
     const limit = 100
@@ -139,20 +140,25 @@ export class SubstackService {
       const res = await fetch(url, { headers: this.getHeaders(cookie, `https://${subdomain}.substack.com`) })
       
       if (!res.ok) {
-        console.error(`[Substack] Error fetching subscribers at ${offset}: ${res.status}`)
+        console.error(`[Substack] Error fetching subscribers at offset ${offset}: ${res.status}`)
         break
       }
       
       const data = await res.json()
       const subs = data.subscribers || []
+      console.log(`[Substack] Offset ${offset}: Obtenidos ${subs.length} subs`)
       if (subs.length === 0) break
       
       allSubscribers = allSubscribers.concat(subs)
       if (subs.length < limit) break
       offset += limit
+      
+      // Safety break to avoid infinite loops if API behaves weirdly
+      if (offset > 50000) break 
     }
 
     if (allSubscribers.length > 0) {
+      console.log(`[Substack] Procesando ${allSubscribers.length} subscriptores para Supabase...`)
       const subsToUpsert = allSubscribers.map((s: any) => ({
         user_id: userId,
         email: s.user_email_address || s.email,
@@ -170,9 +176,14 @@ export class SubstackService {
         synced_at: new Date().toISOString()
       }))
 
-      // Upsert masivo
       const { error } = await supabase.from('subscribers').upsert(subsToUpsert, { onConflict: 'user_id,email' })
-      if (error) console.error('[Supabase] Error upserting subscribers:', error)
+      if (error) {
+        console.error('[Supabase] Error upserting subscribers:', error)
+        throw new Error(`Error al guardar subscriptores: ${error.message}`)
+      }
+      console.log(`[Substack] Sync de subscriptores completado con éxito: ${allSubscribers.length} guardados.`)
+    } else {
+      console.log('[Substack] No se encontraron subscriptores para sincronizar.')
     }
     
     return allSubscribers.length
