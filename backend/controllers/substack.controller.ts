@@ -17,11 +17,13 @@ export const getPosts = async (req: Request, res: Response) => {
     const { data: user } = await supabase.from('users').select('id').single()
     if (!user) return res.status(404).json({ error: 'Usuario no encontrado' })
 
+    const { limit = 25, offset = 0 } = req.query
     const { data, error } = await supabase
       .from('posts')
       .select('*')
       .eq('user_id', user.id)
       .order('published_at', { ascending: false })
+      .range(Number(offset), Number(offset) + Number(limit) - 1)
     
     if (error) throw error
     res.json(data)
@@ -35,14 +37,16 @@ export const getSubscribers = async (req: Request, res: Response) => {
     const { data: user } = await supabase.from('users').select('id').single()
     if (!user) return res.status(404).json({ error: 'Usuario no encontrado' })
 
-    const { data, error } = await supabase
+    const { limit = 100, offset = 0 } = req.query
+    const { data, error, count } = await supabase
       .from('subscribers')
-      .select('*')
+      .select('*', { count: 'exact' })
       .eq('user_id', user.id)
-      .order('synced_at', { ascending: false })
+      .order('created_at', { ascending: false })
+      .range(Number(offset), Number(offset) + Number(limit) - 1)
     
     if (error) throw error
-    res.json({ subscribers: data, total: data.length })
+    res.json({ subscribers: data, total: count || 0 })
   } catch {
     res.status(500).json({ error: 'Error al obtener suscriptores' })
   }

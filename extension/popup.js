@@ -1,4 +1,4 @@
-const DEFAULT_APP_URL = 'http://localhost:3000'
+const DEFAULT_APP_URL = 'https://10x-studio-production.up.railway.app'
 
 const SUBSTACK_COOKIE_NAMES = [
   'substack.sid', 'connect.sid', 'substack-sid', '__cf_bm', 'cf_clearance', 'substack.lli', 'visit_id', 'ajs_anonymous_id'
@@ -151,7 +151,7 @@ async function grabCookiesAndSend() {
 
   const appUrl = await getAppUrl()
   try {
-    const res = await fetch(`${appUrl}/api/substack/connect`, {
+    const res = await fetch(`${appUrl}/api/substack/cookies`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ cookies: allCookies, profileVerified: true, profile })
@@ -195,7 +195,7 @@ async function grabCookiesAndSend() {
 
 async function disconnect() {
   const appUrl = await getAppUrl()
-  try { await fetch(`${appUrl}/api/substack/connect`, { method: 'DELETE' }) } catch { }
+  try { await fetch(`${appUrl}/api/substack/cookies`, { method: 'DELETE' }) } catch { }
   chrome.storage.local.set({ substackConnected: false, substackPublication: '', substackProfile: null })
   chrome.action.setBadgeText({ text: '' })
   setStatusDisconnected()

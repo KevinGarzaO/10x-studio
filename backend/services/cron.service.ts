@@ -25,8 +25,11 @@ export const initCron = () => {
           // 2. Sincronizar posts
           await SubstackService.syncPosts(user.id, user.subdomain)
           
-          // 3. Sincronizar estadísticas y suscriptores
+          // 3. Sincronizar estadísticas
           await SubstackService.syncStats(user.id, user.subdomain)
+
+          // 4. Sincronizar lista de suscriptores completa
+          await SubstackService.syncSubscribers(user.id, user.subdomain)
           
           console.log(`Sincronización completada para: ${user.substack_slug}`)
         } catch (innerError) {

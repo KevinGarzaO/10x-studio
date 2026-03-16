@@ -33,51 +33,60 @@ export class SubstackService {
     const cookie = await this.getCookieHeader(userId)
     if (!cookie) throw new Error('No cookies found')
 
-    // Probar primero con el slug guardado, si falla probaremos con el ID solo o el slug del user
-    let url = `https://substack.com/api/v1/user/${substackUserId}-${substackSlug}/public_profile/self`
-    let res = await fetch(url, { headers: this.getHeaders(cookie) })
-    
-    // Si da 404, intentar con un formato más genérico o solo ID si la API lo permite
-    if (res.status === 404) {
-      console.warn(`[Substack] 404 with slug ${substackSlug}, trying fallback...`)
-      // Algunos perfiles usan un formato diferente o el slug cambió
-      // Intentamos con el formato que el usuario sugirió si es diferente
-      const fallbackUrl = `https://substack.com/api/v1/user/${substackUserId}/public_profile/self`
-      const resFallback = await fetch(fallbackUrl, { headers: this.getHeaders(cookie) })
-      if (resFallback.ok) {
-        res = resFallback
-      } else {
-        throw new Error(`Substack API error: ${res.status} (Tried fallback: ${resFallback.status})`)
+    // Intentar primero con el endpoint "me" que es universal para el usuario autenticado
+    const endpoints = [
+      'https://substack.com/api/v1/me',
+      `https://substack.com/api/v1/user/${substackUserId}-${substackSlug}/public_profile/self`,
+      `https://substack.com/api/v1/user/${substackUserId}/public_profile/self`
+    ]
+
+    let profile: any = null
+    let lastError: any = null
+
+    for (const url of endpoints) {
+      try {
+        console.log(`[Substack] Intentando sync con: ${url}`)
+        const res = await fetch(url, { headers: this.getHeaders(cookie) })
+        if (res.ok) {
+          profile = await res.json()
+          console.log(`[Substack] Perfil obtenido con éxito de: ${url}`)
+          break
+        }
+        lastError = `Status ${res.status} para ${url}`
+      } catch (err) {
+        lastError = err
       }
-    } else if (!res.ok) {
-      throw new Error(`Substack API error: ${res.status}`)
+    }
+
+    if (!profile) {
+      throw new Error(`No se pudo obtener el perfil de Substack después de varios intentos. Último error: ${lastError}`)
     }
     
-    const profile = await res.json()
-    
+    // El objeto de /api/v1/me o public_profile/self puede variar ligeramente, normalizamos:
+    // En /me a veces los datos están en el nivel raíz o bajo 'user'
+    const userData = profile.user || profile
+    const primaryPub = userData.primaryPublication || profile.primaryPublication
+
     const updatedUser: any = {
-      name: profile.name || profile.display_name,
-      handle: profile.handle,
-      photo_url: profile.photo_url || profile.profile_photo_url,
-      bio: profile.bio,
-      substack_slug: profile.slug, // Sincronizar el slug correcto
-      publication_id: String(profile.primaryPublication?.id),
-      subdomain: profile.primaryPublication?.subdomain,
-      subscriber_count: profile.subscriberCountNumber || profile.primaryPublication?.subscriber_count || 0,
+      name: userData.name || userData.display_name,
+      handle: userData.handle,
+      photo_url: userData.photo_url || userData.profile_photo_url,
+      bio: userData.bio,
+      substack_slug: userData.slug, // Sincronizar el slug correcto (p. ej. kevin-garza)
+      substack_user_id: String(userData.id), // Actualizar el ID por si acaso
+      publication_id: String(primaryPub?.id || ''),
+      subdomain: primaryPub?.subdomain || '',
+      subscriber_count: userData.subscriberCountNumber || primaryPub?.subscriber_count || 0,
       updated_at: new Date().toISOString()
     }
 
-    // Campos adicionales si existen en la tabla (asumiendo que el usuario los añadirá)
-    // O los guardamos en un objeto de metadata si preferimos
     const extraFields: any = {
-      follower_count: profile.followerCount || 0,
-      publication_logo: profile.primaryPublication?.logo_url,
-      hero_text: profile.primaryPublication?.hero_text,
-      social_links: profile.userLinks || []
+      follower_count: userData.followerCount || 0,
+      publication_logo: primaryPub?.logo_url,
+      hero_text: primaryPub?.hero_text,
+      social_links: userData.userLinks || []
     }
 
-    // Intentamos actualizar con los campos extra, Supabase ignorará los que no existan
-    // o podemos mapearlos a un campo 'metadata' JSONB si existe.
     await supabase.from('users').update({ ...updatedUser, ...extraFields }).eq('id', userId)
     
     return { ...updatedUser, ...extraFields }
@@ -143,6 +152,58 @@ export class SubstackService {
     await supabase.from('users').update({ subscriber_count: subscriberCount }).eq('id', userId)
 
     return newStat
+  }
+
+  static async syncSubscribers(userId: string, subdomain: string) {
+    const cookie = await this.getCookieHeader(userId)
+    if (!cookie) throw new Error('No cookies found')
+
+    let allSubscribers: any[] = []
+    let offset = 0
+    const limit = 100
+
+    while (true) {
+      const url = `https://${subdomain}.substack.com/api/v1/subscriber-list?limit=${limit}&offset=${offset}&order_by=created_at&order_direction=desc`
+      const res = await fetch(url, { headers: this.getHeaders(cookie, `https://${subdomain}.substack.com`) })
+      
+      if (!res.ok) {
+        console.error(`[Substack] Error fetching subscribers at ${offset}: ${res.status}`)
+        break
+      }
+      
+      const data = await res.json()
+      const subs = data.subscribers || []
+      if (subs.length === 0) break
+      
+      allSubscribers = allSubscribers.concat(subs)
+      if (subs.length < limit) break
+      offset += limit
+    }
+
+    if (allSubscribers.length > 0) {
+      const subsToUpsert = allSubscribers.map((s: any) => ({
+        user_id: userId,
+        email: s.user_email_address || s.email,
+        name: s.user_name || s.name || '',
+        type: s.subscription_interval || s.subscription_type || 'free',
+        created_at: s.subscription_created_at || s.created_at || new Date().toISOString(),
+        country: s.country || '',
+        active: s.active !== false && s.is_subscribed !== false,
+        stars: s.activity_rating ?? s.engagement_stars ?? null,
+        opens7d: s.email_opens_7d ?? null,
+        opens30d: s.email_opens_30d ?? null,
+        opens6m: s.email_opens_180d ?? null,
+        revenue: s.total_revenue_generated != null ? s.total_revenue_generated : (s.revenue_cents != null ? s.revenue_cents / 100 : null),
+        source: s.source ?? '',
+        synced_at: new Date().toISOString()
+      }))
+
+      // Upsert masivo
+      const { error } = await supabase.from('subscribers').upsert(subsToUpsert, { onConflict: 'user_id,email' })
+      if (error) console.error('[Supabase] Error upserting subscribers:', error)
+    }
+    
+    return allSubscribers.length
   }
 
   static async publishNote(userId: string, content: string) {
