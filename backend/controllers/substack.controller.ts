@@ -202,7 +202,8 @@ export const upsertCookies = async (req: Request, res: Response) => {
     const { cookies, profile } = req.body
     
     // 1. Obtener o Crear Usuario
-    let { data: user }: { data: any } = await supabase.from('users').select('id, substack_slug').maybeSingle()
+    let { data: users }: { data: any } = await supabase.from('users').select('id, substack_slug').limit(1)
+    let user = users?.[0]
     
     if (!user) {
       const { data: newUser, error: insertError } = await supabase.from('users').insert({
@@ -233,17 +234,19 @@ export const upsertCookies = async (req: Request, res: Response) => {
 
     // 3. Sincronización INMEDIATA TOTAL (Esperamos a todo para el primer segundo)
     const substackUserId = String(profile?.id || '')
-    const finalSlug = user.substack_slug || profile?.slug || profile?.handle || profile?.primaryPublication?.subdomain || ''
+    const userHandle = profile?.slug || profile?.handle || ''
+    const pubSubdomain = profile?.primaryPublication?.subdomain || user.substack_slug?.replace(`${substackUserId}-`, '') || ''
+    const syncSlug = user.substack_slug || `${substackUserId}-${userHandle}`
 
-    console.log(`[SubstackController] Iniciando sincronización total inmediata para ${finalSlug}...`)
+    console.log(`[SubstackController] Iniciando sincronización total inmediata. User: ${userHandle}, Pub: ${pubSubdomain}...`)
     
     try {
       // PROMISE.ALL para garantizar que al terminar, TODO esté en la DB
       await Promise.all([
-        SubstackService.syncProfile(user.id, substackUserId, finalSlug),
-        SubstackService.syncStats(user.id, finalSlug),
-        SubstackService.syncPosts(user.id, finalSlug),
-        SubstackService.syncSubscribers(user.id, finalSlug)
+        SubstackService.syncProfile(user.id, substackUserId, userHandle),
+        SubstackService.syncStats(user.id, pubSubdomain),
+        SubstackService.syncPosts(user.id, pubSubdomain),
+        SubstackService.syncSubscribers(user.id, pubSubdomain)
       ])
       console.log(`[SubstackController] Sincronización total completada con éxito.`)
     } catch (err) {
@@ -267,7 +270,7 @@ export const upsertCookies = async (req: Request, res: Response) => {
 
     res.json({ 
       ok: true, 
-      publication: finalUser?.subdomain || primaryPub?.subdomain || finalSlug, 
+      publication: finalUser?.subdomain || primaryPub?.subdomain || syncSlug, 
       publication_name: finalUser?.publication_name || primaryPub?.name || profile?.primaryPublication?.name,
       name: finalUser?.name || profile?.name,
       avatar: finalUser?.photo_url || profile?.photo_url,
