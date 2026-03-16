@@ -47,13 +47,13 @@ export function SubstackSection() {
           subCount: sub.subscriber_count || 0,
           followerCount: sub.follower_count || 0,
           connectedAt: sub.created_at || '',
-          expiresAt: sub.expires_at || sub.cookies?.[0]?.expires_at || sub.updated_at || '', 
+          expiresAt: sub.expires_at || (Array.isArray(sub.cookies) ? sub.cookies[0]?.expires_at : null) || sub.updated_at || '', 
           links: sub.social_links || [],
           pubLogo: sub.publication_logo || '',
           publication_name: sub.publication_name || '',
           primaryPublication: { 
             subdomain: sub.subdomain || sub.substack_slug || '', 
-            name: sub.publication_name || sub.name || sub.substack_slug || '' 
+            name: sub.publication_name || sub.substack_slug || '' 
           }
         })
       }
