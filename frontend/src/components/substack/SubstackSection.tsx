@@ -22,6 +22,7 @@ function daysUntil(iso: string) {
 
 function ExpiryBadge({ expiresAt }: { expiresAt: string }) {
   const days = daysUntil(expiresAt)
+  if (days >= 60) return <span className="text-xs bg-emerald-50 border border-emerald-200 text-emerald-700 px-3 py-1 rounded-full font-medium">✓ Sesión activa — {days} días</span>
   if (days > 14) return <span className="text-xs bg-[#e6f4ea] border border-[#bbf7d0] text-[#0d7c3d] px-3 py-1 rounded-full font-medium">✓ Sesión activa — {days} días</span>
   if (days > 5)  return <span className="text-xs bg-amber-50 border border-amber-200 text-amber-700 px-3 py-1 rounded-full font-medium">⚠️ Expira en {days} días</span>
   return <span className="text-xs bg-red-50 border border-red-200 text-red-700 px-3 py-1 rounded-full font-medium animate-pulse">🔴 Expira en {days} días</span>
@@ -36,6 +37,7 @@ export function SubstackSection() {
     try {
       const sub = await api<any>('/api/substack/profile')
       if (sub && !sub.error) {
+        const isPubTitle = sub.name?.toLowerCase().includes('transformateck') || !sub.substack_slug;
         setProfile({
           name: sub.name || '',
           handle: sub.handle || '',
@@ -49,7 +51,7 @@ export function SubstackSection() {
           links: sub.social_links || [],
           pubLogo: sub.publication_logo || '',
           primaryPublication: { 
-            subdomain: sub.substack_slug || '', 
+            subdomain: sub.substack_slug || sub.subdomain || '', 
             name: sub.name || sub.substack_slug || '' 
           }
         })
@@ -182,7 +184,7 @@ export function SubstackSection() {
                         ) : (
                           <span className="text-sm">🗞️</span>
                         )}
-                        {substackPublication}
+                        {profile.primaryPublication?.name || substackPublication}
                       </a>
                     )}
                   </div>

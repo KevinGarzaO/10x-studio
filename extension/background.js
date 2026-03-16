@@ -22,19 +22,6 @@ function checkExpiry() {
 chrome.runtime.onInstalled.addListener(checkExpiry)
 setInterval(checkExpiry, 24 * 60 * 60 * 1000)
 
-// Watch for cookie removal (logout)
-chrome.cookies.onChanged.addListener((change) => {
-  if (
-    change.cookie.domain.includes('substack.com') &&
-    (change.cookie.name === 'substack.sid' || change.cookie.name === 'connect.sid') &&
-    change.removed
-  ) {
-    chrome.storage.local.set({ substackConnected: false, substackProfile: null })
-    chrome.action.setBadgeText({ text: '!' })
-    chrome.action.setBadgeBackgroundColor({ color: '#dc2626' })
-  }
-})
-
 // Relay messages from the 10x web app
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   if (request.type === 'REQUEST_SUBSTACK_STATS') {

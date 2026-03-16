@@ -168,11 +168,11 @@ export const upsertCookies = async (req: Request, res: Response) => {
     const { cookies, profile } = req.body
     
     // 1. Obtener o Crear Usuario
-    let { data: user } = await supabase.from('users').select('id').maybeSingle()
+    let { data: user }: { data: any } = await supabase.from('users').select('id, substack_slug').maybeSingle()
     
     if (!user) {
       const { data: newUser, error: insertError } = await supabase.from('users').insert({
-        name: profile?.name || 'Usuario',
+        name: profile?.primaryPublication?.name || profile?.name || 'Usuario',
         updated_at: new Date().toISOString()
       }).select('id').single()
       
@@ -191,36 +191,41 @@ export const upsertCookies = async (req: Request, res: Response) => {
       substack_sid: cookies['substack.sid'] || cookies['substack-sid'] || cookies['connect.sid'],
       substack_lli: cookies['substack.lli'],
       visit_id: cookies['visit_id'],
-      expires_at: expiresAt.toISOString(), // Guardar la fecha real
+      expires_at: expiresAt.toISOString(),
       updated_at: new Date().toISOString()
     }
     
     await supabase.from('cookies').upsert(cookieData, { onConflict: 'user_id' })
 
-    // 3. Guardar Perfil Inicial
-    let finalProfile = profile
-    if (profile) {
-      const initialUser = {
-        name: profile.name,
-        handle: profile.handle,
-        substack_user_id: String(profile.id || ''),
-        substack_slug: profile.slug,
-        photo_url: profile.photo_url,
-        bio: profile.bio,
-        subdomain: profile.primaryPublication?.subdomain,
-        publication_id: String(profile.primaryPublication?.id || profile.pubId || ''),
-        updated_at: new Date().toISOString()
+    // 3. Sincronización INMEDIATA (no esperar al cron)
+    const finalSlug = user.substack_slug || profile?.slug || profile?.handle || ''
+    const substackUserId = String(profile?.id || '')
+
+    console.log(`[SubstackController] Iniciando sincronización inmediata para ${finalSlug}...`)
+    
+    // Ejecutamos en segundo plano
+    const syncInBg = async () => {
+      try {
+        await SubstackService.syncProfile(user!.id, substackUserId, finalSlug)
+        await SubstackService.syncStats(user!.id, finalSlug)
+        await SubstackService.syncPosts(user!.id, finalSlug)
+        await SubstackService.syncSubscribers(user!.id, finalSlug)
+        console.log(`[SubstackController] Sincronización inmediata completada con éxito.`)
+      } catch (err) {
+        console.error(`[SubstackController] Error en sincronización inmediata:`, err)
       }
-      const { data: updated } = await supabase.from('users').update(initialUser).eq('id', user.id).select().single()
-      if (updated) finalProfile = { ...profile, ...updated }
     }
+    syncInBg()
+
+    // 4. Devolver datos enriquecidos para la extensión
+    const { data: finalUser } = await supabase.from('users').select('*').eq('id', user.id).single()
 
     res.json({ 
       ok: true, 
-      publication: profile?.primaryPublication?.subdomain, 
-      name: profile?.name,
-      avatar: profile?.photo_url,
-      subCount: profile?.primaryPublication?.subscriber_count || 0,
+      publication: finalUser?.subdomain || profile?.primaryPublication?.subdomain, 
+      name: finalUser?.name || profile?.primaryPublication?.name || profile?.name,
+      avatar: finalUser?.photo_url || profile?.photo_url,
+      subCount: finalUser?.subscriber_count || profile?.primaryPublication?.subscriber_count || 0,
       expiresAt: expiresAt.toISOString()
     })
   } catch (err: any) {
