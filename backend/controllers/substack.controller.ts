@@ -239,7 +239,8 @@ export const upsertCookies = async (req: Request, res: Response) => {
     // 4. Devolver datos enriquecidos para la extensión
     const { data: finalUser } = await supabase.from('users').select(`
       *,
-      cookies:cookies (expires_at)
+      cookies:cookies (expires_at),
+      publications:publications (*)
     `).eq('id', user.id).single()
 
     const cookiesArr = (finalUser as any).cookies
@@ -254,7 +255,8 @@ export const upsertCookies = async (req: Request, res: Response) => {
       name: finalUser?.name || profile?.name,
       avatar: finalUser?.photo_url || profile?.photo_url,
       subCount: finalUser?.subscriber_count || 0,
-      expiresAt: finalExpiresAt
+      expiresAt: finalExpiresAt,
+      publications: (finalUser as any).publications || []
     })
   } catch (err: any) {
     console.error('[SubstackController] Error en upsertCookies:', err)

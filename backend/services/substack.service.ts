@@ -36,37 +36,55 @@ export class SubstackService {
     const url = `https://substack.com/api/v1/user/${substackUserId}-${substackSlug}/public_profile/self`
     const res = await fetch(url, { headers: this.getHeaders(cookie) })
     
-    if (!res.ok) throw new Error(`Substack API error: ${res.status} para ${url}`)
-    
     const profile = await res.json()
-    
-    // Extract publication info from the new array structure if primaryPublication is missing
-    const pubUser = profile.publicationUsers?.find((pu: any) => pu.is_primary) || profile.publicationUsers?.[0]
-    const pub = profile.primaryPublication || pubUser?.publication
 
+    // Extract publication info robustly
+    const pubUser = profile.publicationUsers?.find((pu: any) => pu.is_primary) || profile.publicationUsers?.[0]
+    const primaryPub = profile.primaryPublication || pubUser?.publication
+
+    // 1. Update User Profile dynamically
     const updatedUser: any = {
-      name: profile.name || profile.display_name,
+      name: profile.name || profile.display_name, // Dynamic from root
       handle: profile.handle,
       photo_url: profile.photo_url || profile.profile_photo_url,
       bio: profile.bio,
       substack_slug: profile.slug,
-      publication_id: String(pub?.id || ''),
-      publication_name: pub?.name || '',
-      subdomain: pub?.subdomain || '',
-      subscriber_count: profile.subscriberCountNumber || pub?.subscriber_count || 0,
+      publication_id: String(primaryPub?.id || ''),
+      publication_name: primaryPub?.name || '',
+      subdomain: primaryPub?.subdomain || '',
+      subscriber_count: profile.subscriberCountNumber || primaryPub?.subscriber_count || 0,
       updated_at: new Date().toISOString()
     }
 
     const extraFields: any = {
       follower_count: profile.followerCount || 0,
-      publication_logo: pub?.logo_url,
-      hero_text: pub?.hero_text,
+      publication_logo: primaryPub?.logo_url,
+      hero_text: primaryPub?.hero_text,
       social_links: profile.userLinks || []
     }
 
     await supabase.from('users').update({ ...updatedUser, ...extraFields }).eq('id', userId)
+
+    // 2. Sync all publications to the 'publications' table
+    if (profile.publicationUsers && Array.isArray(profile.publicationUsers)) {
+      const publicationsToUpsert = profile.publicationUsers.map((pu: any) => ({
+        id: String(pu.publication?.id),
+        user_id: userId,
+        name: pu.publication?.name,
+        subdomain: pu.publication?.subdomain,
+        logo_url: pu.publication?.logo_url,
+        role: pu.role,
+        is_primary: pu.is_primary || (primaryPub && String(pu.publication?.id) === String(primaryPub.id)),
+        subscriber_count: pu.publication?.subscriber_count || 0,
+        synced_at: new Date().toISOString()
+      }))
+
+      if (publicationsToUpsert.length > 0) {
+        await supabase.from('publications').upsert(publicationsToUpsert, { onConflict: 'user_id,subdomain' })
+      }
+    }
     
-    return { ...updatedUser, ...extraFields }
+    return { ...updatedUser, ...extraFields, publications: profile.publicationUsers }
   }
 
   static async syncPosts(userId: string, subdomain: string) {
