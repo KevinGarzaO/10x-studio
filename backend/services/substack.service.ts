@@ -47,17 +47,18 @@ export class SubstackService {
 
     // 1. Guardar perfil en tabla 'users'
     const userData = {
-      substack_user_id: profile.id,                    // 280221962
-      substack_slug: `${profile.id}-${profile.slug}`,  // 280221962-kevin-garza
-      name: profile.name,                              // "Kevin Garza"
-      handle: profile.handle,                          // "kevingarza"
-      photo_url: profile.photo_url,                    // URL de la foto
-      bio: profile.bio,                                // Texto del bio
-      subscriber_count: profile.subscriberCountNumber, // 269
-      follower_count: profile.followerCount,           // 273
-      social_links: profile.links || [],               // Enlaces (Array JSONB)
-      updated_at: new Date().toISOString()
-    }
+    substack_user_id: profile.id,
+    substack_slug: `${profile.id}-${profile.handle}`,
+    name: profile.name,
+    handle: profile.handle,
+    photo_url: profile.photo_url,
+    bio: profile.bio,
+    subscriber_count: profile.subscriberCountNumber,
+    follower_count: profile.followerCount,
+    subdomain: profile.primaryPublication?.subdomain || '',
+    publication_id: String(profile.primaryPublication?.id || ''),
+    updated_at: new Date().toISOString()
+  }
 
     const { error: userErr } = await supabase.from('users').upsert(userData, { onConflict: 'substack_user_id' })
     if (userErr) console.error('[Substack] Error upsert users:', userErr)
