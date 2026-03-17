@@ -276,7 +276,9 @@ export const getCookies = async (req: Request, res: Response) => {
 export const upsertCookies = async (req: Request, res: Response) => {
   try {
     const { cookies, profile } = req.body
-    
+    console.log('[upsertCookies] Body recibido:', JSON.stringify({ profile }, null, 2))
+
+
     // 1. Obtener o Crear Usuario
     const substackUserId = String(profile?.id || '')
     let { data: users }: { data: any } = await supabase.from('users').select('id, substack_slug').eq('substack_user_id', substackUserId).limit(1)
