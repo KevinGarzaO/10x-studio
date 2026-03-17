@@ -162,11 +162,17 @@ const resolvedUserId = updatedUser?.id || userId
     const limit = 50
 
     while (true) {
-    const url = `https://${subdomain}.substack.com/api/v1/subscribers?limit=${limit}&offset=${offset}&order=subscription_created_at&direction=desc`
-    const res = await fetch(url, { 
-      method: 'GET',
-      headers: this.getHeaders(cookie, `https://${subdomain}.substack.com`)
-    })
+      const url = `https://${subdomain}.substack.com/api/v1/subscriber-stats`
+      const res = await fetch(url, {
+        method: 'POST',
+        headers: this.getHeaders(cookie, `https://${subdomain}.substack.com`),
+        body: JSON.stringify({
+          limit,
+          offset,
+          order_by: 'subscription_created_at',
+          order_direction: 'desc'
+        })
+      })
       
       if (!res.ok) {
         console.error(`[Substack] Error fetching subscribers at offset ${offset}: ${res.status}`)
