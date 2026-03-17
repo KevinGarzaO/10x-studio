@@ -153,7 +153,33 @@ export const getSubscribers = async (req: Request, res: Response) => {
       .range(Number(offset), Number(offset) + Number(limit) - 1)
     
     if (error) throw error
-    res.json({ subscribers: data, total: count || 0 })
+
+    // TOP LEADS: suscriptores con 4 o más estrellas
+    const { count: topLeadsCount } = await supabase
+      .from('subscribers')
+      .select('id', { count: 'exact', head: true })
+      .eq('user_id', user.id)
+      .gte('stars', 4)
+
+    // AVG ESTRELLAS: promedio de estrellas
+    const { data: starsData } = await supabase
+      .from('subscribers')
+      .select('stars')
+      .eq('user_id', user.id)
+      .not('stars', 'is', null)
+
+    let avgStars: string | number = '—';
+    if (starsData && starsData.length > 0) {
+      const sum = starsData.reduce((acc, row) => acc + (row.stars || 0), 0)
+      avgStars = (sum / starsData.length).toFixed(1)
+    }
+
+    res.json({ 
+      subscribers: data, 
+      total: count || 0,
+      topLeads: topLeadsCount || 0,
+      avgStars
+    })
   } catch {
     res.status(500).json({ error: 'Error al obtener suscriptores' })
   }

@@ -62,6 +62,8 @@ function mapSubscriber(s: any): Subscriber {
 export function SubstackSubscribers() {
   const [subscribers,  setSubscribers]  = useState<Subscriber[]>([])
   const [total,        setTotal]        = useState(0)
+  const [globalTopLeads, setGlobalTopLeads] = useState<number>(0)
+  const [globalAvgStars, setGlobalAvgStars] = useState<number | string>('—')
   const [loading,      setLoading]      = useState(true)
   const [progressText, setProgressText]  = useState('')
   const [error,        setError]        = useState('')
@@ -95,6 +97,8 @@ export function SubstackSubscribers() {
 
       const totalCount = firstData.total || 0;
       setTotal(totalCount);
+      setGlobalTopLeads(firstData.topLeads || 0);
+      setGlobalAvgStars(firstData.avgStars ?? '—');
 
       if (!isMounted) return;
 
@@ -199,9 +203,9 @@ export function SubstackSubscribers() {
   }
 
   // Summary stats (basado en lo filtrado para mayor utilidad)
-  const withStars   = subscribers.filter(s => s.stars !== null)
-  const avgStars    = withStars.length > 0 ? (withStars.reduce((a, s) => a + (s.stars ?? 0), 0) / withStars.length).toFixed(1) : '—'
-  const hotLeads    = subscribers.filter(s => (s.stars ?? 0) >= 4).length
+  // Summary stats ahora globales basados en consultas directas a la base de datos
+  const avgStars    = globalAvgStars
+  const hotLeads    = globalTopLeads
 
   // User Row Template
   const userTemplate = (s: Subscriber) => (
