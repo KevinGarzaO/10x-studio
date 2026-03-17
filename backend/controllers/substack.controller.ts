@@ -202,12 +202,14 @@ export const upsertCookies = async (req: Request, res: Response) => {
     const { cookies, profile } = req.body
     
     // 1. Obtener o Crear Usuario
-    let { data: users }: { data: any } = await supabase.from('users').select('id, substack_slug').limit(1)
+    const substackUserId = String(profile?.id || '')
+    let { data: users }: { data: any } = await supabase.from('users').select('id, substack_slug').eq('substack_user_id', substackUserId).limit(1)
     let user = users?.[0]
     
     if (!user) {
       const { data: newUser, error: insertError } = await supabase.from('users').insert({
-        name: profile?.primaryPublication?.name || profile?.name || 'Usuario',
+        substack_user_id: substackUserId,
+        name: profile?.name || profile?.primaryPublication?.name || 'Usuario',
         updated_at: new Date().toISOString()
       }).select('id').single()
       
@@ -233,7 +235,6 @@ export const upsertCookies = async (req: Request, res: Response) => {
     await supabase.from('cookies').upsert(cookieData, { onConflict: 'user_id' })
 
     // 3. Sincronización INMEDIATA TOTAL (Esperamos a todo para el primer segundo)
-    const substackUserId = String(profile?.id || '')
     const userHandle = profile?.slug || profile?.handle || ''
     const pubSubdomain = profile?.primaryPublication?.subdomain || user.substack_slug?.replace(`${substackUserId}-`, '') || ''
     const syncSlug = user.substack_slug || `${substackUserId}-${userHandle}`

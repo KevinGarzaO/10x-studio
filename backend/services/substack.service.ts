@@ -150,11 +150,19 @@ export class SubstackService {
     console.log(`[Substack] Iniciando sync de subscriptores para ${subdomain}...`)
     let allSubscribers: any[] = []
     let offset = 0
-    const limit = 100
+    const limit = 50
 
     while (true) {
-      const url = `https://${subdomain}.substack.com/api/v1/subscriber-list?limit=${limit}&offset=${offset}&order_by=created_at&order_direction=desc`
-      const res = await fetch(url, { headers: this.getHeaders(cookie, `https://${subdomain}.substack.com`) })
+      const url = `https://${subdomain}.substack.com/api/v1/subscriber-stats`
+      const res = await fetch(url, { 
+        method: 'POST',
+        headers: this.getHeaders(cookie, `https://${subdomain}.substack.com`),
+        body: JSON.stringify({
+          filters: { order_by_desc_nulls_last: "subscription_created_at" },
+          limit,
+          offset
+        })
+      })
       
       if (!res.ok) {
         console.error(`[Substack] Error fetching subscribers at offset ${offset}: ${res.status}`)
