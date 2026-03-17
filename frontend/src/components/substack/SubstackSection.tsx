@@ -38,6 +38,17 @@ export function SubstackSection() {
     try {
       const sub = await api<any>('/api/substack/profile')
       if (sub && !sub.error) {
+        // Parse social_links — might be a JSON string in some DB setups
+        let parsedLinks = sub.social_links || []
+        if (typeof parsedLinks === 'string') {
+          try { parsedLinks = JSON.parse(parsedLinks) } catch { parsedLinks = [] }
+        }
+        // Generate labels from type if missing
+        const enrichedLinks = Array.isArray(parsedLinks) ? parsedLinks.map((l: any) => ({
+          ...l,
+          label: l.label || (l.type === 'twitter' ? '𝕏 Twitter' : l.type === 'linkedin' ? 'LinkedIn' : l.type || 'Enlace')
+        })) : []
+
         setProfile({
           name: sub.name || '',
           handle: sub.handle || '',
@@ -47,13 +58,13 @@ export function SubstackSection() {
           subCount: sub.subscriber_count || 0,
           followerCount: sub.follower_count || 0,
           connectedAt: sub.created_at || '',
-          expiresAt: sub.expires_at || (Array.isArray(sub.cookies) ? sub.cookies[0]?.expires_at : null) || sub.updated_at || '', 
-          links: sub.social_links || [],
+          expiresAt: sub.expires_at || sub.updated_at || '', 
+          links: enrichedLinks,
           pubLogo: sub.publication_logo || '',
           publication_name: sub.publication_name || '',
           primaryPublication: { 
-            subdomain: sub.subdomain || sub.substack_slug || '', 
-            name: sub.publication_name || sub.substack_slug || '' 
+            subdomain: sub.subdomain || '', 
+            name: sub.publication_name || '' 
           }
         })
       }
@@ -185,7 +196,7 @@ export function SubstackSection() {
                         ) : (
                           <span className="text-sm">🗞️</span>
                         )}
-                        {profile.primaryPublication?.name || substackPublication}
+                        {profile.primaryPublication?.name || profile.publication_name || substackPublication}
                       </a>
                     )}
                   </div>

@@ -1,6 +1,7 @@
 import { Request, Response } from 'express'
 import { supabase } from '../services/supabase.service'
 import { SubstackService } from '../services/substack.service'
+import { syncSubstackData } from '../services/cron.service'
 
 export const getProfile = async (req: Request, res: Response) => {
   try {
@@ -24,11 +25,11 @@ export const getProfile = async (req: Request, res: Response) => {
     const expiresAt = cookiesRow?.expires_at || null
     console.log('[getProfile] Expires at:', expiresAt)
 
-    // 3. Get publications — query by author_id (substack user id), NOT user_id (column doesn't exist)
+    // 3. Get publications — query by user_id
     const { data: publications } = await supabase
       .from('publications')
       .select('*')
-      .eq('author_id', user.substack_user_id)
+      .eq('user_id', user.id)
 
     const pubs = publications || []
     console.log('[getProfile] Publications:', pubs.map((p: any) => ({ name: p.name, subdomain: p.subdomain })))
@@ -306,21 +307,10 @@ export const upsertCookies = async (req: Request, res: Response) => {
     
     await supabase.from('cookies').upsert(cookieData, { onConflict: 'user_id' })
 
-    // 3. Sincronización INMEDIATA TOTAL (Esperamos a todo para el primer segundo)
-    const userHandle = profile?.slug || profile?.handle || ''
-    const pubSubdomain = profile?.primaryPublication?.subdomain || user.substack_slug?.replace(`${substackUserId}-`, '') || ''
-    const syncSlug = user.substack_slug || `${substackUserId}-${userHandle}`
-
-    console.log(`[SubstackController] Iniciando sincronización total inmediata. User: ${userHandle}, Pub: ${pubSubdomain}...`)
-    
+    // 3. Sincronización INMEDIATA TOTAL usando la misma lógica del cron
+    console.log(`[SubstackController] Iniciando sincronización total inmediata para user: ${user.id}...`)
     try {
-      // PROMISE.ALL para garantizar que al terminar, TODO esté en la DB
-      await Promise.all([
-        SubstackService.syncProfile(user.id, substackUserId, userHandle),
-        SubstackService.syncStats(user.id, pubSubdomain),
-        SubstackService.syncPosts(user.id, pubSubdomain),
-        SubstackService.syncSubscribers(user.id, pubSubdomain)
-      ])
+      await syncSubstackData(user.id)
       console.log(`[SubstackController] Sincronización total completada con éxito.`)
     } catch (err) {
       console.error(`[SubstackController] Error en sincronización total inicial:`, err)
@@ -333,10 +323,14 @@ export const upsertCookies = async (req: Request, res: Response) => {
     const { data: cookiesRow } = await supabase.from('cookies').select('expires_at').eq('user_id', user.id).single()
     const finalExpiresAt = cookiesRow?.expires_at || expiresAt.toISOString()
 
-    // Get publications by author_id (substack user id)
-    const { data: pubs } = await supabase.from('publications').select('*').eq('author_id', substackUserId)
+    // Get publications by user_id
+    const { data: pubs } = await supabase.from('publications').select('*').eq('user_id', user.id)
     const publications = pubs || []
     const primaryPub = publications.find((p: any) => p.is_primary) || publications[0]
+
+    const userHandle = profile?.slug || profile?.handle || ''
+    const pubSubdomain = primaryPub?.subdomain || profile?.primaryPublication?.subdomain || user.substack_slug?.replace(`${substackUserId}-`, '') || ''
+    const syncSlug = user.substack_slug || `${substackUserId}-${userHandle}`
 
     console.log(`[upsertCookies] Final response: name=${finalUser?.name}, pub=${primaryPub?.name}, expires=${finalExpiresAt}, pubs=${publications.length}`)
 

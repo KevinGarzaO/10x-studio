@@ -66,19 +66,18 @@ export class SubstackService {
     // 2. Guardar publicación en tabla 'publications'
     if (profile.primaryPublication) {
       const pubData = {
-        publication_id: profile.primaryPublication.id,          // 7999333
+        id: String(profile.primaryPublication.id),              // Using 'id' instead of 'publication_id'
+        user_id: userId,                                        // Link to 'users' table
         name: profile.primaryPublication.name,                  // "Transformateck"
         subdomain: profile.primaryPublication.subdomain,        // "transformateck"
         logo_url: profile.primaryPublication.logo_url,          // URL del logo
-        hero_text: profile.publicationUsers?.[0]?.publication?.hero_text || profile.primaryPublication.hero_text, // Descripción
-        language: profile.primaryPublication.language,          // "es"
-        payments_state: profile.primaryPublication.payments_state,    // "disabled"
-        community_enabled: profile.publicationUsers?.[0]?.publication?.community_enabled ?? profile.primaryPublication.community_enabled, // true
-        author_id: profile.primaryPublication.author_id,        // 280221962
-        updated_at: new Date().toISOString()
+        role: 'admin',                                          // Default role
+        is_primary: true,                                       // Mark as primary
+        subscriber_count: profile.subscriberCountNumber || 0,   // "269"
+        synced_at: new Date().toISOString()
       }
 
-      const { error: pubErr } = await supabase.from('publications').upsert(pubData, { onConflict: 'publication_id' })
+      const { error: pubErr } = await supabase.from('publications').upsert(pubData, { onConflict: 'id' })
       if (pubErr) console.error('[Substack] Error upsert publications:', pubErr)
     }
     

@@ -28,7 +28,7 @@ export function useAppData() {
       setTopics(t); setHistory(h); setCalendar(c)
       setSettingsState(s); setTemplates(tmpl); setCampaigns(camp)
       setSubstackConnected(!!sub && !sub.error)
-      setSubstackPublication(sub?.substack_slug || sub?.publication || '')
+      setSubstackPublication(sub?.subdomain || sub?.publication_name || sub?.substack_slug || '')
     }).finally(() => setLoading(false))
   }, [])
 
