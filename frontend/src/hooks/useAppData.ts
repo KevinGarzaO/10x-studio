@@ -59,16 +59,21 @@ export function useAppData() {
   const updateCampaign = useCallback(async (c: Campaign) => { await api('/api/campaigns', { method: 'PUT',    body: JSON.stringify(c) }); setCampaigns(p => p.map(x => x.id === c.id ? c : x)) }, [])
   const deleteCampaign = useCallback(async (id: string)  => { await api('/api/campaigns', { method: 'DELETE', body: JSON.stringify({ id }) }); setCampaigns(p => p.filter(x => x.id !== id)) }, [])
 
-  // Substack
-  const refreshSubstackConnection = useCallback(async () => {
-    const sub = await api<{ connected: boolean; publication: string }>('/api/substack/connect')
-    setSubstackConnected(sub.connected)
-    setSubstackPublication(sub.publication)
+  // Substack — reload profile from DB (pure read, no sync trigger)
+  const reloadSubstackProfile = useCallback(async () => {
+    try {
+      const sub = await api<any>('/api/substack/profile')
+      setSubstackConnected(!!sub && !sub.error)
+      setSubstackPublication(sub?.substack_slug || sub?.publication || '')
+    } catch {
+      setSubstackConnected(false)
+      setSubstackPublication('')
+    }
   }, [])
 
   return {
     topics, history, calendar, settings, templates, campaigns, loading,
-    substackConnected, substackPublication, refreshSubstackConnection,
+    substackConnected, substackPublication, reloadSubstackProfile,
     addTopic, updateTopic, deleteTopic,
     addHistory, deleteHistory,
     addCalEvent, updateCalEvent, deleteCalEvent,

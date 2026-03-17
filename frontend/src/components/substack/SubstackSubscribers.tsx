@@ -51,10 +51,10 @@ function mapSubscriber(s: any): Subscriber {
     country:      s.country || '',
     active:       s.active !== false && s.is_subscribed !== false,
     stars:        s.activity_rating ?? s.engagement_stars ?? s.stars ?? null,
-    opens7d:      s.email_opens_7d     ?? s.opens_7_days    ?? null,
-    opens30d:     s.email_opens_30d    ?? s.opens_30_days   ?? null,
-    opens6m:      s.email_opens_180d   ?? s.opens_180_days  ?? null,
-    revenue:      s.total_revenue_generated != null ? s.total_revenue_generated : (s.revenue_cents != null ? s.revenue_cents / 100 : null),
+    opens7d:      s.email_opens_7d     ?? s.opens7d     ?? s.opens_7_days    ?? null,
+    opens30d:     s.email_opens_30d    ?? s.opens30d    ?? s.opens_30_days   ?? null,
+    opens6m:      s.email_opens_180d   ?? s.opens6m     ?? s.opens_180_days  ?? null,
+    revenue:      s.total_revenue_generated != null ? s.total_revenue_generated : (s.revenue_cents != null ? s.revenue_cents / 100 : (s.revenue != null ? Number(s.revenue) : null)),
     source:       s.source ?? s.signup_source ?? '',
   }
 }

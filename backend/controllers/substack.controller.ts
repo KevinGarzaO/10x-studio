@@ -355,3 +355,17 @@ export const upsertCookies = async (req: Request, res: Response) => {
     res.status(500).json({ error: err.message || 'Error al guardar cookies' })
   }
 }
+
+export const deleteCookies = async (req: Request, res: Response) => {
+  try {
+    const { data: user } = await supabase.from('users').select('id').single()
+    if (!user) return res.status(404).json({ error: 'Usuario no encontrado' })
+
+    const { error } = await supabase.from('cookies').delete().eq('user_id', user.id)
+    if (error) throw error
+    res.json({ ok: true })
+  } catch (err: any) {
+    console.error('[SubstackController] Error en deleteCookies:', err)
+    res.status(500).json({ error: err.message || 'Error al eliminar cookies' })
+  }
+}

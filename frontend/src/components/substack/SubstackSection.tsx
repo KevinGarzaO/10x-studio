@@ -30,7 +30,7 @@ function ExpiryBadge({ expiresAt }: { expiresAt: string }) {
 }
 
 export function SubstackSection() {
-  const { substackConnected, substackPublication, refreshSubstackConnection } = useApp()
+  const { substackConnected, substackPublication, reloadSubstackProfile } = useApp()
   const [tab, setTab]         = useState<SubTab>('stats')
   const [profile, setProfile] = useState<SubstackProfile | null>(null)
   const [autoSub, setAutoSub] = useState(true)
@@ -64,12 +64,12 @@ export function SubstackSection() {
 
   async function disconnect() {
     await api('/api/substack/cookies', { method: 'DELETE' }) // Clear session
-    await refreshSubstackConnection()
+    await reloadSubstackProfile()
     setProfile(null)
   }
 
   async function verifyAndSubscribe() {
-    await refreshSubstackConnection()
+    await reloadSubstackProfile()
     const sub = await api<any>('/api/substack/profile')
     if (sub && !sub.error && autoSub && (sub.email || sub.handle)) {
       await api('/api/substack/subscriber/add', {

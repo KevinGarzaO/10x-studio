@@ -26,9 +26,7 @@ export function SubstackStats() {
          setError('No estás conectado a Substack.')
          setLoading(false)
          return
-      }
-      
-      const pubSlug = sub.substack_slug
+       }
       
       // 2. Fetch stats and posts from our backend
       const [stats, posts] = await Promise.all([
@@ -40,11 +38,12 @@ export function SubstackStats() {
       if (posts.error) throw new Error(posts.error)
 
       // 3. Map to StatsData
+      const pubSubdomain = sub.subdomain || sub.substack_slug
       const d: StatsData = {
         publication: { 
-          name: sub.name || pubSlug, 
-          subdomain: pubSlug, 
-          url: `https://${pubSlug}.substack.com` 
+          name: sub.publication_name || sub.name || pubSubdomain, 
+          subdomain: pubSubdomain, 
+          url: `https://${pubSubdomain}.substack.com` 
         },
         subscribers: { 
           total: stats.subscriber_count ?? 0, 
@@ -56,11 +55,11 @@ export function SubstackStats() {
           title:    p.title || 'Sin título',
           date:     p.published_at?.slice(0, 10) ?? '',
           type:     'newsletter', // Default
-          likes:    0, // Backend doesn't have likes yet, would need profile/posts update
+          likes:    0,
           comments: 0,
           openRate: null,
           views:    null,
-          url:      `https://${pubSlug}.substack.com/p/${p.post_id}`,
+          url:      `https://${pubSubdomain}.substack.com/p/${p.post_id}`,
         })) : []
       }
 

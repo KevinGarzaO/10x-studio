@@ -150,4 +150,13 @@ router.get('/cookies/:userId', SubstackController.getCookies)
  */
 router.post('/cookies', SubstackController.upsertCookies)
 
+/**
+ * @swagger
+ * /api/substack/cookies:
+ *   delete:
+ *     summary: Eliminar cookies (desconectar)
+ *     tags: [Substack]
+ */
+router.delete('/cookies', SubstackController.deleteCookies)
+
 export default router
