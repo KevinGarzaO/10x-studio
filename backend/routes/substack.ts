@@ -13,6 +13,7 @@ const router = Router()
  *       200:
  *         description: Perfil del usuario
  */
+router.get('/debug', SubstackController.debugDB)
 router.get('/profile', SubstackController.getProfile)
 
 /**

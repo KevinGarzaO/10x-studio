@@ -52,7 +52,43 @@ export const getProfile = async (req: Request, res: Response) => {
   }
 }
 
+// TEMPORARY DEBUG - shows raw DB state to diagnose issues
+export const debugDB = async (_req: Request, res: Response) => {
+  try {
+    const { data: users } = await supabase.from('users').select('*').limit(3)
+    const { data: pubs } = await supabase.from('publications').select('*').limit(3)
+    const { data: cookies } = await supabase.from('cookies').select('*').limit(3)
+    const { data: subs, count } = await supabase.from('subscribers').select('*', { count: 'exact' }).limit(3)
+    
+    res.json({
+      users: {
+        count: users?.length || 0,
+        columns: users?.[0] ? Object.keys(users[0]) : [],
+        rows: users
+      },
+      publications: {
+        count: pubs?.length || 0,
+        columns: pubs?.[0] ? Object.keys(pubs[0]) : [],
+        rows: pubs
+      },
+      cookies: {
+        count: cookies?.length || 0,
+        columns: cookies?.[0] ? Object.keys(cookies[0]) : [],
+        rows: cookies
+      },
+      subscribers: {
+        count: count || 0,
+        columns: subs?.[0] ? Object.keys(subs[0]) : [],
+        sample: subs?.slice(0, 2)
+      }
+    })
+  } catch (err: any) {
+    res.status(500).json({ error: err.message })
+  }
+}
+
 export const getPosts = async (req: Request, res: Response) => {
+
   try {
     const { data: user } = await supabase.from('users').select('id').single()
     if (!user) return res.status(404).json({ error: 'Usuario no encontrado' })
