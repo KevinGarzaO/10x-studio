@@ -115,7 +115,7 @@ export function InstallPWA() {
             </div>
             <span className="text-[11px] text-stone-300">
                 1. Toca el botón compartir <i className="pi pi-share-alt text-[10px] mx-1"></i> abajo.<br/>
-                2. Selecciona <strong>"Añadir a pantalla de inicio"</strong>.
+                2. Selecciona <strong>&quot;Añadir a pantalla de inicio&quot;</strong>.
             </span>
         </div>
       </div>
