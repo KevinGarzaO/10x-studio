@@ -219,13 +219,18 @@ const resolvedUserId = updatedUser?.id || userId
       }))
 
       console.log(`[Substack] First sub to upsert:`, JSON.stringify(subsToUpsert[0]))
-      const { error } = await supabase.from('subscribers').upsert(subsToUpsert, { onConflict: 'user_id,email' })
+      
+      // Eliminar duplicados por email antes de hacer upsert
+      const uniqueSubs = subsToUpsert.filter(
+        (sub, index, self) => index === self.findIndex(s => s.email === sub.email)
+      )
+
+      const { error } = await supabase.from('subscribers').upsert(uniqueSubs, { onConflict: 'user_id,email' })
       if (error) {
         console.error('[Supabase] Error upserting subscribers:', JSON.stringify(error))
-
         throw new Error(`Error al guardar subscriptores: ${error.message}`)
       }
-      console.log(`[Substack] Sync de subscriptores completado con éxito: ${allSubscribers.length} guardados.`)
+      console.log(`[Substack] Sync de subscriptores completado con éxito: ${uniqueSubs.length} guardados (de ${allSubscribers.length} recibidos).`)
     } else {
       console.log('[Substack] No se encontraron subscriptores para sincronizar.')
     }
