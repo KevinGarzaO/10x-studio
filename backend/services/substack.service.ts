@@ -67,7 +67,6 @@ export class SubstackService {
     if (profile.primaryPublication) {
       const pubData = {
         publication_id: profile.primaryPublication.id,          // 7999333
-        user_id: userId,                                        // MUST LINK to user.id!
         name: profile.primaryPublication.name,                  // "Transformateck"
         subdomain: profile.primaryPublication.subdomain,        // "transformateck"
         logo_url: profile.primaryPublication.logo_url,          // URL del logo

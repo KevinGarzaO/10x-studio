@@ -24,11 +24,11 @@ export const getProfile = async (req: Request, res: Response) => {
     const expiresAt = cookiesRow?.expires_at || null
     console.log('[getProfile] Expires at:', expiresAt)
 
-    // 3. Get publications separately (avoids FK join issues)
+    // 3. Get publications — query by author_id (substack user id), NOT user_id (column doesn't exist)
     const { data: publications } = await supabase
       .from('publications')
       .select('*')
-      .eq('user_id', user.id)
+      .eq('author_id', user.substack_user_id)
 
     const pubs = publications || []
     console.log('[getProfile] Publications:', pubs.map((p: any) => ({ name: p.name, subdomain: p.subdomain })))
@@ -60,6 +60,34 @@ export const debugDB = async (_req: Request, res: Response) => {
     const { data: cookies } = await supabase.from('cookies').select('*').limit(3)
     const { data: subs, count } = await supabase.from('subscribers').select('*', { count: 'exact' }).limit(3)
     
+    // Probe subscribers schema by trying a test insert (will fail but reveals columns)
+    const { error: subSchemaErr } = await supabase.from('subscribers').insert({
+      user_id: 'test-probe',
+      email: 'probe@test.com',
+      name: 'probe',
+      type: 'free',
+      country: '',
+      active: true,
+      stars: 0,
+      opens7d: 0,
+      opens30d: 0,
+      opens6m: 0,
+      revenue: 0,
+      source: '',
+      synced_at: new Date().toISOString()
+    })
+    // Delete the test row if it somehow worked
+    await supabase.from('subscribers').delete().eq('email', 'probe@test.com')
+
+    // Probe publications schema
+    const { error: pubSchemaErr } = await supabase.from('publications').insert({
+      publication_id: 0,
+      name: 'probe',
+      subdomain: 'probe',
+      author_id: 0
+    })
+    await supabase.from('publications').delete().eq('subdomain', 'probe')
+
     res.json({
       users: {
         count: users?.length || 0,
@@ -69,7 +97,8 @@ export const debugDB = async (_req: Request, res: Response) => {
       publications: {
         count: pubs?.length || 0,
         columns: pubs?.[0] ? Object.keys(pubs[0]) : [],
-        rows: pubs
+        rows: pubs,
+        schemaProbeError: pubSchemaErr ? pubSchemaErr.message : 'OK (probe inserted)'
       },
       cookies: {
         count: cookies?.length || 0,
@@ -79,7 +108,8 @@ export const debugDB = async (_req: Request, res: Response) => {
       subscribers: {
         count: count || 0,
         columns: subs?.[0] ? Object.keys(subs[0]) : [],
-        sample: subs?.slice(0, 2)
+        sample: subs?.slice(0, 2),
+        schemaProbeError: subSchemaErr ? subSchemaErr.message : 'OK (probe inserted)'
       }
     })
   } catch (err: any) {
@@ -303,8 +333,8 @@ export const upsertCookies = async (req: Request, res: Response) => {
     const { data: cookiesRow } = await supabase.from('cookies').select('expires_at').eq('user_id', user.id).single()
     const finalExpiresAt = cookiesRow?.expires_at || expiresAt.toISOString()
 
-    // Get publications separately
-    const { data: pubs } = await supabase.from('publications').select('*').eq('user_id', user.id)
+    // Get publications by author_id (substack user id)
+    const { data: pubs } = await supabase.from('publications').select('*').eq('author_id', substackUserId)
     const publications = pubs || []
     const primaryPub = publications.find((p: any) => p.is_primary) || publications[0]
 
