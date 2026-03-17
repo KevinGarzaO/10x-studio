@@ -158,8 +158,8 @@ const resolvedUserId = updatedUser?.id || userId
 
     console.log(`[Substack] Iniciando sync de subscriptores para ${subdomain}...`)
     let allSubscribers: any[] = []
-    let offset = 0
-    const limit = 50
+    let lastId = 0
+    const limit = 100
 
     while (true) {
       const url = `https://${subdomain}.substack.com/api/v1/subscriber-stats`
@@ -168,14 +168,16 @@ const resolvedUserId = updatedUser?.id || userId
         headers: this.getHeaders(cookie, `https://${subdomain}.substack.com`),
         body: JSON.stringify({
           limit,
-          offset,
-          order_by: 'subscription_created_at',
-          order_direction: 'desc'
+          offset: lastId === 0 ? 0 : undefined,
+          after_id: lastId === 0 ? undefined : lastId,
+          order_by: 'subscription_id',
+          order_direction: 'asc',
+          filters: {}
         })
       })
       
       if (!res.ok) {
-        console.error(`[Substack] Error fetching subscribers at offset ${offset}: ${res.status}`)
+        console.error(`[Substack] Error fetching subscribers after_id ${lastId}: ${res.status}`)
         break
       }
       
@@ -187,15 +189,17 @@ const resolvedUserId = updatedUser?.id || userId
       const subs = Array.isArray(data) ? data : (data.subscribers || [])
       const totalReported = data.total_count || (subs.length > 0 ? subs[0]?.total_count : null) || data.count || '?'
       
-      console.log(`[Substack] Offset ${offset}: Obtenidos ${subs.length} subs de un total reportado de ${totalReported}`)
+      console.log(`[Substack] after_id ${lastId}: Obtenidos ${subs.length} subs de un total reportado de ${totalReported}`)
       if (subs.length === 0) break
+      
+      // Mover el cursor al último ID recibido
+      lastId = subs[subs.length - 1].subscription_id
       
       allSubscribers = allSubscribers.concat(subs)
       if (subs.length < limit) break
-      offset += limit
       
       // Safety break to avoid infinite loops if API behaves weirdly
-      if (offset > 50000) break 
+      if (allSubscribers.length > 50000) break 
     }
 
     if (allSubscribers.length > 0) {
