@@ -161,19 +161,22 @@ export const getSubscribers = async (req: Request, res: Response) => {
 
 export const getStats = async (req: Request, res: Response) => {
   try {
-    const { data: user } = await supabase.from('users').select('id').single()
+    const { data: user } = await supabase.from('users').select('id, subscriber_count, follower_count').single()
     if (!user) return res.status(404).json({ error: 'Usuario no encontrado' })
 
-    const { data, error } = await supabase
+    const { data } = await supabase
       .from('stats')
       .select('*')
       .eq('user_id', user.id)
       .order('date', { ascending: false })
       .limit(1)
-      .single()
+      .maybeSingle()
     
-    if (error) throw error
-    res.json(data)
+    // Si no hay stats en la tabla, regresar los del usuario
+    res.json(data || { 
+      subscriber_count: user.subscriber_count || 0,
+      follower_count: user.follower_count || 0
+    })
   } catch {
     res.status(500).json({ error: 'Error al obtener estadísticas' })
   }

@@ -60,15 +60,20 @@ export class SubstackService {
     updated_at: new Date().toISOString()
   }
 
-    const { error: userErr } = await supabase.from('users').upsert(userData, { onConflict: 'substack_user_id' })
-    if (userErr) console.error('[Substack] Error upsert users:', userErr)
+  const { error: userErr, data: updatedUser } = await supabase
+    .from('users')
+    .upsert(userData, { onConflict: 'substack_user_id' })
+    .select('id')
+    .single()
+  if (userErr) console.error('[Substack] Error upsert users:', userErr)
 
+const resolvedUserId = updatedUser?.id || userId
 
     // 2. Guardar publicación en tabla 'publications'
     if (profile.primaryPublication) {
       const pubData = {
         id: String(profile.primaryPublication.id),              // Using 'id' instead of 'publication_id'
-        user_id: userId,                                        // Link to 'users' table
+        user_id: resolvedUserId,                                        // Link to 'users' table
         name: profile.primaryPublication.name,                  // "Transformateck"
         subdomain: profile.primaryPublication.subdomain,        // "transformateck"
         logo_url: profile.primaryPublication.logo_url,          // URL del logo
@@ -157,16 +162,11 @@ export class SubstackService {
     const limit = 50
 
     while (true) {
-      const url = `https://${subdomain}.substack.com/api/v1/subscriber-stats`
-      const res = await fetch(url, { 
-        method: 'POST',
-        headers: this.getHeaders(cookie, `https://${subdomain}.substack.com`),
-        body: JSON.stringify({
-          filters: { order_by_desc_nulls_last: "subscription_created_at" },
-          limit,
-          offset
-        })
-      })
+    const url = `https://${subdomain}.substack.com/api/v1/subscribers?limit=${limit}&offset=${offset}&order=subscription_created_at&direction=desc`
+    const res = await fetch(url, { 
+      method: 'GET',
+      headers: this.getHeaders(cookie, `https://${subdomain}.substack.com`)
+    })
       
       if (!res.ok) {
         console.error(`[Substack] Error fetching subscribers at offset ${offset}: ${res.status}`)

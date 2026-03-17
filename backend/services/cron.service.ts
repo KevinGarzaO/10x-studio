@@ -17,9 +17,9 @@ export const syncSubstackData = async (userIdStr?: string) => {
       try {
         console.log(`[Cron] Sincronizando usuario: ${user.substack_slug}`)
         
-        // 1. Sincronizar perfil (también actualiza publications)
-        await SubstackService.syncProfile(user.id, user.substack_user_id, user.substack_slug)
-        
+        // Extraer solo el handle del slug (280221962-kevin-garza → kevin-garza)
+const handle = user.substack_slug?.split('-').slice(1).join('-') || user.substack_slug
+await SubstackService.syncProfile(user.id, user.substack_user_id, handle)
         // Si no tenemos subdomain en users, lo sacamos de publications
         let subdomain = user.subdomain
         if (!subdomain) {
