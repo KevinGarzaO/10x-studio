@@ -158,8 +158,9 @@ const resolvedUserId = updatedUser?.id || userId
 
     console.log(`[Substack] Iniciando sync de subscriptores para ${subdomain}...`)
     let allSubscribers: any[] = []
-    let lastId = 0
     const limit = 100
+    let offset = 0
+    const seenIds = new Set<number>()
 
     while (true) {
       const url = `https://${subdomain}.substack.com/api/v1/subscriber-stats`
@@ -168,16 +169,14 @@ const resolvedUserId = updatedUser?.id || userId
         headers: this.getHeaders(cookie, `https://${subdomain}.substack.com`),
         body: JSON.stringify({
           limit,
-          offset: lastId === 0 ? 0 : undefined,
-          after_id: lastId === 0 ? undefined : lastId,
-          order_by: 'subscription_id',
-          order_direction: 'asc',
-          filters: {}
+          offset,
+          order_by: 'subscription_created_at',
+          order_direction: 'asc'
         })
       })
       
       if (!res.ok) {
-        console.error(`[Substack] Error fetching subscribers after_id ${lastId}: ${res.status}`)
+        console.error(`[Substack] Error fetching subscribers at offset ${offset}: ${res.status}`)
         break
       }
       
@@ -185,21 +184,26 @@ const resolvedUserId = updatedUser?.id || userId
       console.log('[DEBUG subscribers] Status:', res.status)
       console.log('[DEBUG subscribers] Data keys:', Object.keys(data))
       console.log('[DEBUG subscribers] Sample:', JSON.stringify(data).slice(0, 500))
-      // The API returns { subscribers: [...], total_count: N } based on user's payload
-      const subs = Array.isArray(data) ? data : (data.subscribers || [])
+      
+      const subs = data?.subscribers || []
       const totalReported = data.total_count || (subs.length > 0 ? subs[0]?.total_count : null) || data.count || '?'
       
-      console.log(`[Substack] after_id ${lastId}: Obtenidos ${subs.length} subs de un total reportado de ${totalReported}`)
+      console.log(`[Substack] Offset ${offset}: Obtenidos ${subs.length} subs de un total reportado de ${totalReported}`)
       if (subs.length === 0) break
       
-      // Mover el cursor al último ID recibido
-      lastId = subs[subs.length - 1].subscription_id
+      // Deduplicar por subscription_id
+      for (const sub of subs) {
+        if (!seenIds.has(sub.subscription_id)) {
+          seenIds.add(sub.subscription_id)
+          allSubscribers.push(sub)
+        }
+      }
       
-      allSubscribers = allSubscribers.concat(subs)
       if (subs.length < limit) break
+      offset += limit
       
       // Safety break to avoid infinite loops if API behaves weirdly
-      if (allSubscribers.length > 50000) break 
+      if (offset > 50000) break 
     }
 
     if (allSubscribers.length > 0) {
