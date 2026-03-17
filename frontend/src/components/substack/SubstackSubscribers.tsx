@@ -102,31 +102,18 @@ export function SubstackSubscribers() {
 
       if (!isMounted) return;
 
-      let fetchedSubs: Subscriber[] = [];
-      let off = 0;
-      const CHUNK_SIZE = 100;
+      setProgressText(`Cargando todos los suscriptores...`);
+      
+      const data = await api<any>(`/api/substack/subscribers?limit=3000&offset=0`);
+      if (data.error) throw new Error(data.error)
 
-      while (isMounted && off < totalCount) {
-        setProgressText(`Cargados ${fetchedSubs.length} de ${totalCount} suscriptores...`);
-        
-        try {
-           const data = await api<any>(`/api/substack/subscribers?limit=${CHUNK_SIZE}&offset=${off}`);
-           if (data.error) throw new Error(data.error)
-
-           const raw = data.subscribers || [];
-           const chunk = Array.isArray(raw) ? raw.map(mapSubscriber) : [];
-           
-           fetchedSubs = [...fetchedSubs, ...chunk];
-           setSubscribers([...fetchedSubs]); // Update progress live
-           
-           if (chunk.length === 0) break;
-        } catch (err) {
-           console.error("Chunk failed at offset", off, err);
-           throw err;
-        }
-        
-        off += CHUNK_SIZE;
-      }
+      const raw = data.subscribers || [];
+      const allFetchedSubs = Array.isArray(raw) ? raw.map(mapSubscriber) : [];
+      
+      setSubscribers(allFetchedSubs);
+      setTotal(firstData.total || allFetchedSubs.length);
+      setGlobalTopLeads(data.topLeads || firstData.topLeads || 0);
+      setGlobalAvgStars(data.avgStars ?? firstData.avgStars ?? '—');
     } catch (e: any) { 
       if (isMounted) setError(String(e.message || e)) 
     } finally {
