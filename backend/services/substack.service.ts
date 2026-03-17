@@ -174,6 +174,9 @@ const resolvedUserId = updatedUser?.id || userId
       }
       
       const data = await res.json()
+      console.log('[DEBUG subscribers] Status:', res.status)
+      console.log('[DEBUG subscribers] Data keys:', Object.keys(data))
+      console.log('[DEBUG subscribers] Sample:', JSON.stringify(data).slice(0, 500))
       // The API returns { subscribers: [...], total_count: N } based on user's payload
       const subs = Array.isArray(data) ? data : (data.subscribers || [])
       const totalReported = data.total_count || (subs.length > 0 ? subs[0]?.total_count : null) || data.count || '?'
