@@ -4,41 +4,47 @@ import { SubstackService } from '../services/substack.service'
 
 export const getProfile = async (req: Request, res: Response) => {
   try {
+    // 1. Get user
     const { data: user, error } = await supabase
       .from('users')
-      .select(`
-        *,
-        cookies:cookies (expires_at),
-        publications:publications (*)
-      `)
+      .select('*')
       .single()
 
-    if (error) return res.status(404).json({ error: 'Perfil no encontrado' })
+    if (error || !user) return res.status(404).json({ error: 'Perfil no encontrado' })
     
-    console.log('[DEBUG] User fetched from DB:', { id: user.id, name: user.name, substack_user_id: user.substack_user_id })
-    const publications = (user as any).publications || []
-    console.log('[DEBUG] Publications fetched:', publications.map((p: any) => ({ name: p.name, is_primary: p.is_primary })))
+    console.log('[getProfile] User:', { id: user.id, name: user.name, substack_user_id: user.substack_user_id })
 
-    const cookiesArr = (user as any).cookies 
-    const expiresAt = Array.isArray(cookiesArr) && cookiesArr.length > 0 
-      ? cookiesArr[0].expires_at 
-      : null
+    // 2. Get cookies separately (avoids join issues)
+    const { data: cookiesRow } = await supabase
+      .from('cookies')
+      .select('expires_at')
+      .eq('user_id', user.id)
+      .single()
+    
+    const expiresAt = cookiesRow?.expires_at || null
+    console.log('[getProfile] Expires at:', expiresAt)
 
-    const primaryPub = publications.find((p: any) => p.is_primary) || publications[0]
+    // 3. Get publications separately (avoids FK join issues)
+    const { data: publications } = await supabase
+      .from('publications')
+      .select('*')
+      .eq('user_id', user.id)
 
+    const pubs = publications || []
+    console.log('[getProfile] Publications:', pubs.map((p: any) => ({ name: p.name, subdomain: p.subdomain })))
+
+    const primaryPub = pubs.find((p: any) => p.is_primary) || pubs[0]
+
+    // 4. Build response
     const responseData = {
       ...user,
       expires_at: expiresAt,
-      publication_name: primaryPub?.name,
-      subdomain: primaryPub?.subdomain,
-      publication_logo: primaryPub?.logo_url,
-      publications,
-      _debug: {
-        userCount: (await supabase.from('users').select('id', { count: 'exact' })).count,
-        pubCount: (await supabase.from('publications').select('id', { count: 'exact' })).count
-      }
+      publication_name: primaryPub?.name || null,
+      subdomain: primaryPub?.subdomain || null,
+      publication_logo: primaryPub?.logo_url || null,
+      publications: pubs
     }
-    console.log('[DEBUG] Final response name:', responseData.name, 'Debug Info:', responseData._debug)
+    console.log('[getProfile] Response: name=', responseData.name, 'pub=', responseData.publication_name, 'expires=', responseData.expires_at)
     res.json(responseData)
   } catch (err) {
     console.error('[SubstackController] Error en getProfile:', err)
@@ -255,24 +261,23 @@ export const upsertCookies = async (req: Request, res: Response) => {
     }
 
     // 4. Devolver datos enriquecidos para la extensión
-    const { data: finalUser } = await supabase.from('users').select(`
-      *,
-      cookies:cookies (expires_at),
-      publications:publications (*)
-    `).eq('id', user.id).single()
+    const { data: finalUser } = await supabase.from('users').select('*').eq('id', user.id).single()
 
-    const cookiesArr = (finalUser as any).cookies
-    const finalExpiresAt = Array.isArray(cookiesArr) && cookiesArr.length > 0 
-      ? cookiesArr[0].expires_at 
-      : expiresAt.toISOString()
+    // Get cookies separately
+    const { data: cookiesRow } = await supabase.from('cookies').select('expires_at').eq('user_id', user.id).single()
+    const finalExpiresAt = cookiesRow?.expires_at || expiresAt.toISOString()
 
-    const publications = (finalUser as any).publications || []
+    // Get publications separately
+    const { data: pubs } = await supabase.from('publications').select('*').eq('user_id', user.id)
+    const publications = pubs || []
     const primaryPub = publications.find((p: any) => p.is_primary) || publications[0]
+
+    console.log(`[upsertCookies] Final response: name=${finalUser?.name}, pub=${primaryPub?.name}, expires=${finalExpiresAt}, pubs=${publications.length}`)
 
     res.json({ 
       ok: true, 
-      publication: finalUser?.subdomain || primaryPub?.subdomain || syncSlug, 
-      publication_name: finalUser?.publication_name || primaryPub?.name || profile?.primaryPublication?.name,
+      publication: primaryPub?.subdomain || pubSubdomain || syncSlug, 
+      publication_name: primaryPub?.name || profile?.primaryPublication?.name,
       name: finalUser?.name || profile?.name,
       avatar: finalUser?.photo_url || profile?.photo_url,
       subCount: finalUser?.subscriber_count || 0,

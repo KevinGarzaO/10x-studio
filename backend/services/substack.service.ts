@@ -55,15 +55,19 @@ export class SubstackService {
       bio: profile.bio,                                // Texto del bio
       subscriber_count: profile.subscriberCountNumber, // 269
       follower_count: profile.followerCount,           // 273
+      social_links: profile.links || [],               // Enlaces (Array JSONB)
       updated_at: new Date().toISOString()
     }
 
-    await supabase.from('users').upsert(userData, { onConflict: 'substack_user_id' })
+    const { error: userErr } = await supabase.from('users').upsert(userData, { onConflict: 'substack_user_id' })
+    if (userErr) console.error('[Substack] Error upsert users:', userErr)
+
 
     // 2. Guardar publicación en tabla 'publications'
     if (profile.primaryPublication) {
       const pubData = {
         publication_id: profile.primaryPublication.id,          // 7999333
+        user_id: userId,                                        // MUST LINK to user.id!
         name: profile.primaryPublication.name,                  // "Transformateck"
         subdomain: profile.primaryPublication.subdomain,        // "transformateck"
         logo_url: profile.primaryPublication.logo_url,          // URL del logo
@@ -75,7 +79,8 @@ export class SubstackService {
         updated_at: new Date().toISOString()
       }
 
-      await supabase.from('publications').upsert(pubData, { onConflict: 'publication_id' })
+      const { error: pubErr } = await supabase.from('publications').upsert(pubData, { onConflict: 'publication_id' })
+      if (pubErr) console.error('[Substack] Error upsert publications:', pubErr)
     }
     
     return { profile }
@@ -170,10 +175,11 @@ export class SubstackService {
       }
       
       const data = await res.json()
-      // The API often returns { subscribers: [...] } or just [...]
+      // The API returns { subscribers: [...], total_count: N } based on user's payload
       const subs = Array.isArray(data) ? data : (data.subscribers || [])
+      const totalReported = data.total_count || (subs.length > 0 ? subs[0]?.total_count : null) || data.count || '?'
       
-      console.log(`[Substack] Offset ${offset}: Obtenidos ${subs.length} subs de un total reportado de ${data.count || '?'}`)
+      console.log(`[Substack] Offset ${offset}: Obtenidos ${subs.length} subs de un total reportado de ${totalReported}`)
       if (subs.length === 0) break
       
       allSubscribers = allSubscribers.concat(subs)
@@ -186,6 +192,7 @@ export class SubstackService {
 
     if (allSubscribers.length > 0) {
       console.log(`[Substack] Procesando ${allSubscribers.length} subscriptores para Supabase...`)
+      console.log(`[Substack] Sample subscriber keys:`, Object.keys(allSubscribers[0]))
       const subsToUpsert = allSubscribers.map((s: any) => ({
         user_id: userId,
         email: s.user_email_address || s.email,
@@ -203,9 +210,11 @@ export class SubstackService {
         synced_at: new Date().toISOString()
       }))
 
+      console.log(`[Substack] First sub to upsert:`, JSON.stringify(subsToUpsert[0]))
       const { error } = await supabase.from('subscribers').upsert(subsToUpsert, { onConflict: 'user_id,email' })
       if (error) {
-        console.error('[Supabase] Error upserting subscribers:', error)
+        console.error('[Supabase] Error upserting subscribers:', JSON.stringify(error))
+
         throw new Error(`Error al guardar subscriptores: ${error.message}`)
       }
       console.log(`[Substack] Sync de subscriptores completado con éxito: ${allSubscribers.length} guardados.`)
