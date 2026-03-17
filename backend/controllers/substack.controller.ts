@@ -288,8 +288,10 @@ export const upsertCookies = async (req: Request, res: Response) => {
       const { data: newUser, error: insertError } = await supabase.from('users').insert({
         substack_user_id: substackUserId,
         name: profile?.name || profile?.primaryPublication?.name || 'Usuario',
+        substack_slug: `${substackUserId}-${profile?.handle || profile?.slug || ''}`,
+        subdomain: profile?.primaryPublication?.subdomain || '',
         updated_at: new Date().toISOString()
-      }).select('id').single()
+      }).select('id, substack_slug').single()
       
       if (insertError) throw insertError
       user = newUser
