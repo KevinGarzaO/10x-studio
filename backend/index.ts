@@ -52,7 +52,7 @@ app.get('/', (req, res) => {
 // Start Cron
 initCron()
 
-app.listen(PORT, () => {
+app.listen(Number(PORT), '0.0.0.0', () => {
   console.log(`Server running on port ${PORT}`)
   console.log(`Swagger docs available at http://localhost:${PORT}/api-docs`)
 })
