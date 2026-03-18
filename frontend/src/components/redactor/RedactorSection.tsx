@@ -161,11 +161,10 @@ export function RedactorSection({ prefill }: Props) {
         </div>
       </div>
 
-      {/* Mode tabs */}
-      <div className="flex gap-1 bg-brand-surface rounded-md p-1 mb-5 w-fit">
-        {([['generate','✦ Generar'],['revise','🔄 Revisar'],['compare','⚖️ Comparar']] as [RedactorMode,string][]).map(([m, label]) => (
+      <div className="flex gap-2 p-1 bg-brand-surface rounded-xl border border-brand-border w-fit mb-6">
+        {([['generate','Generar'],['revise','Revisar'],['compare','Comparar']] as [RedactorMode,string][]).map(([m, label]) => (
           <button key={m} onClick={() => setMode(m)}
-            className={`px-4 py-1.5 rounded text-xs font-medium transition-all ${mode === m ? 'bg-brand-accent text-black shadow-sm' : 'text-brand-secondary hover:text-brand-primary'}`}>
+            className={`tab ${mode === m ? 'tab-active' : 'tab-inactive'}`}>
             {label}
           </button>
         ))}
@@ -175,7 +174,7 @@ export function RedactorSection({ prefill }: Props) {
       <div className="card mb-4">
         <button className="w-full px-5 py-4 flex items-center justify-between text-sm font-bold text-brand-primary hover:bg-brand-bg/50 transition-colors"
           onClick={() => setTransOpen(v => !v)}>
-          <span>🌐 Traductor (ES ↔ EN)</span>
+          <span>Traductor (ES ↔ EN)</span>
           <i className={`text-brand-secondary pi ${transOpen ? 'pi-chevron-up' : 'pi-chevron-down'} text-xs`}></i>
         </button>
         {transOpen && (
@@ -199,13 +198,13 @@ export function RedactorSection({ prefill }: Props) {
               </div>
             </div>
               <div className="flex items-center gap-3">
-              <select value={targetLang} onChange={e => setTargetLang(e.target.value)} className="input w-48">
+              <select value={targetLang} onChange={e => setTargetLang(e.target.value)} className="input w-48 h-[36px]">
                 {LANG_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
               </select>
               <button className="btn btn-primary btn-sm" onClick={handleTranslate} disabled={translating}>
-                {translating ? '⏳ Traduciendo...' : '🌐 Traducir'}
+                {translating ? 'Traduciendo...' : 'Traducir'}
               </button>
-              {translated && <button className="btn btn-ghost btn-sm" onClick={() => navigator.clipboard.writeText(translated)}>Copiar</button>}
+              {translated && <button className="btn btn-secondary btn-sm" onClick={() => navigator.clipboard.writeText(translated)}>Copiar</button>}
             </div>
           </div>
         )}
@@ -263,7 +262,7 @@ export function RedactorSection({ prefill }: Props) {
                   placeholder="Ej: Cómo mejorar la productividad en el trabajo remoto" 
                 />
               </div>
-              <button className="btn btn-ghost whitespace-nowrap" onClick={handleSuggest}>✦ Sugerir</button>
+              <button className="btn btn-secondary btn-sm h-[42px]" onClick={handleSuggest}>Sugerir</button>
             </div>
             {showSug && suggestions.length > 0 && (
               <div className="bg-brand-surface rounded-xl p-3 mt-3 flex flex-wrap gap-2 animate-fadein">
@@ -339,18 +338,18 @@ export function RedactorSection({ prefill }: Props) {
           </div>
 
           {mode === 'generate' && (
-            <button className="btn btn-primary w-full py-3 text-sm" onClick={generate} disabled={generating}>
-              {generating ? '⏳ Generando...' : `▶ ${btnLabel}`}
+            <button className="btn btn-primary w-full shadow-lg" onClick={generate} disabled={generating}>
+              {generating ? 'Generando...' : btnLabel}
             </button>
           )}
           {mode === 'revise' && (
-            <button className="btn btn-primary w-full py-3 text-sm" onClick={handleRevise} disabled={generating}>
-              {generating ? '⏳ Revisando...' : '🔄 Mejorar texto'}
+            <button className="btn btn-primary w-full shadow-lg" onClick={handleRevise} disabled={generating}>
+              {generating ? 'Mejorando...' : 'Mejorar texto'}
             </button>
           )}
           {mode === 'compare' && (
-            <button className="btn btn-primary w-full py-3 text-sm" onClick={generateCompare} disabled={generating}>
-              {generating ? '⏳ Generando...' : '⚖️ Generar y comparar'}
+            <button className="btn btn-primary w-full shadow-lg" onClick={generateCompare} disabled={generating}>
+              {generating ? 'Generando...' : 'Generar y comparar'}
             </button>
           )}
         </div>

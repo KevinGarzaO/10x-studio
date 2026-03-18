@@ -100,27 +100,35 @@ export function TopicsSection({ onWriteTopic }: Props) {
           <p className="text-sm text-brand-secondary mt-1">Gestiona tus ideas de contenido</p>
         </div>
         <div className="flex gap-2 flex-wrap w-full md:w-auto">
-          <button className="btn btn-ghost btn-sm flex-1 md:flex-none" onClick={() => { setEditingCampaign(null); setCampaignModal(true) }}>🏷️ Campaña</button>
-          <label className="btn btn-ghost btn-sm cursor-pointer flex-1 md:flex-none justify-center">📥 CSV <input type="file" accept=".csv" className="hidden" onChange={handleImportCSV} /></label>
-          <button className="btn btn-ghost btn-sm flex-1 md:flex-none" onClick={handleSuggest} disabled={suggesting}>{suggesting ? '⏳...' : '✦ Sugerir'}</button>
-          <button className="btn btn-primary btn-sm flex-1 md:flex-none justify-center" onClick={() => { setEditingTopic(null); setTopicModal(true) }}>+ Agregar</button>
+          <button className="btn btn-secondary btn-sm" onClick={() => { setEditingCampaign(null); setCampaignModal(true) }}>Campaña</button>
+          <label className="btn btn-secondary btn-sm cursor-pointer justify-center">
+            <span>Importar CSV</span>
+            <input type="file" accept=".csv" className="hidden" onChange={handleImportCSV} />
+          </label>
+          <button className="btn btn-secondary btn-sm" onClick={handleSuggest} disabled={suggesting}>
+            {suggesting ? 'Cargando...' : 'Sugerir'}
+          </button>
+          <button className="btn btn-primary btn-sm justify-center shadow-lg" onClick={() => { setEditingTopic(null); setTopicModal(true) }}>
+            <i className="pi pi-plus mr-1 text-[10px]"></i>
+            Agregar
+          </button>
         </div>
       </div>
 
       {/* Campaigns strip */}
       {campaigns.length > 0 && (
-        <div className="flex gap-2 mb-4 overflow-x-auto no-scrollbar pb-2 whitespace-nowrap">
+        <div className="flex gap-2 mb-6 overflow-x-auto no-scrollbar p-1 bg-brand-surface/40 rounded-xl border border-brand-border w-fit max-w-full">
           <button onClick={() => setCampaignFilter('all')}
-            className={`px-3 py-1 rounded text-xs font-medium border transition-all ${campaignFilter === 'all' ? 'border-brand-accent text-brand-accent bg-brand-accent/10' : 'border-brand-border text-brand-secondary hover:border-brand-accent'}`}>
+            className={`tab ${campaignFilter === 'all' ? 'tab-active' : 'tab-inactive'} text-xs !h-[32px] px-3`}>
             Todas
           </button>
           {campaigns.map(c => (
             <button key={c.id} onClick={() => setCampaignFilter(c.id)}
-              className={`px-3 py-1 rounded text-xs font-medium border transition-all flex items-center gap-1 ${campaignFilter === c.id ? 'border-current' : 'border-brand-border text-brand-secondary'}`}
-              style={campaignFilter === c.id ? { borderColor: c.color, color: c.color, background: c.color + '12' } : {}}>
-              <span className="w-2 h-2 rounded-full" style={{ background: c.color }} />
+              className={`tab ${campaignFilter === c.id ? '' : 'tab-inactive'} text-xs !h-[32px] px-3 flex items-center gap-2 group/camp`}
+              style={campaignFilter === c.id ? { background: c.color, color: '#1A1A1A', fontWeight: 600 } : {}}>
+              <span className="w-2 h-2 rounded-full border border-black/10" style={{ background: campaignFilter === c.id ? '#1A1A1A' : c.color }} />
               {c.name}
-              <span className="ml-1 opacity-50 hover:opacity-100" onClick={e => { e.stopPropagation(); setEditingCampaign(c); setCampaignModal(true) }}>✏️</span>
+              <i className="pi pi-pencil text-[10px] opacity-0 group-hover/camp:opacity-100 ml-1" onClick={e => { e.stopPropagation(); setEditingCampaign(c); setCampaignModal(true) }} />
             </button>
           ))}
         </div>
@@ -132,10 +140,10 @@ export function TopicsSection({ onWriteTopic }: Props) {
           <i className="pi pi-search absolute left-3 top-1/2 -translate-y-1/2 text-brand-secondary text-sm pointer-events-none" />
           <input type="text" value={search} onChange={e => setSearch(e.target.value)} placeholder="Buscar temas..." className="input !pl-9" />
         </div>
-        <div className="flex gap-1.5 overflow-x-auto no-scrollbar pb-2 md:pb-0 w-full md:w-auto">
+        <div className="flex gap-2 p-1 bg-brand-bg rounded-xl border border-brand-border w-fit max-w-full overflow-x-auto no-scrollbar">
           {(['all', 'idea', 'ready', 'writing', 'done'] as const).map(f => (
             <button key={f} onClick={() => setStatusFilter(f)}
-              className={`px-3 py-1.5 rounded-lg text-xs font-bold border transition-all whitespace-nowrap ${statusFilter === f ? 'border-brand-accent text-brand-accent bg-brand-accent/10 shadow-sm' : 'border-brand-border text-brand-secondary hover:border-brand-accent'}`}>
+              className={`tab ${statusFilter === f ? 'tab-active' : 'tab-inactive'} text-xs !h-[32px] px-3 whitespace-nowrap`}>
               {f === 'all' ? 'Todos' : STATUS_LABELS[f]}
             </button>
           ))}
@@ -147,7 +155,7 @@ export function TopicsSection({ onWriteTopic }: Props) {
         <div className="text-center py-16 text-brand-secondary">
           <div className="text-5xl mb-4">💡</div>
           <p className="mb-5 font-medium text-brand-secondary">No hay temas aún.</p>
-          <button className="btn btn-primary" onClick={() => setTopicModal(true)}>+ Agregar tema</button>
+          <button className="btn btn-primary shadow-lg" onClick={() => setTopicModal(true)}>Agregar tema</button>
         </div>
       ) : (
         <div className="flex flex-col gap-3">
@@ -181,10 +189,20 @@ export function TopicsSection({ onWriteTopic }: Props) {
                     {donePlats.size > 0 && <span className="text-[10px] font-bold text-green-600 ml-0.5">{donePlats.size}/5</span>}
                   </div>
                   <div className="flex gap-1 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
-                    <button className="w-8 h-8 rounded-lg bg-brand-accent text-black flex items-center justify-center hover:brightness-110 transition-all font-bold" onClick={() => onWriteTopic({ title: t.title, notes: t.notes })}>✍️</button>
-                    <button className="w-8 h-8 rounded-lg bg-brand-bg text-brand-secondary flex items-center justify-center hover:bg-brand-border" onClick={() => setResearchTopic(t)}>🔬</button>
-                    <button className="w-8 h-8 rounded-lg bg-brand-bg text-brand-secondary flex items-center justify-center hover:bg-brand-border" onClick={() => { setEditingTopic(t); setTopicModal(true) }}>✏️</button>
-                    <button className="w-8 h-8 rounded-lg bg-red-500/10 text-red-500 flex items-center justify-center hover:bg-red-500/20" onClick={() => deleteTopic(t.id)}>🗑️</button>
+                  <div className="flex gap-1 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
+                    <button className="btn btn-primary btn-sm h-8 w-8 !p-0 justify-center shadow-sm" onClick={() => onWriteTopic({ title: t.title, notes: t.notes })}>
+                      <i className="pi pi-pencil text-xs"></i>
+                    </button>
+                    <button className="btn btn-secondary btn-sm h-8 w-8 !p-0 justify-center" onClick={() => setResearchTopic(t)}>
+                      <i className="pi pi-search text-xs"></i>
+                    </button>
+                    <button className="btn btn-secondary btn-sm h-8 w-8 !p-0 justify-center" onClick={() => { setEditingTopic(t); setTopicModal(true) }}>
+                      <i className="pi pi-cog text-xs"></i>
+                    </button>
+                    <button className="btn btn-danger btn-sm h-8 w-8 !p-0 justify-center" onClick={() => deleteTopic(t.id)}>
+                      <i className="pi pi-trash text-xs"></i>
+                    </button>
+                  </div>
                   </div>
                 </div>
                 <span className="absolute top-4 right-4 sm:relative sm:top-0 sm:right-0 text-[10px] text-brand-secondary font-mono whitespace-nowrap opacity-60">{fmtDate(t.created)}</span>

@@ -49,36 +49,41 @@
 
   /* Buttons */
   .btn {
-    @apply inline-flex items-center justify-center gap-2 px-4 py-2 rounded-[var(--border-radius-sm)] text-[var(--font-size-md)] font-[var(--font-weight-medium)] transition-all duration-200 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed border border-transparent outline-none;
+    @apply inline-flex items-center justify-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold transition-all duration-200 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed border border-transparent outline-none;
+    height: 36px;
   }
 
   .btn-primary {
-    background-color: var(--color-accent);
+    background-color: #4ECCA3;
     color: #1A1A1A;
-    @apply hover:brightness-110 active:scale-[0.98];
+    @apply hover:brightness-105 active:scale-[0.98] border-none font-semibold;
   }
 
   .btn-secondary {
-    background-color: var(--color-surface);
-    color: var(--color-text-primary);
-    border-color: var(--color-border);
-    @apply hover:bg-[#2d2d2d] active:scale-[0.98];
-  }
-
-  .btn-ghost {
-    @apply bg-transparent text-[var(--color-text-secondary)] border-transparent hover:bg-white/5 hover:text-white;
+    @apply bg-transparent text-white border-[#333333] font-medium hover:bg-white/5 active:scale-[0.98] border;
   }
 
   .btn-danger {
-    @apply bg-red-500/10 text-red-400 border-red-500/20 hover:bg-red-500/20;
-  }
-
-  .btn-green {
-    @apply bg-[rgba(78,204,163,0.1)] text-[var(--color-accent)] border-[rgba(78,204,163,0.2)] hover:bg-[rgba(78,204,163,0.2)];
+    @apply bg-transparent text-[#FF4444] border-[#FF4444] font-medium hover:bg-red-500/5 active:scale-[0.98] border;
   }
 
   .btn-sm {
-    @apply px-3 py-1.5 text-[var(--font-size-sm)];
+    @apply px-3 py-1.5 text-xs;
+    height: 30px;
+  }
+
+  /* Tabs */
+  .tab {
+    @apply inline-flex items-center justify-center gap-2 px-4 py-2 rounded-lg text-sm transition-all duration-200 cursor-pointer outline-none;
+    height: 36px;
+  }
+
+  .tab-active {
+    @apply bg-[#4ECCA3] text-[#1A1A1A] font-semibold shadow-sm;
+  }
+
+  .tab-inactive {
+    @apply bg-transparent text-[#9B9B9B] font-medium hover:text-white hover:bg-white/5;
   }
 
   /* Cards */
@@ -129,7 +134,7 @@
   }
 
   .panel-header-dark .panel-title {
-    @apply text-[var(--font-size-xs)] font-[var(--font-weight-bold)] text-white uppercase tracking-wide;
+    @apply text-[var(--font-size-xs)] font-[var(--font-weight-bold)] text-white;
   }
 }
 

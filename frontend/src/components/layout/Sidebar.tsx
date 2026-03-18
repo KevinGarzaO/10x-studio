@@ -310,9 +310,8 @@ export function Sidebar({ active, onNav, collapsed, onToggleCollapse, mobileOpen
              <img src="/icon-192.png" alt="Avocado" className="w-full h-full object-contain" />
           </div>
           {!collapsed && (
-            <div className="flex items-center ml-3 gap-2">
-              <span className="text-white font-black leading-none tracking-tight text-lg">AVOCADO</span>
-              <span className="text-white font-bold uppercase tracking-[0.1em] text-sm opacity-80">ESTUDIO</span>
+            <div className="flex items-center ml-3">
+              <span className="text-white font-black leading-none tracking-tight text-base whitespace-nowrap">AVOCADO ESTUDIO</span>
             </div>
           )}
         </div>
@@ -347,7 +346,7 @@ export function Sidebar({ active, onNav, collapsed, onToggleCollapse, mobileOpen
                   <div key={cat.label} className="space-y-1">
                     <button 
                       onClick={() => toggleCat(activeModule, cat.label)}
-                      className="w-full flex items-center justify-between text-[11px] font-bold text-brand-secondary uppercase tracking-widest py-2 px-2 hover:text-brand-primary transition-colors"
+                      className="w-full flex items-center justify-between text-[11px] font-bold text-brand-secondary py-2 px-2 hover:text-brand-primary transition-colors"
                     >
                       <div className="flex items-center gap-3">
                          {cat.icon && <i className={cat.icon}></i>}
@@ -395,13 +394,13 @@ export function Sidebar({ active, onNav, collapsed, onToggleCollapse, mobileOpen
         {/* User / Niche Footer */}
         <div className={`p-4 border-t border-brand-border ${collapsed ? 'items-center' : ''}`}>
            {!collapsed && (
-             <div className="bg-brand-accent rounded-full px-3 py-1.5 flex items-center gap-2.5 border border-brand-accent shadow-md">
-                <div className="w-7 h-7 rounded-full bg-brand-bg flex items-center justify-center text-brand-accent font-black shadow-inner">
-                  <i className="pi pi-star text-[10px]"></i>
+             <div className="bg-brand-accent rounded-xl px-2.5 py-1.5 flex items-center gap-2 border border-brand-accent shadow-sm scale-90 -ml-1">
+                <div className="w-5 h-5 rounded-lg bg-brand-bg flex items-center justify-center text-brand-accent font-black shadow-inner">
+                  <i className="pi pi-star text-[8px]"></i>
                 </div>
                 <div className="flex flex-col min-w-0">
-                  <span className="text-[11px] text-[#1A1A1A] font-black truncate uppercase tracking-tight">Transformateck</span>
-                  <span className="text-[9px] text-[#1A1A1A]/70 font-bold -mt-0.5">Premium</span>
+                  <span className="text-[10px] text-[#1A1A1A] font-black truncate tracking-tight">Transformateck</span>
+                  <span className="text-[8px] text-[#1A1A1A]/70 font-bold -mt-0.5">Premium</span>
                 </div>
              </div>
            )}

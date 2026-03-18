@@ -136,8 +136,8 @@ export function SubstackSection() {
           </label>
         </div>
 
-        <button onClick={verifyAndSubscribe} className="btn btn-primary w-full py-3 shadow-lg hover:shadow-xl transition-all">
-          🔄 Ya conecté — verificar
+        <button onClick={verifyAndSubscribe} className="btn btn-primary w-full shadow-lg">
+          Verificar conexión
         </button>
       </div>
     )
@@ -205,7 +205,7 @@ export function SubstackSection() {
                 <div className="flex flex-col gap-2.5 items-start md:items-end w-full md:w-auto mt-4 md:mt-0">
                   {profile.expiresAt && <ExpiryBadge expiresAt={profile.expiresAt} />}
                   <div className="flex items-center gap-2 w-full md:w-auto">
-                    <button onClick={disconnect} className="text-xs font-bold px-6 py-2 rounded-full border-2 border-[#FF4444] text-[#FF4444] bg-transparent hover:bg-[#FF4444]/10 transition-all shadow-lg active:scale-95 tracking-wide">
+                    <button onClick={disconnect} className="btn btn-danger px-6">
                       Desconectar
                     </button>
                   </div>
@@ -269,14 +269,14 @@ export function SubstackSection() {
 
       {/* Modern Pill Tabs */}
       <div className="flex mb-8 overflow-x-auto no-scrollbar pb-2">
-        <div className="inline-flex bg-brand-surface/80 backdrop-blur-md p-1.5 rounded-2xl shadow-inner border border-brand-border whitespace-nowrap">
+        <div className="inline-flex bg-brand-surface/80 backdrop-blur-md p-1 rounded-xl shadow-inner border border-brand-border whitespace-nowrap">
           {([
-            ['stats',       '📰 Publicaciones'],
-            ['subscribers', '👥 Suscriptores'],
-            ['publish',     '✍️ Publicar'],
+            ['stats',       'Estadísticas'],
+            ['subscribers', 'Suscriptores'],
+            ['publish',     'Publicar'],
           ] as [SubTab, string][]).map(([t, label]) => (
             <button key={t} onClick={() => setTab(t)}
-              className={`relative px-4 md:px-6 py-2.5 text-sm font-black rounded-xl transition-all duration-300 ${tab === t ? '!text-white bg-brand-accent shadow-md' : 'text-brand-secondary hover:text-brand-primary hover:bg-brand-bg/50'}`}>
+              className={`tab ${tab === t ? 'tab-active' : 'tab-inactive'}`}>
               {label}
             </button>
           ))}

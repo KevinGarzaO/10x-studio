@@ -43,11 +43,11 @@ export function CampaignModal({ open, campaign, onClose, onSave, onDelete }: Pro
             </div>
           </div>
         </div>
-        <div className="flex items-center justify-between mt-6">
-          {onDelete ? <button className="btn btn-danger btn-sm" onClick={onDelete}>🗑️ Eliminar</button> : <div />}
+        <div className="flex items-center justify-between mt-8">
+          {onDelete ? <button className="btn btn-danger btn-sm" onClick={onDelete}>Eliminar</button> : <div />}
           <div className="flex gap-2">
-            <button className="btn btn-ghost" onClick={onClose}>Cancelar</button>
-            <button className="btn btn-primary" onClick={() => { if (!name.trim()) return; onSave({ name, color, description: desc }) }}>Guardar</button>
+            <button className="btn btn-secondary btn-sm" onClick={onClose}>Cancelar</button>
+            <button className="btn btn-primary btn-sm px-4" onClick={() => { if (!name.trim()) return; onSave({ name, color, description: desc }) }}>Guardar</button>
           </div>
         </div>
       </div>

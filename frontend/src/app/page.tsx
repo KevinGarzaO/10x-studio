@@ -89,7 +89,7 @@ export default function Home() {
             <i className="pi pi-map-marker text-5xl mb-4 opacity-20"></i>
             <h2 className="text-xl font-bold text-stone-500">Módulo en construcción</h2>
             <p className="text-sm mt-2 max-w-xs text-center">Estamos trabajando para habilitar la sección <b>{activeSection}</b> muy pronto.</p>
-            <button onClick={() => navTo('dashboard')} className="btn btn-ghost mt-6">Regresar al Dashboard</button>
+            <button onClick={() => navTo('dashboard')} className="btn btn-secondary mt-6">Regresar al Dashboard</button>
           </div>
         )
     }

@@ -84,14 +84,15 @@ export function ResultTabs({ results, topic }: Props) {
     <div className="card overflow-hidden">
       {/* Platform tabs */}
       {results.length > 1 && (
-        <div className="flex border-b border-[#e9e9e7] overflow-x-auto scrollbar-hide">
+        <div className="flex p-1 bg-brand-surface/50 border-b border-brand-border overflow-x-auto no-scrollbar gap-1">
           {results.map((r, i) => (
             <button key={i} onClick={() => setActive(i)}
-              className={`px-4 py-3 text-xs font-black whitespace-nowrap transition-all flex items-center gap-1.5 ${active === i ? 'bg-brand-accent text-white rounded-t-lg' : 'text-brand-secondary hover:text-brand-primary border-b-2 border-transparent'}`}>
-              {PLATFORMS[r.platform].icon} {PLATFORMS[r.platform].label}
-              {r.status === 'loading' && <span className="w-3 h-3 border border-black border-t-transparent rounded-full animate-spin" />}
-              {r.status === 'done'    && r.wordCount && <span className="text-[10px] text-[#9b9a97]">{r.wordCount}p</span>}
-              {r.status === 'error'   && <span className="text-red-500">!</span>}
+              className={`tab ${active === i ? 'tab-active' : 'tab-inactive'} text-xs !h-[32px] px-3`}>
+              <span className="text-sm">{PLATFORMS[r.platform].icon}</span>
+              <span>{PLATFORMS[r.platform].label}</span>
+              {r.status === 'loading' && <i className="pi pi-spin pi-spinner text-[10px]" />}
+              {r.status === 'done'    && r.wordCount && <span className="text-[9px] opacity-60 ml-0.5">{r.wordCount}p</span>}
+              {r.status === 'error'   && <i className="pi pi-exclamation-circle text-red-500 text-[10px]" />}
             </button>
           ))}
         </div>
@@ -117,23 +118,35 @@ export function ResultTabs({ results, topic }: Props) {
       {current?.status === 'done' && (
         <div className="px-6 pb-5 border-t border-[#e9e9e7] pt-4 flex items-center gap-2 flex-wrap min-h-[60px]">
           <div className="flex items-center gap-2 w-full md:w-auto">
-            <button onClick={copy} className="btn btn-secondary btn-sm flex-1 md:flex-none justify-center">{copied ? '✅ Copiado' : '📋 Copiar'}</button>
-            <button onClick={exportPDF}  className="btn btn-secondary btn-sm flex-1 md:flex-none justify-center">📄 PDF</button>
-            <button onClick={exportDOCX} className="btn btn-secondary btn-sm flex-1 md:flex-none justify-center">📝 Word</button>
+            <button onClick={copy} className="btn btn-secondary btn-sm flex-1 md:flex-none">
+              <i className="pi pi-copy"></i>
+              <span>{copied ? 'Copiado' : 'Copiar'}</span>
+            </button>
+            <button onClick={exportPDF}  className="btn btn-secondary btn-sm flex-1 md:flex-none">
+              <i className="pi pi-file-pdf"></i>
+              <span>PDF</span>
+            </button>
+            <button onClick={exportDOCX} className="btn btn-secondary btn-sm flex-1 md:flex-none">
+              <i className="pi pi-file-word"></i>
+              <span>Word</span>
+            </button>
           </div>
           
           <div className="hidden md:block h-4 w-px bg-[#e9e9e7] mx-1" />
           
           <div className="flex items-center gap-2 w-full md:w-auto overflow-x-auto no-scrollbar py-1">
             <span className="text-[10px] sm:text-xs text-[#9b9a97] whitespace-nowrap uppercase font-bold tracking-widest">Publicar:</span>
-            <button onClick={() => publishTo('wordpress')} disabled={!!publishing} className="btn btn-ghost btn-sm text-[10px] sm:text-xs flex-1 md:flex-none whitespace-nowrap">
-              {publishing === 'wordpress' ? '⏳' : '🌐'} WordPress
+            <button onClick={() => publishTo('wordpress')} disabled={!!publishing} className="btn btn-secondary btn-sm flex-1 md:flex-none">
+              <i className={publishing === 'wordpress' ? 'pi pi-spin pi-spinner' : 'pi pi-globe'} />
+              <span>WordPress</span>
             </button>
-            <button onClick={() => publishTo('linkedin')} disabled={!!publishing} className="btn btn-ghost btn-sm text-[10px] sm:text-xs flex-1 md:flex-none whitespace-nowrap">
-              {publishing === 'linkedin' ? '⏳' : '💼'} LinkedIn
+            <button onClick={() => publishTo('linkedin')} disabled={!!publishing} className="btn btn-secondary btn-sm flex-1 md:flex-none">
+              <i className={publishing === 'linkedin' ? 'pi pi-spin pi-spinner' : 'pi pi-linkedin'} />
+              <span>LinkedIn</span>
             </button>
-            <button onClick={() => publishTo('webhook')} disabled={!!publishing} className="btn btn-ghost btn-sm text-[10px] sm:text-xs flex-1 md:flex-none whitespace-nowrap">
-              {publishing === 'webhook' ? '⏳' : '🔗'} Webhook
+            <button onClick={() => publishTo('webhook')} disabled={!!publishing} className="btn btn-secondary btn-sm flex-1 md:flex-none">
+              <i className={publishing === 'webhook' ? 'pi pi-spin pi-spinner' : 'pi pi-link'} />
+              <span>Webhook</span>
             </button>
           </div>
         </div>

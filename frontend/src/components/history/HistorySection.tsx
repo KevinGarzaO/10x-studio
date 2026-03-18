@@ -55,11 +55,11 @@ export function HistorySection({ onRewrite }: { onRewrite: (topic: string) => vo
           <i className="pi pi-search absolute left-3 top-1/2 -translate-y-1/2 text-brand-secondary text-sm pointer-events-none" />
           <input type="text" value={search} onChange={e => setSearch(e.target.value)} placeholder="Buscar..." className="input !pl-9" />
         </div>
-        <div className="flex gap-1.5 flex-wrap">
+        <div className="flex gap-2 p-1 bg-brand-surface rounded-xl border border-brand-border w-fit max-w-full overflow-x-auto no-scrollbar">
           {(['all', ...ALL_PLATFORMS] as const).map(f => (
             <button key={f} onClick={() => setFilter(f)}
-              className={`px-3 py-1.5 rounded-lg text-xs font-bold border transition-all ${filter === f ? 'border-brand-accent text-brand-accent bg-brand-accent/10 shadow-sm' : 'border-brand-border text-brand-secondary hover:border-brand-accent'}`}>
-              {f === 'all' ? 'Todos' : `${PLATFORMS[f].icon} ${PLATFORMS[f].label}`}
+              className={`tab ${filter === f ? 'tab-active' : 'tab-inactive'} text-xs !h-[32px] px-3 whitespace-nowrap`}>
+              {f === 'all' ? 'Todos' : PLATFORMS[f].label}
             </button>
           ))}
         </div>
@@ -99,18 +99,24 @@ export function HistorySection({ onRewrite }: { onRewrite: (topic: string) => vo
                   </div>
                   <div className="text-xs text-brand-secondary">{h.wordCount ? `${h.wordCount.toLocaleString()} palabras · ` : ''}{fmtDate(h.date)}</div>
                 </div>
-                <div className="flex gap-2 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity flex-wrap justify-end mt-2 sm:mt-0 w-full sm:w-auto border-t sm:border-0 pt-2 sm:pt-0">
+                <div className="flex gap-2 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity flex-wrap justify-end mt-2 sm:mt-0 w-full sm:w-auto border-t sm:border-0 pt-3 sm:pt-0">
                   {substackConnected && hasSubstack && (
                     <button
-                      className="btn btn-ghost btn-sm text-[10px] flex-1 sm:flex-none justify-center"
+                      className="btn btn-secondary btn-sm text-xs h-8 flex-1 sm:flex-none justify-center"
                       onClick={() => setPubModal({ id: h.id, topic: h.topic, platform: h.platforms.find(isSubstackPlatform)! })}
                       disabled={pubState?.id === h.id && pubState.status === 'publishing'}
                     >
-                      📰 Publicar
+                      <i className="pi pi-send mr-1.5"></i>
+                      Publicar
                     </button>
                   )}
-                  <button className="btn btn-secondary btn-sm flex-1 sm:flex-none justify-center" onClick={() => onRewrite(h.topic)}>🔄 Regenerar</button>
-                  <button className="btn btn-danger btn-sm" onClick={() => deleteHistory(h.id)}>🗑️</button>
+                  <button className="btn btn-secondary btn-sm text-xs h-8 flex-1 sm:flex-none justify-center" onClick={() => onRewrite(h.topic)}>
+                    <i className="pi pi-refresh mr-1.5"></i>
+                    Regenerar
+                  </button>
+                  <button className="btn btn-danger btn-sm h-8 w-8 !p-0 justify-center" onClick={() => deleteHistory(h.id)}>
+                    <i className="pi pi-trash text-xs"></i>
+                  </button>
                 </div>
               </div>
             )
@@ -132,16 +138,16 @@ export function HistorySection({ onRewrite }: { onRewrite: (topic: string) => vo
                   className="bg-brand-bg border border-brand-border rounded-xl p-4 text-center hover:border-brand-accent transition-all cursor-pointer group/card"
                   onClick={() => publishToSubstack('note', pubModal.topic, pubModal.topic)}
                 >
-                  <div className="text-2xl mb-1 group-hover/card:scale-110 transition-transform">🗒️</div>
-                  <div className="text-sm font-semibold text-brand-primary">Note</div>
+                  <div className="text-2xl mb-1 group-hover/card:scale-110 transition-transform">📝</div>
+                  <div className="text-sm font-semibold text-brand-primary">Nota</div>
                   <div className="text-xs text-brand-secondary">Corto, inmediato</div>
                 </button>
                 <button
                   className="bg-brand-bg border border-brand-border rounded-xl p-4 text-center hover:border-brand-accent transition-all cursor-pointer group/card"
                   onClick={() => publishToSubstack('article', pubModal.topic, pubModal.topic)}
                 >
-                  <div className="text-2xl mb-1 group-hover/card:scale-110 transition-transform">📋</div>
-                  <div className="text-sm font-semibold text-brand-primary">Article</div>
+                  <div className="text-2xl mb-1 group-hover/card:scale-110 transition-transform">📄</div>
+                  <div className="text-sm font-semibold text-brand-primary">Artículo</div>
                   <div className="text-xs text-brand-secondary">Newsletter completo</div>
                 </button>
               </div>
@@ -149,7 +155,7 @@ export function HistorySection({ onRewrite }: { onRewrite: (topic: string) => vo
                 💡 Para editar el contenido antes de publicar, ve a la sección <strong>Substack → Publicar</strong>.
               </p>
             </div>
-            <button className="btn btn-ghost w-full" onClick={() => setPubModal(null)}>Cancelar</button>
+            <button className="btn btn-secondary w-full" onClick={() => setPubModal(null)}>Cancelar</button>
           </div>
         </div>
       )}

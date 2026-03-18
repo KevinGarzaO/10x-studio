@@ -51,10 +51,10 @@ export function ResearchModal({ topic, apiKey, niche, audience, onClose, onSave 
       <div className="bg-brand-surface border border-brand-border rounded-2xl p-6 w-full max-w-lg shadow-[var(--shadow)] max-h-[90vh] overflow-y-auto">
         <div className="flex items-start justify-between mb-4">
           <div>
-            <h2 className="text-xl font-bold text-brand-primary">🔬 Investigación IA</h2>
+            <h2 className="text-xl font-bold text-brand-primary">Investigación con IA</h2>
             <p className="text-sm text-brand-secondary mt-0.5 truncate max-w-xs">{topic.title}</p>
           </div>
-          <button onClick={onClose} className="text-brand-secondary hover:text-brand-primary text-xl">×</button>
+          <button onClick={onClose} className="text-brand-secondary hover:text-brand-primary text-xl px-2">×</button>
         </div>
 
         {!research && !loading && (
@@ -116,9 +116,9 @@ export function ResearchModal({ topic, apiKey, niche, audience, onClose, onSave 
               </div>
             </div>
 
-            <div className="flex justify-end gap-2 pt-2 border-t border-brand-border">
-              <button className="btn btn-ghost" onClick={() => setResearch(null)}>Reintentar</button>
-              <button className="btn btn-primary" onClick={handleSave}>Guardar en tema ✓</button>
+            <div className="flex justify-end gap-2 pt-4 border-t border-brand-border">
+              <button className="btn btn-secondary btn-sm" onClick={() => setResearch(null)}>Reintentar</button>
+              <button className="btn btn-primary btn-sm px-4" onClick={handleSave}>Guardar en tema</button>
             </div>
           </div>
         )}

@@ -14,10 +14,10 @@ export function Dashboard({ onNav }: { onNav: (s: NavSection) => void }) {
   const recent    = [...history].sort((a, b) => b.date.localeCompare(a.date)).slice(0, 5)
 
   const stats = [
-    { label: 'Temas en banco',          value: topics.length },
-    { label: 'Artículos generados',     value: history.length },
-    { label: 'Publicaciones agendadas', value: pending.length },
-    { label: 'Publicados',              value: published.length },
+    { label: 'Temas en banco',          value: topics.length,    icon: 'pi-database' },
+    { label: 'Artículos generados',     value: history.length,   icon: 'pi-file-edit' },
+    { label: 'Publicaciones agendadas', value: pending.length,   icon: 'pi-calendar-plus' },
+    { label: 'Publicados',              value: published.length, icon: 'pi-check-circle' },
   ]
 
   return (
@@ -29,15 +29,19 @@ export function Dashboard({ onNav }: { onNav: (s: NavSection) => void }) {
           </h1>
           <p className="text-sm text-brand-secondary mt-1">Resumen de tu estrategia de contenido</p>
         </div>
-        <button className="btn btn-primary w-full md:w-auto" onClick={() => onNav('redactor-new')}>+ Nuevo artículo</button>
+        <button className="btn btn-primary w-full md:w-auto shadow-lg" onClick={() => onNav('redactor-new')}>
+          <i className="pi pi-plus mr-1 text-[10px]"></i>
+          Nuevo artículo
+        </button>
       </div>
 
       {/* KPI grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
         {stats.map((s, i) => (
           <div key={s.label} className="bg-brand-surface border border-brand-border shadow-[var(--shadow)] rounded-2xl px-5 py-5 hover:-translate-y-1 hover:border-brand-accent transition-all duration-300 cursor-default">
-            <div className="text-[10px] font-bold text-brand-secondary uppercase tracking-widest mb-3">{s.label}</div>
-            <div className="text-2xl md:text-[36px] font-black text-brand-primary leading-none tracking-tight">{s.value}</div>
+            <i className={`pi ${s.icon} text-brand-secondary/40 text-xs mb-3 block`}></i>
+            <div className="text-[10px] font-bold text-brand-secondary tracking-widest mb-2">{s.label}</div>
+            <div className="text-2xl md:text-[32px] font-black text-brand-primary leading-none tracking-tight">{s.value}</div>
           </div>
         ))}
       </div>
@@ -47,7 +51,7 @@ export function Dashboard({ onNav }: { onNav: (s: NavSection) => void }) {
         <div className="card shadow-sm">
           <div className="panel-header-dark">
             <span className="panel-title flex items-center gap-2"><i className="pi pi-calendar"></i> Próximas publicaciones</span>
-            <button className="text-[11px] text-brand-secondary hover:text-brand-primary transition-colors flex items-center gap-1" onClick={() => onNav('calendar')}>Ver calendario <i className="pi pi-arrow-right text-[10px]"></i></button>
+            <button className="text-[11px] text-brand-accent font-bold hover:brightness-110 transition-colors flex items-center gap-1" onClick={() => onNav('calendar')}>Ver calendario <i className="pi pi-arrow-right text-[10px]"></i></button>
           </div>
           <div>
             {upcoming.length ? upcoming.map(e => {
@@ -63,7 +67,7 @@ export function Dashboard({ onNav }: { onNav: (s: NavSection) => void }) {
               <div className="py-8 text-center">
                 <i className="pi pi-calendar text-2xl text-stone-300 mb-2 block"></i>
                 <p className="text-sm text-stone-400 font-medium">Sin publicaciones agendadas</p>
-                <button className="mt-3 text-xs font-medium text-stone-600 underline hover:text-stone-900 transition-colors" onClick={() => onNav('calendar')}>Ir al calendario</button>
+                <button className="mt-3 text-xs font-bold text-brand-accent underline hover:brightness-110 transition-colors" onClick={() => onNav('calendar')}>Ir al calendario</button>
               </div>
             )}
           </div>
@@ -73,19 +77,19 @@ export function Dashboard({ onNav }: { onNav: (s: NavSection) => void }) {
         <div className="card shadow-sm">
           <div className="panel-header-dark">
             <span className="panel-title flex items-center gap-2"><i className="pi pi-check-circle"></i> Listos para escribir</span>
-            <button className="text-[11px] text-brand-secondary hover:text-brand-primary transition-colors flex items-center gap-1" onClick={() => onNav('topics')}>Ver temas <i className="pi pi-arrow-right text-[10px]"></i></button>
+            <button className="text-[11px] text-brand-accent font-bold hover:brightness-110 transition-colors flex items-center gap-1" onClick={() => onNav('topics')}>Ver temas <i className="pi pi-arrow-right text-[10px]"></i></button>
           </div>
           <div>
             {ready.length ? ready.map(t => (
               <div key={t.id} className="flex items-center gap-3 px-5 py-2.5 border-b border-brand-border last:border-0 hover:bg-brand-bg/50 transition-colors">
                 <span className="text-sm flex-1 truncate text-brand-primary font-medium">{t.title}</span>
-                <button className="btn btn-primary btn-sm" onClick={() => onNav('redactor')}>Escribir</button>
+                <button className="btn btn-secondary btn-sm h-7 text-[10px] px-3 font-bold" onClick={() => onNav('redactor')}>Escribir</button>
               </div>
             )) : (
               <div className="py-8 text-center">
                 <i className="pi pi-lightbulb text-2xl text-stone-300 mb-2 block"></i>
                 <p className="text-sm text-stone-400 font-medium">No hay temas listos</p>
-                <button className="mt-3 text-xs font-medium text-stone-600 underline hover:text-stone-900 transition-colors" onClick={() => onNav('topics')}>Agregar temas</button>
+                <button className="mt-3 text-xs font-bold text-brand-accent underline hover:brightness-110 transition-colors" onClick={() => onNav('topics')}>Agregar temas</button>
               </div>
             )}
           </div>
@@ -115,7 +119,7 @@ export function Dashboard({ onNav }: { onNav: (s: NavSection) => void }) {
             <div className="py-8 text-center">
               <i className="pi pi-file-edit text-2xl text-stone-300 mb-2 block"></i>
               <p className="text-sm text-stone-400 font-medium">Aún no has generado artículos</p>
-              <button className="mt-3 text-xs text-stone-500 underline hover:text-stone-800 transition-colors" onClick={() => onNav('redactor')}>Crear primer artículo</button>
+              <button className="mt-3 text-xs font-bold text-brand-accent underline hover:brightness-110 transition-colors" onClick={() => onNav('redactor')}>Crear primer artículo</button>
             </div>
           )}
         </div>

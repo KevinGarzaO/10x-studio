@@ -85,7 +85,7 @@ export function SubstackStats() {
         <span className="text-xl">⚠️</span>
         <div className="font-medium">{error}</div>
       </div>
-      <button onClick={() => loadStats()} className="px-5 py-2 bg-brand-surface border border-red-500/30 text-red-400 rounded-xl font-bold hover:bg-red-500/10 active:scale-95 transition-all shadow-sm">
+      <button onClick={() => loadStats()} className="btn btn-secondary px-6">
         Reintentar
       </button>
     </div>

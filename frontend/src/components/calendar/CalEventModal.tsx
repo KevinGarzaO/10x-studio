@@ -47,17 +47,17 @@ export function CalEventModal({ open, event, defaultDate, topics, onClose, onSav
             </select></div>
           <div><label className="label block mb-1.5">Estado</label>
             <select value={status} onChange={e => setStatus(e.target.value as 'pending' | 'published')} className="input">
-              <option value="pending">🕐 Por publicar</option>
-              <option value="published">✅ Publicado</option>
+              <option value="pending">Por publicar</option>
+              <option value="published">Publicado</option>
             </select></div>
         </div>
         <div className="flex items-center justify-between mt-6">
           {event
-            ? <button className="btn btn-danger btn-sm" onClick={() => onDelete(event.id)}>🗑️ Eliminar</button>
+            ? <button className="btn btn-danger btn-sm" onClick={() => onDelete(event.id)}>Eliminar</button>
             : <div />}
           <div className="flex gap-2">
-            <button className="btn btn-ghost" onClick={onClose}>Cancelar</button>
-            <button className="btn btn-primary" onClick={handleSave}>Guardar</button>
+            <button className="btn btn-secondary btn-sm" onClick={onClose}>Cancelar</button>
+            <button className="btn btn-primary btn-sm px-4" onClick={handleSave}>Guardar</button>
           </div>
         </div>
       </div>

@@ -48,17 +48,17 @@ export function TopicModal({ open, topic, campaigns, onClose, onSave }: Props) {
           <div className="grid grid-cols-2 gap-3">
             <div><label className="label block mb-1.5">Estado</label>
               <select value={status} onChange={e => setStatus(e.target.value as TopicStatus)} className="input">
-                <option value="idea">💡 Idea</option>
-                <option value="ready">✅ Listo</option>
-                <option value="writing">✏️ Escribiendo</option>
-                <option value="done">✓ Hecho</option>
+                <option value="idea">Idea</option>
+                <option value="ready">Listo</option>
+                <option value="writing">Escribiendo</option>
+                <option value="done">Hecho</option>
               </select></div>
             <div><label className="label block mb-1.5">Prioridad</label>
               <select value={priority} onChange={e => setPriority(e.target.value as TopicPriority | '')} className="input">
                 <option value="">Sin prioridad</option>
-                <option value="1">🔴 Alta</option>
-                <option value="2">🟡 Media</option>
-                <option value="3">🟢 Baja</option>
+                <option value="1">Alta</option>
+                <option value="2">Media</option>
+                <option value="3">Baja</option>
               </select></div>
           </div>
           {campaigns.length > 0 && (

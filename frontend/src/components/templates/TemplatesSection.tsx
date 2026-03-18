@@ -49,7 +49,7 @@ function TemplateModal({ template, onClose, onSave }: {
             <div>
               <label className="label block mb-1.5">Plataforma</label>
               <select value={platform} onChange={e => handlePlatformChange(e.target.value as Platform)} className="input">
-                {ALL_PLATFORMS.map(p => <option key={p} value={p}>{PLATFORMS[p].icon} {PLATFORMS[p].label}</option>)}
+                {ALL_PLATFORMS.map(p => <option key={p} value={p}>{PLATFORMS[p].label}</option>)}
               </select>
             </div>
           </div>
@@ -65,9 +65,9 @@ function TemplateModal({ template, onClose, onSave }: {
             <textarea value={prompt} onChange={e => setPrompt(e.target.value)} rows={10} className="input resize-none font-mono text-xs bg-brand-bg/50" />
           </div>
         </div>
-        <div className="flex justify-end gap-2 mt-6">
-          <button className="btn btn-secondary" onClick={onClose}>Cancelar</button>
-          <button className="btn btn-primary" onClick={() => { if (!name.trim()) return; onSave({ name, platform, description, systemPrompt: prompt }) }}>
+        <div className="flex justify-end gap-2 mt-8">
+          <button className="btn btn-secondary btn-sm" onClick={onClose}>Cancelar</button>
+          <button className="btn btn-primary btn-sm px-4 shadow-lg" onClick={() => { if (!name.trim()) return; onSave({ name, platform, description, systemPrompt: prompt }) }}>
             Guardar plantilla
           </button>
         </div>
@@ -99,15 +99,17 @@ export function TemplatesSection() {
           </h1>
           <p className="text-sm text-brand-secondary mt-1">Personaliza cómo la IA genera cada tipo de contenido</p>
         </div>
-        <button className="btn btn-primary" onClick={() => { setEditing(null); setModalOpen(true) }}>+ Nueva plantilla</button>
+        <button className="btn btn-primary btn-sm shadow-lg" onClick={() => { setEditing(null); setModalOpen(true) }}>
+          <i className="pi pi-plus mr-1 text-[10px]"></i>
+          Nueva plantilla
+        </button>
       </div>
 
-      {/* Filter */}
-      <div className="flex gap-1.5 mb-6 flex-wrap">
+      <div className="flex gap-2 p-1 bg-brand-surface rounded-xl border border-brand-border w-fit mb-6 max-w-full overflow-x-auto no-scrollbar">
         {(['all', ...ALL_PLATFORMS] as const).map(p => (
           <button key={p} onClick={() => setFilterPlat(p)}
-            className={`px-3 py-1 rounded-full text-xs font-bold border transition-all ${filterPlat === p ? 'border-brand-accent text-[#1A1A1A] bg-brand-accent shadow-sm' : 'border-brand-border text-brand-secondary hover:border-brand-accent hover:text-brand-primary'}`}>
-            {p === 'all' ? 'Todas' : `${PLATFORMS[p].icon} ${PLATFORMS[p].label}`}
+            className={`tab ${filterPlat === p ? 'tab-active' : 'tab-inactive'} text-xs !h-[32px] px-3 whitespace-nowrap`}>
+            {p === 'all' ? 'Todas' : PLATFORMS[p].label}
           </button>
         ))}
       </div>
@@ -121,7 +123,7 @@ export function TemplatesSection() {
         <div className="text-center py-20 text-brand-secondary bg-brand-surface rounded-2xl border border-dotted border-brand-border">
           <div className="text-5xl mb-4 opacity-20">🗂️</div>
           <p className="mb-6 font-medium">No hay plantillas aún. ¡Crea una para personalizar tu estilo!</p>
-          <button className="btn btn-primary" onClick={() => setModalOpen(true)}>+ Nueva plantilla</button>
+          <button className="btn btn-primary shadow-lg" onClick={() => setModalOpen(true)}>Nueva plantilla</button>
         </div>
       ) : (
         <div className="grid grid-cols-2 gap-4">
@@ -132,9 +134,13 @@ export function TemplatesSection() {
                   <span className="text-xl p-2 bg-brand-bg rounded-lg border border-brand-border">{PLATFORMS[t.platform].icon}</span>
                   <span className="font-bold text-sm text-brand-primary">{t.name}</span>
                 </div>
-                <div className="flex gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
-                  <button className="btn btn-secondary btn-sm !px-2" onClick={() => { setEditing(t); setModalOpen(true) }}>✏️</button>
-                  <button className="btn btn-danger btn-sm !px-2" onClick={() => deleteTemplate(t.id)}>🗑️</button>
+                <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                  <button className="btn btn-secondary btn-sm h-8 w-8 !p-0 justify-center" onClick={() => { setEditing(t); setModalOpen(true) }}>
+                    <i className="pi pi-cog text-xs"></i>
+                  </button>
+                  <button className="btn btn-danger btn-sm h-8 w-8 !p-0 justify-center" onClick={() => deleteTemplate(t.id)}>
+                    <i className="pi pi-trash text-xs"></i>
+                  </button>
                 </div>
               </div>
               <div className="text-xs text-brand-secondary mb-4 line-clamp-1 italic">{t.description || 'Sin descripción'}</div>

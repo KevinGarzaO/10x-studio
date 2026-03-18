@@ -152,16 +152,16 @@ export function IntegrationsSection() {
           <div>
             <label className="label block mb-2">Estado por defecto al publicar</label>
             <select value={wpStatus} onChange={e => setWpStatus(e.target.value as 'draft' | 'publish')} className="input w-56">
-              <option value="draft">📝 Borrador</option>
-              <option value="publish">✅ Publicar directo</option>
+              <option value="draft">Borrador</option>
+              <option value="publish">Publicar directo</option>
             </select>
           </div>
           <div className="flex gap-2 pt-1">
             <button onClick={testWp} disabled={!wpUrl || !wpUser || !wpPass || saving === 'test-wp'} className="btn btn-secondary btn-sm">
-              {saving === 'test-wp' ? '⏳...' : '🔌 Probar conexión'}
+              {saving === 'test-wp' ? 'Probando...' : 'Probar conexión'}
             </button>
-            <button onClick={saveWp} disabled={saving === 'wp'} className="btn btn-primary btn-sm">
-              {saving === 'wp' ? '⏳...' : 'Guardar'}
+            <button onClick={saveWp} disabled={saving === 'wp'} className="btn btn-primary btn-sm px-4">
+              {saving === 'wp' ? 'Guardando...' : 'Guardar'}
             </button>
           </div>
           <p className="text-xs text-brand-secondary bg-brand-bg/50 p-3 rounded-xl border border-brand-border italic">
@@ -199,10 +199,10 @@ export function IntegrationsSection() {
           </div>
           <div className="flex gap-2">
             <button onClick={testLi} disabled={!liToken || saving === 'test-li'} className="btn btn-secondary btn-sm">
-              {saving === 'test-li' ? '⏳...' : '🔌 Verificar token'}
+              {saving === 'test-li' ? 'Verificando...' : 'Verificar token'}
             </button>
-            <button onClick={saveLi} disabled={!liToken || saving === 'li'} className="btn btn-primary btn-sm">
-              {saving === 'li' ? '⏳...' : 'Guardar'}
+            <button onClick={saveLi} disabled={!liToken || saving === 'li'} className="btn btn-primary btn-sm px-4">
+              {saving === 'li' ? 'Guardando...' : 'Guardar'}
             </button>
           </div>
         </div>
@@ -221,7 +221,10 @@ export function IntegrationsSection() {
               <p className="text-xs text-brand-secondary mt-0.5">Zapier, Make, n8n, etc.</p>
             </div>
           </div>
-          <button className="btn btn-primary btn-sm" onClick={() => { setEditingWh(null); setWhModal(true) }}>+ Agregar</button>
+          <button className="btn btn-primary btn-sm shadow-sm" onClick={() => { setEditingWh(null); setWhModal(true) }}>
+            <i className="pi pi-plus mr-1 text-[10px]"></i>
+            Agregar
+          </button>
         </div>
         <div className="p-6">
           {webhooks.length === 0 ? (
@@ -241,8 +244,12 @@ export function IntegrationsSection() {
                       {wh.platforms.map(p => <span key={p} className="text-[10px] font-bold bg-brand-surface border border-brand-border text-brand-secondary px-2 py-0.5 rounded-lg shadow-sm">{PLATFORMS[p].icon} {PLATFORMS[p].label}</span>)}
                     </div>
                   </div>
-                  <button onClick={() => { setEditingWh(wh); setWhModal(true) }} className="btn btn-secondary btn-sm">✏️</button>
-                  <button onClick={() => saveWebhooks(webhooks.filter(w => w.id !== wh.id))} className="btn btn-danger btn-sm">🗑️</button>
+                  <button onClick={() => { setEditingWh(wh); setWhModal(true) }} className="btn btn-secondary btn-sm h-8 w-8 !p-0 justify-center">
+                    <i className="pi pi-cog text-xs"></i>
+                  </button>
+                  <button onClick={() => saveWebhooks(webhooks.filter(w => w.id !== wh.id))} className="btn btn-danger btn-sm h-8 w-8 !p-0 justify-center">
+                    <i className="pi pi-trash text-xs"></i>
+                  </button>
                 </div>
               ))}
             </div>
@@ -306,10 +313,10 @@ function WebhookModal({ webhook, onClose, onSave }: {
           </div>
           <div>
             <label className="label block mb-2">Plataformas que lo disparan</label>
-            <div className="flex flex-wrap gap-2">
+            <div className="flex flex-wrap gap-2 p-1 bg-brand-bg rounded-xl border border-brand-border h-[42px] items-center px-2">
               {ALL_PLATFORMS.map(p => (
                 <button key={p} onClick={() => togglePlatform(p)}
-                  className={`px-3 py-1.5 rounded-xl text-xs font-bold border transition-all ${platforms.has(p) ? 'border-brand-accent text-brand-accent bg-brand-accent/5 shadow-sm' : 'border-brand-border text-brand-secondary hover:border-brand-accent'}`}>
+                  className={`tab ${platforms.has(p) ? 'tab-active' : 'tab-inactive'} !text-[10px] !h-[28px] px-2`}>
                   {PLATFORMS[p].icon} {PLATFORMS[p].label}
                 </button>
               ))}
@@ -326,9 +333,9 @@ function WebhookModal({ webhook, onClose, onSave }: {
             </div>
           </div>
         </div>
-        <div className="flex justify-end gap-2 mt-6">
-          <button className="btn btn-secondary" onClick={onClose}>Cancelar</button>
-          <button className="btn btn-primary" onClick={() => {
+        <div className="flex justify-end gap-2 mt-8">
+          <button className="btn btn-secondary btn-sm" onClick={onClose}>Cancelar</button>
+          <button className="btn btn-primary btn-sm px-4 shadow-lg" onClick={() => {
             if (!name.trim() || !url.trim()) return
             onSave({ id: webhook?.id || uid(), name, url, secret: secret || undefined, platforms: Array.from(platforms), active })
           }}>Guardar</button>

@@ -147,7 +147,10 @@ export function CalendarSection() {
                     </div>
                   )
                 })}
-                <button onClick={() => openAddEvent(ds)} className="text-xs text-brand-accent hover:underline text-left">+ Agregar</button>
+                <button onClick={() => openAddEvent(ds)} className="btn btn-secondary btn-sm h-7 text-[10px] px-3 font-bold max-w-fit mt-1">
+                  <i className="pi pi-plus mr-1 text-[8px]"></i>
+                  Agregar
+                </button>
               </div>
             </div>
           )
@@ -169,8 +172,8 @@ export function CalendarSection() {
           </h1>
           <p className="text-sm text-brand-secondary mt-1">Planifica tu estrategia de publicación</p>
         </div>
-        <button className="btn btn-ghost" onClick={suggestSchedule} disabled={suggesting}>
-          {suggesting ? '⏳ Analizando...' : '✦ Sugerir fechas con IA'}
+        <button className="btn btn-secondary btn-sm" onClick={suggestSchedule} disabled={suggesting}>
+          {suggesting ? 'Analizando...' : 'Sugerir fechas con IA'}
         </button>
       </div>
 
@@ -178,8 +181,8 @@ export function CalendarSection() {
         <div className="flex items-center gap-3 p-4 bg-brand-accent/10 border border-brand-accent/20 rounded-lg mb-5">
           <span className="text-xl">✨</span>
           <div className="flex-1 text-sm text-brand-primary"><strong>La IA sugirió {suggestions.length} fechas</strong> basándose en tus temas disponibles.</div>
-          <button className="btn btn-primary btn-sm" onClick={acceptSuggestions}>Aceptar todas</button>
-          <button className="btn btn-ghost btn-sm" onClick={() => setSuggestions([])}>Descartar</button>
+          <button className="btn btn-primary btn-sm px-4 shadow-sm" onClick={acceptSuggestions}>Aceptar todas</button>
+          <button className="btn btn-secondary btn-sm px-4" onClick={() => setSuggestions([])}>Descartar</button>
         </div>
       )}
 
@@ -188,10 +191,10 @@ export function CalendarSection() {
         <h2 className="text-xl font-bold flex-1 capitalize text-brand-primary">{calTitle}</h2>
         <button className="btn btn-secondary btn-sm px-2" onClick={() => view === 'month' ? navMonth(1) : navWeek(1)}>›</button>
         <button className="btn btn-secondary btn-sm" onClick={goToday}>Hoy</button>
-        <div className="flex bg-brand-bg rounded-lg p-0.5">
+        <div className="flex bg-brand-surface rounded-xl p-1 border border-brand-border h-[42px] items-center px-1">
           {(['month','week'] as CalView[]).map(v => (
             <button key={v} onClick={() => setView(v)}
-              className={`px-3 py-1 rounded-md text-xs font-medium transition-all ${view === v ? 'bg-brand-accent text-[#1A1A1A] shadow-sm' : 'text-brand-secondary'}`}>
+              className={`tab ${view === v ? 'tab-active' : 'tab-inactive'} text-xs !h-[32px] px-4`}>
               {v === 'month' ? 'Mes' : 'Semana'}
             </button>
           ))}

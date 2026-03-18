@@ -93,11 +93,10 @@ export function SubstackPublish() {
 
   return (
     <div className="max-w-2xl">
-      {/* Type selector */}
-      <div className="flex gap-2 mb-5">
-        {([['note','🗒️ Note'],['article','📋 Article']] as [PublishType,string][]).map(([t, label]) => (
+      <div className="flex gap-2 mb-5 p-1 bg-brand-surface/80 rounded-xl border border-brand-border w-fit">
+        {([['note','Nota'],['article','Artículo']] as [PublishType,string][]).map(([t, label]) => (
           <button key={t} onClick={() => setType(t as PublishType)}
-            className={`flex-1 py-3 rounded-lg border-2 text-sm font-bold transition-all ${type === t ? 'border-brand-accent bg-brand-accent/10 text-brand-accent' : 'border-brand-border text-brand-secondary hover:border-brand-accent'}`}>
+            className={`tab ${type === t ? 'tab-active' : 'tab-inactive'} min-w-[100px]`}>
             {label}
           </button>
         ))}
@@ -145,10 +144,10 @@ export function SubstackPublish() {
           {/* Publish time */}
           <div>
             <label className="label block mb-2">Cuándo publicar</label>
-            <div className="flex gap-2 mb-3">
-              {([['now','⚡ Ahora'],['schedule','📅 Programar']] as [PublishTime,string][]).map(([t, label]) => (
+            <div className="flex gap-2 mb-3 p-1 bg-brand-surface/80 rounded-xl border border-brand-border w-fit">
+              {([['now','Ahora'],['schedule','Programar']] as [PublishTime,string][]).map(([t, label]) => (
                 <button key={t} onClick={() => setPublishTime(t as PublishTime)}
-                  className={`px-4 py-2 rounded-lg border text-xs font-bold transition-all ${publishTime === t ? 'border-brand-accent text-brand-accent bg-brand-accent/10' : 'border-brand-border text-brand-secondary hover:border-brand-accent'}`}>
+                  className={`tab ${publishTime === t ? 'tab-active' : 'tab-inactive'}`}>
                   {label}
                 </button>
               ))}
@@ -162,12 +161,12 @@ export function SubstackPublish() {
             )}
           </div>
 
-          <button className="btn btn-primary w-full py-3" onClick={publish} disabled={publishing}>
+          <button className="btn btn-primary w-full shadow-lg" onClick={publish} disabled={publishing}>
             {publishing
-              ? '⏳ Procesando...'
+              ? 'Procesando...'
               : publishTime === 'now'
-                ? `📤 Publicar ${type === 'note' ? 'Note' : 'Article'} ahora`
-                : `📅 Programar publicación`}
+                ? `Publicar ahora`
+                : `Programar publicación`}
           </button>
         </div>
       </div>
@@ -182,8 +181,10 @@ export function SubstackPublish() {
       {pendingQueue.length > 0 && (
         <div className="bg-brand-surface border border-brand-border rounded-2xl mb-5 overflow-hidden shadow-[var(--shadow)]">
           <div className="bg-brand-bg/50 border-b border-brand-border px-5 py-3 flex items-center justify-between">
-            <span className="text-sm font-bold text-brand-primary uppercase tracking-wide">📅 Cola de publicaciones ({pendingQueue.length})</span>
-            <button onClick={loadQueue} className="btn btn-secondary btn-sm">🔄</button>
+            <span className="text-sm font-bold text-brand-primary uppercase tracking-wide">Cola de publicaciones</span>
+            <button onClick={loadQueue} className="btn btn-secondary btn-sm px-3">
+              <i className="pi pi-refresh"></i>
+            </button>
           </div>
           <div className="divide-y divide-brand-border">
             {pendingQueue.map(p => (
@@ -194,7 +195,9 @@ export function SubstackPublish() {
                   <div className="text-xs text-brand-secondary">{new Date(p.scheduleAt).toLocaleString('es-MX')}</div>
                 </div>
                 <span className="text-xs bg-yellow-500/10 border border-yellow-500/20 text-yellow-500 px-2 py-0.5 rounded-full font-bold">Pendiente</span>
-                <button onClick={() => cancelScheduled(p.id)} className="btn btn-danger btn-sm">✕</button>
+                <button onClick={() => cancelScheduled(p.id)} className="btn btn-danger btn-sm px-2">
+                  <i className="pi pi-trash"></i>
+                </button>
               </div>
             ))}
           </div>

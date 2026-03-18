@@ -231,28 +231,29 @@ export function SubstackSubscribers() {
           />
         </div>
         
-        <div className="flex gap-1.5 align-middle">
+        <div className="flex gap-2 p-1 bg-brand-bg rounded-xl border border-brand-border h-[38px] items-center">
           {(['all','free','paid'] as const).map(t => (
-            <Button 
+            <button 
               key={t} 
               onClick={() => handleTypeFilter(t)}
-              label={t === 'all' ? 'Todos' : t === 'paid' ? '💳 Pago' : '🆓 Gratis'}
-              className={`!px-4 !py-2 !rounded-xl !text-[11px] !font-bold transition-all duration-300 ${typeFilter === t ? '!bg-brand-accent !border-brand-accent !text-[#1A1A1A] !shadow-md' : '!bg-brand-bg !border-brand-border !text-brand-secondary hover:!text-brand-primary hover:!border-brand-accent !shadow-sm'}`}
-            />
+              className={`tab ${typeFilter === t ? 'tab-active' : 'tab-inactive'} !text-[11px] h-full`}>
+              {t === 'all' ? 'Todos' : t === 'paid' ? 'Pago' : 'Gratis'}
+            </button>
           ))}
         </div>
         
         <div className="h-6 w-px bg-brand-border mx-1 hidden sm:block"></div>
         
-        <Button 
+        <button 
           onClick={exportCSV} 
           disabled={subscribers.length === 0}
-          icon="pi pi-download"
-          label="Exportar"
-          className="p-button-sm p-button-outlined !rounded-xl !text-[11px] !font-bold !bg-brand-bg !border-brand-border !text-brand-secondary hover:!text-brand-primary !shadow-sm"
-        />
+          className="btn btn-secondary btn-sm gap-1.5 bg-brand-bg"
+        >
+          <i className="pi pi-download"></i>
+          <span>Exportar</span>
+        </button>
         
-        <label className={`cursor-pointer inline-flex items-center px-4 py-2 rounded-xl text-[11px] font-bold bg-brand-accent border border-brand-accent text-[#1A1A1A] hover:brightness-110 transition-all shadow-md gap-1.5 ${importing ? 'opacity-50 pointer-events-none' : ''}`}>
+        <label className={`cursor-pointer btn btn-primary btn-sm gap-1.5 ${importing ? 'opacity-50 pointer-events-none' : ''}`}>
            <i className={importing ? "pi pi-spin pi-spinner" : "pi pi-upload"}></i>
            <span>{importing ? 'Cargando...' : 'Importar CSV'}</span>
            <input type="file" accept=".csv" className="hidden" onChange={handleImportCSV} disabled={importing} />
@@ -286,9 +287,11 @@ export function SubstackSubscribers() {
       </div>
 
       {error && (
-        <div className="bg-red-500/10 border border-red-500/20 rounded-lg p-4 text-red-400 text-sm mb-4">
-          <strong>Error:</strong> {error}
-          <Button onClick={() => loadAll()} label="Reintentar" pt={{ root: { className: 'p-button-sm text-red-400 ml-3 bg-red-500/20 hover:bg-red-500/30' } }} />
+        <div className="bg-red-500/10 border border-red-500/20 rounded-lg p-4 text-red-400 text-sm mb-4 flex items-center justify-between">
+          <div><strong>Error:</strong> {error}</div>
+          <button onClick={() => loadAll()} className="btn btn-secondary btn-sm border-red-500/30 text-red-400 hover:bg-red-500/10">
+            Reintentar
+          </button>
         </div>
       )}
 
