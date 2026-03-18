@@ -310,9 +310,9 @@ export function Sidebar({ active, onNav, collapsed, onToggleCollapse, mobileOpen
              <img src="/icon-192.png" alt="Avocado" className="w-full h-full object-contain" />
           </div>
           {!collapsed && (
-            <div className="flex flex-col ml-3">
+            <div className="flex items-center ml-3 gap-2">
               <span className="text-white font-black leading-none tracking-tight text-lg">AVOCADO</span>
-              <span className="text-white font-bold uppercase tracking-[0.2em] mt-0.5">ESTUDIO</span>
+              <span className="text-white font-bold uppercase tracking-[0.1em] text-sm opacity-80">ESTUDIO</span>
             </div>
           )}
         </div>
@@ -395,13 +395,13 @@ export function Sidebar({ active, onNav, collapsed, onToggleCollapse, mobileOpen
         {/* User / Niche Footer */}
         <div className={`p-4 border-t border-brand-border ${collapsed ? 'items-center' : ''}`}>
            {!collapsed && (
-             <div className="bg-brand-accent rounded-full p-3 flex items-center gap-3 border border-brand-accent shadow-lg">
-                <div className="w-10 h-10 rounded-full bg-brand-bg flex items-center justify-center text-brand-accent font-black shadow-inner">
-                  <i className="pi pi-star text-lg"></i>
+             <div className="bg-brand-accent rounded-full px-3 py-1.5 flex items-center gap-2.5 border border-brand-accent shadow-md">
+                <div className="w-7 h-7 rounded-full bg-brand-bg flex items-center justify-center text-brand-accent font-black shadow-inner">
+                  <i className="pi pi-star text-[10px]"></i>
                 </div>
                 <div className="flex flex-col min-w-0">
-                  <span className="text-[13px] text-[#1A1A1A] font-extrabold truncate uppercase tracking-tight">Transformateck</span>
-                  <span className="text-[11px] text-[#1A1A1A]/80 font-bold">Plan Premium</span>
+                  <span className="text-[11px] text-[#1A1A1A] font-black truncate uppercase tracking-tight">Transformateck</span>
+                  <span className="text-[9px] text-[#1A1A1A]/70 font-bold -mt-0.5">Premium</span>
                 </div>
              </div>
            )}

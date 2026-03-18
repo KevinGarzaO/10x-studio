@@ -106,14 +106,14 @@ export function SubstackStats() {
       {/* Posts KPIs Dashboard style */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
         {[
-          { label: 'Suscriptores', value: data.subscribers.total.toLocaleString(), color: 'text-brand-primary', bg: 'bg-brand-bg' },
-          { label: 'Likes Recientes',  value: totalLikes > 0 ? totalLikes.toLocaleString() : '—',  color: 'text-red-400', bg: 'bg-red-500/10' },
-          { label: 'Apertura Promedio', value: avgOpenRate !== null ? `${avgOpenRate}%` : '—',  color: 'text-green-400', bg: 'bg-green-500/10' },
+          { label: 'Suscriptores', value: (data.subscribers.total || 0).toLocaleString(), color: 'text-brand-primary', bg: 'bg-brand-bg' },
+          { label: 'Likes Recientes',  value: (totalLikes || 0).toLocaleString(),  color: 'text-red-400', bg: 'bg-red-500/10' },
+          { label: 'Apertura Promedio', value: avgOpenRate !== null ? `${avgOpenRate}%` : '0%',  color: 'text-green-400', bg: 'bg-green-500/10' },
         ].map(k => (
           <div key={k.label} className="relative bg-brand-surface border border-brand-border shadow-[var(--shadow)] rounded-2xl p-6 text-center hover:-translate-y-1 hover:border-brand-accent transition-all duration-300 overflow-hidden group">
             <div className={`absolute -right-6 -top-6 w-24 h-24 ${k.bg} rounded-full blur-2xl opacity-20 group-hover:scale-150 transition-transform duration-500 pointer-events-none`} />
             <div className="relative">
-              <div className={`text-5xl font-black tracking-tight ${k.color}`}>{k.value}</div>
+              <div className={`text-4xl font-bold tracking-tight ${k.color}`}>{k.value}</div>
               <div className="text-[11px] font-bold text-brand-secondary uppercase tracking-widest mt-2">{k.label}</div>
             </div>
           </div>
