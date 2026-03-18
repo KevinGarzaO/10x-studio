@@ -292,7 +292,7 @@ export function Sidebar({ active, onNav, collapsed, onToggleCollapse, mobileOpen
       )}
 
       <aside className={`
-        ${sidebarWidth} bg-brand-bg flex flex-col flex-shrink-0 h-screen transition-all duration-300 group z-50
+        ${sidebarWidth} bg-brand-nav-bg flex flex-col flex-shrink-0 h-screen transition-all duration-300 group z-50 border-r border-brand-nav-border
         ${mobileOpen ? 'fixed left-0 top-0 bottom-0 translate-x-0 shadow-2xl' : 'fixed -translate-x-full md:relative md:translate-x-0'}
       `}>
         
@@ -312,7 +312,7 @@ export function Sidebar({ active, onNav, collapsed, onToggleCollapse, mobileOpen
           {!collapsed && (
             <div className="flex flex-col ml-3">
               <span className="text-white font-black leading-none tracking-tight text-lg">AVOCADO</span>
-              <span className="text-[10px] text-brand-accent font-bold uppercase tracking-[0.2em] mt-0.5">ESTUDIO</span>
+              <span className="text-white font-bold uppercase tracking-[0.2em] mt-0.5">ESTUDIO</span>
             </div>
           )}
         </div>
@@ -395,13 +395,13 @@ export function Sidebar({ active, onNav, collapsed, onToggleCollapse, mobileOpen
         {/* User / Niche Footer */}
         <div className={`p-4 border-t border-brand-border ${collapsed ? 'items-center' : ''}`}>
            {!collapsed && (
-             <div className="bg-brand-surface rounded-2xl p-3 flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-brand-bg flex items-center justify-center text-brand-primary font-bold">
-                  {settings.niche ? settings.niche[0].toUpperCase() : 'N'}
+             <div className="bg-brand-accent rounded-full p-3 flex items-center gap-3 border border-brand-accent shadow-lg">
+                <div className="w-10 h-10 rounded-full bg-brand-bg flex items-center justify-center text-brand-accent font-black shadow-inner">
+                  <i className="pi pi-star text-lg"></i>
                 </div>
                 <div className="flex flex-col min-w-0">
-                  <span className="text-[12px] text-brand-primary font-bold truncate">{settings.niche || 'Productor'}</span>
-                  <span className="text-[10px] text-brand-secondary font-medium">Plan gratuito</span>
+                  <span className="text-[13px] text-[#1A1A1A] font-extrabold truncate uppercase tracking-tight">Transformateck</span>
+                  <span className="text-[11px] text-[#1A1A1A]/80 font-bold">Plan Premium</span>
                 </div>
              </div>
            )}

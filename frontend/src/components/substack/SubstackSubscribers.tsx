@@ -25,7 +25,7 @@ interface Subscriber {
 
 const TYPE_BADGE: Record<string, string> = {
   paid: 'bg-green-500/10 border-green-500/20 text-green-400 shadow-sm',
-  free: 'bg-brand-bg border-brand-border text-brand-secondary shadow-sm',
+  free: 'bg-[#1E3A5F] border-[#1E3A5F] text-[#4A9EFF] shadow-sm font-bold',
   comp: 'bg-blue-500/10 border-blue-500/20 text-blue-400 shadow-sm',
 }
 const TYPE_LABEL: Record<string, string> = { paid: '💳 Pago', free: '🆓 Gratis', comp: '🎁 Comp.' }
@@ -35,7 +35,7 @@ function Stars({ value }: { value: number | null }) {
   return (
     <div className="flex gap-0.5">
       {[1,2,3,4,5].map(i => (
-        <span key={i} className={`text-sm ${i <= value ? 'text-brand-accent' : 'text-brand-border'}`}>★</span>
+        <span key={i} className={`text-sm ${i <= (value || 0) ? 'text-[#FFB800]' : 'text-[#444444]'}`}>★</span>
       ))}
     </div>
   )
@@ -196,8 +196,7 @@ export function SubstackSubscribers() {
 
   // User Row Template
   const userTemplate = (s: Subscriber) => (
-    <div className="relative">
-      {s.active === false && <span className="absolute -left-2 top-1/2 -translate-y-1/2 w-1 h-6 bg-red-400 rounded-r-md" title="Suscripción inactiva"></span>}
+    <div className="relative py-1">
       <div className="text-[14px] font-black text-brand-primary truncate max-w-[200px] xl:max-w-[300px]">{s.email}</div>
       {s.name && <div className="text-[13px] font-bold text-brand-secondary truncate max-w-[200px] xl:max-w-[300px] mt-0.5">{s.name}</div>}
       {s.source && <div className="text-[10px] font-bold text-brand-secondary opacity-60 mt-1 uppercase tracking-widest">{s.source}</div>}
@@ -211,7 +210,7 @@ export function SubstackSubscribers() {
   );
 
   const revenueTemplate = (s: Subscriber) => (
-    <span className="text-[14px] whitespace-nowrap font-black text-green-400">
+    <span className={`text-[14px] whitespace-nowrap font-black ${s.revenue && s.revenue > 0 ? 'text-green-400' : 'text-[#9B9B9B]'}`}>
       {s.revenue != null ? `$${s.revenue.toFixed(2)}` : '—'}
     </span>
   );
@@ -228,7 +227,7 @@ export function SubstackSubscribers() {
             onChange={onGlobalFilterChange} 
             placeholder="Buscar por email o nombre..." 
             className="w-full pl-9"
-            style={{ borderRadius: '0.75rem', padding: '0.5rem 0.5rem 0.5rem 2.5rem', background: 'var(--color-bg)', border: '1px solid var(--color-border)', color: 'var(--color-text-primary)' }}
+            style={{ borderRadius: '0.75rem', padding: '0.5rem 0.5rem 0.5rem 2.5rem', background: 'var(--color-bg)', border: '1px solid #333333', color: 'var(--color-text-primary)' }}
           />
         </div>
         
@@ -328,13 +327,13 @@ export function SubstackSubscribers() {
             currentPageReportTemplate="{first} a {last} de {totalRecords}"
             tableStyle={{ minWidth: '800px' }}
           >
-            <Column field="email" header="Usuario" body={userTemplate} sortable style={{ width: '25%' }}></Column>
-            <Column field="type" header="Tipo" body={typeTemplate} sortable style={{ width: '10%' }}></Column>
-            <Column field="stars" header="Estrellas" body={(s: Subscriber) => <Stars value={s.stars} />} sortable style={{ width: '15%' }}></Column>
-            <Column field="opens30d" header="Apert. 30d" sortable style={{ width: '10%', textAlign: 'center' }}></Column>
-            <Column field="opens6m" header="Apert. 6m" sortable style={{ width: '10%', textAlign: 'center' }}></Column>
-            <Column field="revenue" header="Revenue" body={revenueTemplate} sortable style={{ width: '15%' }}></Column>
-            <Column field="createdAt" header="Fecha" sortable style={{ width: '15%' }}></Column>
+            <Column field="email" header="Usuario" body={userTemplate} sortable style={{ width: '25%' }} headerStyle={{ fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.05em' }}></Column>
+            <Column field="type" header="Tipo" body={typeTemplate} sortable style={{ width: '10%' }} headerStyle={{ fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.05em' }}></Column>
+            <Column field="stars" header="Estrellas" body={(s: Subscriber) => <Stars value={s.stars} />} sortable style={{ width: '15%' }} headerStyle={{ fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.05em' }}></Column>
+            <Column field="opens30d" header="APERT. 30D" sortable style={{ width: '12%', textAlign: 'center' }} headerStyle={{ fontSize: '10px', textTransform: 'uppercase', paddingLeft: '1rem', paddingRight: '1rem' }}></Column>
+            <Column field="opens6m" header="APERT. 6M" sortable style={{ width: '12%', textAlign: 'center' }} headerStyle={{ fontSize: '10px', textTransform: 'uppercase', paddingLeft: '1rem', paddingRight: '1rem' }}></Column>
+            <Column field="revenue" header="Revenue" body={revenueTemplate} sortable style={{ width: '15%' }} headerStyle={{ fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.05em' }}></Column>
+            <Column field="createdAt" header="Fecha" sortable style={{ width: '11%' }} headerStyle={{ fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.05em' }}></Column>
           </DataTable>
         </div>
       )}

@@ -23,10 +23,10 @@ function daysUntil(iso: string) {
 
 function ExpiryBadge({ expiresAt }: { expiresAt: string }) {
   const days = daysUntil(expiresAt)
-  if (days >= 60) return <span className="text-xs bg-green-500/10 border border-green-500/20 text-green-400 px-3 py-1 rounded-full font-medium">✓ Sesión activa — {days} días</span>
-  if (days > 14) return <span className="text-xs bg-green-500/10 border border-green-500/20 text-green-400 px-3 py-1 rounded-full font-medium">✓ Sesión activa — {days} días</span>
-  if (days > 5)  return <span className="text-xs bg-amber-500/10 border border-amber-500/20 text-amber-400 px-3 py-1 rounded-full font-medium">⚠️ Expira en {days} días</span>
-  return <span className="text-xs bg-red-500/10 border border-red-500/20 text-red-400 px-3 py-1 rounded-full font-medium animate-pulse">🔴 Expira en {days} días</span>
+  if (days >= 60) return <span className="text-[13px] bg-brand-accent text-[#1A1A1A] px-4 py-1.5 rounded-full font-bold shadow-md">✓ Sesión activa — {days} días</span>
+  if (days > 14) return <span className="text-[13px] bg-brand-accent text-[#1A1A1A] px-4 py-1.5 rounded-full font-bold shadow-md">✓ Sesión activa — {days} días</span>
+  if (days > 5)  return <span className="text-[13px] bg-amber-500 text-[#1A1A1A] px-4 py-1.5 rounded-full font-bold shadow-md">⚠️ Expira en {days} días</span>
+  return <span className="text-[13px] bg-red-500 text-white px-4 py-1.5 rounded-full font-bold shadow-md animate-pulse">🔴 Expira en {days} días</span>
 }
 
 export function SubstackSection() {
@@ -206,7 +206,7 @@ export function SubstackSection() {
                 <div className="flex flex-col gap-2.5 items-start md:items-end w-full md:w-auto mt-4 md:mt-0">
                   {profile.expiresAt && <ExpiryBadge expiresAt={profile.expiresAt} />}
                   <div className="flex items-center gap-2 w-full md:w-auto">
-                    <button onClick={disconnect} className="text-[11px] font-bold px-4 py-1.5 rounded-full border border-red-500/30 text-red-400 bg-red-500/5 hover:bg-red-500/10 transition-colors shadow-sm">
+                    <button onClick={disconnect} className="text-xs font-black px-6 py-2 rounded-full border-2 border-red-500 text-[#FF4444] bg-red-500/10 hover:bg-red-500/20 transition-all shadow-lg active:scale-95 uppercase tracking-wider">
                       Desconectar
                     </button>
                   </div>
@@ -248,17 +248,17 @@ export function SubstackSection() {
                 {/* Substack Metrics */}
                 <div className="flex items-center gap-8 bg-brand-bg/40 px-5 py-2.5 rounded-2xl border border-brand-border shadow-[inset_0_2px_10px_rgb(0,0,0,0.02)]">
                   <div className="text-center">
-                    <div className="text-2xl font-black text-brand-primary tracking-tight leading-none">
+                    <div className="text-4xl font-black text-brand-primary tracking-tighter leading-none">
                       {profile.subCount != null ? Number(profile.subCount).toLocaleString('es') : '—'}
                     </div>
-                    <div className="text-[10px] font-bold text-brand-secondary uppercase tracking-widest mt-1.5">Suscriptores</div>
+                    <div className="text-[10px] font-bold text-brand-secondary uppercase tracking-widest mt-2">Suscriptores</div>
                   </div>
                   <div className="w-px h-8 bg-brand-border"></div>
                   <div className="text-center">
-                    <div className="text-2xl font-black text-brand-primary tracking-tight leading-none">
+                    <div className="text-4xl font-black text-brand-primary tracking-tighter leading-none">
                       {profile.followerCount != null ? Number(profile.followerCount).toLocaleString('es') : '—'}
                     </div>
-                    <div className="text-[10px] font-bold text-brand-secondary uppercase tracking-widest mt-1.5">Seguidores</div>
+                    <div className="text-[10px] font-bold text-brand-secondary uppercase tracking-widest mt-2">Seguidores</div>
                   </div>
                 </div>
 
@@ -277,7 +277,7 @@ export function SubstackSection() {
             ['publish',     '✍️ Publicar'],
           ] as [SubTab, string][]).map(([t, label]) => (
             <button key={t} onClick={() => setTab(t)}
-              className={`relative px-4 md:px-6 py-2.5 text-sm font-bold rounded-xl transition-all duration-300 ${tab === t ? 'text-[#1A1A1A] bg-brand-accent shadow-sm' : 'text-brand-secondary hover:text-brand-primary hover:bg-brand-bg/50'}`}>
+              className={`relative px-4 md:px-6 py-2.5 text-sm font-black rounded-xl transition-all duration-300 ${tab === t ? 'text-white bg-brand-accent shadow-md' : 'text-brand-secondary hover:text-brand-primary hover:bg-brand-bg/50'}`}>
               {label}
             </button>
           ))}

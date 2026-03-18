@@ -23,7 +23,7 @@ interface Props {
 
 export function Header({ activeSection, onMenuClick }: Props) {
   return (
-    <header className="h-[56px] bg-brand-surface border-b border-brand-border flex items-center px-4 md:px-8 gap-3 flex-shrink-0 transition-all duration-300">
+    <header className="h-[56px] bg-brand-nav-bg border-b border-brand-nav-border flex items-center px-4 md:px-8 gap-3 flex-shrink-0 transition-all duration-300">
       {/* Mobile Menu Button */}
       <button 
         onClick={onMenuClick}

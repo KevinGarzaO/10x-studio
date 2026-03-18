@@ -87,7 +87,7 @@ export function ResultTabs({ results, topic }: Props) {
         <div className="flex border-b border-[#e9e9e7] overflow-x-auto scrollbar-hide">
           {results.map((r, i) => (
             <button key={i} onClick={() => setActive(i)}
-              className={`px-4 py-3 text-xs font-medium whitespace-nowrap border-b-2 transition-all flex items-center gap-1.5 ${active === i ? 'border-brand-accent text-brand-accent' : 'border-transparent text-brand-secondary hover:text-brand-primary'}`}>
+              className={`px-4 py-3 text-xs font-black whitespace-nowrap transition-all flex items-center gap-1.5 ${active === i ? 'bg-brand-accent text-white rounded-t-lg' : 'text-brand-secondary hover:text-brand-primary border-b-2 border-transparent'}`}>
               {PLATFORMS[r.platform].icon} {PLATFORMS[r.platform].label}
               {r.status === 'loading' && <span className="w-3 h-3 border border-black border-t-transparent rounded-full animate-spin" />}
               {r.status === 'done'    && r.wordCount && <span className="text-[10px] text-[#9b9a97]">{r.wordCount}p</span>}

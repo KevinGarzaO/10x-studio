@@ -15,6 +15,8 @@ const config: Config = {
         'brand-secondary':'var(--color-text-secondary)',
         'brand-accent':  'var(--color-accent)',
         'brand-border':  'var(--color-border)',
+        'brand-nav-bg':  'var(--color-nav-bg)',
+        'brand-nav-border': 'var(--color-nav-border)',
       },
 
     },

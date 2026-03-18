@@ -113,7 +113,7 @@ export function SubstackStats() {
           <div key={k.label} className="relative bg-brand-surface border border-brand-border shadow-[var(--shadow)] rounded-2xl p-6 text-center hover:-translate-y-1 hover:border-brand-accent transition-all duration-300 overflow-hidden group">
             <div className={`absolute -right-6 -top-6 w-24 h-24 ${k.bg} rounded-full blur-2xl opacity-20 group-hover:scale-150 transition-transform duration-500 pointer-events-none`} />
             <div className="relative">
-              <div className={`text-4xl font-black tracking-tight ${k.color}`}>{k.value}</div>
+              <div className={`text-5xl font-black tracking-tight ${k.color}`}>{k.value}</div>
               <div className="text-[11px] font-bold text-brand-secondary uppercase tracking-widest mt-2">{k.label}</div>
             </div>
           </div>
