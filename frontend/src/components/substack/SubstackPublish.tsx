@@ -97,15 +97,15 @@ export function SubstackPublish() {
       <div className="flex gap-2 mb-5">
         {([['note','🗒️ Note'],['article','📋 Article']] as [PublishType,string][]).map(([t, label]) => (
           <button key={t} onClick={() => setType(t as PublishType)}
-            className={`flex-1 py-3 rounded-lg border-2 text-sm font-medium transition-all ${type === t ? 'border-black bg-black/[0.06] text-black' : 'border-[#e9e9e7] text-[#9b9a97] hover:border-[#e9e9e7]'}`}>
+            className={`flex-1 py-3 rounded-lg border-2 text-sm font-bold transition-all ${type === t ? 'border-brand-accent bg-brand-accent/10 text-brand-accent' : 'border-brand-border text-brand-secondary hover:border-brand-accent'}`}>
             {label}
           </button>
         ))}
       </div>
 
-      <div className="bg-white border border-[#e9e9e7] rounded-2xl mb-5 overflow-hidden shadow-sm">
-        <div className="bg-[#1a1a1a] border-b border-[#2e2e2e] px-6 py-4 flex items-center justify-between">
-          <span className="text-sm font-semibold text-white uppercase tracking-wide">Contenido</span>
+      <div className="bg-brand-surface border border-brand-border rounded-2xl mb-5 overflow-hidden shadow-[var(--shadow)]">
+        <div className="bg-brand-bg/50 border-b border-brand-border px-6 py-4 flex items-center justify-between">
+          <span className="text-sm font-bold text-brand-primary uppercase tracking-wide">Contenido</span>
           {substackHistory.length > 0 && (
             <select className="input w-52 text-xs py-1" onChange={e => {
               const entry = history.find(h => h.id === e.target.value)
@@ -129,15 +129,15 @@ export function SubstackPublish() {
           <div>
             <label className="label block mb-1.5">
               {type === 'note' ? 'Contenido de la nota' : 'Cuerpo del artículo'}
-              {type === 'note' && <span className="ml-1 text-black font-normal normal-case tracking-normal">— máx ~300 palabras</span>}
+              {type === 'note' && <span className="ml-1 text-brand-secondary font-normal normal-case tracking-normal">— máx ~300 palabras</span>}
             </label>
             <textarea value={content} onChange={e => setContent(e.target.value)}
               rows={type === 'note' ? 5 : 12} className="input resize-none"
               placeholder={type === 'note' ? 'Escribe tu nota aquí...' : 'Contenido del artículo en markdown...'} />
             <div className="flex justify-between mt-1">
-              <span className="text-xs text-[#9b9a97]">{content.split(/\s+/).filter(Boolean).length} palabras</span>
+              <span className="text-xs text-brand-secondary">{content.split(/\s+/).filter(Boolean).length} palabras</span>
               {type === 'note' && content.split(/\s+/).filter(Boolean).length > 250 && (
-                <span className="text-xs text-amber-600">⚠️ Las notas largas pueden truncarse</span>
+                <span className="text-xs text-amber-500 font-bold">⚠️ Las notas largas pueden truncarse</span>
               )}
             </div>
           </div>
@@ -148,7 +148,7 @@ export function SubstackPublish() {
             <div className="flex gap-2 mb-3">
               {([['now','⚡ Ahora'],['schedule','📅 Programar']] as [PublishTime,string][]).map(([t, label]) => (
                 <button key={t} onClick={() => setPublishTime(t as PublishTime)}
-                  className={`px-4 py-2 rounded-lg border text-xs font-medium transition-all ${publishTime === t ? 'border-black text-black bg-black/[0.06]' : 'border-[#e9e9e7] text-[#9b9a97]'}`}>
+                  className={`px-4 py-2 rounded-lg border text-xs font-bold transition-all ${publishTime === t ? 'border-brand-accent text-brand-accent bg-brand-accent/10' : 'border-brand-border text-brand-secondary hover:border-brand-accent'}`}>
                   {label}
                 </button>
               ))}
@@ -157,7 +157,7 @@ export function SubstackPublish() {
               <div>
                 <input type="datetime-local" value={scheduleAt} onChange={e => setScheduleAt(e.target.value)}
                   className="input" min={new Date().toISOString().slice(0, 16)} />
-                <p className="text-xs text-[#9b9a97] mt-1.5">El servidor publicará automáticamente en esta fecha/hora, sin que necesites tener la app abierta.</p>
+                <p className="text-xs text-brand-secondary mt-1.5 leading-relaxed">El servidor publicará automáticamente en esta fecha/hora, sin que necesites tener la app abierta.</p>
               </div>
             )}
           </div>
@@ -173,27 +173,27 @@ export function SubstackPublish() {
       </div>
 
       {result && (
-        <div className={`rounded-lg p-4 text-sm font-medium mb-5 ${result.ok ? 'bg-green-50 border border-green-200 text-green-800' : 'bg-red-50 border border-red-200 text-red-800'}`}>
+        <div className={`rounded-xl p-4 text-sm font-bold mb-5 shadow-sm ${result.ok ? 'bg-green-500/10 border border-green-500/20 text-green-400' : 'bg-red-500/10 border border-red-500/20 text-red-400'}`}>
           {result.msg}
         </div>
       )}
 
       {/* Scheduled queue */}
       {pendingQueue.length > 0 && (
-        <div className="bg-white border border-[#e9e9e7] rounded-2xl mb-5 overflow-hidden shadow-sm">
-          <div className="bg-[#1a1a1a] border-b border-[#2e2e2e] px-5 py-3 flex items-center justify-between">
-            <span className="text-sm font-semibold text-white uppercase tracking-wide">📅 Cola de publicaciones ({pendingQueue.length})</span>
+        <div className="bg-brand-surface border border-brand-border rounded-2xl mb-5 overflow-hidden shadow-[var(--shadow)]">
+          <div className="bg-brand-bg/50 border-b border-brand-border px-5 py-3 flex items-center justify-between">
+            <span className="text-sm font-bold text-brand-primary uppercase tracking-wide">📅 Cola de publicaciones ({pendingQueue.length})</span>
             <button onClick={loadQueue} className="btn btn-secondary btn-sm">🔄</button>
           </div>
-          <div className="divide-y divide-[#e9e9e7]">
+          <div className="divide-y divide-brand-border">
             {pendingQueue.map(p => (
-              <div key={p.id} className="px-5 py-3 flex items-center gap-3">
+              <div key={p.id} className="px-5 py-3 flex items-center gap-3 hover:bg-brand-bg/30 transition-colors">
                 <span className="text-lg">{p.type === 'note' ? '🗒️' : '📋'}</span>
                 <div className="flex-1 min-w-0">
-                  <div className="text-sm font-semibold truncate">{p.title || p.content.slice(0, 60)}</div>
-                  <div className="text-xs text-[#9b9a97]">{new Date(p.scheduleAt).toLocaleString('es-MX')}</div>
+                  <div className="text-sm font-bold text-brand-primary truncate">{p.title || p.content.slice(0, 60)}</div>
+                  <div className="text-xs text-brand-secondary">{new Date(p.scheduleAt).toLocaleString('es-MX')}</div>
                 </div>
-                <span className="text-xs bg-yellow-50 border border-yellow-200 text-yellow-700 px-2 py-0.5 rounded-full">Pendiente</span>
+                <span className="text-xs bg-yellow-500/10 border border-yellow-500/20 text-yellow-500 px-2 py-0.5 rounded-full font-bold">Pendiente</span>
                 <button onClick={() => cancelScheduled(p.id)} className="btn btn-danger btn-sm">✕</button>
               </div>
             ))}
@@ -203,20 +203,20 @@ export function SubstackPublish() {
 
       {/* Recent published */}
       {recentQueue.length > 0 && (
-        <div className="bg-white border border-[#e9e9e7] rounded-2xl overflow-hidden shadow-sm">
-          <div className="bg-[#1a1a1a] border-b border-[#2e2e2e] px-5 py-3 flex items-center justify-between">
-            <span className="text-sm font-semibold text-white uppercase tracking-wide">Publicaciones recientes</span>
+        <div className="bg-brand-surface border border-brand-border rounded-2xl overflow-hidden shadow-[var(--shadow)]">
+          <div className="bg-brand-bg/50 border-b border-brand-border px-5 py-3 flex items-center justify-between">
+            <span className="text-sm font-bold text-brand-primary uppercase tracking-wide">Publicaciones recientes</span>
           </div>
-          <div className="divide-y divide-[#e9e9e7]">
+          <div className="divide-y divide-brand-border">
             {recentQueue.reverse().map(p => (
-              <div key={p.id} className="px-5 py-3 flex items-center gap-3">
+              <div key={p.id} className="px-5 py-3 flex items-center gap-3 hover:bg-brand-bg/30 transition-colors">
                 <span className="text-lg">{p.type === 'note' ? '🗒️' : '📋'}</span>
                 <div className="flex-1 min-w-0">
-                  <div className="text-sm truncate">{p.title || p.content.slice(0, 60)}</div>
-                  <div className="text-xs text-[#9b9a97]">{p.publishedAt ? new Date(p.publishedAt).toLocaleString('es-MX') : p.scheduleAt.slice(0, 10)}</div>
+                  <div className="text-sm font-bold text-brand-primary truncate">{p.title || p.content.slice(0, 60)}</div>
+                  <div className="text-xs text-brand-secondary">{p.publishedAt ? new Date(p.publishedAt).toLocaleString('es-MX') : p.scheduleAt.slice(0, 10)}</div>
                 </div>
-                {p.status === 'published' && <span className="text-xs bg-green-50 border border-green-200 text-green-700 px-2 py-0.5 rounded-full">✅ Publicado</span>}
-                {p.status === 'error' && <span className="text-xs bg-red-50 border border-red-200 text-red-700 px-2 py-0.5 rounded-full" title={p.errorMsg}>❌ Error</span>}
+                {p.status === 'published' && <span className="text-xs bg-green-500/10 border border-green-500/20 text-green-400 px-2 py-0.5 rounded-full font-bold">✅ Publicado</span>}
+                {p.status === 'error' && <span className="text-xs bg-red-500/10 border border-red-500/20 text-red-500 px-2 py-0.5 rounded-full font-bold" title={p.errorMsg}>❌ Error</span>}
               </div>
             ))}
           </div>

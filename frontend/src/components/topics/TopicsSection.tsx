@@ -92,12 +92,12 @@ export function TopicsSection({ onWriteTopic }: Props) {
 
   return (
     <div className="max-w-4xl mx-auto pb-20 px-4 sm:px-0">
-      <div className="flex items-end justify-between mb-8 flex-wrap gap-4 border-b border-[#e9e9e7] pb-4">
+      <div className="flex items-end justify-between mb-8 flex-wrap gap-4 border-b border-brand-border pb-4">
         <div>
-          <h1 className="text-2xl md:text-[28px] font-bold tracking-tight text-black flex items-center gap-3">
-            <i className="pi pi-lightbulb text-[#9b9a97]"></i> Banco de Temas
+          <h1 className="text-2xl md:text-[28px] font-bold tracking-tight text-brand-primary flex items-center gap-3">
+            <i className="pi pi-lightbulb text-brand-secondary"></i> Banco de Temas
           </h1>
-          <p className="text-sm text-[#9b9a97] mt-1">Gestiona tus ideas de contenido</p>
+          <p className="text-sm text-brand-secondary mt-1">Gestiona tus ideas de contenido</p>
         </div>
         <div className="flex gap-2 flex-wrap w-full md:w-auto">
           <button className="btn btn-ghost btn-sm flex-1 md:flex-none" onClick={() => { setEditingCampaign(null); setCampaignModal(true) }}>🏷️ Campaña</button>
@@ -111,12 +111,12 @@ export function TopicsSection({ onWriteTopic }: Props) {
       {campaigns.length > 0 && (
         <div className="flex gap-2 mb-4 overflow-x-auto no-scrollbar pb-2 whitespace-nowrap">
           <button onClick={() => setCampaignFilter('all')}
-            className={`px-3 py-1 rounded text-xs font-medium border transition-all ${campaignFilter === 'all' ? 'border-black text-black bg-black/5' : 'border-[#e9e9e7] text-[#9b9a97] hover:border-[#ccc]'}`}>
+            className={`px-3 py-1 rounded text-xs font-medium border transition-all ${campaignFilter === 'all' ? 'border-brand-accent text-brand-accent bg-brand-accent/10' : 'border-brand-border text-brand-secondary hover:border-brand-accent'}`}>
             Todas
           </button>
           {campaigns.map(c => (
             <button key={c.id} onClick={() => setCampaignFilter(c.id)}
-              className={`px-3 py-1 rounded text-xs font-medium border transition-all flex items-center gap-1 ${campaignFilter === c.id ? 'border-current' : 'border-[#e9e9e7] text-[#9b9a97]'}`}
+              className={`px-3 py-1 rounded text-xs font-medium border transition-all flex items-center gap-1 ${campaignFilter === c.id ? 'border-current' : 'border-brand-border text-brand-secondary'}`}
               style={campaignFilter === c.id ? { borderColor: c.color, color: c.color, background: c.color + '12' } : {}}>
               <span className="w-2 h-2 rounded-full" style={{ background: c.color }} />
               {c.name}
@@ -129,13 +129,13 @@ export function TopicsSection({ onWriteTopic }: Props) {
       {/* Toolbar */}
       <div className="flex gap-3 mb-5 flex-wrap items-center">
         <div className="relative flex-1 min-w-[200px]">
-          <i className="pi pi-search absolute left-3 top-1/2 -translate-y-1/2 text-stone-400 text-sm pointer-events-none" />
+          <i className="pi pi-search absolute left-3 top-1/2 -translate-y-1/2 text-brand-secondary text-sm pointer-events-none" />
           <input type="text" value={search} onChange={e => setSearch(e.target.value)} placeholder="Buscar temas..." className="input !pl-9" />
         </div>
         <div className="flex gap-1.5 overflow-x-auto no-scrollbar pb-2 md:pb-0 w-full md:w-auto">
           {(['all', 'idea', 'ready', 'writing', 'done'] as const).map(f => (
             <button key={f} onClick={() => setStatusFilter(f)}
-              className={`px-3 py-1.5 rounded-lg text-xs font-bold border transition-all whitespace-nowrap ${statusFilter === f ? 'border-stone-900 text-stone-900 bg-stone-900/5 shadow-sm' : 'border-[#e9e9e7] text-[#9b9a97] hover:border-[#ccc]'}`}>
+              className={`px-3 py-1.5 rounded-lg text-xs font-bold border transition-all whitespace-nowrap ${statusFilter === f ? 'border-brand-accent text-brand-accent bg-brand-accent/10 shadow-sm' : 'border-brand-border text-brand-secondary hover:border-brand-accent'}`}>
               {f === 'all' ? 'Todos' : STATUS_LABELS[f]}
             </button>
           ))}
@@ -144,9 +144,9 @@ export function TopicsSection({ onWriteTopic }: Props) {
 
       {/* List */}
       {filtered.length === 0 ? (
-        <div className="text-center py-16 text-[#9b9a97]">
+        <div className="text-center py-16 text-brand-secondary">
           <div className="text-5xl mb-4">💡</div>
-          <p className="mb-5 font-medium text-stone-500">No hay temas aún.</p>
+          <p className="mb-5 font-medium text-brand-secondary">No hay temas aún.</p>
           <button className="btn btn-primary" onClick={() => setTopicModal(true)}>+ Agregar tema</button>
         </div>
       ) : (
@@ -155,18 +155,18 @@ export function TopicsSection({ onWriteTopic }: Props) {
             const donePlats = new Set(history.filter(h => h.topicId === t.id || h.topic.toLowerCase() === t.title.toLowerCase()).flatMap(h => h.platforms))
             const campaign  = campaigns.find(c => c.id === t.campaignId)
             return (
-              <div key={t.id} className="bg-white border border-[#e9e9e7] rounded-xl px-4 py-4 flex flex-col sm:flex-row sm:items-center gap-3 group hover:bg-[#f7f7f5] hover:shadow-md hover:-translate-y-0.5 transition-all duration-200 shadow-sm relative">
+              <div key={t.id} className="bg-brand-surface border border-brand-border rounded-xl px-4 py-4 flex flex-col sm:flex-row sm:items-center gap-3 group hover:bg-brand-bg/50 hover:shadow-md hover:-translate-y-0.5 transition-all duration-200 shadow-sm relative">
                 <div className={`hidden sm:block w-2 h-2 rounded-full flex-shrink-0 ${STATUS_DOT[t.status || 'idea']}`} />
                 <div className="flex-1 min-w-0 pr-10 sm:pr-0">
                   <div className="flex items-center gap-2 flex-wrap">
-                    <span className="text-sm font-bold text-[#37352f] leading-tight">{t.title}</span>
+                    <span className="text-sm font-bold text-brand-primary leading-tight">{t.title}</span>
                     {campaign && <span className="text-[10px] px-2 py-0.5 rounded font-black uppercase tracking-wider" style={{ background: campaign.color + '18', color: campaign.color }}>{campaign.name}</span>}
                   </div>
                   <div className="flex gap-1.5 mt-2 flex-wrap items-center">
                     <span className={`sm:hidden w-2 h-2 rounded-full ${STATUS_DOT[t.status || 'idea']}`} />
                     <span className={`${STATUS_BADGE[t.status || 'idea']} !text-[10px] sm:!text-xs`}>{STATUS_LABELS[t.status || 'idea']}</span>
-                    {t.tags.map(tg => <span key={tg} className="text-[10px] bg-[#f1f1ef] text-[#9b9a97] px-2 py-0.5 rounded font-medium">{tg}</span>)}
-                    {t.seoKeyword && <span className="text-[10px] bg-blue-50 text-blue-600 px-2 py-0.5 rounded font-bold">🔍 {t.seoKeyword}</span>}
+                    {t.tags.map(tg => <span key={tg} className="text-[10px] bg-brand-bg text-brand-secondary px-2 py-0.5 rounded font-medium">{tg}</span>)}
+                    {t.seoKeyword && <span className="text-[10px] bg-brand-accent/10 text-brand-accent px-2 py-0.5 rounded font-bold">🔍 {t.seoKeyword}</span>}
                     {t.priority && <span className={`badge border !text-[9px] font-black uppercase tracking-tighter ${PRIORITY_LABELS[t.priority].color}`}>{PRIORITY_LABELS[t.priority].label}</span>}
                   </div>
                 </div>
@@ -181,13 +181,13 @@ export function TopicsSection({ onWriteTopic }: Props) {
                     {donePlats.size > 0 && <span className="text-[10px] font-bold text-green-600 ml-0.5">{donePlats.size}/5</span>}
                   </div>
                   <div className="flex gap-1 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
-                    <button className="w-8 h-8 rounded-lg bg-black text-white flex items-center justify-center hover:bg-stone-800 transition-all font-bold" onClick={() => onWriteTopic({ title: t.title, notes: t.notes })}>✍️</button>
-                    <button className="w-8 h-8 rounded-lg bg-stone-100 text-stone-600 flex items-center justify-center hover:bg-stone-200" onClick={() => setResearchTopic(t)}>🔬</button>
-                    <button className="w-8 h-8 rounded-lg bg-stone-100 text-stone-600 flex items-center justify-center hover:bg-stone-200" onClick={() => { setEditingTopic(t); setTopicModal(true) }}>✏️</button>
-                    <button className="w-8 h-8 rounded-lg bg-red-50 text-red-500 flex items-center justify-center hover:bg-red-100" onClick={() => deleteTopic(t.id)}>🗑️</button>
+                    <button className="w-8 h-8 rounded-lg bg-brand-accent text-black flex items-center justify-center hover:brightness-110 transition-all font-bold" onClick={() => onWriteTopic({ title: t.title, notes: t.notes })}>✍️</button>
+                    <button className="w-8 h-8 rounded-lg bg-brand-bg text-brand-secondary flex items-center justify-center hover:bg-brand-border" onClick={() => setResearchTopic(t)}>🔬</button>
+                    <button className="w-8 h-8 rounded-lg bg-brand-bg text-brand-secondary flex items-center justify-center hover:bg-brand-border" onClick={() => { setEditingTopic(t); setTopicModal(true) }}>✏️</button>
+                    <button className="w-8 h-8 rounded-lg bg-red-500/10 text-red-500 flex items-center justify-center hover:bg-red-500/20" onClick={() => deleteTopic(t.id)}>🗑️</button>
                   </div>
                 </div>
-                <span className="absolute top-4 right-4 sm:relative sm:top-0 sm:right-0 text-[10px] text-[#9b9a97] font-mono whitespace-nowrap opacity-60">{fmtDate(t.created)}</span>
+                <span className="absolute top-4 right-4 sm:relative sm:top-0 sm:right-0 text-[10px] text-brand-secondary font-mono whitespace-nowrap opacity-60">{fmtDate(t.created)}</span>
               </div>
             )
           })}

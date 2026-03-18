@@ -292,33 +292,40 @@ export function Sidebar({ active, onNav, collapsed, onToggleCollapse, mobileOpen
       )}
 
       <aside className={`
-        ${sidebarWidth} bg-[#121212] flex flex-col flex-shrink-0 h-screen transition-all duration-300 group z-50
+        ${sidebarWidth} bg-brand-bg flex flex-col flex-shrink-0 h-screen transition-all duration-300 group z-50
         ${mobileOpen ? 'fixed left-0 top-0 bottom-0 translate-x-0 shadow-2xl' : 'fixed -translate-x-full md:relative md:translate-x-0'}
       `}>
         
         {/* Collapse Toggle (Desktop only) */}
         <button 
           onClick={onToggleCollapse}
-          className="absolute -right-3 top-6 bg-[#2a2a2a] border-2 border-[#121212] text-white w-6 h-6 rounded-full hidden md:flex items-center justify-center text-[10px] opacity-0 group-hover:opacity-100 transition-opacity z-10 hover:bg-[#444]"
+          className="absolute -right-3 top-6 bg-brand-surface border-2 border-brand-bg text-brand-primary w-6 h-6 rounded-full hidden md:flex items-center justify-center text-[10px] opacity-0 group-hover:opacity-100 transition-opacity z-10 hover:bg-brand-border"
         >
           <i className={`pi ${collapsed ? 'pi-chevron-right' : 'pi-chevron-left'} !text-[10px]`}></i>
         </button>
 
         {/* Logo */}
         <div className={`flex items-center px-6 pt-6 pb-6 ${collapsed ? 'justify-center !px-2' : ''}`}>
-          <div className="w-8 h-8 bg-gradient-to-br from-white to-stone-400 rounded-lg flex items-center justify-center text-black font-black text-xl mr-3">10</div>
-          {!collapsed && <div className="flex flex-col"><span className="text-white font-bold leading-none tracking-tight">10X STUDIO</span><span className="text-[10px] text-stone-500 font-bold uppercase tracking-widest mt-0.5">Scale Platform</span></div>}
+          <div className="w-9 h-9 relative flex-shrink-0">
+             <img src="/icon-192.png" alt="Avocado" className="w-full h-full object-contain" />
+          </div>
+          {!collapsed && (
+            <div className="flex flex-col ml-3">
+              <span className="text-white font-black leading-none tracking-tight text-lg">AVOCADO</span>
+              <span className="text-[10px] text-brand-accent font-bold uppercase tracking-[0.2em] mt-0.5">ESTUDIO</span>
+            </div>
+          )}
         </div>
 
         {/* Modules Strip (Level 1) */}
-        <div className={`flex border-b border-white/5 bg-white/5 ${collapsed ? 'flex-col gap-2 p-2' : 'px-2 py-2 gap-1 overflow-x-auto no-scrollbar'}`}>
+        <div className={`flex border-b border-brand-border bg-brand-surface/50 ${collapsed ? 'flex-col gap-2 p-2' : 'px-2 py-2 gap-1 overflow-x-auto no-scrollbar'}`}>
           {ERP_MENU.map(mod => (
             <button
               key={mod.id}
               onClick={() => setActiveModule(mod.id)}
               className={`
                 flex items-center justify-center p-2 rounded-xl transition-all relative group/mod
-                ${activeModule === mod.id ? 'bg-white text-black' : 'text-stone-500 hover:text-stone-300 hover:bg-white/10'}
+                ${activeModule === mod.id ? 'bg-brand-accent text-[#1A1A1A]' : 'text-brand-secondary hover:text-brand-primary hover:bg-brand-surface'}
                 ${collapsed ? 'w-10 h-10' : 'flex-1 min-w-[40px] h-10'}
               `}
               title={mod.title}
@@ -340,18 +347,18 @@ export function Sidebar({ active, onNav, collapsed, onToggleCollapse, mobileOpen
                   <div key={cat.label} className="space-y-1">
                     <button 
                       onClick={() => toggleCat(activeModule, cat.label)}
-                      className="w-full flex items-center justify-between text-[11px] font-bold text-stone-500 uppercase tracking-widest py-2 px-2 hover:text-stone-300 transition-colors"
+                      className="w-full flex items-center justify-between text-[11px] font-bold text-brand-secondary uppercase tracking-widest py-2 px-2 hover:text-brand-primary transition-colors"
                     >
                       <div className="flex items-center gap-3">
                          {cat.icon && <i className={cat.icon}></i>}
                          <span>{cat.label}</span>
                          {cat.pro && <span className="text-[10px]">🔒</span>}
-                         {cat.soon && <span className="text-[8px] bg-stone-800 px-1 rounded ml-1">🔜</span>}
+                         {cat.soon && <span className="text-[8px] bg-brand-surface px-1 rounded ml-1">🔜</span>}
                       </div>
                       <i className={`pi pi-chevron-${expanded ? 'down' : 'right'} text-[8px]`}></i>
                     </button>
                     
-                    <div className={`space-y-0.5 ml-2 border-l border-white/5 pl-2 overflow-hidden transition-all duration-300 ${expanded ? 'max-h-[500px] opacity-100 mt-2' : 'max-h-0 opacity-0'}`}>
+                    <div className={`space-y-0.5 ml-2 border-l border-brand-border pl-2 overflow-hidden transition-all duration-300 ${expanded ? 'max-h-[500px] opacity-100 mt-2' : 'max-h-0 opacity-0'}`}>
                       {cat.items.map(item => (
                         <button
                           key={item.id}
@@ -359,13 +366,13 @@ export function Sidebar({ active, onNav, collapsed, onToggleCollapse, mobileOpen
                           disabled={item.soon}
                           className={`
                             w-full text-left px-3 py-2 rounded-lg text-[13px] transition-all flex items-center justify-between
-                            ${active === item.id ? 'bg-white/10 text-white font-semibold' : 'text-stone-500 hover:text-stone-300 hover:bg-white/5'}
+                            ${active === item.id ? 'bg-brand-accent/10 text-brand-accent font-semibold' : 'text-brand-secondary hover:text-brand-primary hover:bg-brand-surface'}
                             ${item.soon ? 'opacity-40 cursor-not-allowed' : ''}
                           `}
                         >
                           <span>{item.label}</span>
                           {item.pro && <span className="text-[10px]">🔒</span>}
-                          {item.soon && <span className="text-[8px] bg-white/10 px-1 rounded">🔜</span>}
+                          {item.soon && <span className="text-[8px] bg-brand-surface px-1 rounded">🔜</span>}
                         </button>
                       ))}
                     </div>
@@ -376,7 +383,7 @@ export function Sidebar({ active, onNav, collapsed, onToggleCollapse, mobileOpen
           ) : (
             <div className="flex flex-col items-center gap-4">
                {ERP_MENU.find(m => m.id === activeModule)?.categories.map(cat => (
-                 <div key={cat.label} className="w-10 h-10 rounded-xl bg-white/5 flex items-center justify-center text-stone-500 group/cat relative">
+                 <div key={cat.label} className="w-10 h-10 rounded-xl bg-brand-surface flex items-center justify-center text-brand-secondary group/cat relative">
                     <i className={cat.icon || 'pi pi-folder'}></i>
                     {/* Tooltip or Side Popover could go here */}
                  </div>
@@ -386,24 +393,25 @@ export function Sidebar({ active, onNav, collapsed, onToggleCollapse, mobileOpen
         </nav>
 
         {/* User / Niche Footer */}
-        <div className={`p-4 border-t border-white/5 ${collapsed ? 'items-center' : ''}`}>
+        <div className={`p-4 border-t border-brand-border ${collapsed ? 'items-center' : ''}`}>
            {!collapsed && (
-             <div className="bg-[#1a1a1a] rounded-2xl p-3 flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-stone-700 to-stone-800 flex items-center justify-center text-white font-bold">
+             <div className="bg-brand-surface rounded-2xl p-3 flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-brand-bg flex items-center justify-center text-brand-primary font-bold">
                   {settings.niche ? settings.niche[0].toUpperCase() : 'N'}
                 </div>
                 <div className="flex flex-col min-w-0">
-                  <span className="text-[12px] text-stone-300 font-bold truncate">{settings.niche || 'Productor'}</span>
-                  <span className="text-[10px] text-stone-500 font-medium">Plan gratuito</span>
+                  <span className="text-[12px] text-brand-primary font-bold truncate">{settings.niche || 'Productor'}</span>
+                  <span className="text-[10px] text-brand-secondary font-medium">Plan gratuito</span>
                 </div>
              </div>
            )}
            {collapsed && (
-             <div className="w-10 h-10 rounded-xl bg-[#1a1a1a] flex items-center justify-center text-stone-500">
+             <div className="w-10 h-10 rounded-xl bg-brand-surface flex items-center justify-center text-brand-secondary">
                 <i className="pi pi-user"></i>
              </div>
            )}
         </div>
+
       </aside>
     </>
   )

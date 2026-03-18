@@ -9,17 +9,17 @@ export const viewport = {
 }
 
 export const metadata: Metadata = {
-  title: '10X Studio',
+  title: 'Avocado Estudio',
   description: 'Plataforma de creación y publicación de contenido con IA',
   manifest: '/manifest.json',
   icons: { 
-    icon: '/favicon.svg',
+    icon: '/icon-192.png',
     apple: '/icon-192.png'
   },
   appleWebApp: {
     capable: true,
     statusBarStyle: 'black',
-    title: '10X Studio',
+    title: 'Avocado Estudio',
   }
 }
 

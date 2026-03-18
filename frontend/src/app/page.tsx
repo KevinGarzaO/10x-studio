@@ -107,7 +107,7 @@ export default function Home() {
       />
       <div className="flex flex-col flex-1 overflow-hidden transition-all duration-300">
         <Header activeSection={activeSection} onMenuClick={() => setIsMobileMenuOpen(true)} />
-        <main className="flex-1 overflow-y-auto p-4 md:p-8 bg-[#f7f7f5] transition-all duration-300 relative">
+        <main className="flex-1 overflow-y-auto p-4 md:p-8 bg-brand-bg transition-all duration-300 relative">
           {renderSection()}
         </main>
       </div>

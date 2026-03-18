@@ -83,7 +83,7 @@ export function CalendarSection() {
         <div className="overflow-x-auto no-scrollbar -mx-4 px-4 sm:mx-0 sm:px-0">
           <div className="min-w-[600px] sm:min-w-0">
             <div className="grid grid-cols-7 gap-1 mb-1">
-              {DAYS.map(d => <div key={d} className="text-center text-xs font-semibold text-[#9b9a97] uppercase tracking-wider py-1">{d}</div>)}
+              {DAYS.map(d => <div key={d} className="text-center text-xs font-semibold text-brand-secondary uppercase tracking-wider py-1">{d}</div>)}
             </div>
             <div className="grid grid-cols-7 gap-1">
               {cells.map((date, i) => {
@@ -94,15 +94,15 @@ export function CalendarSection() {
                 return (
                   <div key={i}
                     onClick={() => openAddEvent(ds)}
-                    className={`min-h-[80px] rounded-lg p-1.5 cursor-pointer border transition-all group ${isToday ? 'border-gold-DEFAULT bg-black/[0.04]' : 'border-[#e9e9e7] bg-white hover:border-gold-light'} ${!isCurrentMonth ? 'opacity-35' : ''}`}>
-                    <div className={`text-xs font-semibold mb-1 ${isToday ? 'text-gold-dark' : 'text-ink'}`}>{date.getDate()}</div>
+                    className={`min-h-[80px] rounded-lg p-1.5 cursor-pointer border transition-all group ${isToday ? 'border-brand-accent bg-brand-accent/5' : 'border-brand-border bg-brand-surface hover:border-brand-accent'} ${!isCurrentMonth ? 'opacity-35' : ''}`}>
+                    <div className={`text-xs font-semibold mb-1 ${isToday ? 'text-brand-accent' : 'text-brand-primary'}`}>{date.getDate()}</div>
                     {dayEvents.map(ev => {
                       const t = topics.find(t => t.id === ev.topicId)
                       const isSug = ev.id.startsWith('sug-')
                       return (
                         <div key={ev.id}
                           onClick={e => { e.stopPropagation(); if (!isSug) openEditEvent(ev) }}
-                          className={`text-[10px] px-1.5 py-0.5 rounded mb-0.5 truncate cursor-pointer ${ev.status === 'published' ? 'bg-green-100 text-green-800' : isSug ? 'bg-indigo-50 text-indigo-700 border border-dashed border-indigo-200' : 'bg-yellow-50 text-yellow-800'}`}>
+                          className={`text-[10px] px-1.5 py-0.5 rounded mb-0.5 truncate cursor-pointer ${ev.status === 'published' ? 'bg-green-500/10 text-green-400 border border-green-500/20' : isSug ? 'bg-brand-accent/10 text-brand-accent border border-dashed border-brand-accent/20' : 'bg-yellow-500/10 text-yellow-500 border border-yellow-500/20'}`}>
                           {PLATFORMS[ev.platform]?.icon} {t?.title?.substring(0, 18) || 'Evento'}
                         </div>
                       )
@@ -130,9 +130,9 @@ export function CalendarSection() {
           const isToday = ds === today
           return (
             <div key={ds} className="flex gap-3 items-start">
-              <div className={`min-w-[80px] pt-1 ${isToday ? 'text-gold-dark' : ''}`}>
-                <div className="text-sm font-semibold capitalize">{day.toLocaleString('es-MX', { weekday: 'short' })}</div>
-                <div className="text-xs text-[#9b9a97]">{day.getDate()} {day.toLocaleString('es-MX', { month: 'short' })}</div>
+              <div className={`min-w-[80px] pt-1 ${isToday ? 'text-brand-accent' : ''}`}>
+                <div className="text-sm font-semibold capitalize text-brand-primary">{day.toLocaleString('es-MX', { weekday: 'short' })}</div>
+                <div className="text-xs text-brand-secondary">{day.getDate()} {day.toLocaleString('es-MX', { month: 'short' })}</div>
               </div>
               <div className="flex-1 flex flex-col gap-1.5">
                 {dayEvents.map(ev => {
@@ -140,14 +140,14 @@ export function CalendarSection() {
                   const isSug = ev.id.startsWith('sug-')
                   return (
                     <div key={ev.id} onClick={() => !isSug && openEditEvent(ev)}
-                      className={`flex items-center gap-2 px-3 py-2 rounded-lg border cursor-pointer transition-all text-sm font-medium ${ev.status === 'published' ? 'border-l-green-400 border-green-100 bg-green-50' : isSug ? 'border-l-indigo-300 border-indigo-100 bg-indigo-50 border-dashed' : 'border-l-yellow-400 border-yellow-100 bg-yellow-50'} border-l-4`}>
+                      className={`flex items-center gap-2 px-3 py-2 rounded-lg border cursor-pointer transition-all text-sm font-medium ${ev.status === 'published' ? 'border-l-green-500 border-brand-border bg-green-500/5' : isSug ? 'border-l-brand-accent border-brand-border bg-brand-accent/5 border-dashed' : 'border-l-yellow-500 border-brand-border bg-yellow-500/5'} border-l-4`}>
                       <span>{PLATFORMS[ev.platform]?.icon}</span>
-                      <span className="flex-1 truncate">{t?.title || 'Sin tema'}</span>
-                      <span className={`badge ${ev.status === 'published' ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'}`}>{ev.status === 'published' ? '✅ Publicado' : '🕐 Pendiente'}</span>
+                      <span className="flex-1 truncate text-brand-primary">{t?.title || 'Sin tema'}</span>
+                      <span className={`badge ${ev.status === 'published' ? 'bg-green-500/10 text-green-400' : 'bg-yellow-500/10 text-yellow-500'}`}>{ev.status === 'published' ? '✅ Publicado' : '🕐 Pendiente'}</span>
                     </div>
                   )
                 })}
-                <button onClick={() => openAddEvent(ds)} className="text-xs text-gold-dark hover:underline text-left">+ Agregar</button>
+                <button onClick={() => openAddEvent(ds)} className="text-xs text-brand-accent hover:underline text-left">+ Agregar</button>
               </div>
             </div>
           )
@@ -162,12 +162,12 @@ export function CalendarSection() {
 
   return (
     <div className="max-w-4xl mx-auto pb-20">
-      <div className="flex items-end justify-between mb-8 flex-wrap gap-3 border-b border-[#e9e9e7] pb-4">
+      <div className="flex items-end justify-between mb-8 flex-wrap gap-3 border-b border-brand-border pb-4">
         <div>
-          <h1 className="text-[28px] font-bold tracking-tight text-black flex items-center gap-3">
-            <i className="pi pi-calendar text-[#9b9a97]"></i> Calendario
+          <h1 className="text-[28px] font-bold tracking-tight text-brand-primary flex items-center gap-3">
+            <i className="pi pi-calendar text-brand-secondary"></i> Calendario
           </h1>
-          <p className="text-sm text-[#9b9a97] mt-1">Planifica tu estrategia de publicación</p>
+          <p className="text-sm text-brand-secondary mt-1">Planifica tu estrategia de publicación</p>
         </div>
         <button className="btn btn-ghost" onClick={suggestSchedule} disabled={suggesting}>
           {suggesting ? '⏳ Analizando...' : '✦ Sugerir fechas con IA'}
@@ -175,23 +175,23 @@ export function CalendarSection() {
       </div>
 
       {suggestions.length > 0 && (
-        <div className="flex items-center gap-3 p-4 bg-indigo-50 border border-indigo-200 rounded-lg mb-5">
+        <div className="flex items-center gap-3 p-4 bg-brand-accent/10 border border-brand-accent/20 rounded-lg mb-5">
           <span className="text-xl">✨</span>
-          <div className="flex-1 text-sm"><strong>La IA sugirió {suggestions.length} fechas</strong> basándose en tus temas disponibles.</div>
-          <button className="btn btn-green btn-sm" onClick={acceptSuggestions}>Aceptar todas</button>
-          <button className="btn btn-secondary btn-sm" onClick={() => setSuggestions([])}>Descartar</button>
+          <div className="flex-1 text-sm text-brand-primary"><strong>La IA sugirió {suggestions.length} fechas</strong> basándose en tus temas disponibles.</div>
+          <button className="btn btn-primary btn-sm" onClick={acceptSuggestions}>Aceptar todas</button>
+          <button className="btn btn-ghost btn-sm" onClick={() => setSuggestions([])}>Descartar</button>
         </div>
       )}
 
       <div className="flex items-center gap-3 mb-5 flex-wrap">
         <button className="btn btn-secondary btn-sm px-2" onClick={() => view === 'month' ? navMonth(-1) : navWeek(-1)}>‹</button>
-        <h2 className="text-xl font-bold flex-1 capitalize">{calTitle}</h2>
+        <h2 className="text-xl font-bold flex-1 capitalize text-brand-primary">{calTitle}</h2>
         <button className="btn btn-secondary btn-sm px-2" onClick={() => view === 'month' ? navMonth(1) : navWeek(1)}>›</button>
         <button className="btn btn-secondary btn-sm" onClick={goToday}>Hoy</button>
-        <div className="flex bg-cream rounded-lg p-0.5">
+        <div className="flex bg-brand-bg rounded-lg p-0.5">
           {(['month','week'] as CalView[]).map(v => (
             <button key={v} onClick={() => setView(v)}
-              className={`px-3 py-1 rounded-md text-xs font-medium transition-all ${view === v ? 'bg-white text-ink shadow-sm' : 'text-[#9b9a97]'}`}>
+              className={`px-3 py-1 rounded-md text-xs font-medium transition-all ${view === v ? 'bg-brand-accent text-[#1A1A1A] shadow-sm' : 'text-brand-secondary'}`}>
               {v === 'month' ? 'Mes' : 'Semana'}
             </button>
           ))}

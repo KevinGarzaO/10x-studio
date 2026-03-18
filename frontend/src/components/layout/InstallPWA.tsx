@@ -75,11 +75,11 @@ export function InstallPWA() {
     return (
       <div className="fixed bottom-4 left-4 right-4 md:left-auto md:w-96 md:bottom-6 md:right-6 z-[9999] bg-stone-900 border border-stone-700/50 text-white p-4 rounded-2xl shadow-2xl flex items-center justify-between gap-4 animate-fadein">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 bg-gradient-to-br from-white to-stone-400 rounded-lg flex items-center justify-center text-black font-black text-xl flex-shrink-0">
-            10
+          <div className="w-10 h-10 relative flex-shrink-0">
+            <img src="/icon-192.png" alt="Avocado" className="w-full h-full object-contain" />
           </div>
           <div className="flex flex-col">
-            <span className="text-sm font-bold">Instalar 10X Studio</span>
+            <span className="text-sm font-bold">Instalar Avocado Estudio</span>
             <span className="text-xs text-stone-400">Acceso rápido y sin conexión</span>
           </div>
         </div>
@@ -108,7 +108,9 @@ export function InstallPWA() {
         <div className="flex flex-col gap-1 w-full">
             <div className="flex justify-between items-start mb-1">
                 <div className="flex items-center gap-2">
-                    <div className="w-6 h-6 bg-gradient-to-br from-white to-stone-400 rounded flex items-center justify-center text-black font-black text-[12px] flex-shrink-0">10</div>
+                    <div className="w-6 h-6 relative flex-shrink-0">
+                        <img src="/icon-192.png" alt="Avocado" className="w-full h-full object-contain" />
+                    </div>
                     <span className="text-sm font-bold">Instalar App en iOS</span>
                 </div>
                 <button onClick={() => setShowIosPrompt(false)} className="text-stone-500 hover:text-white"><i className="pi pi-times text-sm"></i></button>

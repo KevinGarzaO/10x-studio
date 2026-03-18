@@ -23,10 +23,10 @@ function daysUntil(iso: string) {
 
 function ExpiryBadge({ expiresAt }: { expiresAt: string }) {
   const days = daysUntil(expiresAt)
-  if (days >= 60) return <span className="text-xs bg-emerald-50 border border-emerald-200 text-emerald-700 px-3 py-1 rounded-full font-medium">✓ Sesión activa — {days} días</span>
-  if (days > 14) return <span className="text-xs bg-[#e6f4ea] border border-[#bbf7d0] text-[#0d7c3d] px-3 py-1 rounded-full font-medium">✓ Sesión activa — {days} días</span>
-  if (days > 5)  return <span className="text-xs bg-amber-50 border border-amber-200 text-amber-700 px-3 py-1 rounded-full font-medium">⚠️ Expira en {days} días</span>
-  return <span className="text-xs bg-red-50 border border-red-200 text-red-700 px-3 py-1 rounded-full font-medium animate-pulse">🔴 Expira en {days} días</span>
+  if (days >= 60) return <span className="text-xs bg-green-500/10 border border-green-500/20 text-green-400 px-3 py-1 rounded-full font-medium">✓ Sesión activa — {days} días</span>
+  if (days > 14) return <span className="text-xs bg-green-500/10 border border-green-500/20 text-green-400 px-3 py-1 rounded-full font-medium">✓ Sesión activa — {days} días</span>
+  if (days > 5)  return <span className="text-xs bg-amber-500/10 border border-amber-500/20 text-amber-400 px-3 py-1 rounded-full font-medium">⚠️ Expira en {days} días</span>
+  return <span className="text-xs bg-red-500/10 border border-red-500/20 text-red-400 px-3 py-1 rounded-full font-medium animate-pulse">🔴 Expira en {days} días</span>
 }
 
 export function SubstackSection() {
@@ -95,14 +95,14 @@ export function SubstackSection() {
       <div className="max-w-lg mx-auto py-10">
         <div className="text-center mb-8">
           <div className="text-5xl mb-4">📰</div>
-          <h1 className="text-[28px] font-bold tracking-tight text-black mb-2">Conectar Substack</h1>
-          <p className="text-[#9b9a97] text-sm leading-relaxed">
+          <h1 className="text-[28px] font-bold tracking-tight text-brand-primary mb-2">Conectar Substack</h1>
+          <p className="text-brand-secondary text-sm leading-relaxed">
             Conecta tu cuenta usando la extensión de Chrome para publicar, ver estadísticas y gestionar suscriptores.
           </p>
         </div>
-        <div className="bg-white border border-[#e9e9e7] rounded-lg overflow-hidden shadow-sm mb-6">
-          <div className="bg-[#1a1a1a] border-b border-[#2e2e2e] px-5 py-3">
-            <span className="text-xs font-semibold text-white uppercase tracking-wide">Cómo conectar</span>
+        <div className="card overflow-hidden mb-6">
+          <div className="bg-brand-surface border-b border-brand-border px-5 py-3">
+            <span className="text-xs font-bold text-brand-primary uppercase tracking-wide">Cómo conectar</span>
           </div>
           <div className="p-5 space-y-4">
             {[
@@ -112,10 +112,10 @@ export function SubstackSection() {
               { n: '4', t: 'Esta página se recarga sola', d: 'La extensión recarga tu app automáticamente y verás tu perfil aquí.' },
             ].map(step => (
               <div key={step.n} className="flex gap-3">
-                <div className="w-7 h-7 rounded-full bg-black text-white text-sm font-bold flex items-center justify-center flex-shrink-0">{step.n}</div>
+                <div className="w-7 h-7 rounded-full bg-brand-accent text-[#1A1A1A] text-sm font-bold flex items-center justify-center flex-shrink-0">{step.n}</div>
                 <div>
-                  <div className="text-sm font-semibold text-[#37352f]">{step.t}</div>
-                  <div className="text-xs text-[#9b9a97] mt-0.5 leading-relaxed">{step.d}</div>
+                  <div className="text-sm font-bold text-brand-primary">{step.t}</div>
+                  <div className="text-xs text-brand-secondary mt-0.5 leading-relaxed">{step.d}</div>
                 </div>
               </div>
             ))}
@@ -123,17 +123,17 @@ export function SubstackSection() {
         </div>
 
         {/* Feature 1: Auto-subscription Checkbox */}
-        <div className="bg-amber-50/50 border border-amber-100 rounded-xl p-4 mb-6 flex items-start gap-3">
+        <div className="bg-brand-accent/5 border border-brand-accent/10 rounded-xl p-4 mb-6 flex items-start gap-3">
           <input 
             type="checkbox" 
             id="autosub" 
             checked={autoSub} 
             onChange={e => setAutoSub(e.target.checked)}
-            className="mt-1 w-4 h-4 accent-amber-600"
+            className="mt-1 w-4 h-4 accent-brand-accent"
           />
-          <label htmlFor="autosub" className="text-sm text-amber-900 font-medium leading-tight cursor-pointer">
+          <label htmlFor="autosub" className="text-sm text-brand-primary font-medium leading-tight cursor-pointer">
             Quiero suscribirme al newsletter de Transformateck
-            <span className="block text-[11px] text-amber-700/70 mt-0.5 font-normal">Recibe las últimas actualizaciones y noticias directamente en tu correo.</span>
+            <span className="block text-[11px] text-brand-secondary mt-0.5 font-normal">Recibe las últimas actualizaciones y noticias directamente en tu correo.</span>
           </label>
         </div>
 
@@ -146,20 +146,20 @@ export function SubstackSection() {
 
   return (
     <div className="max-w-4xl mx-auto pb-20">
-      <div className="flex items-end justify-between mb-8 border-b border-[#e9e9e7] pb-4">
+      <div className="flex items-end justify-between mb-8 border-b border-brand-border pb-4">
         <div>
-          <h1 className="text-[28px] font-bold tracking-tight text-black flex items-center gap-3">
-            <i className="pi pi-at text-[#9b9a97]"></i> Substack
+          <h1 className="text-[28px] font-bold tracking-tight text-brand-primary flex items-center gap-3">
+            <i className="pi pi-at text-brand-secondary"></i> Substack
           </h1>
-          <p className="text-sm text-[#9b9a97] mt-1">Publicación y gestión de suscriptores</p>
+          <p className="text-sm text-brand-secondary mt-1">Publicación y gestión de suscriptores</p>
         </div>
       </div>
 
     {/* Profile card Rich UI */}
       {profile && (
-        <div className="relative bg-white/60 backdrop-blur-2xl border border-white/60 shadow-[0_8px_30px_rgb(0,0,0,0.04)] rounded-3xl p-6 md:p-8 mb-8 overflow-hidden group">
+        <div className="relative bg-brand-surface/60 backdrop-blur-2xl border border-brand-border shadow-[var(--shadow)] rounded-3xl p-6 md:p-8 mb-8 overflow-hidden group">
           {/* Decorative Background Blob */}
-          <div className="absolute top-0 right-0 -mt-24 -mr-24 w-72 h-72 bg-gradient-to-br from-amber-400/20 to-orange-500/10 rounded-full blur-3xl pointer-events-none transition-transform duration-700 ease-out group-hover:scale-110" />
+          <div className="absolute top-0 right-0 -mt-24 -mr-24 w-72 h-72 bg-gradient-to-br from-brand-accent/20 to-brand-accent/5 rounded-full blur-3xl pointer-events-none transition-transform duration-700 ease-out group-hover:scale-110" />
 
           <div className="relative flex items-start gap-6 md:gap-8 flex-wrap md:flex-nowrap">
             {/* Avatar */}
@@ -181,15 +181,15 @@ export function SubstackSection() {
               <div className="flex items-start justify-between gap-4 flex-wrap">
                 <div>
                   <a href={profile.handle ? `https://substack.com/@${profile.handle}` : '#'} target="_blank" rel="noopener noreferrer" className="inline-flex flex-col items-start hover:opacity-80 transition-opacity">
-                    <h2 className="text-3xl font-extrabold text-stone-900 tracking-tight">{profile.name || 'Usuario Substack'}</h2>
-                    {profile.handle && <span className="text-stone-500 font-semibold mt-0.5 text-sm tracking-wide">@{profile.handle}</span>}
+                    <h2 className="text-3xl font-extrabold text-brand-primary tracking-tight">{profile.name || 'Usuario Substack'}</h2>
+                    {profile.handle && <span className="text-brand-secondary font-semibold mt-0.5 text-sm tracking-wide">@{profile.handle}</span>}
                   </a>
                   
                   <div className="flex flex-wrap items-center gap-2 mt-3">
-                    {profile.email && <span className="text-xs text-stone-600 px-2.5 py-1 bg-white/80 backdrop-blur-sm rounded-full border border-stone-200 shadow-sm font-medium truncate max-w-[200px]">{profile.email}</span>}
+                    {profile.email && <span className="text-xs text-brand-secondary px-2.5 py-1 bg-brand-bg/80 backdrop-blur-sm rounded-full border border-brand-border shadow-sm font-medium truncate max-w-[200px]">{profile.email}</span>}
                     {substackPublication && (
                       <a href={`https://${profile.primaryPublication?.subdomain || profile.handle}.substack.com`} target="_blank" rel="noopener noreferrer" 
-                         className="flex items-center gap-1.5 text-xs font-bold text-amber-900 px-3 py-1 bg-gradient-to-r from-amber-100 to-orange-50 hover:from-amber-200 hover:to-orange-100 border border-amber-200 rounded-full shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all duration-300 whitespace-nowrap">
+                         className="flex items-center gap-1.5 text-xs font-bold text-brand-accent px-3 py-1 bg-brand-accent/10 hover:bg-brand-accent/20 border border-brand-accent/20 rounded-full shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all duration-300 whitespace-nowrap">
                         {profile.pubLogo ? (
                           /* eslint-disable-next-line @next/next/no-img-element */
                           <img src={profile.pubLogo} className="w-4 h-4 rounded-sm object-cover shadow-sm" alt="Pub Logo" />
@@ -206,7 +206,7 @@ export function SubstackSection() {
                 <div className="flex flex-col gap-2.5 items-start md:items-end w-full md:w-auto mt-4 md:mt-0">
                   {profile.expiresAt && <ExpiryBadge expiresAt={profile.expiresAt} />}
                   <div className="flex items-center gap-2 w-full md:w-auto">
-                    <button onClick={disconnect} className="text-[11px] font-bold px-4 py-1.5 rounded-full border border-red-200 text-red-600 bg-white/50 hover:bg-red-50 hover:border-red-300 transition-colors shadow-sm">
+                    <button onClick={disconnect} className="text-[11px] font-bold px-4 py-1.5 rounded-full border border-red-500/30 text-red-400 bg-red-500/5 hover:bg-red-500/10 transition-colors shadow-sm">
                       Desconectar
                     </button>
                   </div>
@@ -215,10 +215,10 @@ export function SubstackSection() {
 
               {/* Bio */}
               {profile.bio && (
-                <p className="mt-5 text-[15px] text-stone-700 leading-relaxed max-w-3xl whitespace-pre-wrap font-medium">
+                <p className="mt-5 text-[15px] text-brand-secondary leading-relaxed max-w-3xl whitespace-pre-wrap font-medium">
                   {profile.bio.split(/(https?:\/\/[^\s]+)/g).map((part, i) => 
                     part.match(/^https?:\/\//) ? (
-                      <a key={i} href={part} target="_blank" rel="noopener noreferrer" className="text-amber-600 hover:text-amber-800 underline decoration-amber-300 underline-offset-4 font-semibold break-all transition-colors">
+                      <a key={i} href={part} target="_blank" rel="noopener noreferrer" className="text-brand-accent hover:brightness-110 underline decoration-brand-accent/30 underline-offset-4 font-semibold break-all transition-colors">
                         {part.replace(/^https?:\/\//, '')}
                       </a>
                     ) : (
@@ -229,7 +229,7 @@ export function SubstackSection() {
               )}
 
               {/* Links & Stats row */}
-              <div className="mt-7 flex flex-wrap items-center justify-between gap-6 border-t border-stone-200/60 pt-6">
+              <div className="mt-7 flex flex-wrap items-center justify-between gap-6 border-t border-brand-border pt-6">
                 
                 {/* Social Links */}
                 <div className="flex items-center gap-2.5 flex-wrap">
@@ -237,7 +237,7 @@ export function SubstackSection() {
                     const icon = link.type === 'twitter' ? '𝕏' : link.type === 'linkedin' ? 'in' : '🔗';
                     return (
                       <a key={i} href={link.url} target="_blank" rel="noopener noreferrer" 
-                         className="flex items-center gap-1.5 text-[11px] font-bold text-stone-600 hover:text-stone-900 bg-white/50 hover:bg-white shadow-sm hover:shadow px-3 py-1.5 rounded-lg border border-stone-200 transition-all duration-300 hover:-translate-y-0.5">
+                         className="flex items-center gap-1.5 text-[11px] font-bold text-brand-secondary hover:text-brand-primary bg-brand-bg hover:bg-brand-surface shadow-sm hover:shadow px-3 py-1.5 rounded-lg border border-brand-border transition-all duration-300 hover:-translate-y-0.5">
                         <span className="opacity-90">{icon}</span>
                         {link.label || 'Enlace'}
                       </a>
@@ -246,19 +246,19 @@ export function SubstackSection() {
                 </div>
 
                 {/* Substack Metrics */}
-                <div className="flex items-center gap-8 bg-white/40 px-5 py-2.5 rounded-2xl border border-stone-100 shadow-[inset_0_2px_10px_rgb(0,0,0,0.02)]">
+                <div className="flex items-center gap-8 bg-brand-bg/40 px-5 py-2.5 rounded-2xl border border-brand-border shadow-[inset_0_2px_10px_rgb(0,0,0,0.02)]">
                   <div className="text-center">
-                    <div className="text-2xl font-black text-stone-900 tracking-tight leading-none">
+                    <div className="text-2xl font-black text-brand-primary tracking-tight leading-none">
                       {profile.subCount != null ? Number(profile.subCount).toLocaleString('es') : '—'}
                     </div>
-                    <div className="text-[10px] font-bold text-stone-500 uppercase tracking-widest mt-1.5">Suscriptores</div>
+                    <div className="text-[10px] font-bold text-brand-secondary uppercase tracking-widest mt-1.5">Suscriptores</div>
                   </div>
-                  <div className="w-px h-8 bg-stone-300/50"></div>
+                  <div className="w-px h-8 bg-brand-border"></div>
                   <div className="text-center">
-                    <div className="text-2xl font-black text-stone-900 tracking-tight leading-none">
+                    <div className="text-2xl font-black text-brand-primary tracking-tight leading-none">
                       {profile.followerCount != null ? Number(profile.followerCount).toLocaleString('es') : '—'}
                     </div>
-                    <div className="text-[10px] font-bold text-stone-500 uppercase tracking-widest mt-1.5">Seguidores</div>
+                    <div className="text-[10px] font-bold text-brand-secondary uppercase tracking-widest mt-1.5">Seguidores</div>
                   </div>
                 </div>
 
@@ -270,14 +270,14 @@ export function SubstackSection() {
 
       {/* Modern Pill Tabs */}
       <div className="flex mb-8 overflow-x-auto no-scrollbar pb-2">
-        <div className="inline-flex bg-stone-100/80 backdrop-blur-md p-1.5 rounded-2xl shadow-inner border border-stone-200/50 whitespace-nowrap">
+        <div className="inline-flex bg-brand-surface/80 backdrop-blur-md p-1.5 rounded-2xl shadow-inner border border-brand-border whitespace-nowrap">
           {([
             ['stats',       '📰 Publicaciones'],
             ['subscribers', '👥 Suscriptores'],
             ['publish',     '✍️ Publicar'],
           ] as [SubTab, string][]).map(([t, label]) => (
             <button key={t} onClick={() => setTab(t)}
-              className={`relative px-4 md:px-6 py-2.5 text-sm font-bold rounded-xl transition-all duration-300 ${tab === t ? 'text-stone-900 bg-white shadow-sm ring-1 ring-black/5' : 'text-stone-500 hover:text-stone-800 hover:bg-stone-200/50'}`}>
+              className={`relative px-4 md:px-6 py-2.5 text-sm font-bold rounded-xl transition-all duration-300 ${tab === t ? 'text-[#1A1A1A] bg-brand-accent shadow-sm' : 'text-brand-secondary hover:text-brand-primary hover:bg-brand-bg/50'}`}>
               {label}
             </button>
           ))}

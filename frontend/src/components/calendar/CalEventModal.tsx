@@ -30,9 +30,9 @@ export function CalEventModal({ open, event, defaultDate, topics, onClose, onSav
   }
 
   return (
-    <div className="fixed inset-0 bg-[#191919]/40 z-50 flex items-center justify-center p-4" onClick={e => e.target === e.currentTarget && onClose()}>
-      <div className="bg-white rounded-lg p-6 w-full max-w-md shadow-2xl">
-        <h2 className="text-xl font-bold mb-5">{event ? 'Editar publicación' : 'Agendar publicación'}</h2>
+    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4" onClick={e => e.target === e.currentTarget && onClose()}>
+      <div className="bg-brand-surface border border-brand-border rounded-2xl p-6 w-full max-w-md shadow-[var(--shadow)]">
+        <h2 className="text-xl font-bold mb-5 text-brand-primary">{event ? 'Editar publicación' : 'Agendar publicación'}</h2>
         <div className="space-y-4">
           <div><label className="label block mb-1.5">Fecha</label>
             <input type="date" value={date} onChange={e => setDate(e.target.value)} className="input" /></div>
@@ -56,7 +56,7 @@ export function CalEventModal({ open, event, defaultDate, topics, onClose, onSav
             ? <button className="btn btn-danger btn-sm" onClick={() => onDelete(event.id)}>🗑️ Eliminar</button>
             : <div />}
           <div className="flex gap-2">
-            <button className="btn btn-secondary" onClick={onClose}>Cancelar</button>
+            <button className="btn btn-ghost" onClick={onClose}>Cancelar</button>
             <button className="btn btn-primary" onClick={handleSave}>Guardar</button>
           </div>
         </div>

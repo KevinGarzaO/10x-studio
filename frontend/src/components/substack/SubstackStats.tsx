@@ -74,18 +74,18 @@ export function SubstackStats() {
 
   if (loading) return (
     <div className="flex items-center justify-center py-16">
-      <div className="w-6 h-6 border-2 border-stone-800 border-t-transparent rounded-full animate-spin mr-3" />
-      <span className="text-sm text-stone-500 font-medium tracking-tight">Cargando estadísticas...</span>
+      <div className="w-6 h-6 border-2 border-brand-accent border-t-transparent rounded-full animate-spin mr-3" />
+      <span className="text-sm text-brand-secondary font-medium tracking-tight">Cargando estadísticas...</span>
     </div>
   )
 
   if (error) return (
-    <div className="bg-red-50/80 backdrop-blur-md border border-red-100 rounded-2xl p-6 text-red-800 text-sm shadow-sm flex flex-col md:flex-row items-center justify-between gap-4">
+    <div className="bg-red-500/10 border border-red-500/20 rounded-2xl p-6 text-red-400 text-sm shadow-sm flex flex-col md:flex-row items-center justify-between gap-4">
       <div className="flex items-center gap-3">
         <span className="text-xl">⚠️</span>
         <div className="font-medium">{error}</div>
       </div>
-      <button onClick={() => loadStats()} className="px-5 py-2 bg-white border border-red-200 text-red-700 rounded-xl font-bold hover:bg-red-50 active:scale-95 transition-all shadow-sm">
+      <button onClick={() => loadStats()} className="px-5 py-2 bg-brand-surface border border-red-500/30 text-red-400 rounded-xl font-bold hover:bg-red-500/10 active:scale-95 transition-all shadow-sm">
         Reintentar
       </button>
     </div>
@@ -106,62 +106,62 @@ export function SubstackStats() {
       {/* Posts KPIs Dashboard style */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
         {[
-          { label: 'Suscriptores', value: data.subscribers.total.toLocaleString(), color: 'text-stone-900', bg: 'bg-stone-100' },
-          { label: 'Likes Recientes',  value: totalLikes > 0 ? totalLikes.toLocaleString() : '—',  color: 'text-red-600', bg: 'bg-red-50' },
-          { label: 'Apertura Promedio', value: avgOpenRate !== null ? `${avgOpenRate}%` : '—',  color: 'text-emerald-600', bg: 'bg-emerald-50' },
+          { label: 'Suscriptores', value: data.subscribers.total.toLocaleString(), color: 'text-brand-primary', bg: 'bg-brand-bg' },
+          { label: 'Likes Recientes',  value: totalLikes > 0 ? totalLikes.toLocaleString() : '—',  color: 'text-red-400', bg: 'bg-red-500/10' },
+          { label: 'Apertura Promedio', value: avgOpenRate !== null ? `${avgOpenRate}%` : '—',  color: 'text-green-400', bg: 'bg-green-500/10' },
         ].map(k => (
-          <div key={k.label} className="relative bg-white/80 backdrop-blur-xl border border-stone-200/60 shadow-[0_8px_30px_rgb(0,0,0,0.03)] rounded-2xl p-6 text-center hover:-translate-y-1 hover:shadow-[0_12px_40px_rgb(0,0,0,0.06)] hover:border-stone-300 transition-all duration-300 overflow-hidden group">
-            <div className={`absolute -right-6 -top-6 w-24 h-24 ${k.bg} rounded-full blur-2xl opacity-50 group-hover:scale-150 transition-transform duration-500 pointer-events-none`} />
+          <div key={k.label} className="relative bg-brand-surface border border-brand-border shadow-[var(--shadow)] rounded-2xl p-6 text-center hover:-translate-y-1 hover:border-brand-accent transition-all duration-300 overflow-hidden group">
+            <div className={`absolute -right-6 -top-6 w-24 h-24 ${k.bg} rounded-full blur-2xl opacity-20 group-hover:scale-150 transition-transform duration-500 pointer-events-none`} />
             <div className="relative">
               <div className={`text-4xl font-black tracking-tight ${k.color}`}>{k.value}</div>
-              <div className="text-[11px] font-bold text-stone-500 uppercase tracking-widest mt-2">{k.label}</div>
+              <div className="text-[11px] font-bold text-brand-secondary uppercase tracking-widest mt-2">{k.label}</div>
             </div>
           </div>
         ))}
       </div>
 
       {/* Recent posts polished list */}
-      <div className="bg-white/90 backdrop-blur-xl border border-stone-200/80 rounded-2xl shadow-[0_4px_24px_rgb(0,0,0,0.02)] overflow-hidden">
-        <div className="bg-stone-50/80 border-b border-stone-200/80 px-6 py-4 flex items-center justify-between">
-          <h3 className="text-sm font-bold text-stone-800 tracking-wide">Publicaciones <span className="text-stone-500 font-medium">Recientes</span></h3>
+      <div className="bg-brand-surface border border-brand-border rounded-2xl shadow-[var(--shadow)] overflow-hidden">
+        <div className="bg-brand-bg/50 border-b border-brand-border px-6 py-4 flex items-center justify-between">
+          <h3 className="text-sm font-bold text-brand-primary tracking-wide">Publicaciones <span className="text-brand-secondary font-medium">Recientes</span></h3>
         </div>
         {data.posts.length === 0 ? (
           <div className="text-center py-16">
             <div className="text-4xl mb-3 opacity-20">📭</div>
-            <p className="text-sm font-semibold text-stone-400">No hay publicaciones detectadas</p>
+            <p className="text-sm font-semibold text-brand-secondary">No hay publicaciones detectadas</p>
           </div>
         ) : (
-          <div className="divide-y divide-stone-100">
+          <div className="divide-y divide-brand-border">
             {data.posts.map(p => (
-              <div key={p.id} className="px-6 py-4 flex items-start gap-4 hover:bg-stone-50/50 transition-colors group">
-                <div className="mt-1 w-11 h-11 rounded-xl bg-stone-100 flex items-center justify-center border border-stone-200/50 shadow-sm shrink-0 group-hover:scale-110 transition-transform">
+              <div key={p.id} className="px-6 py-4 flex items-start gap-4 hover:bg-brand-bg/50 transition-colors group">
+                <div className="mt-1 w-11 h-11 rounded-xl bg-brand-bg flex items-center justify-center border border-brand-border shadow-sm shrink-0 group-hover:scale-110 transition-transform">
                   <span className="text-lg">{p.type === 'newsletter' ? '📋' : '🗒️'}</span>
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-start justify-between gap-2.5">
-                    <a href={p.url} target="_blank" rel="noopener" className="text-base font-bold text-stone-900 hover:text-amber-700 transition-colors line-clamp-1 group-hover:underline underline-offset-4 decoration-stone-300">
+                    <a href={p.url} target="_blank" rel="noopener" className="text-base font-bold text-brand-primary hover:text-brand-accent transition-colors line-clamp-1 group-hover:underline underline-offset-4 decoration-brand-accent">
                       {p.title}
                     </a>
                   </div>
                   <div className="flex gap-2.5 mt-2.5 flex-wrap">
-                    <span className="text-[10px] font-bold text-stone-600 bg-white border border-stone-200 px-2.5 py-1 rounded-md shadow-sm">{p.date}</span>
+                    <span className="text-[10px] font-bold text-brand-secondary bg-brand-bg border border-brand-border px-2.5 py-1 rounded-md shadow-sm">{p.date}</span>
                     {p.likes > 0 && (
-                      <span className="text-[10px] font-bold text-red-600 bg-red-50/80 border border-red-100 px-2.5 py-1 rounded-md flex items-center gap-1.5 shadow-sm">
+                      <span className="text-[10px] font-bold text-red-400 bg-red-500/10 border border-red-500/20 px-2.5 py-1 rounded-md flex items-center gap-1.5 shadow-sm">
                         <span className="text-[9px]">❤️</span> {p.likes.toLocaleString()}
                       </span>
                     )}
                     {p.comments > 0 && (
-                      <span className="text-[10px] font-bold text-blue-600 bg-blue-50/80 border border-blue-100 px-2.5 py-1 rounded-md flex items-center gap-1.5 shadow-sm">
+                      <span className="text-[10px] font-bold text-blue-400 bg-blue-500/10 border border-blue-500/20 px-2.5 py-1 rounded-md flex items-center gap-1.5 shadow-sm">
                         <span className="text-[9px]">💬</span> {p.comments.toLocaleString()}
                       </span>
                     )}
                     {p.openRate !== null && (
-                      <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50/80 border border-emerald-100 px-2.5 py-1 rounded-md flex items-center gap-1.5 shadow-sm">
+                      <span className="text-[10px] font-bold text-green-400 bg-green-500/10 border border-green-500/20 px-2.5 py-1 rounded-md flex items-center gap-1.5 shadow-sm">
                         <span className="text-[9px]">📬</span> {p.openRate}%
                       </span>
                     )}
                     {p.views !== null && (
-                      <span className="text-[10px] font-bold text-stone-600 bg-stone-100 px-2.5 py-1 rounded-md flex items-center gap-1.5 shadow-sm">
+                      <span className="text-[10px] font-bold text-brand-secondary bg-brand-bg px-2.5 py-1 rounded-md flex items-center gap-1.5 shadow-sm">
                         <span className="text-[9px]">👁</span> {p.views.toLocaleString()}
                       </span>
                     )}

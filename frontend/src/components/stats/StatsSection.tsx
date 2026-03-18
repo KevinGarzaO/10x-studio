@@ -8,10 +8,10 @@ function Bar({ value, max, color }: { value: number; max: number; color: string 
   const pct = max > 0 ? Math.round((value / max) * 100) : 0
   return (
     <div className="flex items-center gap-3">
-      <div className="flex-1 bg-[#e9e9e7] rounded-full h-2.5">
-        <div className="h-2.5 rounded-full transition-all duration-500" style={{ width: `${pct}%`, background: color }} />
+      <div className="flex-1 bg-brand-border rounded-full h-2.5">
+        <div className="h-2.5 rounded-full transition-all duration-500 shadow-sm" style={{ width: `${pct}%`, background: color }} />
       </div>
-      <span className="text-xs font-semibold text-[#191919] w-6 text-right">{value}</span>
+      <span className="text-xs font-bold text-brand-primary w-6 text-right">{value}</span>
     </div>
   )
 }
@@ -53,7 +53,7 @@ export function StatsSection() {
   const maxMonth    = Math.max(...stats.months.map(m => m[1]), 1)
 
   const platformColors: Record<Platform, string> = {
-    'blog':               '#c9963a',
+    'blog':               '#4ECCA3', // Using brand-accent for main
     'linkedin-post':      '#2d6fa4',
     'linkedin-article':   '#1a3f6b',
     'substack-article':   '#e67e22',
@@ -67,12 +67,12 @@ export function StatsSection() {
 
   return (
     <div className="max-w-4xl mx-auto pb-20">
-      <div className="flex items-end justify-between mb-8 border-b border-[#e9e9e7] pb-4">
+      <div className="flex items-end justify-between mb-8 border-b border-brand-border pb-4">
         <div>
-          <h1 className="text-[28px] font-bold tracking-tight text-black flex items-center gap-3">
-            <i className="pi pi-chart-line text-[#9b9a97]"></i> Auditoría & Análisis
+          <h1 className="text-[28px] font-bold tracking-tight text-brand-primary flex items-center gap-3">
+            <i className="pi pi-chart-line text-brand-secondary"></i> Auditoría & Análisis
           </h1>
-          <p className="text-sm text-[#9b9a97] mt-1">Análisis de tu actividad de contenido</p>
+          <p className="text-sm text-brand-secondary mt-1">Análisis de tu actividad de contenido</p>
         </div>
       </div>
 
@@ -84,29 +84,29 @@ export function StatsSection() {
           { label: 'Temas en banco',      value: topics.length },
           { label: 'Días con contenido',  value: stats.activeDays },
         ].map(k => (
-          <div key={k.label} className="bg-white/80 backdrop-blur-xl border border-stone-200/80 shadow-[0_4px_20px_rgb(0,0,0,0.04)] rounded-2xl px-5 py-5 hover:-translate-y-1 hover:shadow-lg hover:border-stone-300 transition-all duration-300 cursor-default">
-            <div className="text-[10px] font-bold text-stone-400 uppercase tracking-widest mb-3">{k.label}</div>
-            <div className="text-[36px] font-black text-stone-900 leading-none tracking-tight">{k.value}</div>
+          <div key={k.label} className="bg-brand-surface border border-brand-border shadow-[var(--shadow)] rounded-2xl px-5 py-5 hover:-translate-y-1 hover:border-brand-accent transition-all duration-300 cursor-default">
+            <div className="text-[10px] font-bold text-brand-secondary uppercase tracking-widest mb-3">{k.label}</div>
+            <div className="text-[36px] font-black text-brand-primary leading-none tracking-tight">{k.value}</div>
           </div>
         ))}
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
         {/* By platform */}
-        <div className="bg-white border border-[#e9e9e7] rounded-2xl overflow-hidden shadow-sm">
-          <div className="bg-[#1a1a1a] border-b border-[#2e2e2e] px-5 py-3 flex items-center gap-2">
-            <i className="pi pi-chart-bar text-white/80"></i>
-            <span className="text-xs font-semibold text-white uppercase tracking-wide">Artículos por plataforma</span>
+        <div className="bg-brand-surface border border-brand-border rounded-2xl overflow-hidden shadow-[var(--shadow)]">
+          <div className="bg-brand-bg/50 border-b border-brand-border px-5 py-3 flex items-center gap-2">
+            <i className="pi pi-chart-bar text-brand-secondary"></i>
+            <span className="text-xs font-bold text-brand-primary uppercase tracking-wide">Artículos por plataforma</span>
           </div>
           <div className="p-5">
             {history.length === 0 ? (
-              <p className="text-sm text-[#9b9a97] py-4 text-center">Aún sin datos</p>
+              <p className="text-sm text-brand-secondary py-4 text-center">Aún sin datos</p>
             ) : (
               <div className="space-y-3">
                 {ALL_PLATFORMS.map(p => (
                   <div key={p}>
                     <div className="flex items-center justify-between mb-1">
-                      <span className="text-xs font-medium">{PLATFORMS[p].icon} {PLATFORMS[p].label}</span>
+                      <span className="text-xs font-bold text-brand-primary">{PLATFORMS[p].icon} {PLATFORMS[p].label}</span>
                     </div>
                     <Bar value={stats.byPlatform[p] || 0} max={maxPlatform} color={platformColors[p]} />
                   </div>
@@ -117,22 +117,22 @@ export function StatsSection() {
         </div>
 
         {/* By month */}
-        <div className="bg-white border border-[#e9e9e7] rounded-2xl overflow-hidden shadow-sm">
-          <div className="bg-[#1a1a1a] border-b border-[#2e2e2e] px-5 py-3 flex items-center gap-2">
-            <i className="pi pi-calendar-times text-white/80"></i>
-            <span className="text-xs font-semibold text-white uppercase tracking-wide">Artículos por mes</span>
+        <div className="bg-brand-surface border border-brand-border rounded-2xl overflow-hidden shadow-[var(--shadow)]">
+          <div className="bg-brand-bg/50 border-b border-brand-border px-5 py-3 flex items-center gap-2">
+            <i className="pi pi-calendar-times text-brand-secondary"></i>
+            <span className="text-xs font-bold text-brand-primary uppercase tracking-wide">Artículos por mes</span>
           </div>
           <div className="p-5">
             {stats.months.length === 0 ? (
-              <p className="text-sm text-[#9b9a97] py-4 text-center">Aún sin datos</p>
+              <p className="text-sm text-brand-secondary py-4 text-center">Aún sin datos</p>
             ) : (
               <div className="space-y-3">
                 {stats.months.map(([key, count]) => (
                   <div key={key}>
                     <div className="flex items-center justify-between mb-1">
-                      <span className="text-xs font-medium capitalize">{fmtMonth(key)}</span>
+                      <span className="text-xs font-bold text-brand-primary capitalize">{fmtMonth(key)}</span>
                     </div>
-                    <Bar value={count} max={maxMonth} color="#3b82f6" />
+                    <Bar value={count} max={maxMonth} color="#4ECCA3" />
                   </div>
                 ))}
               </div>
@@ -143,17 +143,17 @@ export function StatsSection() {
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {/* Topics by status */}
-        <div className="bg-white border border-[#e9e9e7] rounded-2xl overflow-hidden shadow-sm">
-          <div className="bg-[#1a1a1a] border-b border-[#2e2e2e] px-5 py-3 flex items-center gap-2">
-            <i className="pi pi-tags text-white/80"></i>
-            <span className="text-xs font-semibold text-white uppercase tracking-wide">Temas por estado</span>
+        <div className="bg-brand-surface border border-brand-border rounded-2xl overflow-hidden shadow-[var(--shadow)]">
+          <div className="bg-brand-bg/50 border-b border-brand-border px-5 py-3 flex items-center gap-2">
+            <i className="pi pi-tags text-brand-secondary"></i>
+            <span className="text-xs font-bold text-brand-primary uppercase tracking-wide">Temas por estado</span>
           </div>
           <div className="grid grid-cols-2 gap-3 p-5">
             {[
-              { key: 'idea',    label: 'Ideas',       color: 'bg-yellow-50 text-yellow-800 border border-yellow-200' },
-              { key: 'ready',   label: 'Listos',      color: 'bg-green-50 text-green-800 border border-green-200' },
-              { key: 'writing', label: 'Escribiendo', color: 'bg-blue-50 text-blue-800 border border-blue-200' },
-              { key: 'done',    label: 'Hechos',      color: 'bg-gray-50 text-gray-800 border border-gray-200' },
+              { key: 'idea',    label: 'Ideas',       color: 'bg-yellow-500/10 text-yellow-500 border border-yellow-500/20' },
+              { key: 'ready',   label: 'Listos',      color: 'bg-green-500/10 text-green-400 border border-green-500/20' },
+              { key: 'writing', label: 'Escribiendo', color: 'bg-blue-500/10 text-blue-400 border border-blue-500/20' },
+              { key: 'done',    label: 'Hechos',      color: 'bg-brand-bg text-brand-secondary border border-brand-border' },
             ].map(s => (
               <div key={s.key} className={`rounded-xl p-4 shadow-sm ${s.color}`}>
                 <div className="text-[28px] font-bold tracking-tight">{stats.byStatus[s.key as keyof typeof stats.byStatus]}</div>
@@ -164,18 +164,18 @@ export function StatsSection() {
         </div>
 
         {/* Highlights */}
-        <div className="bg-white border border-[#e9e9e7] rounded-2xl overflow-hidden shadow-sm">
-          <div className="bg-[#1a1a1a] border-b border-[#2e2e2e] px-5 py-3 flex items-center gap-2">
-            <i className="pi pi-star text-white/80"></i>
-            <span className="text-xs font-semibold text-white uppercase tracking-wide">Highlights</span>
+        <div className="bg-brand-surface border border-brand-border rounded-2xl overflow-hidden shadow-[var(--shadow)]">
+          <div className="bg-brand-bg/50 border-b border-brand-border px-5 py-3 flex items-center gap-2">
+            <i className="pi pi-star text-brand-secondary"></i>
+            <span className="text-xs font-bold text-brand-primary uppercase tracking-wide">Highlights</span>
           </div>
           <div className="space-y-4 p-5">
             {stats.bestMonth && (
               <div className="flex items-start gap-4">
                 <span className="text-2xl mt-0.5">📅</span>
                 <div>
-                  <div className="text-sm font-semibold text-[#191919]">Mes más productivo</div>
-                  <div className="text-xs text-[#9b9a97] mt-0.5">{fmtMonth(stats.bestMonth[0])} — {stats.bestMonth[1]} artículo{stats.bestMonth[1] !== 1 ? 's' : ''}</div>
+                  <div className="text-sm font-bold text-brand-primary">Mes más productivo</div>
+                  <div className="text-xs text-brand-secondary mt-0.5">{fmtMonth(stats.bestMonth[0])} — {stats.bestMonth[1]} artículo{stats.bestMonth[1] !== 1 ? 's' : ''}</div>
                 </div>
               </div>
             )}
@@ -185,8 +185,8 @@ export function StatsSection() {
                 <div className="flex items-start gap-4">
                   <span className="text-2xl mt-0.5">{PLATFORMS[topPlat].icon}</span>
                   <div>
-                    <div className="text-sm font-semibold text-[#191919]">Plataforma favorita</div>
-                    <div className="text-xs text-[#9b9a97] mt-0.5">{PLATFORMS[topPlat].label} — {stats.byPlatform[topPlat]} artículos</div>
+                    <div className="text-sm font-bold text-brand-primary">Plataforma favorita</div>
+                    <div className="text-xs text-brand-secondary mt-0.5">{PLATFORMS[topPlat].label} — {stats.byPlatform[topPlat]} artículos</div>
                   </div>
                 </div>
               ) : null
@@ -194,8 +194,8 @@ export function StatsSection() {
             <div className="flex items-start gap-4">
               <span className="text-2xl mt-0.5">✍️</span>
               <div>
-                <div className="text-sm font-semibold text-[#191919]">Promedio por artículo</div>
-                <div className="text-xs text-[#9b9a97] mt-0.5">
+                <div className="text-sm font-bold text-brand-primary">Promedio por artículo</div>
+                <div className="text-xs text-brand-secondary mt-0.5">
                   {history.length > 0 ? Math.round(stats.totalWords / history.length).toLocaleString() : 0} palabras
                 </div>
               </div>
@@ -203,8 +203,8 @@ export function StatsSection() {
             <div className="flex items-start gap-4">
               <span className="text-2xl mt-0.5">🎯</span>
               <div>
-                <div className="text-sm font-semibold text-[#191919]">Temas completados</div>
-                <div className="text-xs text-[#9b9a97] mt-0.5">
+                <div className="text-sm font-bold text-brand-primary">Temas completados</div>
+                <div className="text-xs text-brand-secondary mt-0.5">
                   {topics.length > 0 ? Math.round((stats.byStatus.done / topics.length) * 100) : 0}% del banco
                 </div>
               </div>
@@ -215,18 +215,18 @@ export function StatsSection() {
 
       {/* Recent activity */}
       {history.length > 0 && (
-        <div className="bg-white border border-[#e9e9e7] rounded-2xl overflow-hidden shadow-sm mt-4">
-          <div className="bg-[#1a1a1a] border-b border-[#2e2e2e] px-5 py-3 flex items-center gap-2">
-            <i className="pi pi-history text-white/80"></i>
-            <span className="text-xs font-semibold text-white uppercase tracking-wide">Actividad reciente</span>
+        <div className="bg-brand-surface border border-brand-border rounded-2xl overflow-hidden shadow-[var(--shadow)] mt-4">
+          <div className="bg-brand-bg/50 border-b border-brand-border px-5 py-3 flex items-center gap-2">
+            <i className="pi pi-history text-brand-secondary"></i>
+            <span className="text-xs font-bold text-brand-primary uppercase tracking-wide">Actividad reciente</span>
           </div>
           <div>
             {[...history].sort((a, b) => b.date.localeCompare(a.date)).slice(0, 8).map(h => (
-              <div key={h.id} className="flex items-center gap-3 px-5 py-3 border-b border-[#f0f0f0] last:border-0 hover:bg-[#f7f7f5] transition-colors">
-                <span className="text-xs text-[#9b9a97] min-w-[72px] font-mono">{fmtDate(h.date)}</span>
-                <span className="text-sm font-medium flex-1 truncate text-[#37352f]">{h.topic}</span>
+              <div key={h.id} className="flex items-center gap-3 px-5 py-3 border-b border-brand-border last:border-0 hover:bg-brand-bg/50 transition-colors group">
+                <span className="text-xs text-brand-secondary min-w-[72px] font-mono">{fmtDate(h.date)}</span>
+                <span className="text-xs font-bold flex-1 truncate text-brand-primary group-hover:text-brand-accent transition-colors">{h.topic}</span>
                 <div className="flex gap-1">{h.platforms.map(p => <span key={p} title={PLATFORMS[p].label}>{PLATFORMS[p].icon}</span>)}</div>
-                <span className="text-xs font-medium text-[#9b9a97]">{(h.wordCount || 0).toLocaleString()} pal.</span>
+                <span className="text-[10px] font-bold text-brand-secondary">{(h.wordCount || 0).toLocaleString()} pal.</span>
               </div>
             ))}
           </div>

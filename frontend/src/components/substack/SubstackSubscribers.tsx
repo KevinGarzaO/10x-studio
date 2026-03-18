@@ -24,18 +24,18 @@ interface Subscriber {
 }
 
 const TYPE_BADGE: Record<string, string> = {
-  paid: 'bg-emerald-100/80 border-emerald-200 text-emerald-800 shadow-sm',
-  free: 'bg-stone-100/80 border-stone-200 text-stone-700 shadow-sm',
-  comp: 'bg-blue-100/80 border-blue-200 text-blue-800 shadow-sm',
+  paid: 'bg-green-500/10 border-green-500/20 text-green-400 shadow-sm',
+  free: 'bg-brand-bg border-brand-border text-brand-secondary shadow-sm',
+  comp: 'bg-blue-500/10 border-blue-500/20 text-blue-400 shadow-sm',
 }
 const TYPE_LABEL: Record<string, string> = { paid: '💳 Pago', free: '🆓 Gratis', comp: '🎁 Comp.' }
 
 function Stars({ value }: { value: number | null }) {
-  if (value === null) return <span className="text-xs text-[#9b9a97]">—</span>
+  if (value === null) return <span className="text-xs text-brand-secondary">—</span>
   return (
     <div className="flex gap-0.5">
       {[1,2,3,4,5].map(i => (
-        <span key={i} className={`text-sm ${i <= value ? 'text-black' : 'text-[#e9e9e7]'}`}>★</span>
+        <span key={i} className={`text-sm ${i <= value ? 'text-brand-accent' : 'text-brand-border'}`}>★</span>
       ))}
     </div>
   )
@@ -198,9 +198,9 @@ export function SubstackSubscribers() {
   const userTemplate = (s: Subscriber) => (
     <div className="relative">
       {s.active === false && <span className="absolute -left-2 top-1/2 -translate-y-1/2 w-1 h-6 bg-red-400 rounded-r-md" title="Suscripción inactiva"></span>}
-      <div className="text-[14px] font-black text-[#000000] truncate max-w-[200px] xl:max-w-[300px]">{s.email}</div>
-      {s.name && <div className="text-[13px] font-bold text-stone-600 truncate max-w-[200px] xl:max-w-[300px] mt-0.5">{s.name}</div>}
-      {s.source && <div className="text-[10px] font-bold text-stone-400 mt-1 uppercase tracking-widest">{s.source}</div>}
+      <div className="text-[14px] font-black text-brand-primary truncate max-w-[200px] xl:max-w-[300px]">{s.email}</div>
+      {s.name && <div className="text-[13px] font-bold text-brand-secondary truncate max-w-[200px] xl:max-w-[300px] mt-0.5">{s.name}</div>}
+      {s.source && <div className="text-[10px] font-bold text-brand-secondary opacity-60 mt-1 uppercase tracking-widest">{s.source}</div>}
     </div>
   );
 
@@ -211,7 +211,7 @@ export function SubstackSubscribers() {
   );
 
   const revenueTemplate = (s: Subscriber) => (
-    <span className="text-[14px] whitespace-nowrap font-black text-emerald-950">
+    <span className="text-[14px] whitespace-nowrap font-black text-green-400">
       {s.revenue != null ? `$${s.revenue.toFixed(2)}` : '—'}
     </span>
   );
@@ -227,8 +227,8 @@ export function SubstackSubscribers() {
             value={globalFilterValue} 
             onChange={onGlobalFilterChange} 
             placeholder="Buscar por email o nombre..." 
-            className="w-full pl-9 p-inputtext-sm" // PrimeReact styling coupled with custom tailwind override
-            style={{ borderRadius: '0.75rem', padding: '0.5rem 0.5rem 0.5rem 2.5rem', border: '1px solid #e5e7eb', boxShadow: '0 1px 2px 0 rgb(0 0 0 / 0.05)' }}
+            className="w-full pl-9"
+            style={{ borderRadius: '0.75rem', padding: '0.5rem 0.5rem 0.5rem 2.5rem', background: 'var(--color-bg)', border: '1px solid var(--color-border)', color: 'var(--color-text-primary)' }}
           />
         </div>
         
@@ -238,22 +238,22 @@ export function SubstackSubscribers() {
               key={t} 
               onClick={() => handleTypeFilter(t)}
               label={t === 'all' ? 'Todos' : t === 'paid' ? '💳 Pago' : '🆓 Gratis'}
-              className={`p-button-sm !px-4 !py-2 !rounded-xl !text-[11px] !font-bold transition-all duration-300 ${typeFilter === t ? '!bg-stone-900 !border-stone-900 !text-white !shadow-md shadow-stone-900/20' : '!bg-white/60 !border-stone-200 !text-stone-500 hover:!text-stone-800 hover:!border-stone-300 !shadow-sm'}`}
+              className={`!px-4 !py-2 !rounded-xl !text-[11px] !font-bold transition-all duration-300 ${typeFilter === t ? '!bg-brand-accent !border-brand-accent !text-[#1A1A1A] !shadow-md' : '!bg-brand-bg !border-brand-border !text-brand-secondary hover:!text-brand-primary hover:!border-brand-accent !shadow-sm'}`}
             />
           ))}
         </div>
         
-        <div className="h-6 w-px bg-stone-300 mx-1 hidden sm:block"></div>
+        <div className="h-6 w-px bg-brand-border mx-1 hidden sm:block"></div>
         
         <Button 
           onClick={exportCSV} 
           disabled={subscribers.length === 0}
           icon="pi pi-download"
           label="Exportar"
-          className="p-button-sm p-button-outlined !rounded-xl !text-[11px] !font-bold !bg-white/60 !border-stone-200 !text-stone-600 hover:!bg-stone-50 hover:!text-stone-900 !shadow-sm"
+          className="p-button-sm p-button-outlined !rounded-xl !text-[11px] !font-bold !bg-brand-bg !border-brand-border !text-brand-secondary hover:!text-brand-primary !shadow-sm"
         />
         
-        <label className={`cursor-pointer inline-flex items-center px-4 py-2 rounded-xl text-[11px] font-bold bg-stone-900 border border-stone-900 text-white hover:bg-stone-800 transition-all shadow-md shadow-stone-900/20 gap-1.5 ${importing ? 'opacity-50 pointer-events-none' : ''}`}>
+        <label className={`cursor-pointer inline-flex items-center px-4 py-2 rounded-xl text-[11px] font-bold bg-brand-accent border border-brand-accent text-[#1A1A1A] hover:brightness-110 transition-all shadow-md gap-1.5 ${importing ? 'opacity-50 pointer-events-none' : ''}`}>
            <i className={importing ? "pi pi-spin pi-spinner" : "pi pi-upload"}></i>
            <span>{importing ? 'Cargando...' : 'Importar CSV'}</span>
            <input type="file" accept=".csv" className="hidden" onChange={handleImportCSV} disabled={importing} />
@@ -265,7 +265,7 @@ export function SubstackSubscribers() {
   return (
     <div>
       {importResult && (
-        <div className={`mb-6 px-4 py-3 rounded-xl text-sm font-bold shadow-sm ${importResult.startsWith('✅') ? 'bg-emerald-50 border border-emerald-200 text-emerald-800' : 'bg-red-50 border border-red-200 text-red-800'}`}>
+        <div className={`mb-6 px-4 py-3 rounded-xl text-sm font-bold shadow-sm ${importResult.startsWith('✅') ? 'bg-green-500/10 border border-green-500/20 text-green-400' : 'bg-red-500/10 border border-red-500/20 text-red-400'}`}>
           {importResult}
         </div>
       )}
@@ -273,43 +273,43 @@ export function SubstackSubscribers() {
       {/* KPI strip Dashboard style */}
       <div className="grid grid-cols-2 lg:grid-cols-5 gap-3 md:gap-4 mb-8">
         {[
-          { label: 'Total DB',       value: total.toLocaleString(),              color: 'text-stone-900' },
-          { label: 'De pago',        value: subscribers.filter(s=>s.type==='paid').length.toLocaleString(), color: 'text-emerald-600' },
-          { label: 'Gratuitos',      value: subscribers.filter(s=>s.type==='free').length.toLocaleString(), color: 'text-stone-600' },
-          { label: '⭐ Avg Estrellas', value: avgStars,                                color: 'text-stone-900' },
-          { label: '🔥 Top leads',   value: String(hotLeads),                         color: 'text-amber-600' },
+          { label: 'Total DB',       value: total.toLocaleString(),              color: 'text-brand-primary' },
+          { label: 'De pago',        value: subscribers.filter(s=>s.type==='paid').length.toLocaleString(), color: 'text-green-400' },
+          { label: 'Gratuitos',      value: subscribers.filter(s=>s.type==='free').length.toLocaleString(), color: 'text-brand-secondary' },
+          { label: '⭐ Avg Estrellas', value: avgStars,                                color: 'text-brand-primary' },
+          { label: '🔥 Top leads',   value: String(hotLeads),                         color: 'text-brand-accent' },
         ].map(k => (
-          <div key={k.label} className="bg-white/80 backdrop-blur-xl border border-stone-200/80 shadow-[0_4px_20px_rgb(0,0,0,0.03)] rounded-2xl p-3 md:p-4 text-center hover:-translate-y-0.5 hover:shadow-md hover:border-stone-300 transition-all duration-300">
+          <div key={k.label} className="bg-brand-surface border border-brand-border shadow-[var(--shadow)] rounded-2xl p-3 md:p-4 text-center hover:-translate-y-0.5 hover:border-brand-accent transition-all duration-300">
             <div className={`text-xl md:text-2xl font-black tracking-tight ${k.color}`}>{k.value}</div>
-            <div className="text-[9px] md:text-[10px] font-bold text-stone-500 uppercase tracking-widest mt-1 md:mt-1.5">{k.label}</div>
+            <div className="text-[9px] md:text-[10px] font-bold text-brand-secondary uppercase tracking-widest mt-1.5">{k.label}</div>
           </div>
         ))}
       </div>
 
       {error && (
-        <div className="bg-red-50 border border-red-200 rounded-lg p-4 text-red-700 text-sm mb-4">
+        <div className="bg-red-500/10 border border-red-500/20 rounded-lg p-4 text-red-400 text-sm mb-4">
           <strong>Error:</strong> {error}
-          <Button onClick={() => loadAll()} label="Reintentar" text className="p-button-sm text-red-800 ml-3 bg-red-100 hover:bg-red-200" />
+          <Button onClick={() => loadAll()} label="Reintentar" pt={{ root: { className: 'p-button-sm text-red-400 ml-3 bg-red-500/20 hover:bg-red-500/30' } }} />
         </div>
       )}
 
       {/* Loading Bar */}
       {loading && subscribers.length > 0 && (
-        <div className="mb-4 bg-teal-50 border border-teal-100 rounded-xl p-3 flex items-center">
-           <i className="pi pi-spin pi-spinner text-teal-600 text-xl mr-3"></i>
-           <div className="text-sm text-teal-800 font-medium">{progressText}</div>
-           <div className="ml-auto text-xs text-teal-600/60">{subscribers.length} / {total || '?'}</div>
+        <div className="mb-4 bg-brand-accent/5 border border-brand-accent/10 rounded-xl p-3 flex items-center">
+           <i className="pi pi-spin pi-spinner text-brand-accent text-xl mr-3"></i>
+           <div className="text-sm text-brand-primary font-medium">{progressText}</div>
+           <div className="ml-auto text-xs text-brand-secondary">{subscribers.length} / {total || '?'}</div>
         </div>
       )}
 
       {/* PrimeReact DataTable Wrapper */}
       {loading && subscribers.length === 0 ? (
-        <div className="flex flex-col items-center justify-center py-20 bg-white/50 rounded-2xl border border-stone-200/60">
-          <i className="pi pi-spin pi-spinner text-stone-800 text-4xl mb-4"></i>
-          <span className="text-sm font-medium text-stone-600">{progressText || 'Cargando suscriptores...'}</span>
+        <div className="flex flex-col items-center justify-center py-20 bg-brand-surface rounded-2xl border border-brand-border">
+          <i className="pi pi-spin pi-spinner text-brand-accent text-4xl mb-4"></i>
+          <span className="text-sm font-medium text-brand-secondary">{progressText || 'Cargando suscriptores...'}</span>
         </div>
       ) : (
-        <div className="bg-white border border-stone-200/80 rounded-2xl shadow-sm overflow-x-auto mb-6 no-scrollbar">
+        <div className="bg-brand-surface border border-brand-border rounded-2xl shadow-sm overflow-x-auto mb-6 no-scrollbar">
           <DataTable 
             value={subscribers} 
             paginator 
@@ -340,8 +340,8 @@ export function SubstackSubscribers() {
       )}
 
       {/* CSV format tip */}
-      <div className="mt-5 bg-[#f7f7f5] border border-[#e9e9e7] rounded-lg p-4 text-xs text-[#9b9a97]">
-        <strong className="text-black">PrimeReact DataTable:</strong> Los datos se cargan completamente en el cliente. Puedes ordenar, buscar y paginar de forma nativa con los componentes altamente optimizados de PrimeReact.
+      <div className="mt-5 bg-brand-bg border border-brand-border rounded-lg p-4 text-xs text-brand-secondary">
+        <strong className="text-brand-primary">PrimeReact DataTable:</strong> Los datos se cargan completamente en el cliente. Puedes ordenar, buscar y paginar de forma nativa con los componentes altamente optimizados de PrimeReact.
       </div>
     </div>
   )

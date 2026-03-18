@@ -13,8 +13,7 @@ interface IntegrationConfig {
 }
 
 function StatusDot({ active }: { active: boolean }) {
-  return <span className={`w-2 h-2 rounded-full inline-block ${active ? 'bg-green-400' : 'bg-[#e9e9e7]'}`}
-    style={active ? { boxShadow: '0 0 5px #4ade80' } : {}} />
+  return <span className={`w-2 h-2 rounded-full inline-block ${active ? 'bg-brand-accent shadow-[0_0_8px_var(--color-accent)]' : 'bg-brand-border'}`} />
 }
 
 export function IntegrationsSection() {
@@ -99,29 +98,29 @@ export function IntegrationsSection() {
 
   return (
     <div className="max-w-4xl mx-auto pb-20">
-      <div className="flex items-end justify-between mb-8 border-b border-[#e9e9e7] pb-4">
+      <div className="flex items-end justify-between mb-8 border-b border-brand-border pb-4">
         <div>
-          <h1 className="text-[28px] font-bold tracking-tight text-black flex items-center gap-3">
-            <i className="pi pi-link text-[#9b9a97]"></i> Integraciones
+          <h1 className="text-[28px] font-bold tracking-tight text-brand-primary flex items-center gap-3">
+            <i className="pi pi-link text-brand-secondary"></i> Integraciones
           </h1>
-          <p className="text-sm text-[#9b9a97] mt-1">Publica directo en WordPress, LinkedIn y vía webhooks</p>
+          <p className="text-sm text-brand-secondary mt-1">Publica directo en WordPress, LinkedIn y vía webhooks</p>
         </div>
       </div>
 
       {msg && (
-        <div className={`mb-5 px-4 py-3 rounded-lg text-sm font-medium ${msg.type === 'ok' ? 'bg-green-50 border border-green-200 text-green-800' : 'bg-red-50 border border-red-200 text-red-800'}`}>
+        <div className={`mb-5 px-4 py-3 rounded-xl text-sm font-bold shadow-sm ${msg.type === 'ok' ? 'bg-green-500/10 border border-green-500/20 text-green-400' : 'bg-red-500/10 border border-red-500/20 text-red-400'}`}>
           {msg.text}
         </div>
       )}
 
       {/* WordPress */}
-      <div className="bg-white border border-[#e9e9e7] rounded-2xl mb-5 overflow-hidden shadow-sm">
-        <div className="bg-[#1a1a1a] border-b border-[#2e2e2e] px-6 py-4 flex items-center justify-between">
+      <div className="bg-brand-surface border border-brand-border rounded-2xl mb-5 overflow-hidden shadow-[var(--shadow)]">
+        <div className="bg-brand-bg/50 border-b border-brand-border px-6 py-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <span className="text-2xl drop-shadow-md">🌐</span>
             <div>
-              <span className="text-sm font-semibold text-white uppercase tracking-wide">WordPress</span>
-              <p className="text-xs text-stone-400 mt-0.5">REST API / Application Password</p>
+              <span className="text-sm font-bold text-brand-primary uppercase tracking-wide">WordPress</span>
+              <p className="text-xs text-brand-secondary mt-0.5">REST API / Application Password</p>
             </div>
           </div>
           <StatusDot active={!!cfg._hasWp} />
@@ -145,9 +144,9 @@ export function IntegrationsSection() {
             <div>
               <label className="label block mb-1.5">
                 Application Password
-                <a href="https://make.wordpress.org/core/2020/11/05/application-passwords-integration-guide/" target="_blank" rel="noopener" className="ml-1 text-blue-600 font-normal normal-case tracking-normal hover:underline text-xs">¿cómo obtenerlo?</a>
+                <a href="https://make.wordpress.org/core/2020/11/05/application-passwords-integration-guide/" target="_blank" rel="noopener" className="ml-1 text-brand-accent font-normal normal-case tracking-normal hover:brightness-110 text-xs underline">¿cómo obtenerlo?</a>
               </label>
-              <input type="password" value={wpPass} onChange={e => setWpPass(e.target.value)} className="input font-mono text-xs" placeholder="xxxx xxxx xxxx xxxx" />
+              <input type="password" value={wpPass} onChange={e => setWpPass(e.target.value)} className="input font-mono text-xs bg-brand-bg/50" placeholder="xxxx xxxx xxxx xxxx" />
             </div>
           </div>
           <div>
@@ -165,21 +164,21 @@ export function IntegrationsSection() {
               {saving === 'wp' ? '⏳...' : 'Guardar'}
             </button>
           </div>
-          <p className="text-xs text-[#9b9a97] bg-stone-50 p-3 rounded-xl border border-stone-200">
-            <i className="pi pi-info-circle mr-1"></i>
-            El Application Password se genera en <strong>WordPress → Usuarios → Tu perfil → Application Passwords</strong>. No es tu contraseña real.
+          <p className="text-xs text-brand-secondary bg-brand-bg/50 p-3 rounded-xl border border-brand-border italic">
+            <i className="pi pi-info-circle mr-1 text-brand-accent"></i>
+            El Application Password se genera en <strong className="text-brand-primary">WordPress → Usuarios → Tu perfil → Application Passwords</strong>. No es tu contraseña real.
           </p>
         </div>
       </div>
 
       {/* LinkedIn */}
-      <div className="bg-white border border-[#e9e9e7] rounded-2xl mb-5 overflow-hidden shadow-sm">
-        <div className="bg-[#1a1a1a] border-b border-[#2e2e2e] px-6 py-4 flex items-center justify-between">
+      <div className="bg-brand-surface border border-brand-border rounded-2xl mb-5 overflow-hidden shadow-[var(--shadow)]">
+        <div className="bg-brand-bg/50 border-b border-brand-border px-6 py-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <span className="text-2xl drop-shadow-md">💼</span>
             <div>
-              <span className="text-sm font-semibold text-white uppercase tracking-wide">LinkedIn</span>
-              <p className="text-xs text-stone-400 mt-0.5">OAuth 2.0 Access Token</p>
+              <span className="text-sm font-bold text-brand-primary uppercase tracking-wide">LinkedIn</span>
+              <p className="text-xs text-brand-secondary mt-0.5">OAuth 2.0 Access Token</p>
             </div>
           </div>
           <StatusDot active={!!cfg._hasLinkedin} />
@@ -188,13 +187,13 @@ export function IntegrationsSection() {
           <div>
             <label className="label block mb-1.5">
               Access Token
-              <span className="ml-1 text-[#9b9a97] font-normal normal-case tracking-normal text-xs">— requiere <code className="bg-[#e9e9e7] px-1 rounded">w_member_social</code></span>
+              <span className="ml-1 text-brand-secondary font-normal normal-case tracking-normal text-xs">— requiere <code className="bg-brand-bg border border-brand-border px-1.5 rounded text-[10px]">w_member_social</code></span>
             </label>
-            <input type="password" value={liToken} onChange={e => setLiToken(e.target.value)} className="input font-mono text-xs" placeholder="AQV..." />
+            <input type="password" value={liToken} onChange={e => setLiToken(e.target.value)} className="input font-mono text-xs bg-brand-bg/50" placeholder="AQV..." />
           </div>
-          <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 text-xs text-amber-800">
-            <strong><i className="pi pi-info-circle mr-1"></i>Cómo obtener el token:</strong> Crea una app en{' '}
-            <a href="https://www.linkedin.com/developers/apps" target="_blank" rel="noopener" className="underline font-semibold">linkedin.com/developers/apps</a>,
+          <div className="bg-amber-500/5 border border-amber-500/20 rounded-xl p-4 text-xs text-amber-500/90 leading-relaxed">
+            <strong className="text-amber-500"><i className="pi pi-info-circle mr-1"></i>Cómo obtener el token:</strong> Crea una app en{' '}
+            <a href="https://www.linkedin.com/developers/apps" target="_blank" rel="noopener" className="underline font-bold hover:text-amber-400 transition-colors">linkedin.com/developers/apps</a>,
             agrega el producto <strong>Share on LinkedIn</strong> (que incluye <code>w_member_social</code>),
             genera un access token con OAuth 2.0 y pégalo aquí. Los tokens duran ~60 días.
           </div>
@@ -210,36 +209,36 @@ export function IntegrationsSection() {
       </div>
 
       {/* Webhooks */}
-      <div className="bg-white border border-[#e9e9e7] rounded-2xl overflow-hidden shadow-sm">
-        <div className="bg-[#1a1a1a] border-b border-[#2e2e2e] px-6 py-4 flex items-center justify-between">
+      <div className="bg-brand-surface border border-brand-border rounded-2xl overflow-hidden shadow-[var(--shadow)]">
+        <div className="bg-brand-bg/50 border-b border-brand-border px-6 py-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <span className="text-2xl drop-shadow-md">🔗</span>
             <div>
               <div className="flex items-center gap-2">
-                <span className="text-sm font-semibold text-white uppercase tracking-wide">Webhooks</span>
-                {webhooks.length > 0 && <span className="text-[10px] font-bold bg-white/20 text-white px-2 py-0.5 rounded-full">{webhooks.length}</span>}
+                <span className="text-sm font-bold text-brand-primary uppercase tracking-wide">Webhooks</span>
+                {webhooks.length > 0 && <span className="text-[10px] font-bold bg-brand-accent text-[#1A1A1A] px-2 py-0.5 rounded-full">{webhooks.length}</span>}
               </div>
-              <p className="text-xs text-stone-400 mt-0.5">Zapier, Make, n8n, etc.</p>
+              <p className="text-xs text-brand-secondary mt-0.5">Zapier, Make, n8n, etc.</p>
             </div>
           </div>
           <button className="btn btn-primary btn-sm" onClick={() => { setEditingWh(null); setWhModal(true) }}>+ Agregar</button>
         </div>
         <div className="p-6">
           {webhooks.length === 0 ? (
-            <div className="text-center py-8 text-[#9b9a97]">
-              <p className="text-sm mb-3">Sin webhooks configurados.</p>
-              <p className="text-xs">Úsalos para enviar contenido a cualquier API, Zapier, Make, n8n, etc.</p>
+            <div className="text-center py-10 text-brand-secondary">
+              <p className="text-sm font-bold mb-2">Sin webhooks configurados.</p>
+              <p className="text-xs italic opacity-80">Úsalos para enviar contenido a cualquier API, Zapier, Make, n8n, etc.</p>
             </div>
           ) : (
             <div className="space-y-3">
               {webhooks.map(wh => (
-                <div key={wh.id} className="flex items-center gap-3 bg-[#f7f7f5] rounded-lg px-4 py-3">
+                <div key={wh.id} className="flex items-center gap-3 bg-brand-bg/50 border border-brand-border rounded-xl px-4 py-3 hover:bg-brand-bg transition-colors group">
                   <StatusDot active={wh.active} />
                   <div className="flex-1 min-w-0">
-                    <div className="text-sm font-semibold">{wh.name}</div>
-                    <div className="text-xs text-[#9b9a97] truncate">{wh.url}</div>
-                    <div className="flex gap-1 mt-1 flex-wrap">
-                      {wh.platforms.map(p => <span key={p} className="text-[10px] bg-white border border-[#e9e9e7] px-1.5 py-0.5 rounded">{PLATFORMS[p].icon} {PLATFORMS[p].label}</span>)}
+                    <div className="text-sm font-bold text-brand-primary">{wh.name}</div>
+                    <div className="text-xs text-brand-secondary/80 truncate font-mono mt-0.5">{wh.url}</div>
+                    <div className="flex gap-1.5 mt-2 flex-wrap">
+                      {wh.platforms.map(p => <span key={p} className="text-[10px] font-bold bg-brand-surface border border-brand-border text-brand-secondary px-2 py-0.5 rounded-lg shadow-sm">{PLATFORMS[p].icon} {PLATFORMS[p].label}</span>)}
                     </div>
                   </div>
                   <button onClick={() => { setEditingWh(wh); setWhModal(true) }} className="btn btn-secondary btn-sm">✏️</button>
@@ -283,9 +282,9 @@ function WebhookModal({ webhook, onClose, onSave }: {
   }
 
   return (
-    <div className="fixed inset-0 bg-[#191919]/40 z-50 flex items-center justify-center p-4" onClick={e => e.target === e.currentTarget && onClose()}>
-      <div className="bg-white rounded-lg p-6 w-full max-w-md shadow-2xl">
-        <h2 className="text-xl font-bold mb-5">{webhook ? 'Editar webhook' : 'Nuevo webhook'}</h2>
+    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 transition-all duration-300" onClick={e => e.target === e.currentTarget && onClose()}>
+      <div className="bg-brand-surface border border-brand-border rounded-2xl p-6 w-full max-w-md shadow-[var(--shadow)]">
+        <h2 className="text-xl font-bold mb-5 text-brand-primary">{webhook ? 'Editar webhook' : 'Nuevo webhook'}</h2>
         <div className="space-y-4">
           <div>
             <label className="label block mb-1.5">Nombre</label>
@@ -310,20 +309,20 @@ function WebhookModal({ webhook, onClose, onSave }: {
             <div className="flex flex-wrap gap-2">
               {ALL_PLATFORMS.map(p => (
                 <button key={p} onClick={() => togglePlatform(p)}
-                  className={`px-3 py-1.5 rounded-xl text-xs font-bold border transition-all ${platforms.has(p) ? 'border-stone-900 text-stone-900 bg-stone-900/5 shadow-sm' : 'border-[#e9e9e7] text-[#9b9a97]'}`}>
+                  className={`px-3 py-1.5 rounded-xl text-xs font-bold border transition-all ${platforms.has(p) ? 'border-brand-accent text-brand-accent bg-brand-accent/5 shadow-sm' : 'border-brand-border text-brand-secondary hover:border-brand-accent'}`}>
                   {PLATFORMS[p].icon} {PLATFORMS[p].label}
                 </button>
               ))}
             </div>
           </div>
-          <div className="flex items-center gap-3 bg-stone-50 p-3 rounded-xl border border-stone-200">
+          <div className="flex items-center gap-3 bg-brand-bg/50 p-3 rounded-xl border border-brand-border">
             <button onClick={() => setActive(!active)}
-              className={`w-10 h-6 rounded-full transition-all duration-300 relative flex-shrink-0 ${active ? 'bg-stone-900' : 'bg-stone-200'}`}>
+              className={`w-10 h-6 rounded-full transition-all duration-300 relative flex-shrink-0 ${active ? 'bg-brand-accent' : 'bg-brand-border'}`}>
               <span className={`absolute top-1 w-4 h-4 rounded-full bg-white shadow-md transition-all duration-300 ${active ? 'left-5' : 'left-1'}`} />
             </button>
             <div>
-              <span className="text-sm font-semibold text-stone-800">{active ? 'Activo' : 'Inactivo'}</span>
-              <p className="text-xs text-stone-400 mt-0.5">{active ? 'El webhook disparará con nuevas publicaciones' : 'El webhook está desactivado'}</p>
+              <span className="text-sm font-bold text-brand-primary">{active ? 'Activo' : 'Inactivo'}</span>
+              <p className="text-xs text-brand-secondary mt-0.5">{active ? 'El webhook disparará con nuevas publicaciones' : 'El webhook está desactivado'}</p>
             </div>
           </div>
         </div>

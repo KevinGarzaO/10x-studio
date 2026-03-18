@@ -23,21 +23,22 @@ interface Props {
 
 export function Header({ activeSection, onMenuClick }: Props) {
   return (
-    <header className="h-[56px] bg-[#1a1a1a] border-b border-[#2a2a2a] flex items-center px-4 md:px-8 gap-3 flex-shrink-0 transition-all duration-300">
+    <header className="h-[56px] bg-brand-surface border-b border-brand-border flex items-center px-4 md:px-8 gap-3 flex-shrink-0 transition-all duration-300">
       {/* Mobile Menu Button */}
       <button 
         onClick={onMenuClick}
-        className="md:hidden p-2 text-stone-400 hover:text-white transition-colors"
+        className="md:hidden p-2 text-brand-secondary hover:text-brand-primary transition-colors"
       >
         <i className="pi pi-bars text-lg"></i>
       </button>
 
       {/* Breadcrumb */}
       <div className="flex items-center gap-2 text-sm max-w-[50%] overflow-hidden overflow-ellipsis whitespace-nowrap">
-        <span className="text-[#555] font-semibold">10X Studio</span>
-        <span className="text-[#333]">/</span>
-        <span className="text-[#cccccc] font-medium">{SECTION_LABELS[activeSection] || 'Sección'}</span>
+        <span className="text-brand-secondary font-semibold">Avocado Estudio</span>
+        <span className="text-brand-border">/</span>
+        <span className="text-brand-primary font-medium">{SECTION_LABELS[activeSection] || 'Sección'}</span>
       </div>
+
 
       <div className="flex-1" />
       

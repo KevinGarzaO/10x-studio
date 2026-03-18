@@ -152,34 +152,34 @@ export function RedactorSection({ prefill }: Props) {
 
   return (
     <div className="max-w-4xl mx-auto pb-20">
-      <div className="flex items-end justify-between mb-8 border-b border-[#e9e9e7] pb-4">
+      <div className="flex items-end justify-between mb-8 border-b border-brand-border pb-4">
         <div>
-          <h1 className="text-[28px] font-bold tracking-tight text-black flex items-center gap-3">
-            <i className="pi pi-file-edit text-[#9b9a97]"></i> Redactor
+          <h1 className="text-[28px] font-bold tracking-tight text-brand-primary flex items-center gap-3">
+            <i className="pi pi-file-edit text-brand-secondary"></i> Redactor
           </h1>
-          <p className="text-sm text-[#9b9a97] mt-1">Genera, revisa y traduce contenido con IA</p>
+          <p className="text-sm text-brand-secondary mt-1">Genera, revisa y traduce contenido con IA</p>
         </div>
       </div>
 
       {/* Mode tabs */}
-      <div className="flex gap-1 bg-[#f1f1ef] rounded-md p-1 mb-5 w-fit">
+      <div className="flex gap-1 bg-brand-surface rounded-md p-1 mb-5 w-fit">
         {([['generate','✦ Generar'],['revise','🔄 Revisar'],['compare','⚖️ Comparar']] as [RedactorMode,string][]).map(([m, label]) => (
           <button key={m} onClick={() => setMode(m)}
-            className={`px-4 py-1.5 rounded text-xs font-medium transition-all ${mode === m ? 'bg-white text-black shadow-sm' : 'text-[#9b9a97] hover:text-[#37352f]'}`}>
+            className={`px-4 py-1.5 rounded text-xs font-medium transition-all ${mode === m ? 'bg-brand-accent text-black shadow-sm' : 'text-brand-secondary hover:text-brand-primary'}`}>
             {label}
           </button>
         ))}
       </div>
 
       {/* Translator collapsible */}
-      <div className="bg-white border border-[#e9e9e7] rounded-xl mb-4 overflow-hidden shadow-sm">
-        <button className="w-full px-5 py-4 flex items-center justify-between text-sm font-bold text-[#37352f] hover:bg-[#f7f7f5] transition-colors"
+      <div className="card mb-4">
+        <button className="w-full px-5 py-4 flex items-center justify-between text-sm font-bold text-brand-primary hover:bg-brand-bg/50 transition-colors"
           onClick={() => setTransOpen(v => !v)}>
           <span>🌐 Traductor (ES ↔ EN)</span>
-          <i className={`text-[#9b9a97] pi ${transOpen ? 'pi-chevron-up' : 'pi-chevron-down'} text-xs`}></i>
+          <i className={`text-brand-secondary pi ${transOpen ? 'pi-chevron-up' : 'pi-chevron-down'} text-xs`}></i>
         </button>
         {transOpen && (
-          <div className="px-5 pb-5 border-t border-[#e9e9e7] pt-4">
+          <div className="px-5 pb-5 border-t border-brand-border pt-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-3">
               <div>
                 <label className="label block mb-1.5">Texto original</label>
@@ -193,8 +193,8 @@ export function RedactorSection({ prefill }: Props) {
               </div>
               <div>
                 <label className="label block mb-1.5">Traducción</label>
-                <div className="w-full !rounded-xl border border-[#e9e9e7] bg-[#f7f7f5] p-3 text-sm min-h-[138px] overflow-y-auto">
-                  {translating ? <span className="text-[#9b9a97] animate-pulse flex items-center gap-2"><i className="pi pi-spin pi-spinner"></i> Traduciendo...</span> : (translated || <span className="text-[#9b9a97]">La traducción aparecerá aquí</span>)}
+                <div className="w-full !rounded-xl border border-brand-border bg-brand-bg p-3 text-sm min-h-[138px] overflow-y-auto">
+                  {translating ? <span className="text-brand-secondary animate-pulse flex items-center gap-2"><i className="pi pi-spin pi-spinner"></i> Traduciendo...</span> : (translated || <span className="text-brand-secondary">La traducción aparecerá aquí</span>)}
                 </div>
               </div>
             </div>
@@ -212,8 +212,8 @@ export function RedactorSection({ prefill }: Props) {
       </div>
 
       {/* Config card */}
-      <div className="bg-white border border-[#e9e9e7] rounded-xl mb-5 overflow-hidden shadow-sm">
-        <div className="bg-[#1a1a1a] border-b border-[#2e2e2e] px-5 py-3 flex items-center justify-between">
+      <div className="card mb-5">
+        <div className="panel-header-dark">
           <span className="text-xs font-semibold text-white uppercase tracking-wide flex items-center gap-2">
             <i className={`pi ${mode === 'generate' ? 'pi-sparkles' : mode === 'revise' ? 'pi-sync' : 'pi-clone'}`}></i>
             {mode === 'generate' ? 'Configuración' : mode === 'revise' ? 'Texto a revisar' : 'Comparar dos versiones'}
@@ -222,7 +222,7 @@ export function RedactorSection({ prefill }: Props) {
             <select
               value={templateId}
               onChange={e => setTemplateId(e.target.value)}
-              className="text-xs bg-[#2a2a2a] border border-[#444] text-[#ccc] rounded-lg px-2 py-1.5 w-52 focus:outline-none"
+              className="text-xs bg-brand-bg border border-brand-border text-brand-primary rounded-lg px-2 py-1.5 w-52 focus:outline-none focus:border-brand-accent transition-all"
             >
               <option value="">Prompt estándar</option>
               {templates.map(t => <option key={t.id} value={t.id}>{PLATFORMS[t.platform].icon} {t.name}</option>)}
@@ -239,10 +239,10 @@ export function RedactorSection({ prefill }: Props) {
                 const sel = selectedPlatforms.has(p)
                 return (
                   <button key={p} onClick={() => togglePlatform(p)}
-                    className={`relative border-2 rounded-xl py-4 px-2 flex flex-col items-center gap-1.5 transition-all duration-200 ${sel ? 'border-amber-500 bg-amber-50/50 shadow-sm' : 'border-[#e9e9e7] bg-white hover:border-[#ccc] hover:shadow-sm'}`}>
-                    <span className={`absolute top-2 right-2 w-4 h-4 rounded-full border flex items-center justify-center transition-all ${sel ? 'bg-amber-500 border-amber-500 text-white shadow-sm' : 'bg-[#f1f1ef] border-[#e9e9e7] text-transparent'}`}><i className="pi pi-check text-[9px]"></i></span>
+                    className={`relative border-2 rounded-xl py-4 px-2 flex flex-col items-center gap-1.5 transition-all duration-200 ${sel ? 'border-brand-accent bg-brand-accent/5 shadow-sm' : 'border-brand-border bg-brand-bg hover:border-brand-accent hover:shadow-sm'}`}>
+                    <span className={`absolute top-2 right-2 w-4 h-4 rounded-full border flex items-center justify-center transition-all ${sel ? 'bg-brand-accent border-brand-accent text-black shadow-sm' : 'bg-brand-surface border-brand-border text-transparent'}`}><i className="pi pi-check text-[9px]"></i></span>
                     <span className="text-2xl drop-shadow-sm">{PLATFORMS[p].icon}</span>
-                    <span className={`text-[11px] font-bold ${sel ? 'text-amber-900' : 'text-[#37352f]'}`}>{PLATFORMS[p].label}</span>
+                    <span className={`text-[11px] font-bold ${sel ? 'text-brand-accent' : 'text-brand-primary'}`}>{PLATFORMS[p].label}</span>
                   </button>
                 )
               })}
@@ -266,10 +266,10 @@ export function RedactorSection({ prefill }: Props) {
               <button className="btn btn-ghost whitespace-nowrap" onClick={handleSuggest}>✦ Sugerir</button>
             </div>
             {showSug && suggestions.length > 0 && (
-              <div className="bg-[#f1f1ef] rounded-xl p-3 mt-3 flex flex-wrap gap-2 animate-fadein">
+              <div className="bg-brand-surface rounded-xl p-3 mt-3 flex flex-wrap gap-2 animate-fadein">
                 {suggestions.map(s => (
                   <button key={s} onClick={() => { setTopic(s); setShowSug(false) }}
-                    className="text-xs bg-white border border-[#e9e9e7] rounded-lg px-3 py-1.5 font-medium hover:bg-stone-900 hover:text-white hover:border-stone-900 hover:shadow-md transition-all">{s}</button>
+                    className="text-xs bg-brand-bg border border-brand-border rounded-lg px-3 py-1.5 font-medium hover:bg-brand-accent hover:text-black hover:border-brand-accent hover:shadow-md transition-all">{s}</button>
                 ))}
               </div>
             )}
@@ -279,7 +279,7 @@ export function RedactorSection({ prefill }: Props) {
           <div>
             <label className="label block mb-2">
               {mode === 'revise' ? 'Texto a mejorar *' : 'Contexto / Extracto'}
-              <span className="text-[#9b9a97] ml-1 font-normal normal-case tracking-normal">{mode === 'revise' ? '— pega el texto original' : '— opcional'}</span>
+              <span className="text-brand-secondary ml-1 font-normal normal-case tracking-normal">{mode === 'revise' ? '— pega el texto original' : '— opcional'}</span>
             </label>
             <textarea 
               value={extract} 
@@ -291,7 +291,7 @@ export function RedactorSection({ prefill }: Props) {
           </div>
 
           {/* Options */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-stone-50 p-4 rounded-xl border border-stone-200/60">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-brand-surface/30 p-4 rounded-xl border border-brand-border">
             <div>
               <label className="label block mb-2">Extensión</label>
               <select value={length} onChange={e => setLength(e.target.value)} className="input">
@@ -344,12 +344,12 @@ export function RedactorSection({ prefill }: Props) {
             </button>
           )}
           {mode === 'revise' && (
-            <button className="btn btn-primary w-full py-3 text-sm" onClick={handleRevise} disabled={generating} style={{ background: '#4f46e5', borderColor: '#4f46e5' }}>
+            <button className="btn btn-primary w-full py-3 text-sm" onClick={handleRevise} disabled={generating}>
               {generating ? '⏳ Revisando...' : '🔄 Mejorar texto'}
             </button>
           )}
           {mode === 'compare' && (
-            <button className="btn btn-primary w-full py-3 text-sm" onClick={generateCompare} disabled={generating} style={{ background: '#e11d48', borderColor: '#e11d48' }}>
+            <button className="btn btn-primary w-full py-3 text-sm" onClick={generateCompare} disabled={generating}>
               {generating ? '⏳ Generando...' : '⚖️ Generar y comparar'}
             </button>
           )}
@@ -359,8 +359,8 @@ export function RedactorSection({ prefill }: Props) {
       {/* Results */}
       {mode === 'compare' && (results.length > 0 || results2.length > 0) ? (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <div className="space-y-2"><div className="text-xs font-bold text-[#9b9a97] uppercase tracking-widest pl-1">Versión A</div><ResultTabs results={results} topic={topic} /></div>
-          <div className="space-y-2"><div className="text-xs font-bold text-[#9b9a97] uppercase tracking-widest pl-1">Versión B</div><ResultTabs results={results2} topic={topic} /></div>
+          <div className="space-y-2"><div className="text-xs font-bold text-brand-secondary uppercase tracking-widest pl-1">Versión A</div><ResultTabs results={results} topic={topic} /></div>
+          <div className="space-y-2"><div className="text-xs font-bold text-brand-secondary uppercase tracking-widest pl-1">Versión B</div><ResultTabs results={results2} topic={topic} /></div>
         </div>
       ) : results.length > 0 ? (
         <ResultTabs results={results} topic={topic} />

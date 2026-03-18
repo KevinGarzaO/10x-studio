@@ -201,8 +201,8 @@ export function SettingsSection() {
 
   const itemTemplate = (option: any) => (
     <div className="flex items-center gap-2">
-      <i className={`pi ${option.icon} text-stone-500`}></i>
-      <span>{option.label}</span>
+      <i className={`pi ${option.icon} text-brand-secondary`}></i>
+      <span className="font-medium">{option.label}</span>
     </div>
   )
 
@@ -217,54 +217,54 @@ export function SettingsSection() {
 
   return (
     <div className="max-w-4xl mx-auto pb-20">
-      <div className="mb-8 border-b border-[#e9e9e7] pb-4">
-        <h1 className="text-[28px] font-bold tracking-tight text-black flex items-center gap-3">
-          <i className="pi pi-cog text-[#9b9a97]"></i> Configuración del Workspace
+      <div className="mb-8 border-b border-brand-border pb-4">
+        <h1 className="text-[28px] font-bold tracking-tight text-brand-primary flex items-center gap-3">
+          <i className="pi pi-cog text-brand-secondary"></i> Configuración del Workspace
         </h1>
-        <p className="text-sm text-[#9b9a97] mt-1">
+        <p className="text-sm text-brand-secondary mt-1 leading-relaxed">
           Gestiona tus claves de API y preferencias de Inteligencia Artificial
         </p>
       </div>
 
       <div className="grid gap-8">
         {/* IA de Texto */}
-        <section className="bg-white border border-[#e9e9e7] rounded-2xl overflow-hidden shadow-sm">
-          <div className="bg-[#1a1a1a] border-b border-[#2e2e2e] px-6 py-4 flex items-center gap-3">
-            <i className="pi pi-align-left text-white/70"></i>
-            <h2 className="text-sm font-semibold text-white uppercase tracking-wide">Modelo de Texto Principal</h2>
+        <section className="bg-brand-surface border border-brand-border rounded-2xl overflow-hidden shadow-[var(--shadow)]">
+          <div className="bg-brand-bg/50 border-b border-brand-border px-6 py-4 flex items-center gap-3">
+            <i className="pi pi-align-left text-brand-secondary"></i>
+            <h2 className="text-sm font-bold text-brand-primary uppercase tracking-wide">Modelo de Texto Principal</h2>
           </div>
           <div className="p-6">
             <div className="grid gap-6">
               
               <div className="flex flex-col md:flex-row gap-6">
                 <div className="flex flex-col gap-2 flex-1">
-                  <label className="text-xs font-bold text-stone-500 uppercase tracking-widest">Proveedor de IA</label>
+                  <label className="text-xs font-black text-brand-secondary uppercase tracking-widest">Proveedor de IA</label>
                   <Dropdown 
                     value={localSettings.textModel} 
                     options={TEXT_MODELS} 
                     onChange={(e) => changeTextModel(e.value)} 
                     itemTemplate={itemTemplate}
                     valueTemplate={itemTemplate}
-                    className="w-full input text-sm" 
+                    className="w-full input text-sm !bg-brand-bg" 
                   />
-                  <p className="text-xs text-stone-400 mt-1">Este modelo se usará para el Redactor IA y la generación de ideas.</p>
+                  <p className="text-xs text-brand-secondary mt-1.5 leading-relaxed">Este modelo se usará para el Redactor IA y la generación de ideas.</p>
                 </div>
 
                 <div className="flex flex-col gap-2 flex-1">
-                  <label className="text-xs font-bold text-stone-500 uppercase tracking-widest">Versión del Modelo</label>
+                  <label className="text-xs font-black text-brand-secondary uppercase tracking-widest">Versión del Modelo</label>
                   <Dropdown 
                     value={currentTextVersion} 
                     options={activeTextVersions} 
                     onChange={(e) => updateVersion(localSettings.textModel, e.value)} 
-                    className="w-full input text-sm" 
+                    className="w-full input text-sm !bg-brand-bg" 
                     placeholder="Selecciona versión..."
                   />
-                  <p className="text-xs text-stone-400 mt-1">Selecciona la versión específica que deseas usar.</p>
+                  <p className="text-xs text-brand-secondary mt-1.5 leading-relaxed">Selecciona la versión específica que deseas usar.</p>
                 </div>
               </div>
 
-              <div className="flex flex-col gap-2 border-t border-[#f0f0f0] pt-6">
-                <label className="text-xs font-bold text-stone-500 uppercase tracking-widest">{txtProv.label}</label>
+              <div className="flex flex-col gap-2 border-t border-brand-border pt-6">
+                <label className="text-xs font-black text-brand-secondary uppercase tracking-widest">{txtProv.label}</label>
                 <Password
                   value={localSettings.apiKeys[localSettings.textModel as keyof typeof localSettings.apiKeys] || ''}
                   onChange={(e: any) => updateKey(localSettings.textModel, e.target.value)}
@@ -272,10 +272,10 @@ export function SettingsSection() {
                   placeholder={txtProv.ph}
                   feedback={false}
                   toggleMask
-                  inputClassName="input w-full md:w-[600px] font-mono text-sm"
+                  inputClassName="input w-full md:w-[600px] font-mono text-sm !bg-brand-bg"
                 />
                 {txtProv.url && (
-                  <a href={txtProv.url} target="_blank" rel="noreferrer" className="text-xs text-blue-500 hover:underline flex items-center gap-1 mt-1 w-fit">
+                  <a href={txtProv.url} target="_blank" rel="noreferrer" className="text-xs text-brand-accent font-bold hover:brightness-110 flex items-center gap-1.5 mt-2 w-fit underline transition-all">
                     Obtener API Key <i className="pi pi-external-link text-[10px]"></i>
                   </a>
                 )}
@@ -286,43 +286,43 @@ export function SettingsSection() {
         </section>
 
         {/* IA de Imagenes */}
-        <section className="bg-white border border-[#e9e9e7] rounded-2xl overflow-hidden shadow-sm">
-          <div className="bg-[#1a1a1a] border-b border-[#2e2e2e] px-6 py-4 flex items-center gap-3">
-            <i className="pi pi-image text-white/70"></i>
-            <h2 className="text-sm font-semibold text-white uppercase tracking-wide">Modelo de Imágenes Generativas</h2>
+        <section className="bg-brand-surface border border-brand-border rounded-2xl overflow-hidden shadow-[var(--shadow)]">
+          <div className="bg-brand-bg/50 border-b border-brand-border px-6 py-4 flex items-center gap-3">
+            <i className="pi pi-image text-brand-secondary"></i>
+            <h2 className="text-sm font-bold text-brand-primary uppercase tracking-wide">Modelo de Imágenes Generativas</h2>
           </div>
           <div className="p-6">
             <div className="grid gap-6">
               
               <div className="flex flex-col md:flex-row gap-6">
                 <div className="flex flex-col gap-2 flex-1">
-                  <label className="text-xs font-bold text-stone-500 uppercase tracking-widest">Proveedor de Imágenes</label>
+                  <label className="text-xs font-black text-brand-secondary uppercase tracking-widest">Proveedor de Imágenes</label>
                   <Dropdown 
                     value={localSettings.imgModel} 
                     options={IMG_MODELS} 
                     onChange={(e) => changeImgModel(e.value)} 
                     itemTemplate={itemTemplate}
                     valueTemplate={itemTemplate}
-                    className="w-full input text-sm" 
+                    className="w-full input text-sm !bg-brand-bg" 
                   />
-                  <p className="text-xs text-stone-400 mt-1">Este modelo se usará para generar portadas y miniaturas automáticas.</p>
+                  <p className="text-xs text-brand-secondary mt-1.5 leading-relaxed">Este modelo se usará para generar portadas y miniaturas automáticas.</p>
                 </div>
 
                 <div className="flex flex-col gap-2 flex-1">
-                  <label className="text-xs font-bold text-stone-500 uppercase tracking-widest">Versión del Modelo</label>
+                  <label className="text-xs font-black text-brand-secondary uppercase tracking-widest">Versión del Modelo</label>
                   <Dropdown 
                     value={currentImgVersion} 
                     options={activeImgVersions} 
                     onChange={(e) => updateVersion(localSettings.imgModel, e.value)} 
-                    className="w-full input text-sm" 
+                    className="w-full input text-sm !bg-brand-bg" 
                     placeholder="Selecciona versión..."
                   />
-                  <p className="text-xs text-stone-400 mt-1">Selecciona la versión específica que deseas usar.</p>
+                  <p className="text-xs text-brand-secondary mt-1.5 leading-relaxed">Selecciona la versión específica que deseas usar.</p>
                 </div>
               </div>
 
-              <div className="flex flex-col gap-2 border-t border-[#f0f0f0] pt-6">
-                <label className="text-xs font-bold text-stone-500 uppercase tracking-widest">{imgProv.label}</label>
+              <div className="flex flex-col gap-2 border-t border-brand-border pt-6">
+                <label className="text-xs font-black text-brand-secondary uppercase tracking-widest">{imgProv.label}</label>
                 <Password
                   value={localSettings.apiKeys[localSettings.imgModel as keyof typeof localSettings.apiKeys] || ''}
                   onChange={(e: any) => updateKey(localSettings.imgModel, e.target.value)}
@@ -330,10 +330,10 @@ export function SettingsSection() {
                   placeholder={imgProv.ph}
                   feedback={false}
                   toggleMask
-                  inputClassName="input w-full md:w-[600px] font-mono text-sm"
+                  inputClassName="input w-full md:w-[600px] font-mono text-sm !bg-brand-bg"
                 />
                 {imgProv.url && (
-                  <a href={imgProv.url} target="_blank" rel="noreferrer" className="text-xs text-blue-500 hover:underline flex items-center gap-1 mt-1 w-fit">
+                  <a href={imgProv.url} target="_blank" rel="noreferrer" className="text-xs text-brand-accent font-bold hover:brightness-110 flex items-center gap-1.5 mt-2 w-fit underline transition-all">
                     Obtener API Key <i className="pi pi-external-link text-[10px]"></i>
                   </a>
                 )}

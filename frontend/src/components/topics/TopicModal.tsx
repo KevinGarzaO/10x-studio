@@ -39,9 +39,9 @@ export function TopicModal({ open, topic, campaigns, onClose, onSave }: Props) {
   }
 
   return (
-    <div className="fixed inset-0 bg-[#191919]/40 z-50 flex items-center justify-center p-4" onClick={e => e.target === e.currentTarget && onClose()}>
-      <div className="bg-white rounded-lg p-6 w-full max-w-md shadow-2xl">
-        <h2 className="text-xl font-bold mb-5">{topic ? 'Editar tema' : 'Agregar tema'}</h2>
+    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4" onClick={e => e.target === e.currentTarget && onClose()}>
+      <div className="bg-brand-surface border border-brand-border rounded-2xl p-6 w-full max-w-md shadow-[var(--shadow)]">
+        <h2 className="text-xl font-bold mb-5 text-brand-primary">{topic ? 'Editar tema' : 'Agregar tema'}</h2>
         <div className="space-y-4">
           <div><label className="label block mb-1.5">Título *</label>
             <input value={title} onChange={e => setTitle(e.target.value)} className="input" placeholder="Ej: Cómo usar la IA para crear contenido" autoFocus /></div>
@@ -74,7 +74,7 @@ export function TopicModal({ open, topic, campaigns, onClose, onSave }: Props) {
             <textarea value={notes} onChange={e => setNotes(e.target.value)} className="input resize-none h-20" placeholder="Ideas, ángulos, referencias..." /></div>
         </div>
         <div className="flex justify-end gap-2 mt-6">
-          <button className="btn btn-secondary" onClick={onClose}>Cancelar</button>
+          <button className="btn btn-ghost" onClick={onClose}>Cancelar</button>
           <button className="btn btn-primary" onClick={handleSave}>Guardar</button>
         </div>
       </div>

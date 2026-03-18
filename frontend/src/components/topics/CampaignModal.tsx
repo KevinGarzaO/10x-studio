@@ -24,9 +24,9 @@ export function CampaignModal({ open, campaign, onClose, onSave, onDelete }: Pro
   if (!open) return null
 
   return (
-    <div className="fixed inset-0 bg-[#191919]/40 z-50 flex items-center justify-center p-4" onClick={e => e.target === e.currentTarget && onClose()}>
-      <div className="bg-white rounded-lg p-6 w-full max-w-sm shadow-2xl">
-        <h2 className="text-xl font-bold mb-5">{campaign ? 'Editar campaña' : 'Nueva campaña'}</h2>
+    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4" onClick={e => e.target === e.currentTarget && onClose()}>
+      <div className="bg-brand-surface border border-brand-border rounded-2xl p-6 w-full max-w-sm shadow-[var(--shadow)]">
+        <h2 className="text-xl font-bold mb-5 text-brand-primary">{campaign ? 'Editar campaña' : 'Nueva campaña'}</h2>
         <div className="space-y-4">
           <div><label className="label block mb-1.5">Nombre *</label>
             <input value={name} onChange={e => setName(e.target.value)} className="input" placeholder="Ej: Lanzamiento Q1, Serie IA..." autoFocus /></div>
@@ -37,7 +37,7 @@ export function CampaignModal({ open, campaign, onClose, onSave, onDelete }: Pro
             <div className="flex gap-2 flex-wrap">
               {CAMPAIGN_COLORS.map(c => (
                 <button key={c} onClick={() => setColor(c)}
-                  className={`w-7 h-7 rounded-full border-2 transition-all ${color === c ? 'border-[#191919] scale-110' : 'border-transparent'}`}
+                  className={`w-7 h-7 rounded-full border-2 transition-all ${color === c ? 'border-brand-primary scale-110' : 'border-transparent'}`}
                   style={{ background: c }} />
               ))}
             </div>
@@ -46,7 +46,7 @@ export function CampaignModal({ open, campaign, onClose, onSave, onDelete }: Pro
         <div className="flex items-center justify-between mt-6">
           {onDelete ? <button className="btn btn-danger btn-sm" onClick={onDelete}>🗑️ Eliminar</button> : <div />}
           <div className="flex gap-2">
-            <button className="btn btn-secondary" onClick={onClose}>Cancelar</button>
+            <button className="btn btn-ghost" onClick={onClose}>Cancelar</button>
             <button className="btn btn-primary" onClick={() => { if (!name.trim()) return; onSave({ name, color, description: desc }) }}>Guardar</button>
           </div>
         </div>

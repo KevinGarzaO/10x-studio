@@ -37,9 +37,9 @@ function TemplateModal({ template, onClose, onSave }: {
   }
 
   return (
-    <div className="fixed inset-0 bg-[#191919]/40 z-50 flex items-center justify-center p-4" onClick={e => e.target === e.currentTarget && onClose()}>
-      <div className="bg-white rounded-lg p-6 w-full max-w-2xl shadow-2xl max-h-[90vh] overflow-y-auto">
-        <h2 className="text-xl font-bold mb-5">{template ? 'Editar plantilla' : 'Nueva plantilla'}</h2>
+    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 transition-all duration-300" onClick={e => e.target === e.currentTarget && onClose()}>
+      <div className="bg-brand-surface border border-brand-border rounded-2xl p-6 w-full max-w-2xl shadow-[var(--shadow)] max-h-[90vh] overflow-y-auto">
+        <h2 className="text-xl font-bold mb-5 text-brand-primary">{template ? 'Editar plantilla' : 'Nueva plantilla'}</h2>
         <div className="space-y-4">
           <div className="grid grid-cols-2 gap-4">
             <div>
@@ -58,11 +58,11 @@ function TemplateModal({ template, onClose, onSave }: {
             <input value={description} onChange={e => setDesc(e.target.value)} className="input" placeholder="Para qué sirve esta plantilla..." />
           </div>
           <div>
-            <label className="label block mb-1.5">
+            <label className="label block mb-1.5 text-brand-primary">
               Prompt personalizado
-              <span className="ml-2 text-black font-normal normal-case tracking-normal">— usa variables: {'{{topic}}'} {'{{tone}}'} {'{{length}}'} {'{{extract}}'} {'{{audience}}'} {'{{keywords}}'}</span>
+              <span className="ml-2 text-brand-secondary font-normal normal-case tracking-normal">— usa variables: {'{{topic}}'} {'{{tone}}'} {'{{length}}'} {'{{extract}}'} {'{{audience}}'} {'{{keywords}}'}</span>
             </label>
-            <textarea value={prompt} onChange={e => setPrompt(e.target.value)} rows={10} className="input resize-none font-mono text-xs" />
+            <textarea value={prompt} onChange={e => setPrompt(e.target.value)} rows={10} className="input resize-none font-mono text-xs bg-brand-bg/50" />
           </div>
         </div>
         <div className="flex justify-end gap-2 mt-6">
@@ -92,12 +92,12 @@ export function TemplatesSection() {
 
   return (
     <div className="max-w-4xl mx-auto pb-20">
-      <div className="flex items-end justify-between mb-8 flex-wrap gap-3 border-b border-[#e9e9e7] pb-4">
+      <div className="flex items-end justify-between mb-8 flex-wrap gap-3 border-b border-brand-border pb-4">
         <div>
-          <h1 className="text-[28px] font-bold tracking-tight text-black flex items-center gap-3">
-            <i className="pi pi-th-large text-[#9b9a97]"></i> Plantillas de Prompts
+          <h1 className="text-[28px] font-bold tracking-tight text-brand-primary flex items-center gap-3">
+            <i className="pi pi-th-large text-brand-secondary"></i> Plantillas de Prompts
           </h1>
-          <p className="text-sm text-[#9b9a97] mt-1">Personaliza cómo la IA genera cada tipo de contenido</p>
+          <p className="text-sm text-brand-secondary mt-1">Personaliza cómo la IA genera cada tipo de contenido</p>
         </div>
         <button className="btn btn-primary" onClick={() => { setEditing(null); setModalOpen(true) }}>+ Nueva plantilla</button>
       </div>
@@ -106,43 +106,46 @@ export function TemplatesSection() {
       <div className="flex gap-1.5 mb-6 flex-wrap">
         {(['all', ...ALL_PLATFORMS] as const).map(p => (
           <button key={p} onClick={() => setFilterPlat(p)}
-            className={`px-3 py-1 rounded-full text-xs font-medium border transition-all ${filterPlat === p ? 'border-black text-black bg-black/[0.06]' : 'border-[#e9e9e7] text-[#9b9a97] hover:border-[#e9e9e7]'}`}>
+            className={`px-3 py-1 rounded-full text-xs font-bold border transition-all ${filterPlat === p ? 'border-brand-accent text-[#1A1A1A] bg-brand-accent shadow-sm' : 'border-brand-border text-brand-secondary hover:border-brand-accent hover:text-brand-primary'}`}>
             {p === 'all' ? 'Todas' : `${PLATFORMS[p].icon} ${PLATFORMS[p].label}`}
           </button>
         ))}
       </div>
 
       {/* How-to callout */}
-      <div className="bg-[#f7f7f5] border border-[#e9e9e7] rounded-lg p-4 mb-6 text-sm text-[#9b9a97]">
-        <strong className="text-black">¿Cómo funciona?</strong> Crea una plantilla con un prompt personalizado. Al generar en el Redactor, podrás elegirla como base en lugar del prompt estándar. Usa <code className="bg-white px-1 rounded text-xs">{'{{topic}}'}</code>, <code className="bg-white px-1 rounded text-xs">{'{{tone}}'}</code>, <code className="bg-white px-1 rounded text-xs">{'{{extract}}'}</code> para insertar los valores del formulario.
+      <div className="bg-brand-surface border border-brand-border rounded-xl p-4 mb-6 text-sm text-brand-secondary shadow-sm">
+        <strong className="text-brand-primary font-bold">¿Cómo funciona?</strong> Crea una plantilla con un prompt personalizado. Al generar en el Redactor, podrás elegirla como base en lugar del prompt estándar. Usa <code className="bg-brand-bg px-1.5 py-0.5 rounded text-[10px] font-mono border border-brand-border text-brand-accent">{'{{topic}}'}</code>, <code className="bg-brand-bg px-1.5 py-0.5 rounded text-[10px] font-mono border border-brand-border text-brand-accent">{'{{tone}}'}</code>, <code className="bg-brand-bg px-1.5 py-0.5 rounded text-[10px] font-mono border border-brand-border text-brand-accent">{'{{extract}}'}</code> para insertar los valores del formulario.
       </div>
 
       {filtered.length === 0 ? (
-        <div className="text-center py-16 text-[#9b9a97]">
-          <div className="text-4xl mb-3">🗂️</div>
-          <p className="mb-4">No hay plantillas aún. ¡Crea una para personalizar tu estilo!</p>
+        <div className="text-center py-20 text-brand-secondary bg-brand-surface rounded-2xl border border-dotted border-brand-border">
+          <div className="text-5xl mb-4 opacity-20">🗂️</div>
+          <p className="mb-6 font-medium">No hay plantillas aún. ¡Crea una para personalizar tu estilo!</p>
           <button className="btn btn-primary" onClick={() => setModalOpen(true)}>+ Nueva plantilla</button>
         </div>
       ) : (
         <div className="grid grid-cols-2 gap-4">
           {filtered.map(t => (
-            <div key={t.id} className="bg-white/80 backdrop-blur-xl border border-stone-200/80 shadow-[0_4px_20px_rgb(0,0,0,0.04)] rounded-2xl p-5 group hover:-translate-y-1 hover:shadow-lg hover:border-stone-300 transition-all duration-300">
-              <div className="flex items-start justify-between mb-2">
-                <div>
-                  <span className="text-base mr-1">{PLATFORMS[t.platform].icon}</span>
-                  <span className="font-semibold text-sm">{t.name}</span>
+            <div key={t.id} className="bg-brand-surface border border-brand-border shadow-[var(--shadow)] rounded-2xl p-5 group hover:-translate-y-1 hover:border-brand-accent transition-all duration-300">
+              <div className="flex items-start justify-between mb-3">
+                <div className="flex items-center gap-2">
+                  <span className="text-xl p-2 bg-brand-bg rounded-lg border border-brand-border">{PLATFORMS[t.platform].icon}</span>
+                  <span className="font-bold text-sm text-brand-primary">{t.name}</span>
                 </div>
-                <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                  <button className="btn btn-secondary btn-sm" onClick={() => { setEditing(t); setModalOpen(true) }}>✏️</button>
-                  <button className="btn btn-danger btn-sm" onClick={() => deleteTemplate(t.id)}>🗑️</button>
+                <div className="flex gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                  <button className="btn btn-secondary btn-sm !px-2" onClick={() => { setEditing(t); setModalOpen(true) }}>✏️</button>
+                  <button className="btn btn-danger btn-sm !px-2" onClick={() => deleteTemplate(t.id)}>🗑️</button>
                 </div>
               </div>
-              <div className="text-xs text-[#9b9a97] mb-3">{t.description || 'Sin descripción'}</div>
-              <div className="bg-[#f7f7f5] rounded-xl p-3 font-mono text-[10px] text-[#9b9a97] max-h-24 overflow-hidden relative border border-[#e9e9e7]/50">
+              <div className="text-xs text-brand-secondary mb-4 line-clamp-1 italic">{t.description || 'Sin descripción'}</div>
+              <div className="bg-brand-bg rounded-xl p-3 font-mono text-[10px] text-brand-secondary/80 max-h-24 overflow-hidden relative border border-brand-border">
                 {t.systemPrompt.slice(0, 200)}…
-                <div className="absolute inset-x-0 bottom-0 h-8 bg-gradient-to-t from-[#f7f7f5]" />
+                <div className="absolute inset-x-0 bottom-0 h-8 bg-gradient-to-t from-brand-bg" />
               </div>
-              <div className="mt-2 text-[10px] text-[#9b9a97]">{PLATFORMS[t.platform].label} · creada {t.created}</div>
+              <div className="mt-4 flex items-center justify-between text-[9px] font-bold text-brand-secondary uppercase tracking-widest">
+                <span>{PLATFORMS[t.platform].label}</span>
+                <span>{t.created}</span>
+              </div>
             </div>
           ))}
         </div>
