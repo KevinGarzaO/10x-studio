@@ -49,14 +49,6 @@ export const SubscribeWidget = TipTapNode.create({
       ['button', { class: 'bg-[#6b21a8] text-white px-6 py-2 rounded-full font-semibold pointer-events-none' }, 'Suscribirse']
     ]
   },
-
-  addCommands() {
-    return {
-      insertSubscribeWidget: () => ({ commands }: any) => {
-        return commands.insertContent({ type: this.name })
-      },
-    }
-  },
 })
 
 type PublishType = 'article'
@@ -519,7 +511,8 @@ export function SubstackPublish() {
                     key={b} 
                     onClick={() => {
                       if (b === 'Suscribirse con leyenda') {
-                        runCommand(() => (editor?.chain() as any).insertSubscribeWidget().run())
+                        editor?.commands.insertContent({ type: 'subscribe_widget' })
+                        editor?.commands.focus()
                       }
                       setActiveDropdown(null)
                     }} 
