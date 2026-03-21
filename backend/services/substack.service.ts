@@ -1,21 +1,31 @@
 import { supabase } from './supabase.service'
 import fetch from 'node-fetch'
+import { HttpsProxyAgent } from 'https-proxy-agent'
 
 export class SubstackService {
   static async getCookieHeader(userId: string): Promise<string> {
+    console.log(`[getCookieHeader] Buscando cookies para user_id: ${userId}`)
     const { data: cookies } = await supabase
       .from('cookies')
-      .select('substack_sid, substack_lli, visit_id')
+      .select('substack_sid, substack_lli, visit_id, cf_clearance, cf_bm, ab_testing_id, cookie_storage_key')
       .eq('user_id', userId)
       .single()
 
-    if (!cookies) return ''
+    if (!cookies) {
+      console.warn('[getCookieHeader] No se encontraron cookies en la tabla.')
+      return ''
+    }
 
     const parts = []
     if (cookies.substack_sid) parts.push(`substack.sid=${cookies.substack_sid}`)
     if (cookies.substack_lli) parts.push(`substack.lli=${cookies.substack_lli}`)
     if (cookies.visit_id) parts.push(`visit_id=${cookies.visit_id}`)
+    if (cookies.cf_clearance) parts.push(`cf_clearance=${cookies.cf_clearance}`)
+    if (cookies.cf_bm) parts.push(`__cf_bm=${cookies.cf_bm}`)
+    if (cookies.ab_testing_id) parts.push(`ab_testing_id=${cookies.ab_testing_id}`)
+    if (cookies.cookie_storage_key) parts.push(`cookie_storage_key=${cookies.cookie_storage_key}`)
 
+    console.log(`[getCookieHeader] Cookies construidas con ${parts.length} variables. Nombres:`, Object.keys(cookies).filter(k => cookies[k as keyof typeof cookies]))
     return parts.join('; ')
   }
 
@@ -23,9 +33,17 @@ export class SubstackService {
     return {
       'Cookie': cookie,
       'Content-Type': 'application/json',
+      'Accept': 'application/json',
+      'Accept-Language': 'es-MX,es;q=0.9,en;q=0.8',
       'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
       'Origin': origin,
-      'Referer': `${origin}/`
+      'Referer': `${origin}/`,
+      'sec-ch-ua': '"Not_A Brand";v="8", "Chromium";v="120"',
+      'sec-ch-ua-mobile': '?0',
+      'sec-ch-ua-platform': '"Windows"',
+      'sec-fetch-dest': 'empty',
+      'sec-fetch-mode': 'cors',
+      'sec-fetch-site': 'same-origin'
     }
   }
 
@@ -246,27 +264,6 @@ const resolvedUserId = updatedUser?.id || userId
     return allSubscribers.length
   }
 
-  static async publishNote(userId: string, content: string) {
-    const cookie = await this.getCookieHeader(userId)
-    const { data: user } = await supabase.from('users').select('subdomain').eq('id', userId).single()
-    const subdomain = user?.subdomain || 'transformateck'
-    const headers = this.getHeaders(cookie, `https://${subdomain}.substack.com`)
-
-    const bodyJson = {
-      type: "doc",
-      attrs: { schemaVersion: "v1" },
-      content: [{ type: "paragraph", content: [{ type: "text", text: content }] }]
-    }
-
-    const res = await fetch(`https://${subdomain}.substack.com/api/v1/comment/feed`, {
-      method: 'POST',
-      headers,
-      body: JSON.stringify({ bodyJson, replyMinimumRole: "everyone" }),
-    })
-    
-    if (!res.ok) throw new Error(`Substack API error: ${res.status}`)
-    return await res.json()
-  }
 
   static async createDraft(userId: string, params: any) {
     const cookie = await this.getCookieHeader(userId)
@@ -283,7 +280,7 @@ const resolvedUserId = updatedUser?.id || userId
       body: JSON.stringify({
         draft_title: '',
         draft_subtitle: '',
-        draft_body: JSON.stringify({ type: 'doc', content: [{ type: 'paragraph' }] }),
+        draft_body: JSON.stringify({ type: 'doc', content: [{ type: 'paragraph', attrs: { textAlign: null } }] }),
         draft_bylines: [{ id: bylineId, is_guest: false }],
         audience: 'everyone',
         type: 'newsletter',
@@ -302,6 +299,19 @@ const resolvedUserId = updatedUser?.id || userId
     
     const subdomain = user.subdomain
     const headers = this.getHeaders(cookie, `https://${subdomain}.substack.com`)
+
+    if (params.draft_body) {
+      try {
+        let astObj = typeof params.draft_body === 'string' ? JSON.parse(params.draft_body) : params.draft_body;
+        astObj = this.injectSubstackSchema(astObj);
+        params.draft_body = JSON.stringify(astObj); // Must be explicitly encoded as a string for Substack PUT payload
+      } catch (e) {
+        console.error('[Substack] Error injectSubstackSchema in updateDraft', e);
+      }
+    }
+    
+    // Explicitly inject required schema fields for strict update parsing
+    params.draft_bylines = [{ id: Number(user.substack_user_id), is_guest: false }];
 
     const res = await fetch(`https://${subdomain}.substack.com/api/v1/drafts/${draftId}`, {
       method: 'PUT',
@@ -353,51 +363,142 @@ const resolvedUserId = updatedUser?.id || userId
     return await res.json()
   }
 
-  static mdToProseMirror(md: string): any[] {
-    const nodes: any[] = []
-    for (const line of md.split('\n')) {
-      const clean = line
-        .replace(/\*\*(.+?)\*\*/g, '$1')
-        .replace(/\*(.+?)\*/g, '$1')
-        .replace(/`(.+?)`/g, '$1')
-      if (!line.trim()) {
-        nodes.push({ type: 'paragraph', attrs: { textAlign: null } })
-      } else if (line.startsWith('# ')) {
-        nodes.push({ type: 'heading', attrs: { level: 1, id: null }, content: [{ type: 'text', text: line.replace(/^# /, '') }] })
-      } else if (line.startsWith('## ')) {
-        nodes.push({ type: 'heading', attrs: { level: 2, id: null }, content: [{ type: 'text', text: line.replace(/^## /, '') }] })
-      } else if (line.startsWith('### ')) {
-        nodes.push({ type: 'heading', attrs: { level: 3, id: null }, content: [{ type: 'text', text: line.replace(/^### /, '') }] })
-      } else if (line.startsWith('- ') || line.startsWith('* ')) {
-        nodes.push({
-          type: 'bullet_list',
-          content: [{
-            type: 'list_item',
-            content: [{
-              type: 'paragraph',
-              attrs: { textAlign: null },
-              content: [{ type: 'text', text: clean.replace(/^[-*] /, '') }],
-            }],
-          }],
-        })
-      } else {
-        nodes.push({ type: 'paragraph', attrs: { textAlign: null }, content: [{ type: 'text', text: clean }] })
-      }
-    }
-    return nodes
+  static async uploadImage(userId: string, imageBase64: string, postId: string) {
+    const cookie = await this.getCookieHeader(userId)
+    const { data: user } = await supabase.from('users').select('subdomain').eq('id', userId).single()
+    if (!user) throw new Error('User not found')
+    
+    const subdomain = user.subdomain
+    const headers = this.getHeaders(cookie, `https://${subdomain}.substack.com`)
+
+    const res = await fetch(`https://${subdomain}.substack.com/api/v1/image`, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify({ image: imageBase64, postId: Number(postId) }),
+    })
+    
+    if (!res.ok) throw new Error(`Substack API error: ${res.status}`)
+    return await res.json()
   }
 
-  static async publishArticle(userId: string, title: string, content: string, subtitle = '', scheduleAt: string | null = null) {
-    // 1. Create Draft
-    const draft = await this.createDraft(userId, {
+  static injectSubstackSchema(node: any): any {
+    if (!node) return node;
+    
+    // Substack's strict ProseMirror schema enforces `textAlign: null` explicitly on headings/paragraphs without a default fallback. 
+    // TipTap natively drops null attributes, which causes Substack's parser to throw Schema Validation exceptions and fallback to string wrappers.
+    if (node.type === 'paragraph' || node.type === 'heading') {
+      if (!node.attrs) {
+        node.attrs = {};
+      }
+      if (node.attrs.textAlign === undefined) {
+        node.attrs.textAlign = null;
+      }
+    }
+
+    if (node.type === 'image') {
+      // Map standard TipTap image to Substack captionedImage schema
+      return {
+        type: 'captionedImage',
+        content: [
+          {
+            type: 'image2',
+            attrs: {
+              src: node.attrs?.src || '',
+              height: node.attrs?.height || null,
+              width: node.attrs?.width || null,
+              bytes: node.attrs?.bytes || null,
+              type: node.attrs?.fileType || 'image/png'
+            }
+          }
+        ]
+      }
+    }
+
+    if (node.type === 'image') {
+      // Map standard TipTap image to Substack captionedImage schema
+      return {
+        type: 'captionedImage',
+        content: [
+          {
+            type: 'image2',
+            attrs: {
+              src: node.attrs?.src || '',
+              height: node.attrs?.height || null,
+              width: node.attrs?.width || null,
+              bytes: node.attrs?.bytes || null,
+              type: node.attrs?.fileType || 'image/png',
+              srcNoWatermark: null,
+              fullscreen: null,
+              imageSize: null,
+              resizeWidth: null,
+              alt: null,
+              title: null,
+              href: null,
+              belowTheFold: false,
+              topImage: false,
+              isProcessing: false,
+              align: null,
+              offset: false
+            }
+          }
+        ]
+      }
+    }
+
+    if (node.type === 'subscribe_widget') {
+      return {
+        type: 'subscribeWidget',
+        attrs: {
+          url: "%%checkout_url%%",
+          text: "Suscribirse",
+          language: "es"
+        },
+        content: [
+          {
+            type: 'ctaCaption',
+            content: [
+              {
+                type: 'text',
+                text: "¡Gracias por leer Transformateck! Suscríbete gratis para recibir nuevas publicaciones y apoyar mi trabajo."
+              }
+            ]
+          }
+        ]
+      }
+    }
+
+
+    if (node.content && Array.isArray(node.content)) {
+      node.content = node.content.map((child: any) => this.injectSubstackSchema(child));
+    }
+
+    return node;
+  }
+
+  static async publishArticle(userId: string, title: string, content: string, subtitle = '', scheduleAt: string | null = null, draftId?: string) {
+    // 1. Create Empty Draft with strictly compliant default schema if not pre-initialized
+    if (!draftId) {
+      const draft = await this.createDraft(userId, {
+        draft_title: title.trim(),
+        draft_subtitle: subtitle.trim(),
+      })
+      draftId = String(draft.id)
+    }
+
+    // 2. Put explicitly modeled ProseMirror JSON string over native editor Autosave endpoint
+    await this.updateDraft(userId, String(draftId), {
       draft_title: title.trim(),
       draft_subtitle: subtitle.trim(),
-      draft_body: JSON.stringify({ type: 'doc', content: this.mdToProseMirror(content) })
+      draft_podcast_url: null,
+      draft_podcast_duration: null,
+      draft_body: content,
+      section_chosen: false,
+      draft_section_id: null,
+      audience: 'everyone',
+      type: 'newsletter'
     })
 
-    const draftId = draft.id
-
-    // 2. Schedule
+    // 3. Schedule
     const triggerAt = scheduleAt
       ? new Date(scheduleAt).toISOString()
       : new Date(Date.now() + 10_000).toISOString()

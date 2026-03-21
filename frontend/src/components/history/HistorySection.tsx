@@ -22,12 +22,12 @@ export function HistorySection({ onRewrite }: { onRewrite: (topic: string) => vo
       return matchQ && matchF
     })
 
-  async function publishToSubstack(type: 'note' | 'article', content: string, title: string) {
+  async function publishToSubstack(content: string, title: string) {
     setPubState({ id: pubModal!.id, status: 'publishing' })
     try {
       await api('/api/substack/publish', {
         method: 'POST',
-        body: JSON.stringify({ type, content, title, scheduleAt: null }),
+        body: JSON.stringify({ type: 'article', content, title, scheduleAt: null }),
       })
       setPubState({ id: pubModal!.id, status: 'done', msg: '✅ Publicado en Substack' })
       setPubModal(null)
@@ -132,27 +132,19 @@ export function HistorySection({ onRewrite }: { onRewrite: (topic: string) => vo
             <p className="text-sm text-brand-secondary mb-5 truncate">{pubModal.topic}</p>
  
             <div className="space-y-3 mb-6">
-              <p className="text-sm text-brand-primary font-medium">¿Cómo quieres publicarlo?</p>
-              <div className="grid grid-cols-2 gap-3">
+              <p className="text-sm text-brand-primary font-medium">Se publicará como Artículo completo</p>
+              <div className="grid grid-cols-1 gap-3">
                 <button
                   className="bg-brand-bg border border-brand-border rounded-xl p-4 text-center hover:border-brand-accent transition-all cursor-pointer group/card"
-                  onClick={() => publishToSubstack('note', pubModal.topic, pubModal.topic)}
-                >
-                  <div className="text-2xl mb-1 group-hover/card:scale-110 transition-transform">📝</div>
-                  <div className="text-sm font-semibold text-brand-primary">Nota</div>
-                  <div className="text-xs text-brand-secondary">Corto, inmediato</div>
-                </button>
-                <button
-                  className="bg-brand-bg border border-brand-border rounded-xl p-4 text-center hover:border-brand-accent transition-all cursor-pointer group/card"
-                  onClick={() => publishToSubstack('article', pubModal.topic, pubModal.topic)}
+                  onClick={() => publishToSubstack(pubModal.topic, pubModal.topic)}
                 >
                   <div className="text-2xl mb-1 group-hover/card:scale-110 transition-transform">📄</div>
-                  <div className="text-sm font-semibold text-brand-primary">Artículo</div>
+                  <div className="text-sm font-semibold text-brand-primary">Publicar Artículo</div>
                   <div className="text-xs text-brand-secondary">Newsletter completo</div>
                 </button>
               </div>
               <p className="text-xs text-brand-secondary mt-2">
-                💡 Para editar el contenido antes de publicar, ve a la sección <strong>Substack → Publicar</strong>.
+                💡 Para editar o programar el artículo antes de publicar, ve a la sección <strong>Substack → Publicar</strong>.
               </p>
             </div>
             <button className="btn btn-secondary w-full" onClick={() => setPubModal(null)}>Cancelar</button>

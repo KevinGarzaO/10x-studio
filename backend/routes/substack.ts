@@ -52,19 +52,7 @@ router.get('/subscribers', SubstackController.getSubscribers)
  */
 router.get('/stats', SubstackController.getStats)
 
-/**
- * @swagger
- * /api/substack/notes:
- *   post:
- *     summary: Crear una nota en Substack
- *     tags: [Substack]
- *     body:
- *       content: string
- *     responses:
- *       200:
- *         description: Nota creada
- */
-router.post('/notes', SubstackController.createNote)
+
 
 /**
  * @swagger
@@ -107,6 +95,18 @@ router.put('/drafts/update/:id', SubstackController.updateDraft)
  *         description: Draft programado
  */
 router.post('/drafts/schedule', SubstackController.scheduleDraft)
+
+/**
+ * @swagger
+ * /api/substack/image:
+ *   post:
+ *     summary: Subir imagen base64 a Substack
+ *     tags: [Substack]
+ *     responses:
+ *       200:
+ *         description: URL de imagen devuelta
+ */
+router.post('/image', SubstackController.uploadImage)
 
 /**
  * @swagger

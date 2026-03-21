@@ -208,18 +208,7 @@ export const getStats = async (req: Request, res: Response) => {
   }
 }
 
-export const createNote = async (req: Request, res: Response) => {
-  try {
-    const { data: user } = await supabase.from('users').select('id').single()
-    if (!user) return res.status(404).json({ error: 'Usuario no encontrado' })
 
-    const { content } = req.body
-    const result = await SubstackService.publishNote(user.id, content)
-    res.json(result)
-  } catch {
-    res.status(500).json({ error: 'Error al crear nota' })
-  }
-}
 
 export const createDraft = async (req: Request, res: Response) => {
   try {
@@ -259,6 +248,22 @@ export const scheduleDraft = async (req: Request, res: Response) => {
   }
 }
 
+export const uploadImage = async (req: Request, res: Response) => {
+  try {
+    const { data: user } = await supabase.from('users').select('id').single()
+    if (!user) return res.status(404).json({ error: 'Usuario no encontrado' })
+
+    const { image, postId } = req.body
+    if (!image || !postId) return res.status(400).json({ error: 'Faltan imagen o postId' })
+
+    const result = await SubstackService.uploadImage(user.id, image, postId)
+    res.json(result)
+  } catch (e: any) {
+    console.error('[SubstackController] Error uploading image:', e)
+    res.status(500).json({ error: e.message || 'Error al subir imagen' })
+  }
+}
+
 export const addSubscriber = async (req: Request, res: Response) => {
   try {
     const { data: user } = await supabase.from('users').select('id').single()
@@ -277,10 +282,10 @@ export const publishArticle = async (req: Request, res: Response) => {
     const { data: user } = await supabase.from('users').select('id').single()
     if (!user) return res.status(404).json({ error: 'Usuario no encontrado' })
 
-    const { title, content, subtitle, scheduleAt } = req.body
+    const { title, content, subtitle, scheduleAt, draftId } = req.body
     if (!title || !content) return res.status(400).json({ error: 'Título y contenido son requeridos' })
 
-    const result = await SubstackService.publishArticle(user.id, title, content, subtitle, scheduleAt)
+    const result = await SubstackService.publishArticle(user.id, title, content, subtitle, scheduleAt, draftId)
     res.json(result)
   } catch (err: any) {
     console.error('[SubstackController] Publish error:', err)
@@ -334,6 +339,10 @@ export const upsertCookies = async (req: Request, res: Response) => {
       substack_sid: cookies['substack.sid'] || cookies['substack-sid'] || cookies['connect.sid'],
       substack_lli: cookies['substack.lli'],
       visit_id: cookies['visit_id'],
+      cf_clearance: cookies['cf_clearance'],
+      cf_bm: cookies['__cf_bm'],
+      ab_testing_id: cookies['ab_testing_id'],
+      cookie_storage_key: cookies['cookie_storage_key'],
       expires_at: expiresAt.toISOString(),
       updated_at: new Date().toISOString()
     }

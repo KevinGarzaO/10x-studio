@@ -1,7 +1,7 @@
 const DEFAULT_APP_URL = 'https://10x-studio-production.up.railway.app'
 
 const SUBSTACK_COOKIE_NAMES = [
-  'substack.sid', 'connect.sid', 'substack-sid', '__cf_bm', 'cf_clearance', 'substack.lli', 'visit_id', 'ajs_anonymous_id'
+  'substack.sid', 'connect.sid', 'substack-sid', '__cf_bm', 'cf_clearance', 'substack.lli', 'visit_id', 'ajs_anonymous_id', 'cookie_storage_key', 'AWSALBTG', 'AWSALBTGCORS', 'ab_testing_id'
 ]
 
 async function getAppUrl() {
@@ -102,9 +102,11 @@ async function grabCookiesAndSend() {
   setStatusLoading('Buscando cookies...')
 
   const allCookies = {}
-  for (const name of SUBSTACK_COOKIE_NAMES) {
-    const cookie = await new Promise(resolve => chrome.cookies.get({ url: 'https://substack.com', name }, c => resolve(c)))
-    if (cookie) allCookies[name] = cookie.value
+  const rawCookies = await new Promise(resolve => chrome.cookies.getAll({ domain: 'substack.com' }, c => resolve(c)))
+  for (const c of rawCookies) {
+    if (SUBSTACK_COOKIE_NAMES.includes(c.name)) {
+      allCookies[c.name] = c.value
+    }
   }
 
   const hasSession = allCookies['substack.sid'] || allCookies['connect.sid'] || allCookies['substack-sid']
