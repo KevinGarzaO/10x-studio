@@ -264,6 +264,18 @@ export const uploadImage = async (req: Request, res: Response) => {
   }
 }
 
+export const createNote = async (req: Request, res: Response) => {
+  try {
+    const { data: user } = await supabase.from('users').select('id').single()
+    if (!user) return res.status(404).json({ error: 'Usuario no encontrado' })
+    const { content } = req.body
+    const result = await SubstackService.publishNote(user.id, content)
+    res.json({ ok: true, result })
+  } catch (err: any) {
+    res.status(500).json({ error: err.message })
+  }
+}
+
 export const addSubscriber = async (req: Request, res: Response) => {
   try {
     const { data: user } = await supabase.from('users').select('id').single()

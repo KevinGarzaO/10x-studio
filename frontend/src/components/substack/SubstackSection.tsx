@@ -4,9 +4,10 @@ import { useApp } from '@/components/layout/AppProvider'
 import { SubstackStats } from './SubstackStats'
 import { SubstackPublish } from './SubstackPublish'
 import { SubstackSubscribers } from './SubstackSubscribers'
+import { SubstackNotes } from './SubstackNotes'
 import { api } from '@/lib/api'
 
-type SubTab = 'stats' | 'subscribers' | 'publish'
+type SubTab = 'stats' | 'subscribers' | 'publish' | 'notes'
 
 interface SubstackProfile {
   name: string; handle: string; email: string; avatar: string; bio: string;
@@ -274,6 +275,7 @@ export function SubstackSection() {
             ['stats',       'Estadísticas'],
             ['subscribers', 'Suscriptores'],
             ['publish',     'Publicar'],
+            ['notes',       'Notes'],
           ] as [SubTab, string][]).map(([t, label]) => (
             <button key={t} onClick={() => setTab(t)}
               className={`tab ${tab === t ? 'tab-active' : 'tab-inactive'}`}>
@@ -286,6 +288,7 @@ export function SubstackSection() {
       {tab === 'stats'       && <SubstackStats />}
       {tab === 'subscribers' && <SubstackSubscribers />}
       {tab === 'publish'     && <SubstackPublish />}
+      {tab === 'notes'       && <SubstackNotes />}
     </div>
   )
 }

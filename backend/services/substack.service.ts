@@ -363,6 +363,49 @@ const resolvedUserId = updatedUser?.id || userId
     return await res.json()
   }
 
+  static async publishNote(userId: string, content: string) {
+    const cookie = await this.getCookieHeader(userId)
+    const { data: user } = await supabase.from('users').select('subdomain').eq('id', userId).single()
+    const subdomain = user?.subdomain || 'transformateck'
+
+    const headers = {
+      'Cookie': cookie,
+      'Content-Type': 'application/json',
+      'Accept': '*/*',
+      'Accept-Language': 'es-ES,es;q=0.8',
+      'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/146.0.0.0 Safari/537.36',
+      'Origin': `https://${subdomain}.substack.com`,
+      'Referer': `https://${subdomain}.substack.com/publish/home?utm_source=menu`,
+      'sec-ch-ua': '"Chromium";v="146", "Not-A.Brand";v="24", "Brave";v="146"',
+      'sec-ch-ua-mobile': '?0',
+      'sec-ch-ua-platform': '"Windows"',
+      'sec-fetch-dest': 'empty',
+      'sec-fetch-mode': 'cors',
+      'sec-fetch-site': 'same-origin',
+      'sec-gpc': '1',
+      'pragma': 'no-cache',
+      'cache-control': 'no-cache'
+    }
+
+    const bodyJson = {
+      type: "doc",
+      attrs: { schemaVersion: "v1" },
+      content: [{ type: "paragraph", content: [{ type: "text", text: content }] }]
+    }
+
+    const res = await fetch(`https://${subdomain}.substack.com/api/v1/comment/feed`, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify({ bodyJson, replyMinimumRole: "everyone" })
+    })
+
+    if (!res.ok) {
+      const text = await res.text()
+      throw new Error(`Substack API error: ${res.status} - ${text}`)
+    }
+    return await res.json()
+  }
+
   static async uploadImage(userId: string, imageBase64: string, postId: string) {
     const cookie = await this.getCookieHeader(userId)
     const { data: user } = await supabase.from('users').select('subdomain').eq('id', userId).single()
