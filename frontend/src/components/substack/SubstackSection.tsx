@@ -32,7 +32,7 @@ function ExpiryBadge({ expiresAt }: { expiresAt: string }) {
 
 export function SubstackSection() {
   const { substackConnected, substackPublication, reloadSubstackProfile } = useApp()
-  const [tab, setTab]         = useState<SubTab>('stats')
+  const [tab, setTab]         = useState<SubTab>('articles')
   const [profile, setProfile] = useState<SubstackProfile | null>(null)
   const [autoSub, setAutoSub] = useState(true)
   const loadProfile = useCallback(async () => {
@@ -273,10 +273,9 @@ export function SubstackSection() {
       <div className="flex mb-8 overflow-x-auto no-scrollbar pb-2">
         <div className="inline-flex bg-brand-surface/80 backdrop-blur-md p-1 rounded-xl shadow-inner border border-brand-border whitespace-nowrap">
           {([
-            ['stats',       'Estadísticas'],
+            ['articles',    'Artículos'],
             ['subscribers', 'Suscriptores'],
             ['publish',     'Publicar'],
-            ['articles',    'Artículos'],
             ['notes',       'Notes'],
           ] as [SubTab, string][]).map(([t, label]) => (
             <button key={t} onClick={() => setTab(t)}
@@ -290,7 +289,7 @@ export function SubstackSection() {
       {tab === 'stats'       && <SubstackStats />}
       {tab === 'subscribers' && <SubstackSubscribers />}
       {tab === 'publish'     && <SubstackPublish />}
-      {tab === 'articles'    && <SubstackArticles />}
+      {tab === 'articles'    && <SubstackArticles onCompose={() => setTab('publish')} />}
       {tab === 'notes'       && <SubstackNotes />}
     </div>
   )
