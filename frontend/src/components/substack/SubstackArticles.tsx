@@ -5,6 +5,8 @@ import { useApp } from '@/components/layout/AppProvider'
 import { ExternalLink, MoreHorizontal, Loader2, Mail, Users, MousePointerClick, CalendarClock, Edit3, Send } from 'lucide-react'
 import Image from 'next/image'
 
+import { api } from '@/lib/api'
+
 type ArticleType = 'published' | 'scheduled' | 'drafts'
 
 interface APIResponse {
@@ -14,13 +16,10 @@ interface APIResponse {
   total: number
 }
 
-const fetcher = (url: string) => fetch(url).then(r => {
-  if (!r.ok) throw new Error('Network error')
-  return r.json()
-})
+const fetcher = (url: string) => api<any>(url)
 
 export function SubstackArticles() {
-  const { currentWorkspace } = useApp()
+  const { substackConnected } = useApp()
   const [activeTab, setActiveTab] = useState<ArticleType>('published')
   const [search, setSearch] = useState('')
 
@@ -32,7 +31,7 @@ export function SubstackArticles() {
   }
 
   const { data, error, isLoading } = useSWR<APIResponse>(
-    currentWorkspace ? `/api/substack/posts/${endpointMap[activeTab]}&limit=25&offset=0` : null,
+    substackConnected ? `/api/substack/posts/${endpointMap[activeTab]}&limit=25&offset=0` : null,
     fetcher
   )
 
