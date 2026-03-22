@@ -47,6 +47,16 @@ const router = (0, express_1.Router)();
  *         description: Contenido generado
  */
 router.post('/generate', AiController.generate);
+/**
+ * @swagger
+ * /api/generate/substack:
+ *   post:
+ *     summary: Generar un artículo o nota optimizada para Substack usando IA
+ *     tags: [AI]
+ *     responses:
+ *       200:
+ *         description: Título, subtítulo y contenido estructurado del artículo
+ */
 router.post('/generate/substack', AiController.generateSubstack);
 /**
  * @swagger

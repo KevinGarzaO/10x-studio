@@ -131,6 +131,24 @@ router.post('/drafts/schedule', SubstackController.scheduleDraft);
  *         description: URL de imagen devuelta
  */
 router.post('/image', SubstackController.uploadImage);
+/**
+ * @swagger
+ * /api/substack/posts/{type}:
+ *   get:
+ *     summary: Obtener lista de posts directamente desde la API oficial de Substack (drafts, scheduled, published)
+ *     tags: [Substack]
+ *     parameters:
+ *       - in: path
+ *         name: type
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Lista de posts
+ *       400:
+ *         description: Invalid post type
+ */
 router.get('/posts/:type', SubstackController.getSubstackPosts);
 /**
  * @swagger

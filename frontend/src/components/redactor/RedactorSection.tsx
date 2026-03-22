@@ -4,7 +4,7 @@ import { api } from '@/lib/api'
 import { useApp } from '@/components/layout/AppProvider'
 import { uid, dateStr } from '@/lib/utils'
 
-interface Props { prefill?: { title?: string; notes?: string } | null; onNav?: (section: string) => void }
+interface Props { prefill?: { title?: string; notes?: string } | null; onNav?: (section: any) => void }
 type ContentPlatform = 'article' | 'note'
 
 const LENGTH_OPTIONS = [
