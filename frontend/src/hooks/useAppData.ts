@@ -14,6 +14,7 @@ export function useAppData() {
   // Substack connection state — global so all components can use it
   const [substackConnected,    setSubstackConnected]    = useState(false)
   const [substackPublication,  setSubstackPublication]  = useState('')
+  const [editorPrefill,        setEditorPrefill]        = useState<{ type: 'article' | 'note', content: any, title?: string, subtitle?: string, draftId?: string | null } | null>(null)
 
   useEffect(() => {
     Promise.all([
@@ -74,6 +75,7 @@ export function useAppData() {
   return {
     topics, history, calendar, settings, templates, campaigns, loading,
     substackConnected, substackPublication, reloadSubstackProfile,
+    editorPrefill, setEditorPrefill,
     addTopic, updateTopic, deleteTopic,
     addHistory, deleteHistory,
     addCalEvent, updateCalEvent, deleteCalEvent,

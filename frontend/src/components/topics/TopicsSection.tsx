@@ -8,6 +8,7 @@ import { uid, dateStr, fmtDate } from '@/lib/utils'
 import { TopicModal } from './TopicModal'
 import { CampaignModal } from './CampaignModal'
 import { ResearchModal } from './ResearchModal'
+import { SuggestModal } from './SuggestModal'
 
 interface Props { onWriteTopic: (t: { title: string; notes: string }) => void }
 
@@ -34,7 +35,7 @@ export function TopicsSection({ onWriteTopic }: Props) {
   const [campaignModal, setCampaignModal] = useState(false)
   const [editingCampaign, setEditingCampaign] = useState<Campaign | null>(null)
   const [researchTopic, setResearchTopic] = useState<Topic | null>(null)
-  const [suggesting, setSuggesting]     = useState(false)
+  const [suggestModal, setSuggestModal]   = useState(false)
 
   const filtered = topics.filter(t => {
     const matchQ  = !search || t.title.toLowerCase().includes(search.toLowerCase()) || t.tags.some(tg => tg.toLowerCase().includes(search.toLowerCase()))
@@ -44,17 +45,8 @@ export function TopicsSection({ onWriteTopic }: Props) {
     return matchQ && matchSt && matchCa && matchPr
   })
 
-  async function handleSuggest() {
-    if (!settings.apiKey) { alert('Ingresa tu API Key'); return }
-    setSuggesting(true)
-    try {
-      const data = await api<any>('/api/suggest', {
-        method: 'POST',
-        body: JSON.stringify({ type: 'topics', niche: settings.niche, audience: settings.audience, existing: history.map(h => h.topic), apiKey: settings.apiKey }),
-      })
-      for (const t of data.topics) await addTopic({ id: uid(), title: t.title, status: 'idea', tags: t.tags || [], notes: t.notes || '', created: dateStr() })
-    } catch (e) { console.error(e) }
-    setSuggesting(false)
+  function handleSuggestSave(title: string, notes: string) {
+    addTopic({ id: uid(), title, status: 'idea', tags: [], notes, created: dateStr() })
   }
 
   async function handleSaveTopic(data: Omit<Topic, 'id' | 'created'>) {
@@ -105,12 +97,9 @@ export function TopicsSection({ onWriteTopic }: Props) {
             <span>Importar CSV</span>
             <input type="file" accept=".csv" className="hidden" onChange={handleImportCSV} />
           </label>
-          <button className="btn btn-secondary btn-sm" onClick={handleSuggest} disabled={suggesting}>
-            {suggesting ? 'Cargando...' : 'Sugerir'}
-          </button>
-          <button className="btn btn-primary btn-sm justify-center shadow-lg" onClick={() => { setEditingTopic(null); setTopicModal(true) }}>
-            <i className="pi pi-plus mr-1 text-[10px]"></i>
-            Agregar
+          <button className="btn btn-primary btn-sm justify-center shadow-lg" onClick={() => setSuggestModal(true)}>
+            <i className="pi pi-sparkles mr-1 text-[10px]"></i>
+            Sugerir / Agregar
           </button>
         </div>
       </div>
@@ -155,7 +144,9 @@ export function TopicsSection({ onWriteTopic }: Props) {
         <div className="text-center py-16 text-brand-secondary">
           <div className="text-5xl mb-4">💡</div>
           <p className="mb-5 font-medium text-brand-secondary">No hay temas aún.</p>
-          <button className="btn btn-primary shadow-lg" onClick={() => setTopicModal(true)}>Agregar tema</button>
+          <button className="btn btn-primary shadow-lg" onClick={() => setSuggestModal(true)}>
+            <i className="pi pi-sparkles mr-2"></i> Sugerir tema
+          </button>
         </div>
       ) : (
         <div className="flex flex-col gap-3">
@@ -215,6 +206,13 @@ export function TopicsSection({ onWriteTopic }: Props) {
       {topicModal    && <TopicModal open={true} topic={editingTopic} campaigns={campaigns} onClose={() => { setTopicModal(false); setEditingTopic(null) }} onSave={handleSaveTopic} />}
       {campaignModal && <CampaignModal open={true} campaign={editingCampaign} onClose={() => { setCampaignModal(false); setEditingCampaign(null) }} onSave={handleSaveCampaign} onDelete={editingCampaign ? () => { deleteCampaign(editingCampaign.id); setCampaignModal(false) } : undefined} />}
       {researchTopic && <ResearchModal topic={researchTopic} apiKey={settings.apiKey} niche={settings.niche} audience={settings.audience} onClose={() => setResearchTopic(null)} onSave={handleResearchSave} />}
+      <SuggestModal 
+        open={suggestModal} 
+        apiKey={settings.apiKey} 
+        onClose={() => setSuggestModal(false)} 
+        onWrite={(title, notes) => { setSuggestModal(false); onWriteTopic({ title, notes }) }} 
+        onSave={handleSuggestSave} 
+      />
     </div>
   )
 }

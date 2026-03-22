@@ -4,7 +4,7 @@ import { useApp } from '@/components/layout/AppProvider'
 import { Send, Loader2, Calendar, Zap } from 'lucide-react'
 
 export function SubstackNotes() {
-  const { substackPublication } = useApp()
+  const { substackPublication, editorPrefill, setEditorPrefill } = useApp()
   const [content, setContent] = useState('')
   const [loading, setLoading] = useState(false)
   const [result, setResult] = useState<{ ok: boolean; msg: string } | null>(null)
@@ -14,6 +14,14 @@ export function SubstackNotes() {
 
   const charLimit = 2000
   const remaining = charLimit - content.length
+
+  // Auto-fill from AI Redactor
+  useEffect(() => {
+    if (editorPrefill && editorPrefill.type === 'note') {
+      setContent(editorPrefill.content.slice(0, charLimit))
+      setEditorPrefill(null)
+    }
+  }, [editorPrefill, setEditorPrefill])
 
   // Default schedule to tomorrow at 9am local
   useEffect(() => {

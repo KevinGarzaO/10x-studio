@@ -10,13 +10,25 @@ export class CrudService {
   static async saveCollection(table: string, dataArray: any[]) {
     // Basic implementation matching the original logic: delete all and insert
     await supabase.from(table).delete().neq('id', '0')
-    if (dataArray.length > 0) {
+    if (dataArray && dataArray.length > 0) {
       const rows = dataArray.map((item: any) => ({
         id: item.id,
         data: item
       }))
       await supabase.from(table).insert(rows)
     }
+  }
+
+  static async createItem(table: string, item: any) {
+    await supabase.from(table).upsert({ id: item.id || item.topic, data: item })
+  }
+
+  static async updateItem(table: string, item: any) {
+    await supabase.from(table).update({ data: item }).eq('id', item.id || item.topic)
+  }
+
+  static async deleteItem(table: string, id: string) {
+    await supabase.from(table).delete().eq('id', id)
   }
 
   static async getSingular(table: string, fallback: any) {

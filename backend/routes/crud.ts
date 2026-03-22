@@ -3,37 +3,124 @@ import * as CrudController from '../controllers/crud.controller'
 
 const router = Router()
 
+/**
+ * @swagger
+ * /api/topics:
+ *   get:
+ *     summary: Obtener todos los temas guardados
+ *     tags: [CRUD - Temas]
+ *   post:
+ *     summary: Crear un nuevo tema
+ *     tags: [CRUD - Temas]
+ *   put:
+ *     summary: Actualizar un tema existente
+ *     tags: [CRUD - Temas]
+ *   delete:
+ *     summary: Eliminar un tema por su id
+ *     tags: [CRUD - Temas]
+ */
 // Topics
 router.get('/topics', CrudController.getCollection('topics'))
-router.post('/topics', CrudController.saveCollection('topics'))
-router.put('/topics', CrudController.saveCollection('topics'))
-router.delete('/topics', CrudController.saveCollection('topics')) // Original logic re-saves whole collection
+router.post('/topics', CrudController.createItem('topics'))
+router.put('/topics', CrudController.updateItem('topics'))
+router.delete('/topics', CrudController.deleteItem('topics'))
 
+/**
+ * @swagger
+ * /api/history:
+ *   get:
+ *     summary: Obtener el historial de artículos generados
+ *     tags: [CRUD - Historial]
+ *   post:
+ *     summary: Agregar artículo al historial
+ *     tags: [CRUD - Historial]
+ *   delete:
+ *     summary: Eliminar registro del historial
+ *     tags: [CRUD - Historial]
+ */
 // History
 router.get('/history', CrudController.getCollection('history'))
-router.post('/history', CrudController.saveCollection('history'))
-router.delete('/history', CrudController.saveCollection('history'))
+router.post('/history', CrudController.createItem('history'))
+router.delete('/history', CrudController.deleteItem('history'))
 
+/**
+ * @swagger
+ * /api/calendar:
+ *   get:
+ *     summary: Obtener eventos del calendario
+ *     tags: [CRUD - Calendario]
+ *   post:
+ *     summary: Crear un nuevo evento en el calendario
+ *     tags: [CRUD - Calendario]
+ *   put:
+ *     summary: Modificar un evento del calendario
+ *     tags: [CRUD - Calendario]
+ *   delete:
+ *     summary: Eliminar un evento del calendario
+ *     tags: [CRUD - Calendario]
+ */
 // Calendar
 router.get('/calendar', CrudController.getCollection('calendar'))
-router.post('/calendar', CrudController.saveCollection('calendar'))
-router.put('/calendar', CrudController.saveCollection('calendar'))
-router.delete('/calendar', CrudController.saveCollection('calendar'))
+router.post('/calendar', CrudController.createItem('calendar'))
+router.put('/calendar', CrudController.updateItem('calendar'))
+router.delete('/calendar', CrudController.deleteItem('calendar'))
 
+/**
+ * @swagger
+ * /api/settings:
+ *   get:
+ *     summary: Obtener la configuración o preferencias globales de la app
+ *     tags: [CRUD - Preferencias]
+ *   post:
+ *     summary: Guardar o actualizar la configuración
+ *     tags: [CRUD - Preferencias]
+ */
 // Settings
 router.get('/settings', CrudController.getSingular('settings', {}))
 router.post('/settings', CrudController.saveSingular('settings'))
 
+/**
+ * @swagger
+ * /api/templates:
+ *   get:
+ *     summary: Obtener plantillas
+ *     tags: [CRUD - Plantillas]
+ *   post:
+ *     summary: Crear una nueva plantilla
+ *     tags: [CRUD - Plantillas]
+ *   put:
+ *     summary: Actualizar una plantilla
+ *     tags: [CRUD - Plantillas]
+ *   delete:
+ *     summary: Eliminar una plantilla
+ *     tags: [CRUD - Plantillas]
+ */
 // Templates
 router.get('/templates', CrudController.getCollection('templates'))
-router.post('/templates', CrudController.saveCollection('templates'))
-router.put('/templates', CrudController.saveCollection('templates'))
-router.delete('/templates', CrudController.saveCollection('templates'))
+router.post('/templates', CrudController.createItem('templates'))
+router.put('/templates', CrudController.updateItem('templates'))
+router.delete('/templates', CrudController.deleteItem('templates'))
 
+/**
+ * @swagger
+ * /api/campaigns:
+ *   get:
+ *     summary: Obtener campañas publicadas y guardadas
+ *     tags: [CRUD - Campañas]
+ *   post:
+ *     summary: Registrar nueva campaña
+ *     tags: [CRUD - Campañas]
+ *   put:
+ *     summary: Actualizar datos de campaña
+ *     tags: [CRUD - Campañas]
+ *   delete:
+ *     summary: Eliminar campaña
+ *     tags: [CRUD - Campañas]
+ */
 // Campaigns
 router.get('/campaigns', CrudController.getCollection('campaigns'))
-router.post('/campaigns', CrudController.saveCollection('campaigns'))
-router.put('/campaigns', CrudController.saveCollection('campaigns'))
-router.delete('/campaigns', CrudController.saveCollection('campaigns'))
+router.post('/campaigns', CrudController.createItem('campaigns'))
+router.put('/campaigns', CrudController.updateItem('campaigns'))
+router.delete('/campaigns', CrudController.deleteItem('campaigns'))
 
 export default router

@@ -1,0 +1,36 @@
+{
+  "type": "doc",
+  "content": [
+    {
+      "type": "paragraph",
+      "content": [
+        {
+          "type": "text",
+          "text": "Hello"
+        }
+      ],
+      "attrs": {
+        "textAlign": null
+      }
+    },
+    {
+      "type": "subscribeWidget",
+      "attrs": {
+        "url": "%%checkout_url%%",
+        "text": "Suscribirse",
+        "language": "es"
+      },
+      "content": [
+        {
+          "type": "ctaCaption",
+          "content": [
+            {
+              "type": "text",
+              "text": "Thanks for reading Transformateck! Subscribe for free to receive new posts and support my work."
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

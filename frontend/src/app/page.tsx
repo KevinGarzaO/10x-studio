@@ -72,7 +72,7 @@ export default function Home() {
     switch (activeSection) {
       case 'dashboard':     return <Dashboard onNav={navTo} />
       case 'topics-all':    return <TopicsSection onWriteTopic={(t) => navTo('redactor-new', t)} />
-      case 'redactor-new':  return <RedactorSection prefill={redactorPrefill} />
+      case 'redactor-new':  return <RedactorSection prefill={redactorPrefill} onNav={navTo} />
       case 'history-all':   return <HistorySection onRewrite={(t) => navTo('redactor-new', { title: t })} />
       case 'calendar-month': return <CalendarSection />
       case 'substack-stats': return <StatsSection />

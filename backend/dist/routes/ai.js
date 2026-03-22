@@ -47,6 +47,7 @@ const router = (0, express_1.Router)();
  *         description: Contenido generado
  */
 router.post('/generate', AiController.generate);
+router.post('/generate/substack', AiController.generateSubstack);
 /**
  * @swagger
  * /api/suggest:
@@ -58,4 +59,15 @@ router.post('/generate', AiController.generate);
  *         description: Temas sugeridos
  */
 router.post('/suggest', AiController.suggest);
+/**
+ * @swagger
+ * /api/suggest/web:
+ *   post:
+ *     summary: Sugerir temas usando IA con busqueda web
+ *     tags: [AI]
+ *     responses:
+ *       200:
+ *         description: Temas sugeridos usando internet
+ */
+router.post('/suggest/web', AiController.suggestWeb);
 exports.default = router;

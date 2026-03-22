@@ -63,7 +63,7 @@ function SubstackIcon(props: React.SVGProps<SVGSVGElement>) {
 }
 
 export function SubstackPublish() {
-  const { history, addCalEvent } = useApp()
+  const { history, addCalEvent, editorPrefill, setEditorPrefill } = useApp()
   
   const [title, setTitle] = useState('')
   const [subtitle, setSubtitle] = useState('')
@@ -164,6 +164,24 @@ export function SubstackPublish() {
     document.addEventListener('mousedown', handleClickOutside)
     return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [])
+
+  // Auto-fill from AI Redactor
+  useEffect(() => {
+    if (editorPrefill && editorPrefill.type === 'article' && editor) {
+      if (editorPrefill.title) setTitle(editorPrefill.title)
+      if (editorPrefill.subtitle) setSubtitle(editorPrefill.subtitle)
+      if (editorPrefill.draftId) setDraftId(editorPrefill.draftId)
+      
+      // The content is now pre-compiled into a ProseMirror JSON Document AST by the backend
+      try {
+        editor.commands.setContent(editorPrefill.content)
+      } catch (e) {
+        console.error('Failed to set ProseMirror content:', e)
+      }
+      
+      setEditorPrefill(null) // clear to avoid loop
+    }
+  }, [editorPrefill, editor, setEditorPrefill])
 
   const substackHistory = history.filter(h =>
     h.platforms.some(p => p === 'substack-article')

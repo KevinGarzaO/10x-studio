@@ -31,8 +31,14 @@ function ExpiryBadge({ expiresAt }: { expiresAt: string }) {
 }
 
 export function SubstackSection() {
-  const { substackConnected, substackPublication, reloadSubstackProfile } = useApp()
+  const { substackConnected, substackPublication, reloadSubstackProfile, editorPrefill } = useApp()
   const [tab, setTab]         = useState<SubTab>('articles')
+
+  useEffect(() => {
+    if (editorPrefill) {
+      setTab(editorPrefill.type === 'note' ? 'notes' : 'publish')
+    }
+  }, [editorPrefill])
   const [profile, setProfile] = useState<SubstackProfile | null>(null)
   const [autoSub, setAutoSub] = useState(true)
   const loadProfile = useCallback(async () => {
