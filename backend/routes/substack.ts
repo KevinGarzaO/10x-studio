@@ -107,8 +107,7 @@ router.post('/drafts/schedule', SubstackController.scheduleDraft)
  *         description: URL de imagen devuelta
  */
 router.post('/image', SubstackController.uploadImage)
-router.post('/notes', SubstackController.createNote)
-
+router.get('/posts/:type', SubstackController.getSubstackPosts)
 /**
  * @swagger
  * /api/substack/subscriber/add:

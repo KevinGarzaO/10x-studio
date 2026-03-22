@@ -363,7 +363,7 @@ const resolvedUserId = updatedUser?.id || userId
     return await res.json()
   }
 
-  static async publishNote(userId: string, content: string) {
+  static async getSubstackPosts(userId: string, type: string, offset: number, limit: number, order_by: string, order_direction: string) {
     const cookie = await this.getCookieHeader(userId)
     const { data: user } = await supabase.from('users').select('subdomain').eq('id', userId).single()
     const subdomain = user?.subdomain || 'transformateck'
@@ -371,7 +371,7 @@ const resolvedUserId = updatedUser?.id || userId
 
     const headers = {
       ...this.getHeaders(cookie, origin),
-      'Referer': `${origin}/publish/posts/drafts`,
+      'Referer': `${origin}/publish/posts/${type}`,
       'Accept': '*/*',
       'sec-fetch-dest': 'empty',
       'sec-fetch-mode': 'cors',
@@ -379,17 +379,20 @@ const resolvedUserId = updatedUser?.id || userId
       'sec-gpc': '1',
     }
 
-    const bodyJson = {
-      type: "doc",
-      attrs: { schemaVersion: "v1" },
-      content: [{ type: "paragraph", content: [{ type: "text", text: content }] }]
+    // Map 'type' to the correct Substack endpoint
+    // Substack expects: /api/v1/post_management/drafts, scheduled, published
+    const validTypes = ['drafts', 'scheduled', 'published']
+    if (!validTypes.includes(type)) {
+      throw new Error('Invalid post type')
     }
 
-    const res = await fetch(`${origin}/api/v1/comment/feed`, {
-      method: 'POST',
-      headers,
-      body: JSON.stringify({ bodyJson, replyMinimumRole: "everyone" })
-    })
+    const url = new URL(`${origin}/api/v1/post_management/${type}`)
+    url.searchParams.append('offset', offset.toString())
+    url.searchParams.append('limit', limit.toString())
+    url.searchParams.append('order_by', order_by)
+    url.searchParams.append('order_direction', order_direction)
+
+    const res = await fetch(url.toString(), { method: 'GET', headers })
 
     if (!res.ok) {
       const text = await res.text()

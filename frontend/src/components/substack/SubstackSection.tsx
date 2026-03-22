@@ -5,9 +5,10 @@ import { SubstackStats } from './SubstackStats'
 import { SubstackPublish } from './SubstackPublish'
 import { SubstackSubscribers } from './SubstackSubscribers'
 import { SubstackNotes } from './SubstackNotes'
+import { SubstackArticles } from './SubstackArticles'
 import { api } from '@/lib/api'
 
-type SubTab = 'stats' | 'subscribers' | 'publish' | 'notes'
+type SubTab = 'stats' | 'subscribers' | 'publish' | 'notes' | 'articles'
 
 interface SubstackProfile {
   name: string; handle: string; email: string; avatar: string; bio: string;
@@ -275,6 +276,7 @@ export function SubstackSection() {
             ['stats',       'Estadísticas'],
             ['subscribers', 'Suscriptores'],
             ['publish',     'Publicar'],
+            ['articles',    'Artículos'],
             ['notes',       'Notes'],
           ] as [SubTab, string][]).map(([t, label]) => (
             <button key={t} onClick={() => setTab(t)}
@@ -288,6 +290,7 @@ export function SubstackSection() {
       {tab === 'stats'       && <SubstackStats />}
       {tab === 'subscribers' && <SubstackSubscribers />}
       {tab === 'publish'     && <SubstackPublish />}
+      {tab === 'articles'    && <SubstackArticles />}
       {tab === 'notes'       && <SubstackNotes />}
     </div>
   )
