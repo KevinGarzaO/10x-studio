@@ -134,4 +134,37 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     });
     return true; // Keep channel open
   }
+
+  // Publish a Substack Note directly from the extension (bypasses Node.js TLS block)
+  if (request.type === 'PUBLISH_NOTE') {
+    const { content, subdomain } = request;
+    const origin = `https://${subdomain || 'transformateck'}.substack.com`;
+
+    const bodyJson = {
+      type: "doc",
+      attrs: { schemaVersion: "v1" },
+      content: [{ type: "paragraph", content: [{ type: "text", text: content }] }]
+    };
+
+    fetch(`${origin}/api/v1/comment/feed`, {
+      method: 'POST',
+      credentials: 'include',
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': '*/*',
+        'Accept-Language': 'es-ES,es;q=0.8',
+        'Origin': origin,
+        'Referer': `${origin}/publish/posts/drafts`,
+        'sec-fetch-dest': 'empty',
+        'sec-fetch-mode': 'cors',
+        'sec-fetch-site': 'same-origin',
+      },
+      body: JSON.stringify({ bodyJson, replyMinimumRole: "everyone" })
+    })
+      .then(res => res.ok ? res.json() : res.text().then(t => Promise.reject(new Error(`${res.status}: ${t.slice(0, 100)}`))))
+      .then(data => sendResponse({ ok: true, data }))
+      .catch(err => sendResponse({ ok: false, error: err.message }));
+
+    return true; // Keep channel open for async response
+  }
 });

@@ -1,30 +1,68 @@
 'use client'
-import { useState } from 'react'
-import { api } from '@/lib/api'
+import { useState, useEffect, useRef } from 'react'
+import { useApp } from '@/components/layout/AppProvider'
 import { Send, Loader2 } from 'lucide-react'
 
 export function SubstackNotes() {
+  const { substackPublication } = useApp()
   const [content, setContent] = useState('')
   const [loading, setLoading] = useState(false)
   const [result, setResult] = useState<{ ok: boolean; msg: string } | null>(null)
+  const resolverRef = useRef<((ok: boolean, msg: string) => void) | null>(null)
 
   const charLimit = 2000
   const remaining = charLimit - content.length
+
+  // Listen for the extension's response via window.postMessage
+  useEffect(() => {
+    function handleMessage(e: MessageEvent) {
+      if (e.data?.type !== 'PUBLISH_NOTE_RESPONSE') return
+      if (resolverRef.current) {
+        resolverRef.current(e.data.ok === true, e.data.error || '')
+        resolverRef.current = null
+      }
+    }
+    window.addEventListener('message', handleMessage)
+    return () => window.removeEventListener('message', handleMessage)
+  }, [])
 
   async function publishNote() {
     if (!content.trim()) return
     setLoading(true)
     setResult(null)
+
+    // Derive subdomain: substackPublication is the subdomain string
+    const subdomain = substackPublication || 'transformateck'
+
     try {
-      await api('/api/substack/notes', {
-        method: 'POST',
-        body: JSON.stringify({ content: content.trim() })
+      const ok = await new Promise<boolean>((resolve, reject) => {
+        // Timeout after 12 seconds
+        const timer = setTimeout(() => {
+          resolverRef.current = null
+          reject(new Error('Tiempo de espera agotado. ¿Está la extensión instalada y activa?'))
+        }, 12000)
+
+        resolverRef.current = (ok, errorMsg) => {
+          clearTimeout(timer)
+          if (ok) resolve(true)
+          else reject(new Error(errorMsg || 'Error al publicar Note'))
+        }
+
+        window.postMessage({
+          type: 'PUBLISH_NOTE',
+          content: content.trim(),
+          subdomain
+        }, '*')
       })
-      setResult({ ok: true, msg: '✅ Nota publicada correctamente en Substack' })
-      setContent('')
+
+      if (ok) {
+        setResult({ ok: true, msg: '✅ Note publicada correctamente en Substack' })
+        setContent('')
+      }
     } catch (err: any) {
-      setResult({ ok: false, msg: `❌ Error: ${err.message || String(err)}` })
+      setResult({ ok: false, msg: `❌ Error: ${err.message}` })
     }
+
     setLoading(false)
   }
 
@@ -89,8 +127,8 @@ export function SubstackNotes() {
 
       {/* Info card */}
       <div className="mt-4 bg-brand-surface/60 border border-brand-border rounded-xl p-4 text-xs text-brand-secondary leading-relaxed">
-        <p className="font-semibold text-brand-primary mb-1">ℹ️ Sobre las Notas de Substack</p>
-        Las Notas son publicaciones cortas visibles en el feed de tu publicación y en el perfil de Substack. Aparecen de inmediato sin necesidad de borrador o programación.
+        <p className="font-semibold text-brand-primary mb-1">ℹ️ Requiere extensión de Chrome activa</p>
+        Las Notes se publican directamente a través de la extensión de Chrome para garantizar compatibilidad con Substack. Asegúrate de tener la extensión instalada y activada.
       </div>
     </div>
   )

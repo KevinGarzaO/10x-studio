@@ -55,4 +55,17 @@ window.addEventListener('message', (event) => {
             }
         );
     }
+
+    if (event.data.type === 'PUBLISH_NOTE') {
+        chrome.runtime.sendMessage(
+            { type: 'PUBLISH_NOTE', content: event.data.content, subdomain: event.data.subdomain },
+            (response) => {
+                if (chrome.runtime.lastError) {
+                    window.postMessage({ type: 'PUBLISH_NOTE_RESPONSE', ok: false, error: chrome.runtime.lastError.message }, '*');
+                } else if (response) {
+                    window.postMessage({ type: 'PUBLISH_NOTE_RESPONSE', ...response }, '*');
+                }
+            }
+        );
+    }
 });
