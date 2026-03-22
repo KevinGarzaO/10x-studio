@@ -8,13 +8,16 @@ const supabase_service_1 = require("./supabase.service");
 const node_fetch_1 = __importDefault(require("node-fetch"));
 class SubstackService {
     static async getCookieHeader(userId) {
+        console.log(`[getCookieHeader] Buscando cookies para user_id: ${userId}`);
         const { data: cookies } = await supabase_service_1.supabase
             .from('cookies')
-            .select('substack_sid, substack_lli, visit_id')
+            .select('substack_sid, substack_lli, visit_id, cf_clearance, cf_bm, ab_testing_id, cookie_storage_key')
             .eq('user_id', userId)
             .single();
-        if (!cookies)
+        if (!cookies) {
+            console.warn('[getCookieHeader] No se encontraron cookies en la tabla.');
             return '';
+        }
         const parts = [];
         if (cookies.substack_sid)
             parts.push(`substack.sid=${cookies.substack_sid}`);
@@ -22,15 +25,32 @@ class SubstackService {
             parts.push(`substack.lli=${cookies.substack_lli}`);
         if (cookies.visit_id)
             parts.push(`visit_id=${cookies.visit_id}`);
+        if (cookies.cf_clearance)
+            parts.push(`cf_clearance=${cookies.cf_clearance}`);
+        if (cookies.cf_bm)
+            parts.push(`__cf_bm=${cookies.cf_bm}`);
+        if (cookies.ab_testing_id)
+            parts.push(`ab_testing_id=${cookies.ab_testing_id}`);
+        if (cookies.cookie_storage_key)
+            parts.push(`cookie_storage_key=${cookies.cookie_storage_key}`);
+        console.log(`[getCookieHeader] Cookies construidas con ${parts.length} variables. Nombres:`, Object.keys(cookies).filter(k => cookies[k]));
         return parts.join('; ');
     }
     static getHeaders(cookie, origin = 'https://substack.com') {
         return {
             'Cookie': cookie,
             'Content-Type': 'application/json',
+            'Accept': 'application/json',
+            'Accept-Language': 'es-MX,es;q=0.9,en;q=0.8',
             'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
             'Origin': origin,
-            'Referer': `${origin}/`
+            'Referer': `${origin}/`,
+            'sec-ch-ua': '"Not_A Brand";v="8", "Chromium";v="120"',
+            'sec-ch-ua-mobile': '?0',
+            'sec-ch-ua-platform': '"Windows"',
+            'sec-fetch-dest': 'empty',
+            'sec-fetch-mode': 'cors',
+            'sec-fetch-site': 'same-origin'
         };
     }
     static async syncProfile(userId, substackUserId, substackSlug) {
@@ -147,8 +167,9 @@ class SubstackService {
             throw new Error('No cookies found');
         console.log(`[Substack] Iniciando sync de subscriptores para ${subdomain}...`);
         let allSubscribers = [];
-        let lastId = 0;
         const limit = 100;
+        let offset = 0;
+        const seenIds = new Set();
         while (true) {
             const url = `https://${subdomain}.substack.com/api/v1/subscriber-stats`;
             const res = await (0, node_fetch_1.default)(url, {
@@ -156,34 +177,36 @@ class SubstackService {
                 headers: this.getHeaders(cookie, `https://${subdomain}.substack.com`),
                 body: JSON.stringify({
                     limit,
-                    offset: lastId === 0 ? 0 : undefined,
-                    after_id: lastId === 0 ? undefined : lastId,
-                    order_by: 'subscription_id',
-                    order_direction: 'asc',
-                    filters: {}
+                    offset,
+                    order_by: 'subscription_created_at',
+                    order_direction: 'asc'
                 })
             });
             if (!res.ok) {
-                console.error(`[Substack] Error fetching subscribers after_id ${lastId}: ${res.status}`);
+                console.error(`[Substack] Error fetching subscribers at offset ${offset}: ${res.status}`);
                 break;
             }
             const data = await res.json();
             console.log('[DEBUG subscribers] Status:', res.status);
             console.log('[DEBUG subscribers] Data keys:', Object.keys(data));
             console.log('[DEBUG subscribers] Sample:', JSON.stringify(data).slice(0, 500));
-            // The API returns { subscribers: [...], total_count: N } based on user's payload
-            const subs = Array.isArray(data) ? data : (data.subscribers || []);
+            const subs = data?.subscribers || [];
             const totalReported = data.total_count || (subs.length > 0 ? subs[0]?.total_count : null) || data.count || '?';
-            console.log(`[Substack] after_id ${lastId}: Obtenidos ${subs.length} subs de un total reportado de ${totalReported}`);
+            console.log(`[Substack] Offset ${offset}: Obtenidos ${subs.length} subs de un total reportado de ${totalReported}`);
             if (subs.length === 0)
                 break;
-            // Mover el cursor al último ID recibido
-            lastId = subs[subs.length - 1].subscription_id;
-            allSubscribers = allSubscribers.concat(subs);
+            // Deduplicar por subscription_id
+            for (const sub of subs) {
+                if (!seenIds.has(sub.subscription_id)) {
+                    seenIds.add(sub.subscription_id);
+                    allSubscribers.push(sub);
+                }
+            }
             if (subs.length < limit)
                 break;
+            offset += limit;
             // Safety break to avoid infinite loops if API behaves weirdly
-            if (allSubscribers.length > 50000)
+            if (offset > 50000)
                 break;
         }
         if (allSubscribers.length > 0) {
@@ -220,25 +243,6 @@ class SubstackService {
         }
         return allSubscribers.length;
     }
-    static async publishNote(userId, content) {
-        const cookie = await this.getCookieHeader(userId);
-        const { data: user } = await supabase_service_1.supabase.from('users').select('subdomain').eq('id', userId).single();
-        const subdomain = user?.subdomain || 'transformateck';
-        const headers = this.getHeaders(cookie, `https://${subdomain}.substack.com`);
-        const bodyJson = {
-            type: "doc",
-            attrs: { schemaVersion: "v1" },
-            content: [{ type: "paragraph", content: [{ type: "text", text: content }] }]
-        };
-        const res = await (0, node_fetch_1.default)(`https://${subdomain}.substack.com/api/v1/comment/feed`, {
-            method: 'POST',
-            headers,
-            body: JSON.stringify({ bodyJson, replyMinimumRole: "everyone" }),
-        });
-        if (!res.ok)
-            throw new Error(`Substack API error: ${res.status}`);
-        return await res.json();
-    }
     static async createDraft(userId, params) {
         const cookie = await this.getCookieHeader(userId);
         const { data: user } = await supabase_service_1.supabase.from('users').select('subdomain, substack_user_id').eq('id', userId).single();
@@ -253,7 +257,7 @@ class SubstackService {
             body: JSON.stringify({
                 draft_title: '',
                 draft_subtitle: '',
-                draft_body: JSON.stringify({ type: 'doc', content: [{ type: 'paragraph' }] }),
+                draft_body: JSON.stringify({ type: 'doc', content: [{ type: 'paragraph', attrs: { textAlign: null } }] }),
                 draft_bylines: [{ id: bylineId, is_guest: false }],
                 audience: 'everyone',
                 type: 'newsletter',
@@ -271,6 +275,18 @@ class SubstackService {
             throw new Error('User not found');
         const subdomain = user.subdomain;
         const headers = this.getHeaders(cookie, `https://${subdomain}.substack.com`);
+        if (params.draft_body) {
+            try {
+                let astObj = typeof params.draft_body === 'string' ? JSON.parse(params.draft_body) : params.draft_body;
+                astObj = this.injectSubstackSchema(astObj);
+                params.draft_body = JSON.stringify(astObj); // Must be explicitly encoded as a string for Substack PUT payload
+            }
+            catch (e) {
+                console.error('[Substack] Error injectSubstackSchema in updateDraft', e);
+            }
+        }
+        // Explicitly inject required schema fields for strict update parsing
+        params.draft_bylines = [{ id: Number(user.substack_user_id), is_guest: false }];
         const res = await (0, node_fetch_1.default)(`https://${subdomain}.substack.com/api/v1/drafts/${draftId}`, {
             method: 'PUT',
             headers,
@@ -316,53 +332,163 @@ class SubstackService {
             throw new Error(`Substack API error: ${res.status}`);
         return await res.json();
     }
-    static mdToProseMirror(md) {
-        const nodes = [];
-        for (const line of md.split('\n')) {
-            const clean = line
-                .replace(/\*\*(.+?)\*\*/g, '$1')
-                .replace(/\*(.+?)\*/g, '$1')
-                .replace(/`(.+?)`/g, '$1');
-            if (!line.trim()) {
-                nodes.push({ type: 'paragraph', attrs: { textAlign: null } });
+    static async getSubstackPosts(userId, type, offset, limit, order_by, order_direction) {
+        const cookie = await this.getCookieHeader(userId);
+        const { data: user } = await supabase_service_1.supabase.from('users').select('subdomain').eq('id', userId).single();
+        const subdomain = user?.subdomain || 'transformateck';
+        const origin = `https://${subdomain}.substack.com`;
+        const headers = {
+            ...this.getHeaders(cookie, origin),
+            'Referer': `${origin}/publish/posts/${type}`,
+            'Accept': '*/*',
+            'sec-fetch-dest': 'empty',
+            'sec-fetch-mode': 'cors',
+            'sec-fetch-site': 'same-origin',
+            'sec-gpc': '1',
+        };
+        // Map 'type' to the correct Substack endpoint
+        // Substack expects: /api/v1/post_management/drafts, scheduled, published
+        const validTypes = ['drafts', 'scheduled', 'published'];
+        if (!validTypes.includes(type)) {
+            throw new Error('Invalid post type');
+        }
+        const url = new URL(`${origin}/api/v1/post_management/${type}`);
+        url.searchParams.append('offset', offset.toString());
+        url.searchParams.append('limit', limit.toString());
+        url.searchParams.append('order_by', order_by);
+        url.searchParams.append('order_direction', order_direction);
+        const res = await (0, node_fetch_1.default)(url.toString(), { method: 'GET', headers });
+        if (!res.ok) {
+            const text = await res.text();
+            throw new Error(`Substack API error: ${res.status} - ${text.slice(0, 200)}`);
+        }
+        return await res.json();
+    }
+    static async uploadImage(userId, imageBase64, postId) {
+        const cookie = await this.getCookieHeader(userId);
+        const { data: user } = await supabase_service_1.supabase.from('users').select('subdomain').eq('id', userId).single();
+        if (!user)
+            throw new Error('User not found');
+        const subdomain = user.subdomain;
+        const headers = this.getHeaders(cookie, `https://${subdomain}.substack.com`);
+        const res = await (0, node_fetch_1.default)(`https://${subdomain}.substack.com/api/v1/image`, {
+            method: 'POST',
+            headers,
+            body: JSON.stringify({ image: imageBase64, postId: Number(postId) }),
+        });
+        if (!res.ok)
+            throw new Error(`Substack API error: ${res.status}`);
+        return await res.json();
+    }
+    static injectSubstackSchema(node) {
+        if (!node)
+            return node;
+        // Substack's strict ProseMirror schema enforces `textAlign: null` explicitly on headings/paragraphs without a default fallback. 
+        // TipTap natively drops null attributes, which causes Substack's parser to throw Schema Validation exceptions and fallback to string wrappers.
+        if (node.type === 'paragraph' || node.type === 'heading') {
+            if (!node.attrs) {
+                node.attrs = {};
             }
-            else if (line.startsWith('# ')) {
-                nodes.push({ type: 'heading', attrs: { level: 1, id: null }, content: [{ type: 'text', text: line.replace(/^# /, '') }] });
-            }
-            else if (line.startsWith('## ')) {
-                nodes.push({ type: 'heading', attrs: { level: 2, id: null }, content: [{ type: 'text', text: line.replace(/^## /, '') }] });
-            }
-            else if (line.startsWith('### ')) {
-                nodes.push({ type: 'heading', attrs: { level: 3, id: null }, content: [{ type: 'text', text: line.replace(/^### /, '') }] });
-            }
-            else if (line.startsWith('- ') || line.startsWith('* ')) {
-                nodes.push({
-                    type: 'bullet_list',
-                    content: [{
-                            type: 'list_item',
-                            content: [{
-                                    type: 'paragraph',
-                                    attrs: { textAlign: null },
-                                    content: [{ type: 'text', text: clean.replace(/^[-*] /, '') }],
-                                }],
-                        }],
-                });
-            }
-            else {
-                nodes.push({ type: 'paragraph', attrs: { textAlign: null }, content: [{ type: 'text', text: clean }] });
+            if (node.attrs.textAlign === undefined) {
+                node.attrs.textAlign = null;
             }
         }
-        return nodes;
+        if (node.type === 'image') {
+            // Map standard TipTap image to Substack captionedImage schema
+            return {
+                type: 'captionedImage',
+                content: [
+                    {
+                        type: 'image2',
+                        attrs: {
+                            src: node.attrs?.src || '',
+                            height: node.attrs?.height || null,
+                            width: node.attrs?.width || null,
+                            bytes: node.attrs?.bytes || null,
+                            type: node.attrs?.fileType || 'image/png'
+                        }
+                    }
+                ]
+            };
+        }
+        if (node.type === 'image') {
+            // Map standard TipTap image to Substack captionedImage schema
+            return {
+                type: 'captionedImage',
+                content: [
+                    {
+                        type: 'image2',
+                        attrs: {
+                            src: node.attrs?.src || '',
+                            height: node.attrs?.height || null,
+                            width: node.attrs?.width || null,
+                            bytes: node.attrs?.bytes || null,
+                            type: node.attrs?.fileType || 'image/png',
+                            srcNoWatermark: null,
+                            fullscreen: null,
+                            imageSize: null,
+                            resizeWidth: null,
+                            alt: null,
+                            title: null,
+                            href: null,
+                            belowTheFold: false,
+                            topImage: false,
+                            isProcessing: false,
+                            align: null,
+                            offset: false
+                        }
+                    }
+                ]
+            };
+        }
+        if (node.type === 'subscribe_widget') {
+            return {
+                type: 'subscribeWidget',
+                attrs: {
+                    url: "%%checkout_url%%",
+                    text: "Suscribirse",
+                    language: "es"
+                },
+                content: [
+                    {
+                        type: 'ctaCaption',
+                        content: [
+                            {
+                                type: 'text',
+                                text: "¡Gracias por leer Transformateck! Suscríbete gratis para recibir nuevas publicaciones y apoyar mi trabajo."
+                            }
+                        ]
+                    }
+                ]
+            };
+        }
+        if (node.content && Array.isArray(node.content)) {
+            node.content = node.content.map((child) => this.injectSubstackSchema(child));
+        }
+        return node;
     }
-    static async publishArticle(userId, title, content, subtitle = '', scheduleAt = null) {
-        // 1. Create Draft
-        const draft = await this.createDraft(userId, {
+    static async publishArticle(userId, title, content, subtitle = '', scheduleAt = null, draftId) {
+        // 1. Create Empty Draft with strictly compliant default schema if not pre-initialized
+        if (!draftId) {
+            const draft = await this.createDraft(userId, {
+                draft_title: title.trim(),
+                draft_subtitle: subtitle.trim(),
+            });
+            draftId = String(draft.id);
+        }
+        // 2. Put explicitly modeled ProseMirror JSON string over native editor Autosave endpoint
+        await this.updateDraft(userId, String(draftId), {
             draft_title: title.trim(),
             draft_subtitle: subtitle.trim(),
-            draft_body: JSON.stringify({ type: 'doc', content: this.mdToProseMirror(content) })
+            draft_podcast_url: null,
+            draft_podcast_duration: null,
+            draft_body: content,
+            section_chosen: false,
+            draft_section_id: null,
+            audience: 'everyone',
+            type: 'newsletter'
         });
-        const draftId = draft.id;
-        // 2. Schedule
+        // 3. Schedule
         const triggerAt = scheduleAt
             ? new Date(scheduleAt).toISOString()
             : new Date(Date.now() + 10_000).toISOString();

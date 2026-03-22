@@ -1,6 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.deleteCookies = exports.upsertCookies = exports.getCookies = exports.publishArticle = exports.addSubscriber = exports.scheduleDraft = exports.updateDraft = exports.createDraft = exports.createNote = exports.getStats = exports.getSubscribers = exports.getPosts = exports.debugDB = exports.getProfile = void 0;
+exports.deleteCookies = exports.upsertCookies = exports.getCookies = exports.publishArticle = exports.addSubscriber = exports.getSubstackPosts = exports.uploadImage = exports.scheduleDraft = exports.updateDraft = exports.createDraft = exports.getStats = exports.getSubscribers = exports.getPosts = exports.debugDB = exports.getProfile = void 0;
 const supabase_service_1 = require("../services/supabase.service");
 const substack_service_1 = require("../services/substack.service");
 const cron_service_1 = require("../services/cron.service");
@@ -198,20 +198,6 @@ const getStats = async (req, res) => {
     }
 };
 exports.getStats = getStats;
-const createNote = async (req, res) => {
-    try {
-        const { data: user } = await supabase_service_1.supabase.from('users').select('id').single();
-        if (!user)
-            return res.status(404).json({ error: 'Usuario no encontrado' });
-        const { content } = req.body;
-        const result = await substack_service_1.SubstackService.publishNote(user.id, content);
-        res.json(result);
-    }
-    catch {
-        res.status(500).json({ error: 'Error al crear nota' });
-    }
-};
-exports.createNote = createNote;
 const createDraft = async (req, res) => {
     try {
         const { data: user } = await supabase_service_1.supabase.from('users').select('id').single();
@@ -253,6 +239,41 @@ const scheduleDraft = async (req, res) => {
     }
 };
 exports.scheduleDraft = scheduleDraft;
+const uploadImage = async (req, res) => {
+    try {
+        const { data: user } = await supabase_service_1.supabase.from('users').select('id').single();
+        if (!user)
+            return res.status(404).json({ error: 'Usuario no encontrado' });
+        const { image, postId } = req.body;
+        if (!image || !postId)
+            return res.status(400).json({ error: 'Faltan imagen o postId' });
+        const result = await substack_service_1.SubstackService.uploadImage(user.id, image, postId);
+        res.json(result);
+    }
+    catch (e) {
+        console.error('[SubstackController] Error uploading image:', e);
+        res.status(500).json({ error: e.message || 'Error al subir imagen' });
+    }
+};
+exports.uploadImage = uploadImage;
+const getSubstackPosts = async (req, res) => {
+    try {
+        const { data: user } = await supabase_service_1.supabase.from('users').select('id').single();
+        if (!user)
+            return res.status(404).json({ error: 'Usuario no encontrado' });
+        const { type } = req.params; // 'published', 'drafts', 'scheduled'
+        const limit = Number(req.query.limit) || 25;
+        const offset = Number(req.query.offset) || 0;
+        const order_by = req.query.order_by || 'post_date';
+        const order_direction = req.query.order_direction || 'desc';
+        const result = await substack_service_1.SubstackService.getSubstackPosts(user.id, type, offset, limit, order_by, order_direction);
+        res.json(result);
+    }
+    catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+};
+exports.getSubstackPosts = getSubstackPosts;
 const addSubscriber = async (req, res) => {
     try {
         const { data: user } = await supabase_service_1.supabase.from('users').select('id').single();
@@ -272,10 +293,10 @@ const publishArticle = async (req, res) => {
         const { data: user } = await supabase_service_1.supabase.from('users').select('id').single();
         if (!user)
             return res.status(404).json({ error: 'Usuario no encontrado' });
-        const { title, content, subtitle, scheduleAt } = req.body;
+        const { title, content, subtitle, scheduleAt, draftId } = req.body;
         if (!title || !content)
             return res.status(400).json({ error: 'Título y contenido son requeridos' });
-        const result = await substack_service_1.SubstackService.publishArticle(user.id, title, content, subtitle, scheduleAt);
+        const result = await substack_service_1.SubstackService.publishArticle(user.id, title, content, subtitle, scheduleAt, draftId);
         res.json(result);
     }
     catch (err) {
@@ -327,6 +348,10 @@ const upsertCookies = async (req, res) => {
             substack_sid: cookies['substack.sid'] || cookies['substack-sid'] || cookies['connect.sid'],
             substack_lli: cookies['substack.lli'],
             visit_id: cookies['visit_id'],
+            cf_clearance: cookies['cf_clearance'],
+            cf_bm: cookies['__cf_bm'],
+            ab_testing_id: cookies['ab_testing_id'],
+            cookie_storage_key: cookies['cookie_storage_key'],
             expires_at: expiresAt.toISOString(),
             updated_at: new Date().toISOString()
         };
