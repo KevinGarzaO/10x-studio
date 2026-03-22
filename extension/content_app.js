@@ -68,4 +68,17 @@ window.addEventListener('message', (event) => {
             }
         );
     }
+
+    if (event.data.type === 'SCHEDULE_NOTE') {
+        chrome.runtime.sendMessage(
+            { type: 'SCHEDULE_NOTE', content: event.data.content, subdomain: event.data.subdomain, trigger_at: event.data.trigger_at },
+            (response) => {
+                if (chrome.runtime.lastError) {
+                    window.postMessage({ type: 'PUBLISH_NOTE_RESPONSE', ok: false, error: chrome.runtime.lastError.message }, '*');
+                } else if (response) {
+                    window.postMessage({ type: 'PUBLISH_NOTE_RESPONSE', ...response }, '*');
+                }
+            }
+        );
+    }
 });
