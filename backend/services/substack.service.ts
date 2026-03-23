@@ -433,6 +433,13 @@ const resolvedUserId = updatedUser?.id || userId
       }
     }
 
+    if (node.type === 'subscribe_widget') {
+      return {
+        type: 'subscribeWidget',
+        attrs: { url: null }
+      }
+    }
+
     if (node.type === 'image') {
       // Map standard TipTap image to Substack captionedImage schema
       return {

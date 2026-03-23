@@ -141,11 +141,16 @@ Responde SOLO en este formato JSON estricto:
 // Helper to convert markdown to HTML string (TipTap parses HTML natively into ProseMirror AST)
 function mdToProseMirror(md: string) {
   const blocks = md.split('\n\n').filter(b => b.trim())
-  let html = ''
+  const total = blocks.length
+  const firstThird = Math.max(1, Math.floor(total * 0.25))
+  const middle = Math.max(2, Math.floor(total * 0.55))
+  const end = total - 1
   
+  let html = ''
   let inList = false
 
-  for (const block of blocks) {
+  for (let i = 0; i < blocks.length; i++) {
+    const block = blocks[i]
     if (block.startsWith('- ')) {
       if (!inList) {
         html += '<ul>\n'
@@ -174,6 +179,15 @@ function mdToProseMirror(md: string) {
       html += `<h3>${parsedBlock.replace(/^###\s/, '')}</h3>\n`
     } else {
       html += `<p>${parsedBlock}</p>\n`
+    }
+    
+    // Inject Subscribe Widgets exactly after parsing the targeted blocks
+    if (i === firstThird || i === middle || i === end) {
+      if (inList) {
+        html += '</ul>\n'
+        inList = false
+      }
+      html += '<div data-type="subscribe-widget"></div>\n'
     }
   }
 
