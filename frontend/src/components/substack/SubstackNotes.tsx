@@ -1,4 +1,3 @@
-'use client'
 import { useState, useEffect, useRef } from 'react'
 import { useApp } from '@/components/layout/AppProvider'
 import { Send, Loader2, Calendar, Zap } from 'lucide-react'
@@ -28,7 +27,6 @@ export function SubstackNotes() {
     const d = new Date()
     d.setDate(d.getDate() + 1)
     d.setHours(9, 0, 0, 0)
-    // Format for datetime-local input: "YYYY-MM-DDTHH:mm"
     setScheduleDate(d.toISOString().slice(0, 16))
   }, [])
 
@@ -67,12 +65,16 @@ export function SubstackNotes() {
           else reject(new Error(errorMsg || 'Error al publicar Note'))
         }
 
+        // HACK: The Chrome Extension utilizes aggressive `.trim()` filters that destroy Note empty line breaks
+        // To force vertical rendering spaces on Substack, we replace paragraph markers with Zero-Width space nodes!
+        // This guarantees `trim()` preserves the line and the Substack DOM natively renders an empty paragraph gap.
+        const safePayloadString = content.trim().replace(/\n+/g, '\n\u200B\n')
+
         if (scheduleMode) {
-          // Convert local datetime to ISO UTC
           const trigger_at = new Date(scheduleDate).toISOString()
-          window.postMessage({ type: 'SCHEDULE_NOTE', content: content.trim(), subdomain, trigger_at }, '*')
+          window.postMessage({ type: 'SCHEDULE_NOTE', content: safePayloadString, subdomain, trigger_at }, '*')
         } else {
-          window.postMessage({ type: 'PUBLISH_NOTE', content: content.trim(), subdomain }, '*')
+          window.postMessage({ type: 'PUBLISH_NOTE', content: safePayloadString, subdomain }, '*')
         }
       })
 
@@ -130,7 +132,6 @@ export function SubstackNotes() {
               />
             </div>
           )}
-
           {/* Textarea */}
           <div className="relative">
             <textarea

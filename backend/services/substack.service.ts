@@ -543,4 +543,49 @@ const resolvedUserId = updatedUser?.id || userId
 
     return await this.scheduleDraft(userId, String(draftId), triggerAt)
   }
+
+  static async publishNote(userId: string, contentStr: string) {
+    const cookie = await this.getCookieHeader(userId)
+    const { data: user } = await supabase.from('users').select('subdomain').eq('id', userId).single()
+    if (!user) throw new Error('User not found')
+    
+    // Notes strictly utilize the global Substack URL, not the user subdomain URL
+    const headers = this.getHeaders(cookie, `https://substack.com`)
+
+    // Extract native AST schema generated natively by TipTap or TextArea strings
+    let astObj;
+    try {
+      astObj = JSON.parse(contentStr);
+    } catch (e) {
+      // Fallback natively to raw string outputs targeting Notes schema definitions
+      const paragraphs = contentStr
+        .split('\n')
+        .filter(line => line.trim() !== '')
+        .map(line => ({
+          type: "paragraph",
+          content: [{ type: "text", text: line.trim() }]
+        }))
+
+      astObj = { type: 'doc', content: paragraphs }
+    }
+
+    // Force Substack v1 compliance structure wrapper around the payload
+    const bodyJson = {
+      type: "doc",
+      attrs: { schemaVersion: "v1" },
+      content: astObj.content || []
+    }
+
+    const res = await fetch(`https://substack.com/api/v1/comment/feed`, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify({
+        bodyJson: bodyJson,
+        replyMinimumRole: "everyone"
+      }),
+    })
+    
+    if (!res.ok) throw new Error(`Substack API error: ${res.status}`)
+    return await res.json()
+  }
 }

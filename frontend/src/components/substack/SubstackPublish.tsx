@@ -278,21 +278,26 @@ export function SubstackPublish() {
   }
 
   async function publish() {
+    const isNote = editorPrefill?.type === 'note'
+    
     if (!editor?.getText().trim()) { alert('Escribe el contenido'); return }
-    if (!title.trim()) { alert('Escribe el título'); return }
-    if (isScheduled && !scheduleAt) { alert('Selecciona la fecha y hora de programación'); return }
+    if (!isNote && !title.trim()) { alert('Escribe el título'); return }
+    if (!isNote && isScheduled && !scheduleAt) { alert('Selecciona la fecha y hora de programación'); return }
 
     setPublishing(true); setResult(null)
     try {
-      // Si no es un post programado, usar ISO instantáneo o backend lo asume como "ahora"
-      const isoSchedule = isScheduled && scheduleAt ? new Date(scheduleAt).toISOString() : new Date().toISOString()
-      const endpoint = '/api/substack/publish'
-      const bodyPayload = {
+      const isoSchedule = (!isNote && isScheduled && scheduleAt) ? new Date(scheduleAt).toISOString() : new Date().toISOString()
+      
+      const endpoint = isNote ? '/api/substack/note' : '/api/substack/publish'
+      
+      const bodyPayload = isNote ? {
+        content: JSON.stringify(editor.getJSON())
+      } : {
         title: title.trim(),
         subtitle: subtitle.trim(),
         content: JSON.stringify(editor.getJSON()),
         scheduleAt: isoSchedule,
-        draftId, // Explicitly pass the pre-created Draft ID
+        draftId,
         type: 'article' as PublishType
       }
 
@@ -340,8 +345,9 @@ export function SubstackPublish() {
   }
 
   const handleContinue = () => {
-    if (!editor?.getText().trim()) { alert('El artículo no puede estar vacío'); return }
-    if (!title.trim()) { alert('El artículo debe tener un título'); return }
+    const isNote = editorPrefill?.type === 'note'
+    if (!editor?.getText().trim()) { alert('El contenido no puede estar vacío'); return }
+    if (!isNote && !title.trim()) { alert('El artículo debe tener un título'); return }
     setPublishStep('settings')
   }
 

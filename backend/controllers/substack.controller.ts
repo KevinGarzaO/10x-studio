@@ -248,6 +248,19 @@ export const scheduleDraft = async (req: Request, res: Response) => {
   }
 }
 
+export const publishNote = async (req: Request, res: Response) => {
+  try {
+    const { data: user } = await supabase.from('users').select('id').single()
+    if (!user) return res.status(404).json({ error: 'Usuario no encontrado' })
+
+    const { content } = req.body
+    const result = await SubstackService.publishNote(user.id, content)
+    res.json(result)
+  } catch (e: any) {
+    res.status(500).json({ error: e.message || 'Error al publicar nota' })
+  }
+}
+
 export const uploadImage = async (req: Request, res: Response) => {
   try {
     const { data: user } = await supabase.from('users').select('id').single()

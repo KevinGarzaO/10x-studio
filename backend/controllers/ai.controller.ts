@@ -86,12 +86,23 @@ export const suggest = async (req: Request, res: Response) => {
     
     // Parse the inner JSON from text response
     try {
-      const result = JSON.parse(data.content[0].text)
+      // Intentar parsear como JSON si es un Artículo
+      let result;
+      try {
+        result = JSON.parse(data.content[0].text.trim())
+      } catch (innerErr) {
+        // Fallback: Si no es JSON (por ejemplo, para Notes), lo envolvemos
+        result = {
+          titulo: '',
+          subtitulo: '',
+          contenido: data.content[0].text
+        }
+      }
       res.json(result)
-    } catch {
-      res.status(500).json({ error: 'Failed to parse AI response' })
+    } catch (e) {
+      res.status(500).json({ error: 'Failed to process AI response' })
     }
-  } catch {
+  } catch (e) {
     res.status(500).json({ error: 'Error calling AI API' })
   }
 }
@@ -104,7 +115,7 @@ export const generateSubstack = async (req: Request, res: Response) => {
     return res.status(400).json({ error: 'API key requerida. Configura CLAUDE_API_KEY en las variables de entorno.' })
   }
 
-  const prompt = `
+  const prompt = platform === 'article' ? `
 Eres un ghostwriter experto que escribe exactamente como Kevin Garza — fundador de Transformateck.
 
 GUÍA DE VOZ Y ESTILO:
@@ -154,10 +165,7 @@ Ahora escribe un artículo sobre: "${topic}"
 Extensión: ${length} palabras aproximadamente
 Tono adicional: ${tone}
 
-${platform === 'article' ? 
-  'Es un artículo de newsletter largo con subtítulos, historias y reflexiones profundas.' : 
-  'Es una nota corta y directa — máximo 300 palabras, sin subtítulos, muy conversacional.'
-}
+Es un artículo de newsletter largo con subtítulos, historias y reflexiones profundas.
 
 Responde SOLO en este formato JSON sin nada más:
 {
@@ -165,6 +173,30 @@ Responde SOLO en este formato JSON sin nada más:
   "subtitulo": "subtítulo opcional",
   "contenido": "contenido completo del artículo"
 }
+` : `
+Eres un ghostwriter experto que escribe exactamente como Kevin Garza.
+
+Escribe una nota corta para Substack sobre: "${topic}"
+
+Reglas:
+- Máximo 300 palabras
+- Párrafos cortos separados por salto de línea
+- Usar emojis relevantes al inicio de párrafos clave
+- Tono conversacional mexicano
+- Abre con una historia o pregunta directa
+- Cierra invitando al grupo de WhatsApp de Transformateck
+- Sin título ni subtítulo — solo el cuerpo del texto
+
+Ejemplo de formato:
+"Mira, hace poco me pasó algo curioso. 🤔
+
+[párrafo 2]
+
+[párrafo 3]
+
+🚀 Si quieres aprender más, únete a nuestra comunidad..."
+
+Responde SOLO con el texto de la nota, sin JSON, sin explicaciones.
 `
 
 // Helper to convert markdown to HTML string (TipTap parses HTML natively into ProseMirror AST)
@@ -270,7 +302,20 @@ function mdToProseMirror(md: string) {
     if (rawText.endsWith('```')) rawText = rawText.slice(0, -3)
     
     try {
-      const parsed = JSON.parse(rawText.trim())
+      let parsed;
+      try {
+        // Strict parse for standard Article payload shapes
+        parsed = JSON.parse(rawText.trim())
+      } catch (e) {
+        // Fallback natively to raw string outputs targeting Notes schema definitions
+        // mdToProseMirror expects "\n\n" to separate blocks. Claude generates "\n" for Notes.
+        parsed = {
+          titulo: '',
+          subtitulo: '',
+          contenido: rawText.trim().replace(/\n+/g, '\n\n')
+        }
+      }
+      
       const pmContent = mdToProseMirror(parsed.contenido || '')
       
       res.json({ 
