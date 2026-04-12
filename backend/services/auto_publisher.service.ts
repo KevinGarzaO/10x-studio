@@ -229,16 +229,32 @@ RESPUESTA ESTRICTA EN EL SIGUIENTE FORMATO JSON:
    */
   static async publishFlowForUser(userId: string) {
     try {
-      console.log('================ AUTO PUBLISHER START ================')
-      console.log(`[AutoPublisher] Iniciando flujo para el usuario ${userId}`);
+      const { supabase } = require('./supabase.service')
+      console.log('================ SUBSTACK AUTO START ================')
+      console.log(`[SubstackAuto] Iniciando flujo para el usuario ${userId}`);
 
-      // 1. Obtener Trending Topic
-      const { topic, extract } = await this.findTrendingTopicForToday();
-      console.log(`[AutoPublisher] Información curada. Titular detectado: ${topic}`);
+      // A. Consultar Memoria (últimos temas publicados tanto en LI como Substack)
+      const { data: recentHistory } = await supabase
+        .from('history')
+        .select('topic')
+        .eq('user_id', userId)
+        .order('id', { ascending: false })
+        .limit(15)
+      
+      const excluded = recentHistory?.map((h: any) => h.topic).filter(Boolean) || []
 
-      // 2. Redactar el contenido
-      const articleObj = await this.writeArticle(topic, extract);
-      console.log(`[AutoPublisher] Artículo redactado (Título sugerido: ${articleObj.titulo})`);
+      // 1. Obtener Trending Topic con Scoring
+      const { topic, extract, relevance_score } = await this.findTrendingTopicForToday(excluded);
+      console.log(`[SubstackAuto] Noticia: "${topic}" | Score: ${relevance_score}`);
+
+      if (relevance_score < 85) {
+        console.log(`[SubstackAuto] Score (${relevance_score}) insuficiente para artículo. Abortando.`);
+        return;
+      }
+
+      // 2. Redactar el contenido (Plataforma: substack-article)
+      const articleObj = await this.writeArticle(topic, extract, 'substack-article');
+      console.log(`[SubstackAuto] Artículo redactado: ${articleObj.titulo}`);
 
       // 3. Generar Imagen Nano Banana v5
       let imageUrl = null;
@@ -271,29 +287,40 @@ ${articleObj.image_prompt}
       const htmlContent = mdToHtml(articleObj.contenido || '')
       const finalHtml = imageUrl ? `<p><img src="${imageUrl}" alt="Nano Banana v5"></p>\n` + htmlContent : htmlContent
 
-      // 5. Crear DRAFT en Substack (estado Draft = revisión de usuario manual primero)
-      console.log('[AutoPublisher] Iniciando carga a Substack como DRAFT...');
-      
+      // 5. Crear DRAFT en Substack
+      console.log('[SubstackAuto] Iniciando carga a Substack...');
       const draft = await SubstackService.createDraft(userId, {
         draft_title: articleObj.titulo.trim(),
         draft_subtitle: articleObj.subtitulo.trim()
       })
 
-      // Actualizar borrador
+      // 6. Actualizar borrador con contenido
       await SubstackService.updateDraft(userId, String(draft.id), {
         draft_title: articleObj.titulo.trim(),
         draft_subtitle: articleObj.subtitulo.trim(),
-        draft_podcast_url: null,
-        draft_podcast_duration: null,
         draft_body: finalHtml,
-        section_chosen: false,
-        draft_section_id: null,
         audience: 'everyone',
         type: 'newsletter'
       })
 
-      console.log(`[AutoPublisher] ✅ ÉXITO: Borrador guardado en Substack con ID ${draft.id}`);
-      console.log('================ AUTO PUBLISHER END ==================')
+      // 7. PROGRAMAR PARA 7 DÍAS DESPUÉS
+      const nextWeek = new Date();
+      nextWeek.setDate(nextWeek.getDate() + 7);
+      
+      console.log(`[SubstackAuto] Programando artículo para 1 semana después: ${nextWeek.toISOString()}`);
+      await SubstackService.scheduleDraft(userId, String(draft.id), nextWeek.toISOString());
+
+      // 8. Registrar en el Historial para Memoria
+      await supabase.from('history').insert({
+        user_id: userId,
+        topic: topic,
+        type: 'substack-article',
+        content: articleObj.contenido,
+        status: 'scheduled'
+      })
+
+      console.log(`[SubstackAuto] ✅ ÉXITO: Artículo programado para próximamente con ID ${draft.id}`);
+      console.log('================ SUBSTACK AUTO END ==================')
     } catch (e) {
       console.error('[AutoPublisher] FALLO GENERAL:', e);
     }
