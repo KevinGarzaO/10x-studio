@@ -124,8 +124,12 @@ export function LinkedInSection() {
       'linkedin-oauth', 'width=600,height=700,scrollbars=yes'
     )
     const handler = (e: MessageEvent) => {
-      if (e.data?.type === 'LINKEDIN_AUTH') {
-        const d = e.data;
+      // Sometimes e.data is stringified, depends on browser/context
+      const data = typeof e.data === 'string' ? JSON.parse(e.data) : e.data;
+
+      if (data?.type === 'LINKEDIN_AUTH') {
+        console.log('[LinkedIn Auth] Datos recibidos:', data)
+        const d = data;
         saveSettings({ 
           ...settings, 
           linkedinToken: d.token, 

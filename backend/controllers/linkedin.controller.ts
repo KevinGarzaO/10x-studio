@@ -192,9 +192,16 @@ export const linkedinProxyImage = async (req: Request, res: Response) => {
 
   try {
     const response = await fetch(imageUrl, {
-      headers: { 'User-Agent': 'Mozilla/5.0' }
+      headers: { 
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        'Accept': 'image/avif,image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8'
+      }
     })
-    if (!response.ok) throw new Error('Could not fetch image')
+    
+    if (!response.ok) {
+      console.error(`[LinkedIn Proxy] Failed to fetch image: ${response.status} ${response.statusText} for URL: ${imageUrl}`)
+      throw new Error(`LinkedIn returned ${response.status}`)
+    }
     
     const contentType = response.headers.get('content-type') || 'image/jpeg'
     res.setHeader('Content-Type', contentType)
@@ -203,8 +210,8 @@ export const linkedinProxyImage = async (req: Request, res: Response) => {
     const buffer = await response.buffer()
     res.send(buffer)
   } catch (e: any) {
-    console.error('[LinkedIn] Proxy error:', e.message)
-    res.status(500).send('Error loading image')
+    console.error('[LinkedIn Proxy] Critical Error:', e.message)
+    res.status(500).send(`Error loading image: ${e.message}`)
   }
 }
 
