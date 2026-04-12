@@ -54,6 +54,12 @@ export function LinkedInSection() {
   }, [editorPrefill, setEditorPrefill])
 
   const [imgError, setImgError] = useState(false)
+  
+  // Reset image error when photo changes
+  useEffect(() => {
+    setImgError(false)
+  }, [settings.linkedinPhoto])
+
   const isConnected = !!settings.linkedinToken
 
   // Reset imgError when photo changes
