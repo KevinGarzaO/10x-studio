@@ -57,37 +57,37 @@ export const initCron = () => {
     await syncSubstackData()
   })
   
-  // 2. Auto Publisher Cron (L, M, V a las 18:00 UTC = 12:00 PM Monterrey)
+  // 2. Substack Auto Publisher (L, M, V a las 12:00 PM Monterrey)
   cron.schedule('0 18 * * 1,3,5', async () => {
-    console.log('[AutoPublisher CRON] Verificando inicio de autopublicación...');
-    
-    // Seguro de inicio: Solo desde la semana del Lunes 20 de Abril de 2026
+    console.log('[SubstackAuto] Verificando inicio...');
     const startDate = new Date('2026-04-20T00:00:00.000Z');
-    if (new Date() < startDate) {
-      console.log('[AutoPublisher CRON] Aún no es Lunes 20. Omitiendo ejecución por ahora.');
-      return;
-    }
+    if (new Date() < startDate) return;
 
-    console.log(`[AutoPublisher CRON] Es L, M o V a las 12 PM Monterrey. Lanzando Agente Autónomo...`);
-    
-    // Obtener al administrador/usuario principal (podemos sacarlo de los perfiles configurados)
     const { data: users } = await supabase.from('users').select('id, substack_user_id').not('substack_user_id', 'is', null).limit(1);
-    
-    if (users && users.length > 0) {
-      // Llamar al Agente Maestro
-      await AutoPublisherService.publishFlowForUser(users[0].id)
-    } else {
-      console.error('[AutoPublisher CRON] No se encontró usuario principal con cuenta de Substack conectada.');
-    }
+    if (users && users.length > 0) await AutoPublisherService.publishFlowForUser(users[0].id)
   })
 
-  // 3. Global Scheduler (Every 15 minutes)
+  // 4. LinkedIn Auto Publisher - Turno 1 (L-S a las 12:00 PM Monterrey)
+  cron.schedule('0 18 * * 1-6', async () => {
+    console.log('[LinkedInAuto] Turno 12:00 PM iniciado...');
+    const { data: users } = await supabase.from('users').select('id').limit(1).single();
+    if (users) await AutoPublisherService.publishLinkedInAutoFlow(users.id)
+  })
+
+  // 5. LinkedIn Auto Publisher - Turno 2 (L-S a las 05:00 PM Monterrey)
+  cron.schedule('0 23 * * 1-6', async () => {
+    console.log('[LinkedInAuto] Turno 05:00 PM iniciado...');
+    const { data: users } = await supabase.from('users').select('id').limit(1).single();
+    if (users) await AutoPublisherService.publishLinkedInAutoFlow(users.id)
+  })
+
+  // 3. Global Scheduler (Every 15 minutes for pending posts)
   const { SchedulerService } = require('./scheduler.service')
   cron.schedule('*/15 * * * *', async () => {
     await SchedulerService.processPendingPosts()
   })
 
-  console.log('Cron services initialized (Sync=15m, AutoPublisher=L,M,V 12:00PM MTY, Scheduler=15m)')
+  console.log('Cron services initialized (Sync=15m, Substack=L,M,V 12PM, LinkedIn=L-S 12PM&5PM, Scheduler=15m)')
 }
 
 
