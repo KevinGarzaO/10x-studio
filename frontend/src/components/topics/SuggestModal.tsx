@@ -27,12 +27,13 @@ interface Props {
   apiKey: string
   open: boolean
   initialQuery?: string
+  minRelevance?: number
   onClose: () => void
   onWrite: (title: string, notes: string) => void
   onSave: (title: string, notes: string) => void
 }
 
-export function SuggestModal({ apiKey, open, initialQuery, onClose, onWrite, onSave }: Props) {
+export function SuggestModal({ apiKey, open, initialQuery, minRelevance = 0, onClose, onWrite, onSave }: Props) {
   const [userInput, setUserInput] = useState('')
   const [loading, setLoading]     = useState(false)
   const [results, setResults]     = useState<WebSuggestion[]>([])
@@ -62,11 +63,14 @@ export function SuggestModal({ apiKey, open, initialQuery, onClose, onWrite, onS
       })
       if (data.error) throw new Error(data.error)
       if (Array.isArray(data.temas)) {
-        // Ordenar de mayor a menor relevancia y asegurar que relevancia exista numéricamente (fallback a 50)
-        const sorted = data.temas.map((t: any) => ({
-          ...t, 
-          relevancia: typeof t.relevancia === 'number' ? t.relevancia : (parseInt(t.relevancia) || 50)
-        })).sort((a: any, b: any) => b.relevancia - a.relevancia)
+        // Ordenar de mayor a menor relevancia, tipear numéricamente y aplicar filtro de minRelevance
+        const sorted = data.temas
+          .map((t: any) => ({
+            ...t, 
+            relevancia: typeof t.relevancia === 'number' ? t.relevancia : (parseInt(t.relevancia) || 50)
+          }))
+          .filter((t: any) => t.relevancia >= minRelevance)
+          .sort((a: any, b: any) => b.relevancia - a.relevancia)
         setResults(sorted)
       } else {
         throw new Error('Formato de respuesta inválido')

@@ -37,6 +37,7 @@ No hagas un retrato simple. Diseña una composición de "Storytelling Visual":
 4. AMBIENTE: Cinematográfico, tech futurista de alto detalle, neones turquesa vibrantes.
 
 PROMPT FINAL: (Genera el prompt narrativo de forma hiper-compacta, en inglés, en un párrafo de máximo 80 a 100 palabras para inyectarlo en DALL-E)
+ESTILO OBLIGATORIO: vibrant cartoon illustration, comic book art style, bold outlines, cel-shading, NOT photorealistic, NOT 3D render. Colorful and expressive.
 `;
 function buildPrompt(p) {
     const isArticle = p.platform === 'substack-article' || p.platform === 'blog' || p.platform === 'article';

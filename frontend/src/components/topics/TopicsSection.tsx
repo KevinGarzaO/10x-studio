@@ -36,6 +36,7 @@ export function TopicsSection({ onWriteTopic }: Props) {
   const [editingCampaign, setEditingCampaign] = useState<Campaign | null>(null)
   const [researchTopic, setResearchTopic] = useState<Topic | null>(null)
   const [suggestModal, setSuggestModal]   = useState(false)
+  const [newsModal, setNewsModal]         = useState(false)
 
   const filtered = topics
     .filter(t => t.status === 'idea' || !t.status)
@@ -98,6 +99,10 @@ export function TopicsSection({ onWriteTopic }: Props) {
           <button className="btn btn-primary btn-sm justify-center shadow-lg" onClick={() => setSuggestModal(true)}>
             <i className="pi pi-sparkles mr-1 text-[10px]"></i>
             Sugerir / Agregar
+          </button>
+          <button className="btn btn-sm justify-center border border-brand-accent/60 bg-brand-accent/10 text-brand-accent hover:bg-brand-accent/20 transition-colors" onClick={() => setNewsModal(true)}>
+            <i className="pi pi-bolt mr-1 text-[10px]"></i>
+            Noticias IA
           </button>
         </div>
       </div>
@@ -203,6 +208,15 @@ export function TopicsSection({ onWriteTopic }: Props) {
         onClose={() => setSuggestModal(false)} 
         onWrite={(title, notes) => { setSuggestModal(false); onWriteTopic({ title, notes }) }} 
         onSave={handleSuggestSave} 
+      />
+      <SuggestModal
+        open={newsModal}
+        apiKey={settings.apiKey}
+        initialQuery="últimas noticias más relevantes e impactantes de inteligencia artificial de esta semana"
+        minRelevance={85}
+        onClose={() => setNewsModal(false)}
+        onWrite={(title, notes) => { setNewsModal(false); onWriteTopic({ title, notes }) }}
+        onSave={handleSuggestSave}
       />
     </div>
   )
