@@ -106,8 +106,14 @@ export function LinkedInSection() {
   }
 
   function handleConnect() {
+    let baseUrl = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:3001'
+    // Remove trailing /api if present to avoid duplication
+    if (baseUrl.endsWith('/api')) {
+      baseUrl = baseUrl.slice(0, -4)
+    }
+    
     const popup = window.open(
-      `${process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:3001'}/api/linkedin/auth`,
+      `${baseUrl}/api/linkedin/auth`,
       'linkedin-oauth', 'width=600,height=700,scrollbars=yes'
     )
     const handler = (e: MessageEvent) => {
