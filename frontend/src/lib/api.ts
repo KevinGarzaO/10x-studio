@@ -7,12 +7,16 @@ export async function api<T>(path: string, options?: RequestInit): Promise<T> {
     throw new Error(errorMsg)
   }
 
-  // Normalize path to prevent double /api if BACKEND_URL already has it
-  const cleanPath = path.startsWith('/api') && BACKEND_URL.endsWith('/api') 
-    ? path.slice(4) 
-    : path
+  // Normalize BACKEND_URL and path to prevent duplication or double slashes
+  const cleanBase = BACKEND_URL.replace(/\/api\/?$/, '').replace(/\/+$/, '')
+  const cleanPath = path.startsWith('/') ? path : `/${path}`
+  
+  // If we are calling an internal api route, make sure we use /api unless it's a full URL
+  const finalPath = (cleanPath.startsWith('/api') || path.startsWith('http')) 
+    ? cleanPath 
+    : `/api${cleanPath}`
 
-  const url = path.startsWith('http') ? path : `${BACKEND_URL}${cleanPath}`
+  const url = path.startsWith('http') ? path : `${cleanBase}${finalPath}`
   console.log(`%c[API] Request: ${url}`, 'color: #0b57d0; font-weight: bold;')
   
   const res = await fetch(url, { 
