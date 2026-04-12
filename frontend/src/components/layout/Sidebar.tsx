@@ -112,9 +112,9 @@ export const ERP_MENU: NavModule[] = [
         label: 'Canales',
         icon: 'pi pi-send',
         items: [
+          { id: 'li-dash', label: 'LinkedIn' },
           { id: 'substack-dash', label: 'Substack' },
           { id: 'wp-dash', label: 'WordPress', soon: true },
-          { id: 'li-dash', label: 'LinkedIn', soon: true },
           { id: 'x-dash', label: 'X / Twitter', soon: true },
           { id: 'multichannel-create', label: 'Multicanal', pro: true },
         ]

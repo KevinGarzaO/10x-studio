@@ -92,6 +92,12 @@ export interface AppSettings {
   audience: string
   substackCookie?: string
   substackPublication?: string
+  linkedinToken?: string
+  linkedinUrn?: string
+  linkedinName?: string
+  linkedinPhoto?: string
+  linkedinEmail?: string
+  linkedinHeadline?: string
 }
 
 export interface GeneratedResult {

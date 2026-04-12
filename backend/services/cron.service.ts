@@ -81,7 +81,13 @@ export const initCron = () => {
     }
   })
 
-  console.log('Cron services initialized (Sync=15m, AutoPublisher=L,M,V 12:00PM MTY desde el día 20)')
+  // 3. Global Scheduler (Every 15 minutes)
+  const { SchedulerService } = require('./scheduler.service')
+  cron.schedule('*/15 * * * *', async () => {
+    await SchedulerService.processPendingPosts()
+  })
+
+  console.log('Cron services initialized (Sync=15m, AutoPublisher=L,M,V 12:00PM MTY, Scheduler=15m)')
 }
 
 

@@ -44,9 +44,9 @@ No hagas un retrato simple. Diseña una composición de "Storytelling Visual":
 - Reloj "3:00 AM", Letrero "Build in Public".
 
 3. PERSONAJES DINÁMICOS:
-- JERSEY: Variedad deportiva global e internacional. (Preferencia #1: Rayados de Monterrey). Alternar con: Red Bull F1/Checo Pérez, Boxeo Canelo Álvarez, Dallas Cowboys, Astros de Houston, Sultanes, Tomateros. Fútbol Internacional: Juventus, Real Madrid, Liverpool FC, Boca Juniors, Flamengo, etc. 
+- JERSEY: Variedad deportiva global e internacional. ES CRÍTICO VARIAR EL EQUIPO EN CADA GENERACIÓN. Elige al azar entre: Rayados de Monterrey, Selección Mexicana, Red Bull F1 (Pérez), Dallas Cowboys, Astros de Houston, Sultanes, Real Madrid, Liverpool FC, Juventus. 
 - PROHIBICIÓN ESTRICTA: NUNCA usar jerseys de Tigres u Club América.
-- GORRA: Kevin siempre lleva una gorra deportiva en la cabeza (que combine con el jersey).
+- GORRA: Kevin siempre lleva una gorra deportiva. LA GORRA DEBE SER DEL MISMO EQUIPO Y COLOR QUE EL JERSEY ELEGIDO (Uniforme completo y coherente).
 - AGUACATE: Aguacate antropomorfizado 🥑 con brazos/piernas. Es un personaje analista/ayudante (sosteniendo letreros de "This Works", analizando datos con Kevin).
 
 4. AMBIENTE: Cinematográfico, tech futurista de alto detalle, neones turquesa vibrantes.
@@ -56,34 +56,45 @@ ESTILO OBLIGATORIO: vibrant cartoon illustration, comic book art style, bold out
 `;
 
 export function buildPrompt(p: PromptParams): string {
-  const isArticle = p.platform === 'substack-article' || p.platform === 'blog' || p.platform === 'article';
+  const isLI      = p.platform.startsWith('linkedin');
+  const isArticle = p.platform === 'substack-article' || p.platform === 'blog' || p.platform === 'article' || p.platform === 'linkedin-article';
+  const isShort   = p.platform === 'linkedin-post' || p.platform === 'substack-note';
 
-  if (isArticle) {
-    return `
-Escribe un ARTÍCULO newsletter de Substack sobre: "${p.topic}"
-- Longitud: ~${p.length} palabras. Tono: ${p.tone}.
+  let platformGoal = '';
+  if (isArticle) platformGoal = `un ARTÍCULO largo y detallado para ${p.platform}`;
+  else if (isShort) platformGoal = `un POST corto y viral para ${p.platform}`;
+  else platformGoal = `un contenido para ${p.platform}`;
+
+  // Formato especial para LinkedIn: Texto "Puro" sin Markdown
+  const liFormatting = isLI ? `
+REGLA DE FORMATO CRÍTICA PARA LINKEDIN:
+- NO usar Markdown. Prohibido usar asteriscos (**) para negritas.
+- NO usar almohadillas (#) para títulos o encabezados.
+- Usa texto plano limpio y EMOJIS para resaltar puntos o separar secciones.
+- Sé extremadamente breve y directo. Aunque se pida "Largo", no superes los 2,600 caracteres (aprox 400 palabras) para asegurar que quepa en LinkedIn sin cortes.
+` : '';
+
+  return `
+Escribe ${platformGoal} sobre: "${p.topic}"
+- Longitud sugerida: ~${p.length} palabras. 
+- Tono: ${p.tone}.
 ${p.audience ? `- Audiencia: ${p.audience}` : ''}
 ${p.keywords ? `- Palabras clave: ${p.keywords}` : ''}
-${p.extract ? `\nMaterial base (ESTA ES TU FUENTE PRIMARIA, RESPÉTALA):\n${p.extract}` : '\nNO hay material base provisto. Utiliza tu vasto conocimiento en IA, datos reales de 2024 y tu estilo de noticiero para crear un artículo profundamente preciso, sin inventar términos vagos.'}
+${p.extract ? `\nMaterial base (FUENTE PRIMARIA):\n${p.extract}` : '\nSin material base. Usa datos reales de finales de 2024/2025 y tendencias actuales.'}
 
 ${KEVIN_VOICE_RULES}
-${NANO_BANANA_META_PROMPT}
+${liFormatting}
 
-RESPUESTA (Solo JSON):
+${(isArticle || isLI) ? NANO_BANANA_META_PROMPT : ''}
+
+RESPUESTA (JSON PURO):
 {
-  "titulo": "...",
-  "subtitulo": "...",
-  "contenido": "...",
-  "image_prompt": "Dejalo completamente VACÍO (un string vacío \"\"). El sistema generará la infografía en el Paso 2."
+  "titulo": "Titular gancho",
+  "subtitulo": "${isArticle ? 'Subtítulo descriptivo' : ''}",
+  "contenido": "Contenido en texto plano (EMOJIS permitidos, Markdown PROHIBIDO si es LinkedIn)",
+  "image_prompt": "${(isArticle || isLI) ? 'Prompt para DALL-E (Paso 2)' : ''}"
 }
 `;
-  }
-
-  if (p.platform === 'substack-note') {
-    return `Escribe una NOTA de Substack sobre: "${p.topic}". ${KEVIN_VOICE_RULES} Máx 300 palabras, sin título.`;
-  }
-
-  return `Escribe un post de ${p.platform} sobre ${p.topic}. Tono: ${p.tone}.`;
 }
 
 export function buildSuggestTopicsPrompt(niche: string, audience: string, existing: string[]): string {

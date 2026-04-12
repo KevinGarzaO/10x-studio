@@ -143,7 +143,8 @@ export const generateSubstack = async (req: Request, res: Response) => {
 
     // 3. Generate Nano Banana Image with Face References
     let imageUrl = null;
-    if (platform === 'article' && parsed.image_prompt && process.env.GEMINI_API_KEY) {
+    const allowsImage = platform === 'article' || platform.startsWith('linkedin');
+    if (allowsImage && parsed.image_prompt && process.env.GEMINI_API_KEY) {
       try {
         const refImages: any[] = []
         const refPaths = [path.join(__dirname, '../assets/references/ref1.jpg'), path.join(__dirname, '../assets/references/ref2.jpg')]
@@ -176,11 +177,12 @@ ${parsed.image_prompt}
     const finalHtml = imageUrl ? `<p><img src="${imageUrl}" alt="Nano Banana"></p>\n` + htmlContent : htmlContent
 
     res.json({
-      titulo: parsed.titulo,
-      subtitulo: parsed.subtitulo,
+      titulo: parsed.titulo || '',
+      subtitulo: parsed.subtitulo || '',
       contenido: finalHtml,
+      contenido_raw: parsed.contenido || '', // For LinkedIn/Notes
       imageUrl,
-      image_prompt: parsed.image_prompt,
+      image_prompt: parsed.image_prompt || '',
       usage: data.usage
     })
 

@@ -12,6 +12,8 @@ const substack_1 = __importDefault(require("./routes/substack"));
 const users_1 = __importDefault(require("./routes/users"));
 const crud_1 = __importDefault(require("./routes/crud"));
 const ai_1 = __importDefault(require("./routes/ai"));
+const linkedin_1 = __importDefault(require("./routes/linkedin"));
+const linkedin_controller_1 = require("./controllers/linkedin.controller");
 const cron_service_1 = require("./services/cron.service");
 const auth_middleware_1 = require("./middleware/auth.middleware");
 const path_1 = __importDefault(require("path"));
@@ -44,6 +46,9 @@ app.use('/api', auth_middleware_1.authMiddleware, crud_1.default);
 app.use('/api', auth_middleware_1.authMiddleware, ai_1.default);
 app.use('/api/substack', auth_middleware_1.authMiddleware, substack_1.default);
 app.use('/api/users', auth_middleware_1.authMiddleware, users_1.default);
+// LinkedIn: callback is public (OAuth redirect), rest requires auth
+app.get('/api/linkedin/callback', linkedin_controller_1.linkedinCallback);
+app.use('/api/linkedin', auth_middleware_1.authMiddleware, linkedin_1.default);
 // Root route
 app.get('/', (req, res) => {
     res.send('10X Studio API is running');

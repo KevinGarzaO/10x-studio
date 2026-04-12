@@ -19,19 +19,7 @@ const AvocadoAlert = Swal.mixin({
 })
 
 interface Props { prefill?: { title?: string; notes?: string } | null; onNav?: (section: any) => void }
-type ContentPlatform = 'article' | 'note'
-
-const LENGTH_OPTIONS = [
-  { label: 'Corto ~500', value: '500' },
-  { label: 'Medio ~1000', value: '1000' },
-  { label: 'Largo ~1500', value: '1500' }
-]
-
-const TONE_OPTIONS = [
-  { label: 'Conversacional', value: 'Conversacional' },
-  { label: 'Profesional', value: 'Profesional' },
-  { label: 'Inspiracional', value: 'Inspiracional' }
-]
+type ContentPlatform = 'article' | 'note' | 'linkedin-post'
 
 export function RedactorSection({ prefill, onNav }: Props) {
   const { settings, addHistory, addTopic, topics, updateTopic, setEditorPrefill } = useApp()
@@ -39,8 +27,6 @@ export function RedactorSection({ prefill, onNav }: Props) {
   const [platform, setPlatform] = useState<ContentPlatform>('article')
   const [topic, setTopic]       = useState('')
   const [extract, setExtract]   = useState('')
-  const [length, setLength]     = useState('1000') // default Medio
-  const [tone, setTone]         = useState('Conversacional')
   
   const [generating, setGenerating] = useState(false)
   const [showSugModal, setShowSugModal] = useState(false)
@@ -91,25 +77,36 @@ export function RedactorSection({ prefill, onNav }: Props) {
     setGenerating(true)
 
     try {
+      // Auto-calculate length and tone based on user request
+      const finalLength = platform === 'article' ? '1500' : (platform === 'note' ? '300' : '400')
+      const finalTone = 'Conversacional'
+
       const data = await api<any>('/api/generate/substack', { 
         method: 'POST',
         body: JSON.stringify({ 
           topic, 
           platform, 
-          length, 
-          tone,
+          length: finalLength, 
+          tone: finalTone,
           extract 
         }) 
       })
       
       if (data.error) throw new Error(data.error)
       
-      const { titulo, subtitulo, contenido, contenido_raw } = data
+      const { titulo, subtitulo, contenido, contenido_raw, imageUrl: generatedImageUrl } = data
 
       // Save to history/topics
       const wordCount = typeof contenido === 'string' ? contenido.split(/\s+/).length : JSON.stringify(contenido).split(/\s+/).length // approx
       const matchedTopic = topics.find(t => t.title.toLowerCase() === topic.trim().toLowerCase())
-      await addHistory({ id: uid(), topic: topic.trim(), topicId: matchedTopic?.id ?? null, platforms: [platform === 'article' ? 'substack-article' : 'substack-note'], date: dateStr(), wordCount })
+      await addHistory({ 
+        id: uid(), 
+        topic: topic.trim(), 
+        topicId: matchedTopic?.id ?? null, 
+        platforms: [platform === 'article' ? 'substack-article' : platform === 'note' ? 'substack-note' : 'linkedin-post'], 
+        date: dateStr(), 
+        wordCount 
+      })
       if (matchedTopic) await updateTopic({ ...matchedTopic, status: 'done' })
       else await addTopic({ id: uid(), title: topic.trim(), status: 'done', tags: [], notes: '', created: dateStr() })
 
@@ -131,8 +128,20 @@ export function RedactorSection({ prefill, onNav }: Props) {
         }
       }
 
-      setEditorPrefill({ type: platform, content: platform === 'note' ? contenido_raw : contenido, title: titulo, subtitle: subtitulo, draftId: autoDraftId })
-      if (onNav) onNav('substack-dash')
+      setEditorPrefill({ 
+        type: platform, 
+        content: (platform === 'note' || platform === 'linkedin-post') ? contenido_raw : contenido, 
+        title: titulo, 
+        subtitle: subtitulo, 
+        draftId: autoDraftId,
+        imageUrl: generatedImageUrl 
+      })
+      
+      if (platform === 'linkedin-post') {
+        if (onNav) onNav('li-dash')
+      } else {
+        if (onNav) onNav('substack-dash')
+      }
 
     } catch (e: any) {
       AvocadoAlert.fire({
@@ -153,7 +162,7 @@ export function RedactorSection({ prefill, onNav }: Props) {
           <h1 className="text-[28px] font-bold tracking-tight text-brand-primary flex items-center gap-3">
             <i className="pi pi-sparkles text-brand-accent"></i> Redactor IA
           </h1>
-          <p className="text-sm text-brand-secondary mt-1">Genera borradores para Substack directamente listos para publicar</p>
+          <p className="text-sm text-brand-secondary mt-1">Genera borradores para Substack o LinkedIn directamente listos para publicar</p>
         </div>
       </div>
 
@@ -183,6 +192,13 @@ export function RedactorSection({ prefill, onNav }: Props) {
                 <span className={`absolute top-2 right-2 w-4 h-4 rounded-full border flex items-center justify-center transition-all ${platform === 'note' ? 'bg-brand-accent border-brand-accent text-black shadow-sm' : 'bg-brand-surface border-brand-border text-transparent'}`}><i className="pi pi-check text-[9px]"></i></span>
                 <span className="text-3xl drop-shadow-sm">📝</span>
                 <span className={`text-[13px] font-bold ${platform === 'note' ? 'text-brand-accent' : 'text-brand-primary'}`}>Substack Note</span>
+              </button>
+              <button 
+                onClick={() => setPlatform('linkedin-post')}
+                className={`flex-1 relative border-2 rounded-xl py-4 px-2 flex flex-col items-center gap-2 transition-all duration-200 ${platform === 'linkedin-post' ? 'border-brand-accent bg-brand-accent/5 shadow-sm' : 'border-brand-border bg-brand-bg hover:border-brand-accent hover:shadow-sm'}`}>
+                <span className={`absolute top-2 right-2 w-4 h-4 rounded-full border flex items-center justify-center transition-all ${platform === 'linkedin-post' ? 'bg-brand-accent border-brand-accent text-black shadow-sm' : 'bg-brand-surface border-brand-border text-transparent'}`}><i className="pi pi-check text-[9px]"></i></span>
+                <span className="text-3xl drop-shadow-sm">💼</span>
+                <span className={`text-[13px] font-bold ${platform === 'linkedin-post' ? 'text-brand-accent' : 'text-brand-primary'}`}>LinkedIn Post</span>
               </button>
             </div>
           </div>
@@ -231,26 +247,6 @@ export function RedactorSection({ prefill, onNav }: Props) {
             onSave={handleSuggestSave} 
           />
 
-          {/* Options */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label className="label block mb-2">TONO</label>
-              <select value={tone} onChange={e => setTone(e.target.value)} className="input !bg-brand-surface border-brand-border">
-                {TONE_OPTIONS.map(o => (
-                  <option key={o.value} value={o.value}>{o.label}</option>
-                ))}
-              </select>
-            </div>
-            <div>
-              <label className="label block mb-2">EXTENSIÓN</label>
-              <select value={length} onChange={e => setLength(e.target.value)} className="input !bg-brand-surface border-brand-border">
-                {LENGTH_OPTIONS.map(o => (
-                  <option key={o.value} value={o.value}>{o.label}</option>
-                ))}
-              </select>
-            </div>
-          </div>
-
           <div className="pt-4 border-t border-white/5">
             <button 
               className="w-full text-base font-bold py-4 rounded-xl shadow-lg transition-all transform hover:-translate-y-0.5 active:translate-y-0 disabled:opacity-50 disabled:transform-none bg-brand-accent hover:opacity-90 text-black flex items-center justify-center gap-2" 
@@ -260,7 +256,7 @@ export function RedactorSection({ prefill, onNav }: Props) {
               {generating ? (
                 <><i className="pi pi-spin pi-spinner"></i> Generando borrador...</>
               ) : (
-                <><i className="pi pi-bolt"></i> Generar {platform === 'article' ? 'Artículo' : 'Note'}</>
+                <><i className="pi pi-bolt"></i> Generar {platform === 'article' ? 'Artículo' : platform === 'note' ? 'Note' : 'LinkedIn Post'}</>
               )}
             </button>
           </div>

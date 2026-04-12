@@ -342,6 +342,67 @@ export function SettingsSection() {
             </div>
           </div>
         </section>
+        {/* LinkedIn */}
+        <section className="bg-brand-surface border border-brand-border rounded-2xl overflow-hidden shadow-[var(--shadow)]">
+          <div className="bg-brand-bg/50 border-b border-brand-border px-6 py-4 flex items-center gap-3">
+            <i className="pi pi-linkedin text-[#0A66C2]"></i>
+            <h2 className="text-sm font-bold text-brand-primary uppercase tracking-wide">LinkedIn</h2>
+          </div>
+          <div className="p-6">
+            {settings.linkedinToken ? (
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <span className="w-2.5 h-2.5 rounded-full bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.6)]"></span>
+                  <div>
+                    <p className="text-sm font-bold text-brand-primary">Conectado como {settings.linkedinName || 'LinkedIn User'}</p>
+                    <p className="text-xs text-brand-secondary mt-0.5">Tu cuenta está lista para publicar</p>
+                  </div>
+                </div>
+                <button
+                  className="btn btn-sm btn-secondary text-xs"
+                  onClick={async () => { await saveSettings({ ...settings, linkedinToken: '', linkedinUrn: '', linkedinName: '' }) }}
+                >
+                  <i className="pi pi-sign-out mr-1 text-[10px]"></i>Desconectar
+                </button>
+              </div>
+            ) : (
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-bold text-brand-primary">No conectado</p>
+                  <p className="text-xs text-brand-secondary mt-0.5">Conecta tu cuenta para publicar directamente desde Avocado</p>
+                </div>
+                <button
+                  className="btn btn-sm bg-[#0A66C2] text-white hover:bg-[#0A66C2]/90 transition-colors"
+                  onClick={() => {
+                    const popup = window.open(
+                      `${process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:3001'}/api/linkedin/auth`,
+                      'linkedin-oauth',
+                      'width=600,height=700,scrollbars=yes'
+                    )
+                    const handler = (e: MessageEvent) => {
+                      if (e.data?.type === 'LINKEDIN_AUTH') {
+                        saveSettings({ 
+                          ...settings, 
+                          linkedinToken: e.data.token, 
+                          linkedinUrn: e.data.urn, 
+                          linkedinName: e.data.name,
+                          linkedinPhoto: e.data.photo,
+                          linkedinEmail: e.data.email,
+                          linkedinHeadline: e.data.headline
+                        })
+                        window.removeEventListener('message', handler)
+                        popup?.close()
+                      }
+                    }
+                    window.addEventListener('message', handler)
+                  }}
+                >
+                  <i className="pi pi-linkedin mr-1 text-[10px]"></i>Conectar LinkedIn
+                </button>
+              </div>
+            )}
+          </div>
+        </section>
       </div>
 
     </div>

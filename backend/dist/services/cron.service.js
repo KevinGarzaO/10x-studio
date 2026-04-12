@@ -76,6 +76,11 @@ const initCron = () => {
             console.error('[AutoPublisher CRON] No se encontró usuario principal con cuenta de Substack conectada.');
         }
     });
-    console.log('Cron services initialized (Sync=15m, AutoPublisher=L,M,V 12:00PM MTY desde el día 20)');
+    // 3. Global Scheduler (Every minute)
+    const { SchedulerService } = require('./scheduler.service');
+    node_cron_1.default.schedule('* * * * *', async () => {
+        await SchedulerService.processPendingPosts();
+    });
+    console.log('Cron services initialized (Sync=15m, AutoPublisher=L,M,V 12:00PM MTY, Scheduler=1m)');
 };
 exports.initCron = initCron;

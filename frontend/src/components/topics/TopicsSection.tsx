@@ -212,7 +212,7 @@ export function TopicsSection({ onWriteTopic }: Props) {
       <SuggestModal
         open={newsModal}
         apiKey={settings.apiKey}
-        initialQuery="últimas noticias más relevantes e impactantes de inteligencia artificial de esta semana"
+        initialQuery="noticias más relevantes e impactantes de esta semana sobre los grandes de la inteligencia artificial: Anthropic Claude, OpenAI ChatGPT GPT, Google Gemini, Meta Llama, xAI Grok, Microsoft Copilot. Prioriza lanzamientos, actualizaciones de modelos y noticias de impacto de estas empresas primero, luego otras noticias relevantes de IA"
         minRelevance={85}
         onClose={() => setNewsModal(false)}
         onWrite={(title, notes) => { setNewsModal(false); onWriteTopic({ title, notes }) }}

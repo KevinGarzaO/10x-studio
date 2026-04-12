@@ -7,6 +7,8 @@ import substackRoutes from './routes/substack'
 import usersRoutes from './routes/users'
 import crudRoutes from './routes/crud'
 import aiRoutes from './routes/ai'
+import linkedinRoutes from './routes/linkedin'
+import { linkedinCallback } from './controllers/linkedin.controller'
 import { initCron } from './services/cron.service'
 import { authMiddleware } from './middleware/auth.middleware'
 
@@ -46,6 +48,9 @@ app.use('/api', authMiddleware, crudRoutes)
 app.use('/api', authMiddleware, aiRoutes)
 app.use('/api/substack', authMiddleware, substackRoutes)
 app.use('/api/users', authMiddleware, usersRoutes)
+// LinkedIn: callback is public (OAuth redirect), rest requires auth
+app.get('/api/linkedin/callback', linkedinCallback)
+app.use('/api/linkedin', authMiddleware, linkedinRoutes)
 
 // Root route
 app.get('/', (req, res) => {
