@@ -243,7 +243,7 @@ export function LinkedInSection() {
             {(settings.linkedinPhoto && !imgError) ? (
               /* eslint-disable-next-line @next/next/no-img-element */
               <img 
-                src={`${process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:3001'}/api/linkedin/proxy-image?url=${encodeURIComponent(settings.linkedinPhoto)}`} 
+                src={`${backendUrl}/api/linkedin/proxy-image?url=${encodeURIComponent(settings.linkedinPhoto)}`} 
                 alt={settings.linkedinName}
                 className="w-full h-full rounded-full object-cover border-4 border-white shadow-md ring-1 ring-black/5" 
                 onError={() => {
@@ -353,7 +353,7 @@ export function LinkedInSection() {
               <div className="relative mt-4 rounded-xl overflow-hidden group shadow-2xl border border-white/10">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img 
-                  src={image.startsWith('http') ? (image.includes('proxy-image') ? image : `${process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:3001'}/api/linkedin/proxy-image?url=${encodeURIComponent(image)}`) : image} 
+                  src={image.startsWith('http') ? (image.includes('proxy-image') ? image : `${backendUrl}/api/linkedin/proxy-image?url=${encodeURIComponent(image)}`) : image} 
                   alt="Preview" 
                   className="w-full max-h-[400px] object-cover" 
                 />
