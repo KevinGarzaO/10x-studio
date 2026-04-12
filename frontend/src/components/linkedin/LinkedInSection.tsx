@@ -25,6 +25,13 @@ export function LinkedInSection() {
   const [posts, setPosts] = useState<any[]>([])
   const [statsLoading, setStatsLoading] = useState(false)
   
+  // Clean Backend URL for Production (prevents /api/api substitution)
+  const getBackendUrl = () => {
+    let url = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:3001'
+    return url.endsWith('/api') ? url.slice(0, -4) : url
+  }
+  const backendUrl = getBackendUrl()
+  
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   // Prefill check
@@ -106,14 +113,8 @@ export function LinkedInSection() {
   }
 
   function handleConnect() {
-    let baseUrl = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:3001'
-    // Remove trailing /api if present to avoid duplication
-    if (baseUrl.endsWith('/api')) {
-      baseUrl = baseUrl.slice(0, -4)
-    }
-    
     const popup = window.open(
-      `${baseUrl}/api/linkedin/auth`,
+      `${backendUrl}/api/linkedin/auth`,
       'linkedin-oauth', 'width=600,height=700,scrollbars=yes'
     )
     const handler = (e: MessageEvent) => {
@@ -307,7 +308,7 @@ export function LinkedInSection() {
               {settings.linkedinPhoto && !imgError ? (
                 /* eslint-disable-next-line @next/next/no-img-element */
                 <img 
-                  src={`${process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:3001'}/api/linkedin/proxy-image?url=${encodeURIComponent(settings.linkedinPhoto)}`}
+                  src={`${backendUrl}/api/linkedin/proxy-image?url=${encodeURIComponent(settings.linkedinPhoto)}`}
                   alt="Me" 
                   className="w-full h-full object-cover" 
                   onError={() => setImgError(true)}
@@ -459,7 +460,7 @@ export function LinkedInSection() {
                     {settings.linkedinPhoto && !imgError ? (
                       /* eslint-disable-next-line @next/next/no-img-element */
                       <img 
-                        src={`${process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:3001'}/api/linkedin/proxy-image?url=${encodeURIComponent(settings.linkedinPhoto)}`}
+                        src={`${backendUrl}/api/linkedin/proxy-image?url=${encodeURIComponent(settings.linkedinPhoto)}`}
                         alt="Me" 
                         className="w-full h-full object-cover" 
                         onError={() => setImgError(true)}
