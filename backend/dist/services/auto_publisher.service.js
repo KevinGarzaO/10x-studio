@@ -161,8 +161,8 @@ RESPUESTA ESTRICTA EN EL SIGUIENTE FORMATO JSON:
         const data = await res.json();
         let parsed = parseClaudeJson(data.content[0].text);
         // Robustez de imagen
-        if (!parsed.image_prompt || parsed.image_prompt.length < 500) {
-            console.log('[AutoPublisher] Mejorando infografía (Nano Banana) a 1200 palabras...');
+        if (!parsed.image_prompt || parsed.image_prompt.length < 50) {
+            console.log('[AutoPublisher] Refinando image_prompt compacto Nano Banana (80-100 palabras)...');
             const refineReq = await (0, node_fetch_1.default)('https://api.anthropic.com/v1/messages', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json', 'x-api-key': apiKey, 'anthropic-version': '2023-06-01' },
@@ -171,7 +171,7 @@ RESPUESTA ESTRICTA EN EL SIGUIENTE FORMATO JSON:
                     messages: [
                         { role: 'user', content: prompt },
                         { role: 'assistant', content: data.content[0].text },
-                        { role: 'user', content: "Ahora, genera EXCLUSIVAMENTE el image_prompt de 1000 palabras siguiendo todas las reglas visuales de Nano Banana v5. Recrea una INFOGRAFÍA NARRATIVA altamente compleja y detallada." }
+                        { role: 'user', content: "Ahora, genera EXCLUSIVAMENTE el image_prompt de 80 a 100 palabras (en inglés) siguiendo las reglas visuales de Nano Banana v4 (Gorra siempre, Máscara en mesa). Sé increíblemente conciso y descriptivo en un solo párrafo." }
                     ]
                 })
             });
