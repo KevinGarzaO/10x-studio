@@ -1,6 +1,8 @@
 import { supabase } from './supabase.service'
 import fetch from 'node-fetch'
 import { HttpsProxyAgent } from 'https-proxy-agent'
+import fs from 'fs'
+import path from 'path'
 
 export class SubstackService {
   static async getCookieHeader(userId: string): Promise<string> {
@@ -303,14 +305,43 @@ const resolvedUserId = updatedUser?.id || userId
     if (params.draft_body) {
       try {
         let astObj = typeof params.draft_body === 'string' ? JSON.parse(params.draft_body) : params.draft_body;
+        
+        // --- NEW: Automatic Image Hosting on Substack CDN ---
+        const backendUrl = process.env.BACKEND_URL || '';
+        const processNodes = async (node: any) => {
+          if (node.type === 'image' && node.attrs?.src?.includes(backendUrl)) {
+            try {
+              console.log(`[SubstackService] Detectada imagen local: ${node.attrs.src}. Subiendo a Substack...`);
+              const fileName = node.attrs.src.split('/').pop();
+              const filePath = path.join(__dirname, '../uploads', fileName);
+              
+              if (fs.existsSync(filePath)) {
+                const imageBase64 = fs.readFileSync(filePath).toString('base64');
+                const uploadResult = await this.uploadImage(userId, imageBase64, draftId);
+                if (uploadResult?.url) {
+                  console.log(`[SubstackService] Imagen subida con éxito: ${uploadResult.url}`);
+                  node.attrs.src = uploadResult.url;
+                }
+              }
+            } catch (imgErr) {
+              console.error('[SubstackService] Error procesando imagen para Substack:', imgErr);
+            }
+          }
+          if (node.content && Array.isArray(node.content)) {
+            for (const child of node.content) await processNodes(child);
+          }
+        };
+        
+        await processNodes(astObj);
+        // ---------------------------------------------------
+
         astObj = this.injectSubstackSchema(astObj);
-        params.draft_body = JSON.stringify(astObj); // Must be explicitly encoded as a string for Substack PUT payload
+        params.draft_body = JSON.stringify(astObj); 
       } catch (e) {
-        console.error('[Substack] Error injectSubstackSchema in updateDraft', e);
+        console.error('[Substack] Error processing draft_body in updateDraft', e);
       }
     }
     
-    // Explicitly inject required schema fields for strict update parsing
     params.draft_bylines = [{ id: Number(user.substack_user_id), is_guest: false }];
 
     const res = await fetch(`https://${subdomain}.substack.com/api/v1/drafts/${draftId}`, {

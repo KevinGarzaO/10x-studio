@@ -37,13 +37,16 @@ export function TopicsSection({ onWriteTopic }: Props) {
   const [researchTopic, setResearchTopic] = useState<Topic | null>(null)
   const [suggestModal, setSuggestModal]   = useState(false)
 
-  const filtered = topics.filter(t => {
-    const matchQ  = !search || t.title.toLowerCase().includes(search.toLowerCase()) || t.tags.some(tg => tg.toLowerCase().includes(search.toLowerCase()))
-    const matchSt = statusFilter === 'all' || t.status === statusFilter
-    const matchCa = campaignFilter === 'all' || t.campaignId === campaignFilter
-    const matchPr = priorityFilter === 'all' || t.priority === priorityFilter
-    return matchQ && matchSt && matchCa && matchPr
-  })
+  const filtered = topics
+    .filter(t => t.status === 'idea' || !t.status)
+    .filter(t => {
+      const matchQ  = !search || t.title.toLowerCase().includes(search.toLowerCase()) || t.tags.some(tg => tg.toLowerCase().includes(search.toLowerCase()))
+      const matchSt = statusFilter === 'all' || t.status === statusFilter
+      const matchCa = campaignFilter === 'all' || t.campaignId === campaignFilter
+      const matchPr = priorityFilter === 'all' || t.priority === priorityFilter
+      return matchQ && matchSt && matchCa && matchPr
+    })
+    .sort((a, b) => new Date(b.created).getTime() - new Date(a.created).getTime())
 
   function handleSuggestSave(title: string, notes: string) {
     addTopic({ id: uid(), title, status: 'idea', tags: [], notes, created: dateStr() })
@@ -92,11 +95,6 @@ export function TopicsSection({ onWriteTopic }: Props) {
           <p className="text-sm text-brand-secondary mt-1">Gestiona tus ideas de contenido</p>
         </div>
         <div className="flex gap-2 flex-wrap w-full md:w-auto">
-          <button className="btn btn-secondary btn-sm" onClick={() => { setEditingCampaign(null); setCampaignModal(true) }}>Campaña</button>
-          <label className="btn btn-secondary btn-sm cursor-pointer justify-center">
-            <span>Importar CSV</span>
-            <input type="file" accept=".csv" className="hidden" onChange={handleImportCSV} />
-          </label>
           <button className="btn btn-primary btn-sm justify-center shadow-lg" onClick={() => setSuggestModal(true)}>
             <i className="pi pi-sparkles mr-1 text-[10px]"></i>
             Sugerir / Agregar
@@ -129,14 +127,7 @@ export function TopicsSection({ onWriteTopic }: Props) {
           <i className="pi pi-search absolute left-3 top-1/2 -translate-y-1/2 text-brand-secondary text-sm pointer-events-none" />
           <input type="text" value={search} onChange={e => setSearch(e.target.value)} placeholder="Buscar temas..." className="input !pl-9" />
         </div>
-        <div className="flex gap-2 p-1 bg-brand-bg rounded-xl border border-brand-border w-fit max-w-full overflow-x-auto no-scrollbar">
-          {(['all', 'idea', 'ready', 'writing', 'done'] as const).map(f => (
-            <button key={f} onClick={() => setStatusFilter(f)}
-              className={`tab ${statusFilter === f ? 'tab-active' : 'tab-inactive'} text-xs !h-[32px] px-3 whitespace-nowrap`}>
-              {f === 'all' ? 'Todos' : STATUS_LABELS[f]}
-            </button>
-          ))}
-        </div>
+        {/* Filtros eliminados a petición del usuario. Solo 'idea' disponible */}
       </div>
 
       {/* List */}

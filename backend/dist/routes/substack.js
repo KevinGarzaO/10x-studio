@@ -163,6 +163,17 @@ router.get('/posts/:type', SubstackController.getSubstackPosts);
 router.post('/subscriber/add', SubstackController.addSubscriber);
 /**
  * @swagger
+ * /api/substack/note:
+ *   post:
+ *     summary: Publicar un Substack Note instantáneo
+ *     tags: [Substack]
+ *     responses:
+ *       200:
+ *         description: Nota publicada
+ */
+router.post('/note', SubstackController.publishNote);
+/**
+ * @swagger
  * /api/substack/publish:
  *   post:
  *     summary: Publicar un artículo completo (Draft + Schedule)

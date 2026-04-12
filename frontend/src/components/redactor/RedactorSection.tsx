@@ -4,6 +4,20 @@ import { api } from '@/lib/api'
 import { useApp } from '@/components/layout/AppProvider'
 import { uid, dateStr } from '@/lib/utils'
 
+import Swal from 'sweetalert2'
+import { SuggestModal } from '../topics/SuggestModal'
+
+const AvocadoAlert = Swal.mixin({
+  background: '#131313',
+  color: '#e0e0e0',
+  customClass: {
+    popup: 'border border-white/10 rounded-2xl shadow-2xl',
+    confirmButton: 'btn btn-primary px-6 h-10',
+    cancelButton: 'btn btn-secondary px-6 h-10'
+  },
+  buttonsStyling: false
+})
+
 interface Props { prefill?: { title?: string; notes?: string } | null; onNav?: (section: any) => void }
 type ContentPlatform = 'article' | 'note'
 
@@ -24,32 +38,56 @@ export function RedactorSection({ prefill, onNav }: Props) {
 
   const [platform, setPlatform] = useState<ContentPlatform>('article')
   const [topic, setTopic]       = useState('')
+  const [extract, setExtract]   = useState('')
   const [length, setLength]     = useState('1000') // default Medio
   const [tone, setTone]         = useState('Conversacional')
   
   const [generating, setGenerating] = useState(false)
-  const [suggestions, setSuggestions] = useState<string[]>([])
-  const [showSug, setShowSug]   = useState(false)
+  const [showSugModal, setShowSugModal] = useState(false)
 
   const lastPrefill = useRef<typeof prefill>(null)
   useEffect(() => {
     if (prefill && prefill !== lastPrefill.current) {
       lastPrefill.current = prefill
       if (prefill.title) setTopic(prefill.title)
+      if (prefill.notes) setExtract(prefill.notes)
     }
   }, [prefill])
 
-  async function handleSuggest() {
-    if (!settings.apiKey) { alert('Ingresa tu API Key de OpenAI / Anthropic en Configuración'); return }
-    try {
-      const data = await api<any>('/api/suggest', { method: 'POST',
-        body: JSON.stringify({ type: 'topics', niche: settings.niche, audience: settings.audience, existing: [], apiKey: settings.apiKey }) })
-      setSuggestions(data.topics.map((t: { title: string }) => t.title)); setShowSug(true)
-    } catch (e) { console.error(e) }
+  function handleSuggest() {
+    setShowSugModal(true)
+  }
+
+  function handleSuggestWrite(title: string, notes: string) {
+    setTopic(title)
+    setExtract(notes)
+    setShowSugModal(false)
+  }
+
+  function handleSuggestSave(title: string, notes: string) {
+    addTopic({ id: uid(), title, status: 'idea', tags: [], notes, created: dateStr() })
+    Swal.fire({
+      icon: 'success',
+      title: 'Tema Guardado',
+      text: 'Se ha agregado exitosamente a tu Banco de Temas',
+      toast: true,
+      position: 'bottom-end',
+      showConfirmButton: false,
+      timer: 3000
+    })
   }
 
   async function generate() {
-    if (!topic.trim()) { alert('Escribe un tema'); return }
+    if (!topic.trim()) { 
+      AvocadoAlert.fire({
+        icon: 'error',
+        title: 'Campo vacío',
+        text: 'Por favor, escribe o elige un tema válido primero.',
+        confirmButtonColor: '#ff4d4d'
+      })
+      return 
+    }
+    
     setGenerating(true)
 
     try {
@@ -59,7 +97,8 @@ export function RedactorSection({ prefill, onNav }: Props) {
           topic, 
           platform, 
           length, 
-          tone 
+          tone,
+          extract 
         }) 
       })
       
@@ -96,7 +135,12 @@ export function RedactorSection({ prefill, onNav }: Props) {
       if (onNav) onNav('substack-dash')
 
     } catch (e: any) {
-      alert(`Error al generar: ${e.message || String(e)}`)
+      AvocadoAlert.fire({
+        icon: 'error',
+        title: 'Error de generación',
+        text: e.message || String(e),
+        confirmButtonColor: '#ff4d4d'
+      })
     } finally {
       setGenerating(false)
     }
@@ -160,18 +204,32 @@ export function RedactorSection({ prefill, onNav }: Props) {
               <button className="btn w-32 border border-brand-border bg-brand-surface hover:bg-brand-bg/80 text-brand-primary transition-colors text-sm h-[42px] font-medium rounded-xl" onClick={handleSuggest}>
                 Sugerir
               </button>
+            {/* Opt: SuggestModal prop additions later in the file */}
             </div>
-            {showSug && suggestions.length > 0 && (
-              <div className="bg-brand-surface rounded-xl p-3 mt-3 flex flex-wrap gap-2 animate-fadein">
-                {suggestions.map(s => (
-                  <button key={s} onClick={() => { setTopic(s); setShowSug(false) }}
-                    className="text-xs bg-brand-bg border border-brand-border rounded-lg px-3 py-1.5 font-medium hover:bg-brand-accent hover:text-black hover:border-brand-accent transition-all">
-                    {s}
-                  </button>
-                ))}
-              </div>
-            )}
           </div>
+
+          {/* Extract/Resumen base */}
+          <div className="mt-6">
+            <label className="label block mb-2">RESUMEN BASE <span className="text-[#9b9a97] font-normal normal-case tracking-normal">— (Opcional) contenido curado para el bot</span></label>
+            <div className="relative w-full">
+              <i className="pi pi-align-left absolute left-3 top-3 text-stone-400 text-sm pointer-events-none" />
+              <textarea 
+                value={extract} 
+                onChange={e => setExtract(e.target.value)} 
+                className="input !pl-9 min-h-[120px] resize-y py-3" 
+                placeholder="Si utilizaste 'Sugerir', aquí se pegará el resumen técnico de internet automáticamente." 
+              />
+            </div>
+          </div>
+
+          <SuggestModal 
+            open={showSugModal} 
+            initialQuery={topic}
+            apiKey={settings.apiKey} 
+            onClose={() => setShowSugModal(false)} 
+            onWrite={handleSuggestWrite} 
+            onSave={handleSuggestSave} 
+          />
 
           {/* Options */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

@@ -28,7 +28,7 @@ type NavModule = {
   pro?: boolean;
 }
 
-const ERP_MENU: NavModule[] = [
+export const ERP_MENU: NavModule[] = [
   {
     id: 'core',
     title: 'CORE',
@@ -264,19 +264,16 @@ export function Sidebar({ active, onNav, collapsed, onToggleCollapse, mobileOpen
     const mod = ERP_MENU.find(m => m.categories.some(c => c.items.some(i => i.id === active)))
     if (mod) {
       setActiveModule(mod.id)
-      ERP_MENU.forEach(m => {
-        m.categories.forEach(c => {
-          if (c.items.some(i => i.id === active)) {
-            setExpandedCats(prev => ({ ...prev, [`${m.id}-${c.label}`]: true }))
-          }
-        })
-      })
+      const targetCat = mod.categories.find(c => c.items.some(i => i.id === active))
+      if (targetCat) {
+        setExpandedCats({ [`${mod.id}-${targetCat.label}`]: true })
+      }
     }
   }, [active])
 
   const toggleCat = (modId: string, label: string) => {
     const key = `${modId}-${label}`
-    setExpandedCats(prev => ({ ...prev, [key]: !prev[key] }))
+    setExpandedCats(prev => ({ [key]: !prev[key] }))
   }
 
   const sidebarWidth = collapsed ? 'w-[70px]' : 'w-[280px]'

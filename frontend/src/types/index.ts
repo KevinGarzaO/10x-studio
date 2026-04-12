@@ -150,7 +150,7 @@ export const CAMPAIGN_COLORS = [
 ]
 
 export const ALL_PLATFORMS: Platform[] = [
-  'blog', 'linkedin-post', 'linkedin-article', 'substack-article', 'substack-note',
+  'substack-article', 'substack-note',
 ]
 
 // ── Integrations ─────────────────────────────────────────

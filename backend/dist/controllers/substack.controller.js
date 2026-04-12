@@ -1,6 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.deleteCookies = exports.upsertCookies = exports.getCookies = exports.publishArticle = exports.addSubscriber = exports.getSubstackPosts = exports.uploadImage = exports.scheduleDraft = exports.updateDraft = exports.createDraft = exports.getStats = exports.getSubscribers = exports.getPosts = exports.debugDB = exports.getProfile = void 0;
+exports.deleteCookies = exports.upsertCookies = exports.getCookies = exports.publishArticle = exports.addSubscriber = exports.getSubstackPosts = exports.uploadImage = exports.publishNote = exports.scheduleDraft = exports.updateDraft = exports.createDraft = exports.getStats = exports.getSubscribers = exports.getPosts = exports.debugDB = exports.getProfile = void 0;
 const supabase_service_1 = require("../services/supabase.service");
 const substack_service_1 = require("../services/substack.service");
 const cron_service_1 = require("../services/cron.service");
@@ -239,6 +239,20 @@ const scheduleDraft = async (req, res) => {
     }
 };
 exports.scheduleDraft = scheduleDraft;
+const publishNote = async (req, res) => {
+    try {
+        const { data: user } = await supabase_service_1.supabase.from('users').select('id').single();
+        if (!user)
+            return res.status(404).json({ error: 'Usuario no encontrado' });
+        const { content } = req.body;
+        const result = await substack_service_1.SubstackService.publishNote(user.id, content);
+        res.json(result);
+    }
+    catch (e) {
+        res.status(500).json({ error: e.message || 'Error al publicar nota' });
+    }
+};
+exports.publishNote = publishNote;
 const uploadImage = async (req, res) => {
     try {
         const { data: user } = await supabase_service_1.supabase.from('users').select('id').single();

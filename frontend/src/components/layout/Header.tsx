@@ -3,17 +3,17 @@ import { useState, useEffect } from 'react'
 import { useApp } from './AppProvider'
 import type { NavSection } from '@/app/page'
 import { Password } from 'primereact/password'
+import { ERP_MENU } from './Sidebar'
 
-const SECTION_LABELS: Partial<Record<NavSection, string>> = {
-  dashboard:    'Dashboard',
-  topics:       'Banco de Temas',
-  redactor:     'Redactor',
-  history:      'Historial',
-  calendar:     'Calendario',
-  stats:        'Estadísticas',
-  templates:    'Plantillas',
-  substack:     'Substack',
-  integrations: 'Integraciones',
+function getSectionLabel(active: string): string {
+  for (const group of ERP_MENU) {
+    for (const cat of group.categories) {
+      for (const item of cat.items) {
+        if (item.id === active) return item.label;
+      }
+    }
+  }
+  return 'Sección';
 }
 
 interface Props { 
@@ -22,6 +22,10 @@ interface Props {
 }
 
 export function Header({ activeSection, onMenuClick }: Props) {
+  useEffect(() => {
+    document.title = `Avocado Estudio | ${getSectionLabel(activeSection)}`
+  }, [activeSection])
+
   return (
     <header className="h-[56px] bg-brand-nav-bg border-b border-brand-nav-border flex items-center px-4 md:px-8 gap-3 flex-shrink-0 transition-all duration-300">
       {/* Mobile Menu Button */}
@@ -36,7 +40,7 @@ export function Header({ activeSection, onMenuClick }: Props) {
       <div className="flex items-center gap-2 text-sm max-w-[50%] overflow-hidden overflow-ellipsis whitespace-nowrap">
         <span className="text-brand-secondary font-semibold">Avocado Estudio</span>
         <span className="text-brand-border">/</span>
-        <span className="text-brand-primary font-medium">{SECTION_LABELS[activeSection] || 'Sección'}</span>
+        <span className="text-brand-primary font-medium">{getSectionLabel(activeSection)}</span>
       </div>
 
 

@@ -90,14 +90,26 @@ const suggest = async (req, res) => {
             return res.status(400).json({ error: data.error.message });
         // Parse the inner JSON from text response
         try {
-            const result = JSON.parse(data.content[0].text);
+            // Intentar parsear como JSON si es un Artículo
+            let result;
+            try {
+                result = JSON.parse(data.content[0].text.trim());
+            }
+            catch (innerErr) {
+                // Fallback: Si no es JSON (por ejemplo, para Notes), lo envolvemos
+                result = {
+                    titulo: '',
+                    subtitulo: '',
+                    contenido: data.content[0].text
+                };
+            }
             res.json(result);
         }
-        catch {
-            res.status(500).json({ error: 'Failed to parse AI response' });
+        catch (e) {
+            res.status(500).json({ error: 'Failed to process AI response' });
         }
     }
-    catch {
+    catch (e) {
         res.status(500).json({ error: 'Error calling AI API' });
     }
 };
@@ -108,44 +120,100 @@ const generateSubstack = async (req, res) => {
     if (!apiKey) {
         return res.status(400).json({ error: 'API key requerida. Configura CLAUDE_API_KEY en las variables de entorno.' });
     }
-    const prompt = `
-Eres un ghostwriter experto que escribe en el estilo de Kevin Garza — fundador de Transformateck.
+    const prompt = platform === 'article' ? `
+Eres un ghostwriter experto que escribe exactamente como Kevin Garza — fundador de Transformateck.
 
-Estilo de escritura:
-- Español mexicano conversacional
-- Narrativa personal con historias reales
+GUÍA DE VOZ Y ESTILO:
+
+Estructura narrativa:
+- Abre SIEMPRE con una historia real o anécdota personal
+- Presenta el problema a través de alguien más (un amigo, un cliente, alguien conocido)
+- Desarrolla con reflexión personal honesta
+- Cierra SIEMPRE con llamada a unirse al grupo de WhatsApp de Transformateck
+
+Tono:
+- Conversacional mexicano — como platicando con un amigo de confianza
+- Directo y sin rodeos
 - Honesto sobre limitaciones y fracasos
-- Directo, sin rodeos
-- Párrafos cortos
-- Enfocado en emprendedores y creadores latinos
+- Nunca presumido, siempre humano y vulnerable
+- Usa "Mira," al inicio de párrafos importantes
+- Usa "Y aquí está..." para revelar insights clave
+- Usa "Déjame decirte algo" para momentos de verdad incómoda
 
-Escribe un ${platform === 'article' ? 'artículo de newsletter' : 'nota corta'} sobre: "${topic}"
+Formato:
+- Párrafos cortos — máximo 3-4 líneas
+- Subtítulos en negrita con mayúsculas en cada palabra importante
+- Listas solo cuando son absolutamente necesarias
+- Números escritos en texto — "cuarenta y siete" no "47"
+- Sin introducciones genéricas ni conclusiones corporativas
+
+Frases características de Kevin:
+- "Mira,"
+- "Y aquí está el secreto que nadie te cuenta"
+- "Déjame decirte algo"
+- "¿Sabes qué realmente..."
+- "Vamos por 1,000"
+- "Nos vemos del otro lado"
+
+Cierre SIEMPRE debe incluir:
+- Párrafo invitando a unirse al grupo de WhatsApp de Transformateck (Usa frases casuales y cortas)
+- Mencionar que son más de 600 personas y van por 1,000
+- Hashtags relevantes al tema (5 máximo)
+
+Audiencia:
+- Emprendedores y creadores de contenido latinos
+- Personas que quieren usar IA para crecer su negocio
+- Comunidad hispanohablante en LATAM
+
+Ahora escribe un artículo sobre: "${topic}"
 
 Extensión: ${length} palabras aproximadamente
-Tono: ${tone}
+Tono adicional: ${tone}
 
-${platform === 'article' ?
-        `Incluye: título atractivo, introducción con historia personal, desarrollo con puntos prácticos, cierre con llamada a la acción.
-Responde SOLO en este formato JSON estricto (sin explicaciones adicionales):
+Es un artículo de newsletter largo con subtítulos, historias y reflexiones profundas.
+
+Responde SOLO en este formato JSON sin nada más:
 {
   "titulo": "título del artículo",
   "subtitulo": "subtítulo opcional",
-  "contenido": "cuerpo del artículo en texto plano o markdown con saltos de línea"
-}` :
-        `Es una nota corta y directa — máximo 300 palabras, sin título.
-Responde SOLO en este formato JSON estricto:
-{
-  "titulo": "",
-  "subtitulo": "",
-  "contenido": "cuerpo de la nota en texto plano"
-}`}
+  "contenido": "contenido completo del artículo"
+}
+` : `
+Eres un ghostwriter experto que escribe exactamente como Kevin Garza.
+
+Escribe una nota corta para Substack sobre: "${topic}"
+
+Reglas:
+- Máximo 300 palabras
+- Párrafos cortos separados por salto de línea
+- Usar emojis relevantes al inicio de párrafos clave
+- Tono conversacional mexicano
+- Abre con una historia o pregunta directa
+- Cierra invitando al grupo de WhatsApp de Transformateck
+- Sin título ni subtítulo — solo el cuerpo del texto
+
+Ejemplo de formato:
+"Mira, hace poco me pasó algo curioso. 🤔
+
+[párrafo 2]
+
+[párrafo 3]
+
+🚀 Si quieres aprender más, únete a nuestra comunidad..."
+
+Responde SOLO con el texto de la nota, sin JSON, sin explicaciones.
 `;
     // Helper to convert markdown to HTML string (TipTap parses HTML natively into ProseMirror AST)
     function mdToProseMirror(md) {
         const blocks = md.split('\n\n').filter(b => b.trim());
+        const total = blocks.length;
+        const firstThird = Math.max(1, Math.floor(total * 0.25));
+        const middle = Math.max(2, Math.floor(total * 0.55));
+        const end = total - 1;
         let html = '';
         let inList = false;
-        for (const block of blocks) {
+        for (let i = 0; i < blocks.length; i++) {
+            const block = blocks[i];
             if (block.startsWith('- ')) {
                 if (!inList) {
                     html += '<ul>\n';
@@ -153,7 +221,10 @@ Responde SOLO en este formato JSON estricto:
                 }
                 const items = block.split('\n').filter(line => line.trim().startsWith('- '));
                 for (const item of items) {
-                    let itemHtml = item.replace(/^- /, '').replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+                    let itemHtml = item
+                        .replace(/^- /, '')
+                        .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+                        .replace(/\[(.*?)\]\((.*?)\)/g, '<a href="$2">$1</a>');
                     html += `<li><p>${itemHtml}</p></li>\n`;
                 }
                 continue;
@@ -162,7 +233,10 @@ Responde SOLO en este formato JSON estricto:
                 html += '</ul>\n';
                 inList = false;
             }
-            let parsedBlock = block.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+            let parsedBlock = block
+                .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+                .replace(/\[(.*?)\]\((.*?)\)/g, '<a href="$2">$1</a>')
+                .replace(/\n/g, '<br>');
             if (parsedBlock.startsWith('# ')) {
                 html += `<h1>${parsedBlock.replace(/^#\s/, '')}</h1>\n`;
             }
@@ -175,10 +249,30 @@ Responde SOLO en este formato JSON estricto:
             else {
                 html += `<p>${parsedBlock}</p>\n`;
             }
+            // Inject Subscribe Widgets exactly after parsing the targeted blocks
+            if (i === firstThird || i === middle || i === end) {
+                if (inList) {
+                    html += '</ul>\n';
+                    inList = false;
+                }
+                html += '<div data-type="subscribe-widget"></div>\n';
+            }
         }
         if (inList) {
             html += '</ul>\n';
         }
+        // FORCE HARDCODED CLOSING NATIVELY TO PREVENT JSON FORMATTING COLLAPSES
+        html += `
+<p><strong>¿Ya eres parte de nuestra comunidad de WhatsApp?</strong></p>
+<p>Mira, somos más de 600 personas construyendo la comunidad de IA más grande en español y Latinoamérica. Tenemos un grupo activo en WhatsApp donde compartimos noticias como esta en tiempo real, discutimos las implicaciones para nuestros negocios y nos ayudamos entre todos.</p>
+<p>Esta semana estamos discutiendo GPT-5.4, si vale la pena adoptarlo ahora o esperar, y cómo proteger tu negocio de estas crisis entre plataformas.</p>
+<p>No es solo leer noticias. Es entender las implicaciones reales con gente que está aplicando esto en sus empresas.</p>
+<p>Vamos por 1,000 miembros. Si esto que leíste te resonó, deberías estar ahí.</p>
+<p><a href="https://chat.whatsapp.com/CQsp63vm1oW3QNS3Q87gZA">Únete al grupo de WhatsApp</a></p>
+<p>Nos vemos del otro lado.</p>
+<p>Kevin Garza<br>Fundador, Transformateck</p>
+<p>#OpenAI #GPT54 #InteligenciaArtificial #Claude #Anthropic #Transformateck #IA #TechStrategy #AIModels #SamAltman</p>
+`;
         return html;
     }
     try {
@@ -207,7 +301,20 @@ Responde SOLO en este formato JSON estricto:
         if (rawText.endsWith('```'))
             rawText = rawText.slice(0, -3);
         try {
-            const parsed = JSON.parse(rawText.trim());
+            let parsed;
+            try {
+                // Strict parse for standard Article payload shapes
+                parsed = JSON.parse(rawText.trim());
+            }
+            catch (e) {
+                // Fallback natively to raw string outputs targeting Notes schema definitions
+                // mdToProseMirror expects "\n\n" to separate blocks. Claude generates "\n" for Notes.
+                parsed = {
+                    titulo: '',
+                    subtitulo: '',
+                    contenido: rawText.trim().replace(/\n+/g, '\n\n')
+                };
+            }
             const pmContent = mdToProseMirror(parsed.contenido || '');
             res.json({
                 titulo: parsed.titulo,

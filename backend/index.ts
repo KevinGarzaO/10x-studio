@@ -10,6 +10,8 @@ import aiRoutes from './routes/ai'
 import { initCron } from './services/cron.service'
 import { authMiddleware } from './middleware/auth.middleware'
 
+import path from 'path'
+
 dotenv.config()
 
 const app = express()
@@ -17,6 +19,7 @@ const PORT = process.env.PORT || 3001
 
 app.use(cors())
 app.use(express.json({ limit: '15mb' }))
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')))
 
 // Swagger config
 const swaggerOptions = {

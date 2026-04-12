@@ -1,54 +1,89 @@
 'use client'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { api } from '@/lib/api'
 import { Loader2, Plus, PenLine, Trash2, Search, X } from 'lucide-react'
+import Swal from 'sweetalert2'
+
+const AvocadoAlert = Swal.mixin({
+  background: '#131313',
+  color: '#e0e0e0',
+  customClass: {
+    popup: 'border border-white/10 rounded-2xl shadow-2xl',
+    confirmButton: 'btn btn-primary px-6 h-10',
+    cancelButton: 'btn btn-secondary px-6 h-10'
+  },
+  buttonsStyling: false
+})
 
 // The format returned by our backend
 interface WebSuggestion {
   titulo: string
   descripcion: string
   por_que: string
+  relevancia: number
 }
 
 interface Props {
   apiKey: string
   open: boolean
+  initialQuery?: string
   onClose: () => void
   onWrite: (title: string, notes: string) => void
   onSave: (title: string, notes: string) => void
 }
 
-export function SuggestModal({ apiKey, open, onClose, onWrite, onSave }: Props) {
+export function SuggestModal({ apiKey, open, initialQuery, onClose, onWrite, onSave }: Props) {
   const [userInput, setUserInput] = useState('')
   const [loading, setLoading]     = useState(false)
-  const [errorMsg, setErrorMsg]   = useState('')
   const [results, setResults]     = useState<WebSuggestion[]>([])
+
+  // Ensure initialQuery triggers search once when modal opens
+  useEffect(() => {
+    if (open && initialQuery && initialQuery.trim() !== '') {
+      setUserInput(initialQuery)
+      handleAutomatedSearch(initialQuery)
+    } else if (open) {
+      setUserInput('')
+      setResults([])
+    }
+  }, [open, initialQuery])
 
   if (!open) return null
 
-  async function handleSearch() {
-    const query = userInput.trim()
-    if (!query) return
-    
+  async function handleAutomatedSearch(query: string) {
+    if (!query.trim() || loading) return
     setLoading(true)
-    setErrorMsg('')
     setResults([])
 
     try {
       const data = await api<any>('/api/suggest/web', {
         method: 'POST',
-        body: JSON.stringify({ userInput: query, apiKey }),
+        body: JSON.stringify({ userInput: query.trim(), apiKey }),
       })
       if (data.error) throw new Error(data.error)
       if (Array.isArray(data.temas)) {
-        setResults(data.temas)
+        // Ordenar de mayor a menor relevancia y asegurar que relevancia exista numéricamente (fallback a 50)
+        const sorted = data.temas.map((t: any) => ({
+          ...t, 
+          relevancia: typeof t.relevancia === 'number' ? t.relevancia : (parseInt(t.relevancia) || 50)
+        })).sort((a: any, b: any) => b.relevancia - a.relevancia)
+        setResults(sorted)
       } else {
         throw new Error('Formato de respuesta inválido')
       }
     } catch (e: any) {
-      setErrorMsg(e.message || String(e))
+      AvocadoAlert.fire({
+        icon: 'error',
+        title: 'Error de Búsqueda Web',
+        text: e.message || String(e),
+        confirmButtonColor: '#ff4d4d'
+      })
     }
     setLoading(false)
+  }
+
+  function handleSearch() {
+    handleAutomatedSearch(userInput)
   }
 
   function handleDiscard(index: number) {
@@ -101,7 +136,6 @@ export function SuggestModal({ apiKey, open, onClose, onWrite, onSave }: Props) 
                 {loading ? <Loader2 size={18} className="animate-spin" /> : 'Buscar temas'}
               </button>
             </div>
-            {errorMsg && <p className="text-red-400 text-sm mt-3 bg-red-900/20 p-3 rounded-xl border border-red-900/50">{errorMsg}</p>}
           </div>
 
           {/* Results Area */}
@@ -119,9 +153,27 @@ export function SuggestModal({ apiKey, open, onClose, onWrite, onSave }: Props) 
                 Resultados encontrados
               </div>
               {results.map((item, i) => (
-                <div key={i} className="bg-brand-surface border border-brand-border rounded-xl p-5 hover:border-brand-accent/50 transition-colors group">
-                  <h3 className="text-[16px] font-bold text-brand-primary mb-2 leading-tight">{item.titulo}</h3>
-                  <div className="space-y-3 mb-5">
+                <div key={i} className="bg-brand-surface border border-brand-border rounded-xl p-5 hover:border-brand-accent/50 transition-colors group relative overflow-hidden">
+                  <div className="absolute top-0 right-0 h-full w-1 flex flex-col justify-end bg-black/40">
+                    <div 
+                      className={`w-full transition-all duration-1000 ${
+                        item.relevancia >= 90 ? 'bg-brand-accent shadow-[0_0_15px_rgba(78,204,163,0.6)]' : 
+                        item.relevancia >= 70 ? 'bg-yellow-400' : 'bg-red-400'
+                      }`}
+                      style={{ height: `${item.relevancia}%` }}
+                    />
+                  </div>
+                  <div className="flex justify-between items-start mb-2 pr-4">
+                    <h3 className="text-[16px] font-bold text-brand-primary leading-tight">{item.titulo}</h3>
+                    <div className="flex flex-col items-center ml-2 flex-shrink-0 bg-brand-bg rounded-lg border border-brand-border px-2 py-1">
+                      <span className="text-[10px] uppercase text-brand-secondary font-bold tracking-wider mb-0.5">Viralidad</span>
+                      <div className="flex items-center gap-1">
+                        <i className={`pi pi-bolt text-xs ${item.relevancia >= 90 ? 'text-brand-accent' : item.relevancia >= 70 ? 'text-yellow-400' : 'text-red-400'}`}></i>
+                        <span className={`text-sm font-bold ${item.relevancia >= 90 ? 'text-brand-accent' : 'text-brand-primary'}`}>{item.relevancia}%</span>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="space-y-3 mb-5 pr-4">
                     <p className="text-sm text-brand-secondary leading-relaxed bg-brand-bg p-3 rounded-lg border border-brand-border/50">
                       <span className="font-semibold text-brand-primary mb-1 block">📝 Descripción:</span>
                       {item.descripcion}
