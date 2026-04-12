@@ -14,7 +14,7 @@ export function useAppData() {
   // Substack connection state — global so all components can use it
   const [substackConnected,    setSubstackConnected]    = useState(false)
   const [substackPublication,  setSubstackPublication]  = useState('')
-  const [editorPrefill,        setEditorPrefill]        = useState<{ type: 'article' | 'note' | 'linkedin-post' | 'linkedin-article', content: any, title?: string, subtitle?: string, draftId?: string | null } | null>(null)
+  const [editorPrefill,        setEditorPrefill]        = useState<{ type: 'article' | 'note' | 'linkedin-post' | 'linkedin-article', content: any, title?: string, subtitle?: string, draftId?: string | null, imageUrl?: string } | null>(null)
 
   useEffect(() => {
     Promise.all([
