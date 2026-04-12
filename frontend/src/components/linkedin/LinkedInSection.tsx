@@ -27,8 +27,9 @@ export function LinkedInSection() {
   
   // Clean Backend URL for Production (prevents /api/api substitution)
   const getBackendUrl = () => {
-    let url = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:3001'
-    return url.endsWith('/api') ? url.slice(0, -4) : url
+    const rawUrl = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:3001'
+    // Remove trailing slashes and /api prefix if it's already there
+    return rawUrl.replace(/\/api\/?$/, '').replace(/\/+$/, '')
   }
   const backendUrl = getBackendUrl()
   
