@@ -6,6 +6,8 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.SubstackService = void 0;
 const supabase_service_1 = require("./supabase.service");
 const node_fetch_1 = __importDefault(require("node-fetch"));
+const fs_1 = __importDefault(require("fs"));
+const path_1 = __importDefault(require("path"));
 class SubstackService {
     static async getCookieHeader(userId) {
         console.log(`[getCookieHeader] Buscando cookies para user_id: ${userId}`);
@@ -278,14 +280,41 @@ class SubstackService {
         if (params.draft_body) {
             try {
                 let astObj = typeof params.draft_body === 'string' ? JSON.parse(params.draft_body) : params.draft_body;
+                // --- NEW: Automatic Image Hosting on Substack CDN ---
+                const backendUrl = process.env.BACKEND_URL || '';
+                const processNodes = async (node) => {
+                    if (node.type === 'image' && node.attrs?.src?.includes(backendUrl)) {
+                        try {
+                            console.log(`[SubstackService] Detectada imagen local: ${node.attrs.src}. Subiendo a Substack...`);
+                            const fileName = node.attrs.src.split('/').pop();
+                            const filePath = path_1.default.join(__dirname, '../uploads', fileName);
+                            if (fs_1.default.existsSync(filePath)) {
+                                const imageBase64 = fs_1.default.readFileSync(filePath).toString('base64');
+                                const uploadResult = await this.uploadImage(userId, imageBase64, draftId);
+                                if (uploadResult?.url) {
+                                    console.log(`[SubstackService] Imagen subida con éxito: ${uploadResult.url}`);
+                                    node.attrs.src = uploadResult.url;
+                                }
+                            }
+                        }
+                        catch (imgErr) {
+                            console.error('[SubstackService] Error procesando imagen para Substack:', imgErr);
+                        }
+                    }
+                    if (node.content && Array.isArray(node.content)) {
+                        for (const child of node.content)
+                            await processNodes(child);
+                    }
+                };
+                await processNodes(astObj);
+                // ---------------------------------------------------
                 astObj = this.injectSubstackSchema(astObj);
-                params.draft_body = JSON.stringify(astObj); // Must be explicitly encoded as a string for Substack PUT payload
+                params.draft_body = JSON.stringify(astObj);
             }
             catch (e) {
-                console.error('[Substack] Error injectSubstackSchema in updateDraft', e);
+                console.error('[Substack] Error processing draft_body in updateDraft', e);
             }
         }
-        // Explicitly inject required schema fields for strict update parsing
         params.draft_bylines = [{ id: Number(user.substack_user_id), is_guest: false }];
         const res = await (0, node_fetch_1.default)(`https://${subdomain}.substack.com/api/v1/drafts/${draftId}`, {
             method: 'PUT',

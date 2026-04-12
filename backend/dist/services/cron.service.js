@@ -49,12 +49,33 @@ const syncSubstackData = async (userIdStr) => {
     }
 };
 exports.syncSubstackData = syncSubstackData;
+const auto_publisher_service_1 = require("./auto_publisher.service");
 const initCron = () => {
-    // Cada 15 minutos
+    // 1. Existing Data Sync Cron (Every 15 mins)
     node_cron_1.default.schedule('*/15 * * * *', async () => {
         console.log('Iniciando sincronización programada:', new Date().toISOString());
         await (0, exports.syncSubstackData)();
     });
-    console.log('Cron service initialized (Every 15 minutes)');
+    // 2. Auto Publisher Cron (L, M, V a las 18:00 UTC = 12:00 PM Monterrey)
+    node_cron_1.default.schedule('0 18 * * 1,3,5', async () => {
+        console.log('[AutoPublisher CRON] Verificando inicio de autopublicación...');
+        // Seguro de inicio: Solo desde la semana del Lunes 20 de Abril de 2026
+        const startDate = new Date('2026-04-20T00:00:00.000Z');
+        if (new Date() < startDate) {
+            console.log('[AutoPublisher CRON] Aún no es Lunes 20. Omitiendo ejecución por ahora.');
+            return;
+        }
+        console.log(`[AutoPublisher CRON] Es L, M o V a las 12 PM Monterrey. Lanzando Agente Autónomo...`);
+        // Obtener al administrador/usuario principal (podemos sacarlo de los perfiles configurados)
+        const { data: users } = await supabase_service_1.supabase.from('users').select('id, substack_user_id').not('substack_user_id', 'is', null).limit(1);
+        if (users && users.length > 0) {
+            // Llamar al Agente Maestro
+            await auto_publisher_service_1.AutoPublisherService.publishFlowForUser(users[0].id);
+        }
+        else {
+            console.error('[AutoPublisher CRON] No se encontró usuario principal con cuenta de Substack conectada.');
+        }
+    });
+    console.log('Cron services initialized (Sync=15m, AutoPublisher=L,M,V 12:00PM MTY desde el día 20)');
 };
 exports.initCron = initCron;
