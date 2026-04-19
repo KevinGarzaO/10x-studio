@@ -3,7 +3,16 @@
 import { useState } from 'react'
 import type { NavSection } from '@/app/page'
 
-const CORE_ITEMS = [
+interface NavItem {
+  id: string;
+  label: string;
+  icon: string;
+  badge?: number;
+  pro?: boolean;
+  soon?: boolean;
+}
+
+const CORE_ITEMS: NavItem[] = [
   { id: 'dashboard', label: 'Resumen general', icon: '🏠' },
   { id: 'recent-activity', label: 'Actividad reciente', icon: '📋' },
   { id: 'notifications', label: 'Notificaciones', icon: '🔔', badge: 3 },
@@ -22,7 +31,7 @@ const CORE_ITEMS = [
   { id: 'feedback', label: 'Dar feedback', icon: '💬' },
 ]
 
-const CMS_ITEMS = [
+const CMS_ITEMS: NavItem[] = [
   { id: 'cms-dashboard', label: 'Dashboard CMS', icon: '📊' },
   { id: 'calendar-month', label: 'Calendario editorial', icon: '🗓️' },
   { id: 'content-report', label: 'Auditoría & análisis', icon: '📈' },
