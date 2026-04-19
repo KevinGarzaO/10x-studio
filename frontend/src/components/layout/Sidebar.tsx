@@ -89,7 +89,6 @@ export const ERP_MENU: NavModule[] = [
     categories: [
       {
         label: 'Estrategia',
-        icon: 'pi pi-chart-bar',
         items: [
           { id: 'cms-dashboard', label: 'Dashboard CMS' },
           { id: 'calendar-month', label: 'Calendario editorial' },
@@ -99,7 +98,6 @@ export const ERP_MENU: NavModule[] = [
       },
       {
         label: 'Content Ops',
-        icon: 'pi pi-pencil',
         items: [
           { id: 'topics-all', label: 'Banco de temas' },
           { id: 'redactor-new', label: 'Redactor IA' },
@@ -110,7 +108,6 @@ export const ERP_MENU: NavModule[] = [
       },
       {
         label: 'Canales',
-        icon: 'pi pi-send',
         items: [
           { id: 'li-dash', label: 'LinkedIn' },
           { id: 'substack-dash', label: 'Substack' },
@@ -121,7 +118,6 @@ export const ERP_MENU: NavModule[] = [
       },
       {
         label: 'Automatización',
-        icon: 'pi pi-bolt',
         items: [
           { id: 'webhooks-mine', label: 'Webhooks' },
           { id: 'zapier-connections', label: 'Zapier / Make' },
@@ -138,7 +134,6 @@ export const ERP_MENU: NavModule[] = [
     categories: [
       {
         label: 'Audiencia',
-        icon: 'pi pi-list',
         items: [
           { id: 'crm-contacts', label: 'Contactos' },
           { id: 'crm-lists', label: 'Listas & segmentos' },
@@ -147,7 +142,6 @@ export const ERP_MENU: NavModule[] = [
       },
       {
         label: 'Leads',
-        icon: 'pi pi-target',
         pro: true,
         items: [
           { id: 'leads-active', label: 'Leads activos' },
@@ -157,7 +151,6 @@ export const ERP_MENU: NavModule[] = [
       },
       {
         label: 'Co-pilot de Negocio',
-        icon: 'pi pi-android',
         pro: true,
         items: [
           { id: 'copilot-chat-new', label: 'Chat con IA' },
@@ -175,7 +168,6 @@ export const ERP_MENU: NavModule[] = [
     categories: [
       {
         label: 'Mi Cartera',
-        icon: 'pi pi-wallet',
         items: [
           { id: 'fin-balance', label: 'Estado de cuenta' },
           { id: 'fin-history', label: 'Historial financiero' },
@@ -183,7 +175,6 @@ export const ERP_MENU: NavModule[] = [
       },
       {
         label: 'Préstamos',
-        icon: 'pi pi-percentage',
         items: [
           { id: 'loan-active', label: 'Mi préstamo activo' },
           { id: 'loan-request', label: 'Solicitar préstamo' },
@@ -192,7 +183,6 @@ export const ERP_MENU: NavModule[] = [
       },
       {
         label: 'Pagos',
-        icon: 'pi pi-credit-card',
         items: [
           { id: 'pay-next', label: 'Próximos pagos' },
           { id: 'pay-now', label: 'Pagar ahora' },
@@ -208,7 +198,6 @@ export const ERP_MENU: NavModule[] = [
     categories: [
       {
         label: 'El Analizador',
-        icon: 'pi pi-search',
         pro: true,
         items: [
           { id: 'trans-analyzer', label: 'Analizar mi negocio' },
@@ -218,7 +207,6 @@ export const ERP_MENU: NavModule[] = [
       },
       {
         label: 'Comunidad',
-        icon: 'pi pi-comments',
         items: [
           { id: 'trans-feed', label: 'Feed' },
           { id: 'trans-groups', label: 'Grupos' },
@@ -227,7 +215,6 @@ export const ERP_MENU: NavModule[] = [
       },
       {
         label: 'Recursos',
-        icon: 'pi pi-book',
         items: [
           { id: 'trans-library', label: 'Biblioteca' },
           { id: 'trans-tutorials', label: 'Tutoriales' },
@@ -235,7 +222,6 @@ export const ERP_MENU: NavModule[] = [
       },
       {
         label: 'Directorio',
-        icon: 'pi pi-map-marker',
         items: [
           { id: 'trans-providers', label: 'Proveedores' },
           { id: 'trans-members', label: 'Miembros' },
@@ -346,7 +332,6 @@ export function Sidebar({ active, onNav, collapsed, onToggleCollapse, mobileOpen
                       className="w-full flex items-center justify-between text-[11px] font-bold text-brand-secondary py-2 px-2 hover:text-brand-primary transition-colors"
                     >
                       <div className="flex items-center gap-3">
-                         {cat.icon && <i className={cat.icon}></i>}
                          <span>{cat.label}</span>
                          {cat.pro && <span className="text-[10px]">🔒</span>}
                          {cat.soon && <span className="text-[8px] bg-brand-surface px-1 rounded ml-1">🔜</span>}
@@ -379,8 +364,8 @@ export function Sidebar({ active, onNav, collapsed, onToggleCollapse, mobileOpen
           ) : (
             <div className="flex flex-col items-center gap-4">
                {ERP_MENU.find(m => m.id === activeModule)?.categories.map(cat => (
-                 <div key={cat.label} className="w-10 h-10 rounded-xl bg-brand-surface flex items-center justify-center text-brand-secondary group/cat relative">
-                    <i className={cat.icon || 'pi pi-folder'}></i>
+<div key={cat.label} className="w-10 h-10 rounded-xl bg-brand-surface flex items-center justify-center text-brand-secondary group/cat relative">
+                     <span>{cat.label}</span>
                     {/* Tooltip or Side Popover could go here */}
                  </div>
                ))}

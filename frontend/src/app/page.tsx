@@ -1,6 +1,6 @@
 'use client'
 import { useState } from 'react'
-import { Sidebar } from '@/components/layout/Sidebar'
+import SidebarNew from '@/components/layout/SidebarNew'
 import { Header } from '@/components/layout/Header'
 import { Dashboard } from '@/components/dashboard/Dashboard'
 import { TopicsSection } from '@/components/topics/TopicsSection'
@@ -13,6 +13,7 @@ import { SubstackSection } from '@/components/substack/SubstackSection'
 import { IntegrationsSection } from '@/components/integrations/IntegrationsSection'
 import { LinkedInSection } from '@/components/linkedin/LinkedInSection'
 import { SettingsSection } from '@/components/settings/SettingsSection'
+import AvocadoStatusBar from '@/components/layout/StatusBar'
 
 export type NavSection = 
   | 'dashboard' | 'recent-activity' | 'notifications'
@@ -59,13 +60,10 @@ export type NavSection =
 export default function Home() {
   const [activeSection, setActiveSection] = useState<NavSection>('dashboard')
   const [redactorPrefill, setRedactorPrefill] = useState<{ title?: string; notes?: string } | null>(null)
-  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false)
-  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
 
   function navTo(section: NavSection, prefill?: { title?: string; notes?: string }) {
     setActiveSection(section)
     if (prefill) setRedactorPrefill(prefill)
-    setIsMobileMenuOpen(false) // Horizontal close on nav
   }
 
   const renderSection = () => {
@@ -97,21 +95,13 @@ export default function Home() {
   }
 
   return (
-    <div className="flex h-screen overflow-hidden">
-      <Sidebar 
-        active={activeSection} 
-        onNav={navTo} 
-        collapsed={isSidebarCollapsed} 
-        onToggleCollapse={() => setIsSidebarCollapsed(!isSidebarCollapsed)} 
-        mobileOpen={isMobileMenuOpen}
-        onMobileClose={() => setIsMobileMenuOpen(false)}
-      />
-      <div className="flex flex-col flex-1 overflow-hidden transition-all duration-300">
-        <Header activeSection={activeSection} onMenuClick={() => setIsMobileMenuOpen(true)} />
-        <main className="flex-1 overflow-y-auto p-4 md:p-8 bg-brand-bg transition-all duration-300 relative">
-          {renderSection()}
-        </main>
-      </div>
+    <div className="app-layout">
+      <Header activeSection={activeSection} onMenuClick={() => {}} />
+      <SidebarNew currentSection={activeSection} onNavigate={navTo} />
+      <main className="main-content">
+        {renderSection()}
+      </main>
+      <AvocadoStatusBar />
     </div>
   )
 }
