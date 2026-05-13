@@ -4,6 +4,7 @@ import { ImageService } from './image.service'
 import { SubstackService } from './substack.service'
 import fs from 'fs'
 import path from 'path'
+import { SearchService } from './search.service'
 
 // Helper to reliably parse JSON coming from Claude
 function parseClaudeJson(rawText: string) {
@@ -26,58 +27,7 @@ function parseClaudeJson(rawText: string) {
 }
 
 // Reuse logic from controller for HTML formatting
-function mdToHtml(md: string) {
-  const blocks = md.split('\n\n').filter(b => b.trim())
-  const total = blocks.length
-  const firstThird = Math.max(1, Math.floor(total * 0.25))
-  const middle = Math.max(2, Math.floor(total * 0.55))
-  const end = total - 1
-  
-  let html = ''
-  let inList = false
-
-  for (let i = 0; i < blocks.length; i++) {
-    const block = blocks[i]
-    if (block.trim().startsWith('- ')) {
-      if (!inList) { html += '<ul>\n'; inList = true; }
-      const items = block.split('\n').filter(l => l.trim().startsWith('- '))
-      for (const item of items) {
-        const itemText = item.replace(/^- /, '')
-                             .replace(/\*\*([\s\S]*?)\*\*/g, '<strong>$1</strong>')
-                             .replace(/(?<!\*)\*(?!\*)([\s\S]*?)\*/g, '<em>$1</em>')
-        html += `<li><p>${itemText}</p></li>\n`
-      }
-      continue
-    }
-    if (inList) { html += '</ul>\n'; inList = false; }
-
-    let parsed = block.replace(/\*\*([\s\S]*?)\*\*/g, '<strong>$1</strong>')
-                      .replace(/(?<!\*)\*(?!\*)([\s\S]*?)\*/g, '<em>$1</em>')
-                      .replace(/\[(.*?)\]\((.*?)\)/g, '<a href="$2">$1</a>')
-                      .replace(/\n/g, '<br>')
-
-    if (parsed.startsWith('# ')) html += `<h1>${parsed.replace(/^#\s/, '')}</h1>\n`
-    else if (parsed.startsWith('## ')) html += `<h2>${parsed.replace(/^##\s/, '')}</h2>\n`
-    else if (parsed.startsWith('### ')) html += `<h3>${parsed.replace(/^###\s/, '')}</h3>\n`
-    else html += `<p>${parsed}</p>\n`
-    
-    if (i === firstThird || i === middle || i === end) {
-      html += '<div data-type="subscribe-widget"></div>\n'
-    }
-  }
-  if (inList) html += '</ul>\n'
-
-  html += `
-<br>
-<p><strong>¿Ya eres parte de nuestra comunidad de WhatsApp?</strong></p>
-<p>Mira, somos más de 600 personas construyendo la comunidad de IA más grande en español y Latinoamérica. Tenemos un grupo activo en WhatsApp donde compartimos noticias como esta en tiempo real, discutimos las implicaciones para nuestros negocios y nos ayudamos entre todos.</p>
-<p>Vamos por 1,000 miembros. Si esto que leíste te resonó, deberías estar ahí.</p>
-<p><a href="https://chat.whatsapp.com/CQsp63vm1oW3QNS3Q87gZA">Únete al grupo de WhatsApp</a></p>
-<p>Nos vemos del otro lado.</p>
-<p>Kevin Garza<br>Fundador, Transformateck</p>
-`
-  return html
-}
+// Removed duplicated mdToHtml, now handled by SubstackService with mdToAST
 
 export class AutoPublisherService {
   /**
@@ -87,88 +37,55 @@ export class AutoPublisherService {
     const apiKey = process.env.CLAUDE_API_KEY
     if (!apiKey) throw new Error('CLAUDE_API_KEY no configurada.')
 
-    console.log('[AutoPublisher] Búsqueda interactiva web con Claude...');
+    // 1. Obtener noticias reales de Google News
+    const newsContext = await SearchService.getLatestAINews();
+    console.log('[AutoPublisher] Noticias reales obtenidas. Consultando a Claude...');
     
     const prompt = `
 Eres un analista de tendencias tech de alto nivel para Transformateck.
-Busca y encuentra la noticia más importante, disruptiva y actual sobre Inteligencia Artificial (AI) que haya sucedido en las últimas 48 horas.
-Enfócate en herramientas, nuevas versiones (Anthropic, OpenAI, Meta, Google, Windows 11 AI, etc.), o casos de impacto para el negocio.
+He buscado noticias recientes sobre IA y aquí tienes los resultados más frescos:
+
+${newsContext}
+
+TU TAREA:
+1. Analiza estas noticias y elige la más importante, disruptiva y actual (o combina varias si están relacionadas).
+2. Enfócate en herramientas, nuevas versiones o casos de impacto real para negocios.
 
 IMPORTANTE: NO elijas ninguna noticia relacionada con los siguientes temas (YA FUERON CUBIERTOS):
 ${excludedTopics.length > 0 ? excludedTopics.map(t => `- ${t}`).join('\n') : 'Ninguno todavía.'}
 
-Una vez encuentres los resultados, elige la MEJOR noticia e incluye en tu JSON:
-1. topic: Un titular corto y potente sobre la noticia.
-2. extract: Un resumen crudo de 3-4 párrafos con los datos reales, porcentajes y explicaciones técnicas.
-3. relevance_score: Un número del 0 al 100 indicando qué tan "viral" y "útil" es esta noticia para dueños de negocios y entusiastas de la IA.
-
-RESPUESTA ESTRICTA EN EL SIGUIENTE FORMATO JSON:
+Una vez elijas la MEJOR noticia, responde ESTRICTAMENTE en este formato JSON:
 {
-  "topic": "...",
-  "extract": "...",
+  "topic": "Un titular corto y potente sobre la noticia",
+  "extract": "Un resumen crudo de 3-4 párrafos con los datos reales, porcentajes y explicaciones técnicas encontradas en la noticia.",
   "relevance_score": 85
-}`
+}
 
-    const messages: any[] = [{ role: 'user', content: prompt }]
-    let toolLoopLimit = 5
+Nota: relevance_score debe ser un número del 0 al 100 indicando qué tan "viral" y "útil" es esta noticia hoy.`;
 
-    while (toolLoopLimit > 0) {
-      toolLoopLimit--
-      
-      const res = await fetch('https://api.anthropic.com/v1/messages', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'x-api-key': apiKey, 'anthropic-version': '2023-06-01' },
-        body: JSON.stringify({
-          model: 'claude-haiku-4-5-20251001', // Restaurado al modelo original
-          max_tokens: 2000,
-          tools: [{
-            name: 'web_search',
-            description: 'Search the web for news',
-            input_schema: {
-              type: 'object',
-              properties: { query: { type: 'string' } },
-              required: ['query']
-            }
-          }],
-          messages
-        })
-      });
+    const res = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-api-key': apiKey, 'anthropic-version': '2023-06-01' },
+      body: JSON.stringify({
+        model: 'claude-haiku-4-5-20251001',
+        max_tokens: 2000,
+        messages: [{ role: 'user', content: prompt }]
+      })
+    });
 
-      const data: any = await res.json()
-      if (!data.content) throw new Error(`[AutoPublisher] Claude error: ${JSON.stringify(data)}`)
-      
-      messages.push({ role: 'assistant', content: data.content })
-
-      const toolUse = data.content.find((b: any) => b.type === 'tool_use')
-      if (toolUse) {
-        console.log(`[AutoPublisher] Claude usa herramienta: ${toolUse.name}(${JSON.stringify(toolUse.input)})`)
-        // Simular herramienta o si tienes una real, conectarla.
-        // Dado que estamos en un entorno donde se espera 'web_search', y Claude Haiku 4.5 lo tiene nativo en algunos casos,
-        // pero aquí usamos fetch manual. Si Claude pide usarla, debemos darle un resultado.
-        
-        const toolResult = {
-          role: 'user',
-          content: [{
-            type: 'tool_result',
-            tool_use_id: toolUse.id,
-            content: 'Simulated web search results: Mistral releases new model with 128k context, better than GPT-4. Meta Llama 4 training leaks. OpenAI confirms Sora release date for summer 2026.'
-          }]
-        }
-        messages.push(toolResult)
-        continue
-      }
-
-      const textBlock = data.content.find((b: any) => b.type === 'text');
-      if (textBlock) {
-        const result = parseClaudeJson(textBlock.text)
-        return { 
-          topic: result.topic, 
-          extract: result.extract, 
-          relevance_score: result.relevance_score || 0 
-        }
+    const data: any = await res.json()
+    if (!data.content) throw new Error(`[AutoPublisher] Claude error: ${JSON.stringify(data)}`)
+    
+    const textBlock = data.content.find((b: any) => b.type === 'text');
+    if (textBlock) {
+      const result = parseClaudeJson(textBlock.text)
+      return { 
+        topic: result.topic, 
+        extract: result.extract, 
+        relevance_score: result.relevance_score || 0 
       }
     }
-    throw new Error('[AutoPublisher] Excedido límite de bucle de herramientas.')
+    throw new Error('[AutoPublisher] Claude no devolvió texto válido.')
   }
 
   /**
@@ -283,9 +200,9 @@ ${articleObj.image_prompt}
         }
       }
 
-      // 4. Formatear
-      const htmlContent = mdToHtml(articleObj.contenido || '')
-      const finalHtml = imageUrl ? `<p><img src="${imageUrl}" alt="Nano Banana v5"></p>\n` + htmlContent : htmlContent
+      // 4. Armar el cuerpo (Markdown + Imagen HTML para que el conversor la reconozca)
+      const markdownContent = articleObj.contenido || ''
+      const finalBody = imageUrl ? `<img src="${imageUrl}" alt="Nano Banana v5">\n\n` + markdownContent : markdownContent
 
       // 5. Crear DRAFT en Substack
       console.log('[SubstackAuto] Iniciando carga a Substack...');
@@ -298,17 +215,17 @@ ${articleObj.image_prompt}
       await SubstackService.updateDraft(userId, String(draft.id), {
         draft_title: articleObj.titulo.trim(),
         draft_subtitle: articleObj.subtitulo.trim(),
-        draft_body: finalHtml,
+        draft_body: finalBody,
         audience: 'everyone',
         type: 'newsletter'
       })
 
-      // 7. PROGRAMAR PARA 7 DÍAS DESPUÉS
-      const nextWeek = new Date();
-      nextWeek.setDate(nextWeek.getDate() + 7);
+      // 7. PROGRAMAR PARA EL MISMO DÍA (L, M, V)
+      const scheduledDate = new Date();
+      // No sumamos días para que se publique el mismo día que se ejecuta el cron
       
-      console.log(`[SubstackAuto] Programando artículo para 1 semana después: ${nextWeek.toISOString()}`);
-      await SubstackService.scheduleDraft(userId, String(draft.id), nextWeek.toISOString());
+      console.log(`[SubstackAuto] Programando artículo para hoy: ${scheduledDate.toISOString()}`);
+      await SubstackService.scheduleDraft(userId, String(draft.id), scheduledDate.toISOString());
 
       // 8. Registrar en el Historial para Memoria
       await supabase.from('history').insert({

@@ -3,6 +3,7 @@ import fetch from 'node-fetch'
 import { HttpsProxyAgent } from 'https-proxy-agent'
 import fs from 'fs'
 import path from 'path'
+import { mdToAST } from '../lib/converter'
 
 export class SubstackService {
   static async getCookieHeader(userId: string): Promise<string> {
@@ -304,31 +305,66 @@ const resolvedUserId = updatedUser?.id || userId
 
     if (params.draft_body) {
       try {
-        let astObj = typeof params.draft_body === 'string' ? JSON.parse(params.draft_body) : params.draft_body;
+        let astObj;
+        const isJson = typeof params.draft_body === 'string' && (params.draft_body.trim().startsWith('{') || params.draft_body.trim().startsWith('['));
+        
+        if (isJson) {
+          try {
+            astObj = JSON.parse(params.draft_body);
+          } catch (e) {
+            console.warn('[SubstackService] Failed to parse draft_body as JSON, treating as Markdown/HTML');
+            astObj = mdToAST(params.draft_body);
+          }
+        } else if (typeof params.draft_body === 'string') {
+          astObj = mdToAST(params.draft_body);
+        } else {
+          astObj = params.draft_body;
+        }
         
         // --- NEW: Automatic Image Hosting on Substack CDN ---
         const backendUrl = process.env.BACKEND_URL || '';
         const processNodes = async (node: any) => {
-          if (node.type === 'image' && node.attrs?.src?.includes(backendUrl)) {
+          // Robustez: Si el nodo es nulo o no es un objeto, ignorar
+          if (!node || typeof node !== 'object') return;
+
+          // Detectamos si la imagen es local
+          const isLocal = node.attrs?.src && (
+            (backendUrl && node.attrs.src.includes(backendUrl)) || 
+            node.attrs.src.includes('/uploads/') ||
+            node.attrs.src.startsWith('http://localhost')
+          );
+
+          if ((node.type === 'image' || node.type === 'image2') && isLocal) {
             try {
-              console.log(`[SubstackService] Detectada imagen local: ${node.attrs.src}. Subiendo a Substack...`);
               const fileName = node.attrs.src.split('/').pop();
-              const filePath = path.join(__dirname, '../uploads', fileName);
+              const filePath = path.resolve(process.cwd(), 'uploads', fileName);
+              
+              console.log(`[SubstackService] Procesando imagen local: ${fileName}`);
               
               if (fs.existsSync(filePath)) {
-                const imageBase64 = fs.readFileSync(filePath).toString('base64');
+                // IMPORTANTE: Substack suele requerir el prefijo data:image/png;base64,
+                const rawBase64 = fs.readFileSync(filePath).toString('base64');
+                const imageBase64 = `data:image/png;base64,${rawBase64}`;
+                
                 const uploadResult = await this.uploadImage(userId, imageBase64, draftId);
+                
                 if (uploadResult?.url) {
-                  console.log(`[SubstackService] Imagen subida con éxito: ${uploadResult.url}`);
+                  console.log(`[SubstackService] ✅ Imagen subida con éxito: ${uploadResult.url}`);
                   node.attrs.src = uploadResult.url;
+                } else {
+                  console.warn('[SubstackService] ⚠️ La subida no devolvió URL:', uploadResult);
                 }
               }
             } catch (imgErr) {
-              console.error('[SubstackService] Error procesando imagen para Substack:', imgErr);
+              console.error('[SubstackService] ❌ Error subiendo imagen:', imgErr);
             }
           }
+
+          // Recorrer hijos con seguridad
           if (node.content && Array.isArray(node.content)) {
-            for (const child of node.content) await processNodes(child);
+            for (const child of node.content) {
+              if (child) await processNodes(child);
+            }
           }
         };
         
@@ -464,26 +500,7 @@ const resolvedUserId = updatedUser?.id || userId
       }
     }
 
-    if (node.type === 'image') {
-      // Map standard TipTap image to Substack captionedImage schema
-      return {
-        type: 'captionedImage',
-        content: [
-          {
-            type: 'image2',
-            attrs: {
-              src: node.attrs?.src || '',
-              height: node.attrs?.height || null,
-              width: node.attrs?.width || null,
-              bytes: node.attrs?.bytes || null,
-              type: node.attrs?.fileType || 'image/png'
-            }
-          }
-        ]
-      }
-    }
-
-    if (node.type === 'image') {
+    if (node.type === 'image' || node.type === 'image2') {
       // Map standard TipTap image to Substack captionedImage schema
       return {
         type: 'captionedImage',
@@ -500,7 +517,7 @@ const resolvedUserId = updatedUser?.id || userId
               fullscreen: null,
               imageSize: null,
               resizeWidth: null,
-              alt: null,
+              alt: node.attrs?.alt || null,
               title: null,
               href: null,
               belowTheFold: false,

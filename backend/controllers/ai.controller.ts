@@ -5,6 +5,7 @@ import path from 'path'
 import { buildPrompt, buildSuggestTopicsPrompt, Platform } from '../lib/prompts'
 import { ImageService } from '../services/image.service'
 import { supabase } from '../services/supabase.service'
+import { SearchService } from '../services/search.service'
 
 /**
  * Helper to parse Claude JSON response with resilience
@@ -201,11 +202,16 @@ export const suggestWeb = async (req: Request, res: Response) => {
     const key = apiKey || process.env.CLAUDE_API_KEY;
     if (!key) throw new Error('API Key de Claude faltante en la configuración');
     
+    const newsContext = await SearchService.getLatestAINews();
     const query = userInput ? userInput : "tendencias de inteligencia artificial y tecnología";
     
     const prompt = `
-Eres un analista experto de contenidos. Busca información reciente o en la web sobre esto: "${query}".
-Devuelve EXACTAMENTE entre 3 y 4 sugerencias de temas súper atractivos para un newsletter tech.
+Eres un analista experto de contenidos. He buscado noticias recientes sobre IA y aquí tienes los resultados:
+
+${newsContext}
+
+TU TAREA:
+Basado en estos resultados (y en tu conocimiento sobre "${query}"), devuelve EXACTAMENTE entre 3 y 4 sugerencias de temas súper atractivos para un newsletter tech.
 El formato DEBE SER estrictamente este JSON:
 {
   "temas": [
@@ -228,7 +234,6 @@ No incluyas nada más que el JSON puro.`;
       body: JSON.stringify({
         model: 'claude-haiku-4-5-20251001',
         max_tokens: 4000,
-        tools: [{ type: 'web_search_20250305', name: 'web_search' }],
         messages: [{ role: 'user', content: prompt }]
       })
     });

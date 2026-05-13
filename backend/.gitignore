@@ -3,3 +3,6 @@ dist/
 .env
 .env.local
 *.tsbuildinfo
+uploads/*.png
+uploads/*.jpg
+uploads/*.jpeg
