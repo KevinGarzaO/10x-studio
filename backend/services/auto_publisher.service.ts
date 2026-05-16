@@ -220,11 +220,11 @@ ${articleObj.image_prompt}
         type: 'newsletter'
       })
 
-      // 7. PROGRAMAR PARA EL MISMO DÍA (L, M, V)
+      // 7. PROGRAMAR PARA HOY (con un margen de 5 minutos para evitar que Substack lo rechace si la hora ya pasó)
       const scheduledDate = new Date();
-      // No sumamos días para que se publique el mismo día que se ejecuta el cron
+      scheduledDate.setMinutes(scheduledDate.getMinutes() + 5);
       
-      console.log(`[SubstackAuto] Programando artículo para hoy: ${scheduledDate.toISOString()}`);
+      console.log(`[SubstackAuto] Programando artículo para hoy (+5min): ${scheduledDate.toISOString()}`);
       await SubstackService.scheduleDraft(userId, String(draft.id), scheduledDate.toISOString());
 
       // 8. Registrar en el Historial para Memoria

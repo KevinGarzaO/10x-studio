@@ -57,11 +57,13 @@ export const initCron = () => {
     await syncSubstackData()
   })
   
+  // Fecha global de inicio para evitar publicaciones antes de lo planeado
+  const GLOBAL_START_DATE = new Date('2026-05-21T00:00:00.000Z');
+
   // 2. Substack Auto Publisher (L, M, V a las 12:00 PM Monterrey)
   cron.schedule('0 18 * * 1,3,5', async () => {
     console.log('[SubstackAuto] Verificando inicio...');
-    const startDate = new Date('2026-04-20T00:00:00.000Z');
-    if (new Date() < startDate) return;
+    if (new Date() < GLOBAL_START_DATE) return;
 
     const { data: users } = await supabase.from('users').select('id, substack_user_id').not('substack_user_id', 'is', null).limit(1);
     if (users && users.length > 0) await AutoPublisherService.publishFlowForUser(users[0].id)
@@ -69,14 +71,18 @@ export const initCron = () => {
 
   // 4. LinkedIn Auto Publisher - Turno 1 (L-S a las 12:00 PM Monterrey)
   cron.schedule('0 18 * * 1-6', async () => {
-    console.log('[LinkedInAuto] Turno 12:00 PM iniciado...');
+    console.log('[LinkedInAuto] Turno 12:00 PM Verificando inicio...');
+    if (new Date() < GLOBAL_START_DATE) return;
+
     const { data: users } = await supabase.from('users').select('id').limit(1).single();
     if (users) await AutoPublisherService.publishLinkedInAutoFlow(users.id)
   })
 
   // 5. LinkedIn Auto Publisher - Turno 2 (L-S a las 05:00 PM Monterrey)
   cron.schedule('0 23 * * 1-6', async () => {
-    console.log('[LinkedInAuto] Turno 05:00 PM iniciado...');
+    console.log('[LinkedInAuto] Turno 05:00 PM Verificando inicio...');
+    if (new Date() < GLOBAL_START_DATE) return;
+
     const { data: users } = await supabase.from('users').select('id').limit(1).single();
     if (users) await AutoPublisherService.publishLinkedInAutoFlow(users.id)
   })
