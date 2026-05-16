@@ -8,12 +8,23 @@ export interface ProseMirrorNode {
 }
 
 export function mdToAST(md: string): ProseMirrorNode {
+  // --- NEW: Limpieza profunda de HTML residual ---
+  // Si la IA mandó <p> o <div>, los normalizamos para que el conversor trabaje con texto limpio.
+  let cleanMD = md
+    .replace(/<p>/g, '')
+    .replace(/<\/p>/g, '\n\n')
+    .replace(/<div>/g, '')
+    .replace(/<\/div>/g, '\n\n')
+    .replace(/<br\s*\/?>/g, '\n')
+    // Eliminamos cualquier otra etiqueta HTML, excepto las imágenes que procesamos luego
+    .replace(/<(?!img|data-type="subscribe-widget")[^>]*>?/gm, '');
+
   // Append WhatsApp signature if not present
-  if (!md.includes('chat.whatsapp.com')) {
-    md += `\n\n**¿Ya eres parte de nuestra comunidad de WhatsApp?**\n\nMira, somos más de 600 personas construyendo la comunidad de IA más grande en español y Latinoamérica. Tenemos un grupo activo en WhatsApp donde compartimos noticias como esta en tiempo real, discutimos las implicaciones para nuestros negocios y nos ayudamos entre todos.\n\nVamos por 1,000 miembros. Si esto que leíste te resonó, deberías estar ahí.\n\n[Únete al grupo de WhatsApp](https://chat.whatsapp.com/CQsp63vm1oW3QNS3Q87gZA)\n\nNos vemos del otro lado.\n\nKevin Garza  \nFundador, Transformateck`;
+  if (!cleanMD.includes('chat.whatsapp.com')) {
+    cleanMD += `\n\n**¿Ya eres parte de nuestra comunidad de WhatsApp?**\n\nMira, somos más de 600 personas construyendo la comunidad de IA más grande en español y Latinoamérica. Tenemos un grupo activo en WhatsApp donde compartimos noticias como esta en tiempo real, discutimos las implicaciones para nuestros negocios y nos ayudamos entre todos.\n\nVamos por 1,000 miembros. Si esto que leíste te resonó, deberías estar ahí.\n\n[Únete al grupo de WhatsApp](https://chat.whatsapp.com/CQsp63vm1oW3QNS3Q87gZA)\n\nNos vemos del otro lado.\n\nKevin Garza  \nFundador, Transformateck`;
   }
 
-  const blocks = md.split('\n\n').filter(b => b.trim());
+  const blocks = cleanMD.split('\n\n').filter(b => b.trim());
   const content: ProseMirrorNode[] = [];
   
   const total = blocks.length;

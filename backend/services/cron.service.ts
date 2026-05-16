@@ -71,18 +71,16 @@ export const initCron = () => {
 
   // 4. LinkedIn Auto Publisher - Turno 1 (L-S a las 12:00 PM Monterrey)
   cron.schedule('0 18 * * 1-6', async () => {
-    console.log('[LinkedInAuto] Turno 12:00 PM Verificando inicio...');
-    if (new Date() < GLOBAL_START_DATE) return;
-
+    console.log('[LinkedInAuto] Turno 12:00 PM iniciado...');
+    // LinkedIn NO tiene el freno de GLOBAL_START_DATE, publica de inmediato
     const { data: users } = await supabase.from('users').select('id').limit(1).single();
     if (users) await AutoPublisherService.publishLinkedInAutoFlow(users.id)
   })
 
   // 5. LinkedIn Auto Publisher - Turno 2 (L-S a las 05:00 PM Monterrey)
   cron.schedule('0 23 * * 1-6', async () => {
-    console.log('[LinkedInAuto] Turno 05:00 PM Verificando inicio...');
-    if (new Date() < GLOBAL_START_DATE) return;
-
+    console.log('[LinkedInAuto] Turno 05:00 PM iniciado...');
+    // LinkedIn NO tiene el freno de GLOBAL_START_DATE, publica de inmediato
     const { data: users } = await supabase.from('users').select('id').limit(1).single();
     if (users) await AutoPublisherService.publishLinkedInAutoFlow(users.id)
   })
