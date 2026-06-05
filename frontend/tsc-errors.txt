@@ -1,0 +1,12 @@
+src/app/api/cron/route.ts(31,35): error TS2554: Expected 1 arguments, but got 2.
+src/app/api/cron/route.ts(33,68): error TS2554: Expected 2-4 arguments, but got 5.
+src/components/integrations/IntegrationsSection.tsx(304,103): error TS2802: Type 'Set<Platform>' can only be iterated through when using the '--downlevelIteration' flag or with a '--target' of 'es2015' or higher.
+src/components/redactor/RedactorSection.tsx(15,77): error TS2345: Argument of type 'Set<string>' is not assignable to parameter of type 'Set<Platform> | (() => Set<Platform>)'.
+  Type 'Set<string>' is not assignable to type 'Set<Platform>'.
+    Type 'string' is not assignable to type 'Platform'.
+src/components/redactor/RedactorSection.tsx(65,27): error TS2802: Type 'Set<Platform>' can only be iterated through when using the '--downlevelIteration' flag or with a '--target' of 'es2015' or higher.
+src/components/redactor/RedactorSection.tsx(89,106): error TS2802: Type 'Set<Platform>' can only be iterated through when using the '--downlevelIteration' flag or with a '--target' of 'es2015' or higher.
+src/components/redactor/RedactorSection.tsx(89,191): error TS2802: Type 'Set<Platform>' can only be iterated through when using the '--downlevelIteration' flag or with a '--target' of 'es2015' or higher.
+src/components/redactor/RedactorSection.tsx(104,26): error TS2802: Type 'Set<Platform>' can only be iterated through when using the '--downlevelIteration' flag or with a '--target' of 'es2015' or higher.
+src/components/redactor/RedactorSection.tsx(132,30): error TS2802: Type 'Set<Platform>' can only be iterated through when using the '--downlevelIteration' flag or with a '--target' of 'es2015' or higher.
+src/components/redactor/RedactorSection.tsx(133,41): error TS7053: Element implicitly has an 'any' type because expression of type 'any' can't be used to index type 'Record<Platform, { label: string; icon: string; sub: string; short: boolean; }>'.
