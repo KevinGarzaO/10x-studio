@@ -360,9 +360,26 @@ export const upsertCookies = async (req: Request, res: Response) => {
 
     if (!user) throw new Error('No se pudo determinar el ID del usuario')
 
-    // 2. Guardar Cookies con Expiración de 90 días
-    const expiresAt = new Date()
+    // 2. Guardar Cookies con Expiración (extraída del JWT substack.lli si es posible, o 90 días por defecto)
+    let expiresAt = new Date()
     expiresAt.setDate(expiresAt.getDate() + 90)
+
+    const lli = cookies['substack.lli']
+    if (lli) {
+      try {
+        const parts = lli.split('.')
+        if (parts.length === 3) {
+          const payload = Buffer.from(parts[1], 'base64').toString('utf8')
+          const decoded = JSON.parse(payload)
+          if (decoded && typeof decoded.exp === 'number') {
+            expiresAt = new Date(decoded.exp * 1000)
+            console.log(`[upsertCookies] Detectado exp real del token JWT substack.lli: ${expiresAt.toISOString()}`)
+          }
+        }
+      } catch (e) {
+        console.warn('[upsertCookies] Error decodificando substack.lli JWT:', e)
+      }
+    }
 
     const cookieData = {
       user_id: user.id,
