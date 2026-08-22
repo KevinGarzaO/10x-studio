@@ -123,7 +123,29 @@ const resolvedUserId = updatedUser?.id || userId
     const posts = await res.json()
     const postsArray = Array.isArray(posts) ? posts : (posts.posts || [])
 
-    const postsToUpsert = postsArray.map((p: any) => ({
+    // Fetch per-post stats from post detail endpoint
+    const postsWithStats = await Promise.all(postsArray.map(async (p: any) => {
+      let stats = p.stats || {}
+      let reactions = p.reactions || {}
+      let commentCount = p.comment_count || 0
+
+      try {
+        const detailUrl = `https://${subdomain}.substack.com/api/v1/post_management/${p.id}`
+        const detailRes = await fetch(detailUrl, { headers: this.getHeaders(cookie, `https://${subdomain}.substack.com`) })
+        if (detailRes.ok) {
+          const detail = await detailRes.json()
+          stats = detail.stats || stats
+          reactions = detail.reactions || reactions
+          commentCount = detail.comment_count || commentCount
+        }
+      } catch (e) {
+        // Fallback: use data from list endpoint
+      }
+
+      return { ...p, stats, reactions, comment_count: commentCount }
+    }))
+
+    const postsToUpsert = postsWithStats.map((p: any) => ({
       user_id: userId,
       post_id: String(p.id),
       title: p.title,
@@ -138,6 +160,7 @@ const resolvedUserId = updatedUser?.id || userId
       views: p.stats?.views || 0,
       open_rate: p.stats?.open_rate || 0,
       reaction_count: p.reactions?.total || Object.values(p.reactions || {}).reduce((a: number, b: any) => a + (typeof b === 'number' ? b : 0), 0) as number,
+      likes: p.reactions?.total || Object.values(p.reactions || {}).reduce((a: number, b: any) => a + (typeof b === 'number' ? b : 0), 0) as number,
       comment_count: p.comment_count || 0,
       synced_at: new Date().toISOString()
     }))

@@ -6,9 +6,10 @@ import { SubstackPublish } from './SubstackPublish'
 import { SubstackSubscribers } from './SubstackSubscribers'
 import { SubstackNotes } from './SubstackNotes'
 import { SubstackArticles } from './SubstackArticles'
+import { SubstackPostDetail } from './SubstackPostDetail'
 import { api } from '@/lib/api'
 
-type SubTab = 'stats' | 'subscribers' | 'publish' | 'notes' | 'articles'
+type SubTab = 'stats' | 'subscribers' | 'publish' | 'notes' | 'articles' | 'detail'
 
 interface SubstackProfile {
   name: string; handle: string; email: string; avatar: string; bio: string;
@@ -33,6 +34,7 @@ function ExpiryBadge({ expiresAt }: { expiresAt: string }) {
 export function SubstackSection() {
   const { substackConnected, substackPublication, reloadSubstackProfile, editorPrefill } = useApp()
   const [tab, setTab]         = useState<SubTab>('articles')
+  const [selectedPostId, setSelectedPostId] = useState<string | null>(null)
 
   useEffect(() => {
     if (editorPrefill) {
@@ -295,8 +297,9 @@ export function SubstackSection() {
       {tab === 'stats'       && <SubstackStats />}
       {tab === 'subscribers' && <SubstackSubscribers />}
       {tab === 'publish'     && <SubstackPublish />}
-      {tab === 'articles'    && <SubstackArticles onCompose={() => setTab('publish')} />}
+      {tab === 'articles'    && <SubstackArticles onCompose={() => setTab('publish')} onPostClick={(postId) => { setSelectedPostId(postId); setTab('detail'); }} />}
       {tab === 'notes'       && <SubstackNotes />}
+      {tab === 'detail'      && selectedPostId && <SubstackPostDetail postId={selectedPostId} onBack={() => { setSelectedPostId(null); setTab('articles'); }} />}
     </div>
   )
 }

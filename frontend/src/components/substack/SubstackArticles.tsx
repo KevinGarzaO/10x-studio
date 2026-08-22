@@ -18,7 +18,7 @@ interface APIResponse {
 
 const fetcher = (url: string) => api<any>(url)
 
-export function SubstackArticles({ onCompose }: { onCompose?: () => void }) {
+export function SubstackArticles({ onCompose, onPostClick }: { onCompose?: () => void; onPostClick?: (postId: string) => void }) {
   const { substackConnected, substackPublication } = useApp()
   const [activeTab, setActiveTab] = useState<ArticleType>('published')
   const [search, setSearch] = useState('')
@@ -48,12 +48,15 @@ export function SubstackArticles({ onCompose }: { onCompose?: () => void }) {
   )
 
   const handlePostClick = (post: any) => {
-    const subdomain = substackPublication || 'transformateck'
-    
-    if (activeTab === 'published') {
-      window.open(`https://${subdomain}.substack.com/publish/posts/detail/${post.id}?referrer=%2Fpublish%2Fposts%2Fpublished`, '_blank')
+    if (onPostClick) {
+      onPostClick(post.id)
     } else {
-      window.open(`https://${subdomain}.substack.com/publish/post/${post.id}`, '_blank')
+      const subdomain = substackPublication || 'transformateck'
+      if (activeTab === 'published') {
+        window.open(`https://${subdomain}.substack.com/publish/posts/detail/${post.id}?referrer=%2Fpublish%2Fposts%2Fpublished`, '_blank')
+      } else {
+        window.open(`https://${subdomain}.substack.com/publish/post/${post.id}`, '_blank')
+      }
     }
   }
 
@@ -177,7 +180,7 @@ export function SubstackArticles({ onCompose }: { onCompose?: () => void }) {
 
                 {/* Stats (only for published) */}
                 {activeTab === 'published' && post.stats && (
-                  <div className="flex items-center gap-8 pl-8 border-l border-white/10 text-xs">
+                  <div className="flex items-center gap-6 pl-8 border-l border-white/10 text-xs">
                     <div className="flex flex-col">
                       <span className="text-brand-primary font-bold text-[13px]">{post.stats.signups || 0}</span>
                       <span className="text-brand-secondary text-[11px]">Subscripciones</span>
@@ -189,6 +192,10 @@ export function SubstackArticles({ onCompose }: { onCompose?: () => void }) {
                     <div className="flex flex-col">
                       <span className="text-brand-primary font-bold text-[13px]">{post.stats.open_rate ? `${Math.round(post.stats.open_rate * 100)}%` : '0%'}</span>
                       <span className="text-brand-secondary text-[11px]">Abierto</span>
+                    </div>
+                    <div className="flex flex-col">
+                      <span className="text-brand-primary font-bold text-[13px]">{post.likes || post.reactions?.total || 0}</span>
+                      <span className="text-brand-secondary text-[11px]">Me gusta</span>
                     </div>
                   </div>
                 )}

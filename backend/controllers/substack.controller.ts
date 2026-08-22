@@ -139,6 +139,39 @@ export const getPosts = async (req: Request, res: Response) => {
   }
 }
 
+export const getPostDetail = async (req: Request, res: Response) => {
+  try {
+    const { data: user } = await supabase.from('users').select('id').single()
+    if (!user) return res.status(404).json({ error: 'Usuario no encontrado' })
+
+    const { postId } = req.params
+    const { data: post, error } = await supabase
+      .from('posts')
+      .select('*')
+      .eq('user_id', user.id)
+      .eq('post_id', postId)
+      .single()
+
+    if (error || !post) return res.status(404).json({ error: 'Post no encontrado' })
+
+    // Get publication info
+    const { data: pub } = await supabase
+      .from('publications')
+      .select('subdomain')
+      .eq('user_id', user.id)
+      .eq('is_primary', true)
+      .single()
+
+    res.json({
+      ...post,
+      subdomain: pub?.subdomain || 'transformateck',
+      post_url: `https://${pub?.subdomain || 'transformateck'}.substack.com/p/${post.post_id}`,
+    })
+  } catch {
+    res.status(500).json({ error: 'Error al obtener detalle del post' })
+  }
+}
+
 export const getSubscribers = async (req: Request, res: Response) => {
   try {
     const { data: user } = await supabase.from('users').select('id').single()
@@ -331,6 +364,7 @@ export const getSubstackPosts = async (req: Request, res: Response) => {
         open_rate: p.open_rate || 0,
       },
       reactions: { total: p.reaction_count || 0 },
+      likes: p.likes || 0,
       comment_count: p.comment_count || 0,
       publishedBylines: [{ name: 'Kevin Garza' }],
     }))

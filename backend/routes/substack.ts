@@ -30,6 +30,15 @@ router.get('/posts', SubstackController.getPosts)
 
 /**
  * @swagger
+ * /api/substack/posts/detail/{postId}:
+ *   get:
+ *     summary: Obtener detalle de un post con analytics desde Supabase
+ *     tags: [Substack]
+ */
+router.get('/posts/detail/:postId', SubstackController.getPostDetail)
+
+/**
+ * @swagger
  * /api/substack/subscribers:
  *   get:
  *     summary: Obtener lista de suscriptores desde Supabase
