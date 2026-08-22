@@ -18,29 +18,40 @@ interface APIResponse {
 
 const fetcher = (url: string) => api<any>(url)
 
+const PAGE_SIZE = 15
+
 export function SubstackArticles({ onCompose, onPostClick }: { onCompose?: () => void; onPostClick?: (postId: string) => void }) {
   const { substackConnected, substackPublication } = useApp()
   const [activeTab, setActiveTab] = useState<ArticleType>('published')
   const [search, setSearch] = useState('')
+  const [page, setPage] = useState(0)
+
+  const offset = page * PAGE_SIZE
 
   // Parallel fetching of all post types to ensure permanent metrics in badges
   const publishedSWR = useSWR<APIResponse>(
-    substackConnected ? '/api/substack/posts/published?order_by=post_date&order_direction=desc&limit=25&offset=0' : null,
+    substackConnected ? `/api/substack/posts/published?order_by=post_date&order_direction=desc&limit=${PAGE_SIZE}&offset=${offset}` : null,
     fetcher
   )
   const scheduledSWR = useSWR<APIResponse>(
-    substackConnected ? '/api/substack/posts/scheduled?order_by=trigger_at&order_direction=asc&limit=25&offset=0' : null,
+    substackConnected ? `/api/substack/posts/scheduled?order_by=trigger_at&order_direction=asc&limit=${PAGE_SIZE}&offset=${offset}` : null,
     fetcher
   )
   const draftsSWR = useSWR<APIResponse>(
-    substackConnected ? '/api/substack/posts/drafts?order_by=draft_updated_at&order_direction=desc&limit=25&offset=0' : null,
+    substackConnected ? `/api/substack/posts/drafts?order_by=draft_updated_at&order_direction=desc&limit=${PAGE_SIZE}&offset=${offset}` : null,
     fetcher
   )
+
+  const handleTabChange = (tab: ArticleType) => {
+    setActiveTab(tab)
+    setPage(0)
+  }
 
   const activeSWR = activeTab === 'published' ? publishedSWR : activeTab === 'scheduled' ? scheduledSWR : draftsSWR
   const { data, error, isLoading } = activeSWR
 
   const posts = data?.posts || []
+  const hasMore = posts.length === PAGE_SIZE
 
   // Simple client-side search filter
   const filteredPosts = posts.filter((post: any) => 
@@ -65,7 +76,7 @@ export function SubstackArticles({ onCompose, onPostClick }: { onCompose?: () =>
       <div className="flex items-center justify-between">
         <div className="flex bg-brand-bg border border-brand-border rounded-lg p-1 overflow-x-auto hide-scrollbar">
           <button
-            onClick={() => setActiveTab('published')}
+            onClick={() => handleTabChange('published')}
             className={`flex items-center gap-2 px-4 py-1.5 rounded-md text-sm font-semibold transition-colors whitespace-nowrap ${
               activeTab === 'published' ? 'bg-[#3b3b3b] text-white' : 'text-brand-secondary hover:text-brand-primary'
             }`}
@@ -73,7 +84,7 @@ export function SubstackArticles({ onCompose, onPostClick }: { onCompose?: () =>
             Publicado <span className="text-[11px] font-bold bg-[#1e1e1e] text-[#a0a0a0] px-2 py-0.5 rounded-full min-w-[24px] text-center shadow-inner">{publishedSWR.data ? publishedSWR.data.posts.length : '—'}</span>
           </button>
           <button
-            onClick={() => setActiveTab('scheduled')}
+            onClick={() => handleTabChange('scheduled')}
             className={`flex items-center gap-2 px-4 py-1.5 rounded-md text-sm font-semibold transition-colors whitespace-nowrap ${
               activeTab === 'scheduled' ? 'bg-[#3b3b3b] text-white' : 'text-brand-secondary hover:text-brand-primary'
             }`}
@@ -81,7 +92,7 @@ export function SubstackArticles({ onCompose, onPostClick }: { onCompose?: () =>
             Programado <span className="text-[11px] font-bold bg-[#1e1e1e] text-[#a0a0a0] px-2 py-0.5 rounded-full min-w-[24px] text-center shadow-inner">{scheduledSWR.data ? scheduledSWR.data.posts.length : '—'}</span>
           </button>
           <button
-            onClick={() => setActiveTab('drafts')}
+            onClick={() => handleTabChange('drafts')}
             className={`flex items-center gap-2 px-4 py-1.5 rounded-md text-sm font-semibold transition-colors whitespace-nowrap ${
               activeTab === 'drafts' ? 'bg-[#3b3b3b] text-white' : 'text-brand-secondary hover:text-brand-primary'
             }`}
@@ -213,6 +224,32 @@ export function SubstackArticles({ onCompose, onPostClick }: { onCompose?: () =>
             ))}
           </div>
         )}
+      </div>
+
+      {/* Pagination */}
+      <div className="flex items-center justify-between py-4">
+        <span className="text-xs text-brand-secondary">
+          Página {page + 1} {hasMore ? `(+${PAGE_SIZE} posts)` : `(última)`}
+        </span>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => { setPage(p => Math.max(0, p - 1)); }}
+            disabled={page === 0}
+            className="px-3 py-1.5 rounded-lg border border-brand-border text-xs font-bold text-brand-secondary hover:text-brand-primary hover:bg-brand-surface disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+          >
+            ← Anterior
+          </button>
+          <span className="text-xs text-brand-secondary px-2">
+            {page + 1}
+          </span>
+          <button
+            onClick={() => { setPage(p => p + 1); }}
+            disabled={!hasMore}
+            className="px-3 py-1.5 rounded-lg border border-brand-border text-xs font-bold text-brand-secondary hover:text-brand-primary hover:bg-brand-surface disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+          >
+            Siguiente →
+          </button>
+        </div>
       </div>
     </div>
   )

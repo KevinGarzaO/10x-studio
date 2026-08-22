@@ -1,7 +1,7 @@
 'use client'
 import { useState } from 'react'
 import useSWR from 'swr'
-import { ExternalLink, MoreHorizontal, Loader2, Eye, Users, Share2, MousePointerClick, Mail, ChevronLeft, ChevronRight } from 'lucide-react'
+import { ExternalLink, MoreHorizontal, Loader2, Eye, Users, Share2, MousePointerClick, Mail } from 'lucide-react'
 import { api } from '@/lib/api'
 
 interface WebPost {
@@ -165,32 +165,30 @@ export function WebArticles({ onPostClick }: { onPostClick?: (postId: string) =>
       </div>
 
       {/* Pagination */}
-      {totalPages > 1 && (
-        <div className="flex items-center justify-between">
-          <span className="text-xs text-brand-secondary">
-            Mostrando {page * PAGE_SIZE + 1}-{Math.min((page + 1) * PAGE_SIZE, total)} de {total}
+      <div className="flex items-center justify-between py-4">
+        <span className="text-xs text-brand-secondary">
+          {data ? `Mostrando ${page * PAGE_SIZE + 1}-${Math.min((page + 1) * PAGE_SIZE, total)} de ${total} posts` : 'Cargando...'}
+        </span>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => setPage(p => Math.max(0, p - 1))}
+            disabled={page === 0}
+            className="px-3 py-1.5 rounded-lg border border-brand-border text-xs font-bold text-brand-secondary hover:text-brand-primary hover:bg-brand-surface disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+          >
+            ← Anterior
+          </button>
+          <span className="text-xs text-brand-secondary px-2">
+            {page + 1} / {totalPages || 1}
           </span>
-          <div className="flex items-center gap-2">
-            <button
-              onClick={() => setPage(p => Math.max(0, p - 1))}
-              disabled={page === 0}
-              className="p-2 rounded-lg border border-brand-border text-brand-secondary hover:text-brand-primary hover:bg-brand-surface disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
-            >
-              <ChevronLeft size={16} />
-            </button>
-            <span className="text-xs text-brand-secondary px-2">
-              {page + 1} / {totalPages}
-            </span>
-            <button
-              onClick={() => setPage(p => Math.min(totalPages - 1, p + 1))}
-              disabled={page >= totalPages - 1}
-              className="p-2 rounded-lg border border-brand-border text-brand-secondary hover:text-brand-primary hover:bg-brand-surface disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
-            >
-              <ChevronRight size={16} />
-            </button>
-          </div>
+          <button
+            onClick={() => setPage(p => Math.min(totalPages - 1, p + 1))}
+            disabled={page >= totalPages - 1}
+            className="px-3 py-1.5 rounded-lg border border-brand-border text-xs font-bold text-brand-secondary hover:text-brand-primary hover:bg-brand-surface disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+          >
+            Siguiente →
+          </button>
         </div>
-      )}
+      </div>
     </div>
   )
 }

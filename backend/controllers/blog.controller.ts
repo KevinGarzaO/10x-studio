@@ -317,6 +317,12 @@ export const getWebPosts = async (req: Request, res: Response) => {
   try {
     const { limit = 25, offset = 0, status = 'published' } = req.query
 
+    const { count: total } = await supabase
+      .from('content')
+      .select('*', { count: 'exact', head: true })
+      .eq('content_type', 'blog_post')
+      .eq('status', status)
+
     const { data: posts, error } = await supabase
       .from('content')
       .select('*')
@@ -361,7 +367,7 @@ export const getWebPosts = async (req: Request, res: Response) => {
       }
     }))
 
-    res.json({ posts: postsWithAnalytics, total: postsWithAnalytics.length })
+    res.json({ posts: postsWithAnalytics, total: total || 0 })
   } catch (error: any) {
     console.error('[BlogController] Error en getWebPosts:', error)
     res.status(500).json({ error: error.message })
