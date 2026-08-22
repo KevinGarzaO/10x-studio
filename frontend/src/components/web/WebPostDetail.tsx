@@ -22,10 +22,16 @@ interface WebPostDetail {
     cta_clicks: number
     cta_breakdown: Record<string, number>
     subscribe_submits: number
-    scroll_depth_count: number
-    max_scroll_depth: number
+    scroll_visitors: number
+    avg_scroll_depth: number
     total_events: number
   }
+  recent_events?: Array<{
+    event_type: string
+    visitor_id: string
+    recorded_at: string
+    metadata?: Record<string, any>
+  }>
   post_url: string
 }
 
@@ -143,10 +149,10 @@ export function WebPostDetail({ postId, onBack }: { postId: string; onBack: () =
         </div>
         <div className="card p-5">
           <div className="flex items-center justify-between mb-3">
-            <span className="text-xs font-bold text-brand-secondary uppercase tracking-wider">Scroll máximo</span>
+            <span className="text-xs font-bold text-brand-secondary uppercase tracking-wider">Scroll promedio</span>
             <TrendingUp size={16} className="text-brand-accent" />
           </div>
-          <div className="text-3xl font-extrabold text-brand-primary tracking-tight">{analytics.max_scroll_depth}%</div>
+          <div className="text-3xl font-extrabold text-brand-primary tracking-tight">{analytics.avg_scroll_depth}%</div>
         </div>
       </div>
 
@@ -233,12 +239,12 @@ export function WebPostDetail({ postId, onBack }: { postId: string; onBack: () =
               <div className="text-[10px] font-bold text-brand-secondary uppercase tracking-wider mt-1">Suscripciones</div>
             </div>
             <div className="text-center p-3 bg-brand-bg rounded-xl">
-              <div className="text-lg font-bold text-brand-primary">{analytics.scroll_depth_count || 0}</div>
-              <div className="text-[10px] font-bold text-brand-secondary uppercase tracking-wider mt-1">Scroll depth</div>
+              <div className="text-lg font-bold text-brand-primary">{analytics.scroll_visitors || 0}</div>
+              <div className="text-[10px] font-bold text-brand-secondary uppercase tracking-wider mt-1">Lectores con scroll</div>
             </div>
             <div className="text-center p-3 bg-brand-bg rounded-xl">
-              <div className="text-lg font-bold text-brand-primary">{analytics.total_events}</div>
-              <div className="text-[10px] font-bold text-brand-secondary uppercase tracking-wider mt-1">Total eventos</div>
+              <div className="text-lg font-bold text-brand-primary">{analytics.avg_scroll_depth || 0}%</div>
+              <div className="text-[10px] font-bold text-brand-secondary uppercase tracking-wider mt-1">Scroll promedio</div>
             </div>
           </div>
         </div>

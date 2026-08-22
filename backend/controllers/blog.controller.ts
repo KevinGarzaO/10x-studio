@@ -412,10 +412,28 @@ export const getWebPostDetail = async (req: Request, res: Response) => {
       ctaBreakdown[name] = (ctaBreakdown[name] || 0) + 1
     })
 
-    // Max scroll depth
-    const maxScroll = scrollDepths.length > 0
-      ? Math.max(...scrollDepths.map(e => e.metadata?.depth_percent || 0))
+    // Scroll depth: group by visitor, take max depth per visitor, then avg
+    const visitorScrollMax: Record<string, number> = {}
+    scrollDepths.forEach(e => {
+      const vid = e.visitor_id || 'unknown'
+      const depth = e.metadata?.depth_percent || 0
+      if (!visitorScrollMax[vid] || depth > visitorScrollMax[vid]) {
+        visitorScrollMax[vid] = depth
+      }
+    })
+    const visitorScrollValues = Object.values(visitorScrollMax)
+    const avgScrollDepth = visitorScrollValues.length > 0
+      ? Math.round(visitorScrollValues.reduce((a, b) => a + b, 0) / visitorScrollValues.length)
       : 0
+    const scrollVisitors = visitorScrollValues.length
+
+    // Events with timestamps for timeline
+    const recentEvents = (events || []).slice(0, 20).map(e => ({
+      event_type: e.event_type,
+      visitor_id: e.visitor_id,
+      recorded_at: e.recorded_at,
+      metadata: e.metadata,
+    }))
 
     res.json({
       ...post,
@@ -427,10 +445,11 @@ export const getWebPostDetail = async (req: Request, res: Response) => {
         cta_clicks: ctaClicks.length,
         cta_breakdown: ctaBreakdown,
         subscribe_submits: subscribeSubmits,
-        scroll_depth_count: scrollDepths.length,
-        max_scroll_depth: maxScroll,
+        scroll_visitors: scrollVisitors,
+        avg_scroll_depth: avgScrollDepth,
         total_events: events?.length || 0,
       },
+      recent_events: recentEvents,
       post_url: `https://transformateck.com/blog/${post.slug}`,
     })
   } catch (error: any) {
