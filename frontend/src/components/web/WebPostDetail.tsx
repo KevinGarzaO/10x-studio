@@ -22,6 +22,7 @@ interface WebPostDetail {
     cta_clicks: number
     cta_breakdown: Record<string, number>
     subscribe_submits: number
+    scroll_depth_count: number
     max_scroll_depth: number
     total_events: number
   }
@@ -214,7 +215,7 @@ export function WebPostDetail({ postId, onBack }: { postId: string; onBack: () =
           <h3 className="text-sm font-bold text-brand-primary mb-4 flex items-center gap-2">
             <BarChart3 size={16} className="text-brand-accent" /> Resumen de eventos
           </h3>
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-3 gap-3">
             <div className="text-center p-3 bg-brand-bg rounded-xl">
               <div className="text-lg font-bold text-brand-primary">{analytics.views}</div>
               <div className="text-[10px] font-bold text-brand-secondary uppercase tracking-wider mt-1">Page views</div>
@@ -226,6 +227,14 @@ export function WebPostDetail({ postId, onBack }: { postId: string; onBack: () =
             <div className="text-center p-3 bg-brand-bg rounded-xl">
               <div className="text-lg font-bold text-brand-primary">{analytics.cta_clicks}</div>
               <div className="text-[10px] font-bold text-brand-secondary uppercase tracking-wider mt-1">CTA clicks</div>
+            </div>
+            <div className="text-center p-3 bg-brand-bg rounded-xl">
+              <div className="text-lg font-bold text-brand-primary">{analytics.subscribe_submits}</div>
+              <div className="text-[10px] font-bold text-brand-secondary uppercase tracking-wider mt-1">Suscripciones</div>
+            </div>
+            <div className="text-center p-3 bg-brand-bg rounded-xl">
+              <div className="text-lg font-bold text-brand-primary">{analytics.scroll_depth_count || 0}</div>
+              <div className="text-[10px] font-bold text-brand-secondary uppercase tracking-wider mt-1">Scroll depth</div>
             </div>
             <div className="text-center p-3 bg-brand-bg rounded-xl">
               <div className="text-lg font-bold text-brand-primary">{analytics.total_events}</div>

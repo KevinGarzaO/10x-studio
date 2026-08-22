@@ -317,15 +317,9 @@ export const getWebPosts = async (req: Request, res: Response) => {
   try {
     const { limit = 25, offset = 0, status = 'published' } = req.query
 
-    const { count: total } = await supabase
+    const { data: posts, error, count: total } = await supabase
       .from('content')
-      .select('*', { count: 'exact', head: true })
-      .eq('content_type', 'blog_post')
-      .eq('status', status)
-
-    const { data: posts, error } = await supabase
-      .from('content')
-      .select('*')
+      .select('*', { count: 'exact' })
       .eq('content_type', 'blog_post')
       .eq('status', status)
       .order('published_at', { ascending: false })
@@ -433,6 +427,7 @@ export const getWebPostDetail = async (req: Request, res: Response) => {
         cta_clicks: ctaClicks.length,
         cta_breakdown: ctaBreakdown,
         subscribe_submits: subscribeSubmits,
+        scroll_depth_count: scrollDepths.length,
         max_scroll_depth: maxScroll,
         total_events: events?.length || 0,
       },
