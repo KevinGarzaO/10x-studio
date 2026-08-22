@@ -1,7 +1,7 @@
 'use client'
 import { useState } from 'react'
 import useSWR from 'swr'
-import { ExternalLink, MoreHorizontal, Loader2, Eye, Users, Share2, MousePointerClick, Mail } from 'lucide-react'
+import { ExternalLink, MoreHorizontal, Loader2, Eye, Users, Share2, MousePointerClick, Mail, ChevronLeft, ChevronRight } from 'lucide-react'
 import { api } from '@/lib/api'
 
 interface WebPost {
@@ -29,17 +29,22 @@ interface APIResponse {
   total: number
 }
 
+const PAGE_SIZE = 15
+
 const fetcher = (url: string) => api<APIResponse>(url)
 
 export function WebArticles({ onPostClick }: { onPostClick?: (postId: string) => void }) {
   const [search, setSearch] = useState('')
+  const [page, setPage] = useState(0)
 
   const { data, error, isLoading } = useSWR<APIResponse>(
-    '/api/blog/web-posts?status=published&limit=50',
+    `/api/blog/web-posts?status=published&limit=${PAGE_SIZE}&offset=${page * PAGE_SIZE}`,
     fetcher
   )
 
   const posts = data?.posts || []
+  const total = data?.total || 0
+  const totalPages = Math.ceil(total / PAGE_SIZE)
 
   const filteredPosts = posts.filter((post: WebPost) =>
     post.title.toLowerCase().includes(search.toLowerCase())
@@ -51,7 +56,7 @@ export function WebArticles({ onPostClick }: { onPostClick?: (postId: string) =>
         <div className="flex items-center gap-3">
           <span className="text-sm font-bold text-brand-primary">Publicado</span>
           <span className="text-[11px] font-bold bg-[#1e1e1e] text-[#a0a0a0] px-2 py-0.5 rounded-full min-w-[24px] text-center shadow-inner">
-            {data ? posts.length : '—'}
+            {data ? total : '—'}
           </span>
         </div>
       </div>
@@ -143,15 +148,12 @@ export function WebArticles({ onPostClick }: { onPostClick?: (postId: string) =>
 
                 {/* Actions */}
                 <div className="flex items-center gap-2 pl-4 ml-2 opacity-50 group-hover:opacity-100 transition-opacity">
-                  <a
-                    href={post.post_url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    onClick={(e) => e.stopPropagation()}
+                  <button
+                    onClick={(e) => { e.stopPropagation(); onPostClick?.(post.id); }}
                     className="p-2 hover:bg-brand-bg rounded-md text-brand-secondary hover:text-brand-primary transition-colors"
                   >
                     <ExternalLink size={16} />
-                  </a>
+                  </button>
                   <button className="p-2 hover:bg-brand-bg rounded-md text-brand-secondary hover:text-brand-primary transition-colors">
                     <MoreHorizontal size={16} />
                   </button>
@@ -161,6 +163,34 @@ export function WebArticles({ onPostClick }: { onPostClick?: (postId: string) =>
           </div>
         )}
       </div>
+
+      {/* Pagination */}
+      {totalPages > 1 && (
+        <div className="flex items-center justify-between">
+          <span className="text-xs text-brand-secondary">
+            Mostrando {page * PAGE_SIZE + 1}-{Math.min((page + 1) * PAGE_SIZE, total)} de {total}
+          </span>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setPage(p => Math.max(0, p - 1))}
+              disabled={page === 0}
+              className="p-2 rounded-lg border border-brand-border text-brand-secondary hover:text-brand-primary hover:bg-brand-surface disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+            >
+              <ChevronLeft size={16} />
+            </button>
+            <span className="text-xs text-brand-secondary px-2">
+              {page + 1} / {totalPages}
+            </span>
+            <button
+              onClick={() => setPage(p => Math.min(totalPages - 1, p + 1))}
+              disabled={page >= totalPages - 1}
+              className="p-2 rounded-lg border border-brand-border text-brand-secondary hover:text-brand-primary hover:bg-brand-surface disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+            >
+              <ChevronRight size={16} />
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
