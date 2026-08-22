@@ -18,8 +18,6 @@ const NAV_ITEMS: NavItem[] = [
   { id: 'calendar-month', label: 'Calendario editorial', icon: '🗓️' },
   { id: 'topics-all', label: 'Banco de temas', icon: '💡', badge: 5 },
   { id: 'redactor-new', label: 'Redactor IA', icon: '✏️' },
-  { id: 'templates-mine', label: 'Plantillas & formatos', icon: '📝' },
-  { id: 'history-all', label: 'Historial', icon: '📜' },
   { id: 'li-dash', label: 'LinkedIn', icon: '💼', badge: 1 },
   { id: 'substack-dash', label: 'Substack', icon: '📧', badge: 2 },
   { id: 'web-dash', label: 'Web', icon: '🌍' },
