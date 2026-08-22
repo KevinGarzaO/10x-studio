@@ -236,6 +236,37 @@ ${articleObj.image_prompt}
         status: 'scheduled'
       })
 
+      // 9. Guardar en tabla content (unified storage)
+      try {
+        const { ContentService } = require('./content.service')
+        const slug = ContentService.generateSlug(articleObj.titulo)
+        const wordCount = (articleObj.contenido || '').split(/\s+/).length
+        
+        await ContentService.create({
+          slug,
+          title: articleObj.titulo,
+          subtitle: articleObj.subtitulo || '',
+          excerpt: (articleObj.contenido || '').substring(0, 200) + '...',
+          markdown_content: articleObj.contenido || '',
+          html_content: finalBody,
+          image_url: imageUrl || undefined,
+          image_prompt: articleObj.image_prompt || '',
+          content_type: 'newsletter',
+          source: 'ai_generated',
+          destination: 'substack',
+          user_id: userId,
+          word_count: wordCount,
+          tone: 'conversacional, persuasivo y experto',
+          length_target: '1000',
+          status: 'published',
+          published_at: new Date().toISOString(),
+          external_id: String(draft.id)
+        })
+        console.log(`[SubstackAuto] Artículo guardado en content table`)
+      } catch (contentErr) {
+        console.error('[SubstackAuto] Error guardando en content:', contentErr)
+      }
+
       console.log(`[SubstackAuto] ✅ ÉXITO: Artículo programado para próximamente con ID ${draft.id}`);
       console.log('================ SUBSTACK AUTO END ==================')
     } catch (e) {
@@ -337,10 +368,145 @@ ${postObj.image_prompt}
         published_at: new Date().toISOString()
       })
 
+      // 8. Guardar en tabla content (unified storage)
+      try {
+        const { ContentService } = require('./content.service')
+        const slug = ContentService.generateSlug(postObj.titulo || topic)
+        const wordCount = (postObj.contenido || '').split(/\s+/).length
+        
+        await ContentService.create({
+          slug,
+          title: postObj.titulo || topic,
+          subtitle: '',
+          excerpt: (postObj.contenido || '').substring(0, 200) + '...',
+          markdown_content: postObj.contenido || '',
+          html_content: postObj.contenido || '',
+          image_url: imageUrl || undefined,
+          image_prompt: postObj.image_prompt || '',
+          content_type: 'linkedin_post',
+          source: 'ai_generated',
+          destination: 'linkedin',
+          user_id: userId,
+          word_count: wordCount,
+          tone: 'conversacional, persuasivo y experto',
+          length_target: '300',
+          status: 'published',
+          published_at: new Date().toISOString(),
+          external_id: postId
+        })
+        console.log(`[LinkedInAuto] Post guardado en content table`)
+      } catch (contentErr) {
+        console.error('[LinkedInAuto] Error guardando en content:', contentErr)
+      }
+
       console.log(`[LinkedInAuto] ✅ ÉXITO: Publicado en LinkedIn con ID ${postId}`);
       console.log('================ LINKEDIN AUTO END ==================')
     } catch (e) {
       console.error('[LinkedInAuto] FALLO:', e);
+    }
+  }
+
+  /**
+   * 5. Flujo Autónomo para Blog Posts (2x/día: 10AM y 6PM Monterrey)
+   */
+  static async publishBlogForUser(userId: string) {
+    try {
+      const { supabase } = require('./supabase.service')
+      const { ContentService } = require('./content.service')
+      
+      console.log('================ BLOG AUTO START ================')
+      
+      // A. Consultar Memoria (últimos temas publicados)
+      const { data: recentHistory } = await supabase
+        .from('history')
+        .select('topic')
+        .eq('user_id', userId)
+        .order('id', { ascending: false })
+        .limit(15)
+      
+      const excluded = recentHistory?.map((h: any) => h.topic).filter(Boolean) || []
+
+      // 1. Encontrar Tema Trending con Scoring
+      const { topic, extract, relevance_score } = await this.findTrendingTopicForToday(excluded)
+      console.log(`[BlogAuto] Noticia: "${topic}" | Score: ${relevance_score}`)
+
+      if (relevance_score < 85) {
+        console.log(`[BlogAuto] Score (${relevance_score}) insuficiente para blog. Abortando.`);
+        return;
+      }
+
+      // 2. Redactar el contenido (Plataforma: blog)
+      const articleObj = await this.writeArticle(topic, extract, 'blog')
+      console.log(`[BlogAuto] Artículo redactado: ${articleObj.titulo}`);
+
+      // 3. Generar Imagen Nano Banana v5
+      let imageUrl = null;
+      if (articleObj.image_prompt && process.env.GEMINI_API_KEY) {
+        console.log(`[BlogAuto] Dibujando infografía Nano Banana v5...`);
+        const refImages: any[] = []
+        const refPaths = [path.join(__dirname, '../assets/references/ref1.jpg'), path.join(__dirname, '../assets/references/ref2.jpg')]
+        for (const p of refPaths) {
+          if (fs.existsSync(p)) {
+            refImages.push({ data: fs.readFileSync(p).toString('base64'), mimeType: 'image/jpeg' })
+          }
+        }
+        
+        const finalImgPrompt = `
+INSTRUCCIONES DE IDENTIDAD (PARA GEMINI):
+Kevin Garza: Basar rostro y físico en fotos adjuntas. Gorra deportiva siempre puesta. Jersey México/Latam.
+NUNCA poner máscara en la cara. NUNCA escribir códigos hexadecimales.
+
+PROMPT ARTÍSTICO (CREA UNA INFOGRAFÍA VISUAL!):
+${articleObj.image_prompt}
+`;
+        
+        const imgRes = await ImageService.generate(finalImgPrompt, refImages)
+        if (imgRes?.base64) {
+          imageUrl = await ImageService.uploadToSupabase(imgRes.base64, userId)
+        }
+      }
+
+      // 4. Armar el body HTML
+      const markdownContent = articleObj.contenido || ''
+      const finalBody = imageUrl ? `<img src="${imageUrl}" alt="Nano Banana v5">\n\n` + markdownContent : markdownContent
+
+      // 5. Guardar en tabla content
+      const slug = ContentService.generateSlug(articleObj.titulo)
+      const wordCount = markdownContent.split(/\s+/).length
+      
+      const content = await ContentService.create({
+        slug,
+        title: articleObj.titulo,
+        subtitle: articleObj.subtitulo || '',
+        excerpt: markdownContent.substring(0, 200) + '...',
+        markdown_content: markdownContent,
+        html_content: finalBody,
+        image_url: imageUrl,
+        image_prompt: articleObj.image_prompt || '',
+        content_type: 'blog_post',
+        source: 'ai_generated',
+        destination: 'web',
+        user_id: userId,
+        word_count: wordCount,
+        tone: 'conversacional, persuasivo y experto',
+        length_target: '1000',
+        status: 'published',
+        published_at: new Date().toISOString()
+      })
+
+      // 6. Registrar en el Historial para Memoria
+      await supabase.from('history').insert({
+        user_id: userId,
+        topic: topic,
+        type: 'blog_post',
+        content: articleObj.contenido,
+        status: 'published'
+      })
+
+      console.log(`[BlogAuto] ✅ ÉXITO: Blog post guardado con ID ${content.id}`);
+      console.log('================ BLOG AUTO END ==================')
+    } catch (e) {
+      console.error('[BlogAuto] FALLO:', e);
     }
   }
 }

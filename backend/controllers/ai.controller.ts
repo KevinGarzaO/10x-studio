@@ -6,6 +6,7 @@ import { buildPrompt, buildSuggestTopicsPrompt, Platform } from '../lib/prompts'
 import { ImageService } from '../services/image.service'
 import { supabase } from '../services/supabase.service'
 import { SearchService } from '../services/search.service'
+import { ContentService } from '../services/content.service'
 
 /**
  * Helper to parse Claude JSON response with resilience
@@ -176,6 +177,38 @@ ${parsed.image_prompt}
     // 4. Return result
     const htmlContent = mdToHtml(parsed.contenido || '')
     const finalHtml = imageUrl ? `<p><img src="${imageUrl}" alt="Nano Banana"></p>\n` + htmlContent : htmlContent
+
+    // 5. Save to content table (unified storage)
+    try {
+      const userId = (req as any).user?.id
+      const wordCount = (parsed.contenido || '').split(/\s+/).length
+      const contentType = platform === 'substack-article' ? 'newsletter' : 
+                         platform === 'linkedin-post' ? 'linkedin_post' : 
+                         platform === 'substack-note' ? 'note' : 'newsletter'
+      const destination = platform.includes('substack') ? 'substack' : 
+                         platform.includes('linkedin') ? 'linkedin' : 'web'
+
+      await ContentService.create({
+        slug: ContentService.generateSlug(parsed.titulo || topic),
+        title: parsed.titulo || topic,
+        subtitle: parsed.subtitulo || '',
+        excerpt: (parsed.contenido || '').substring(0, 200) + '...',
+        markdown_content: parsed.contenido || '',
+        html_content: finalHtml,
+        image_url: imageUrl || undefined,
+        image_prompt: parsed.image_prompt || '',
+        content_type: contentType as any,
+        source: 'ai_generated',
+        destination: destination as any,
+        user_id: userId,
+        word_count: wordCount,
+        tone: tone,
+        length_target: length,
+        status: 'draft'
+      })
+    } catch (saveErr) {
+      console.error('[AIController] Error saving to content table:', saveErr)
+    }
 
     res.json({
       titulo: parsed.titulo || '',

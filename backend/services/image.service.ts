@@ -2,6 +2,7 @@
 import { GoogleGenAI } from "@google/genai";
 import fs from 'fs';
 import path from 'path';
+import { supabase } from './supabase.service';
 
 export class ImageService {
   private static client: any = null;
@@ -33,7 +34,6 @@ export class ImageService {
         }
       }));
 
-      // El prompt se agrega como la última parte
       parts.push({ text: prompt });
 
       const response = await client.models.generateContent({
@@ -68,14 +68,45 @@ export class ImageService {
   }
 
   /**
-   * Guarda la imagen localmente en la carpeta /uploads y devuelve la URL.
+   * Upload image to Supabase Storage and return public URL.
+   */
+  static async uploadToSupabase(base64: string, userId: string): Promise<string | null> {
+    try {
+      const fileName = `art-${userId}-${Date.now()}.png`;
+      const filePath = `generated/${fileName}`;
+      
+      const buffer = Buffer.from(base64, 'base64');
+      
+      const { error: uploadErr } = await supabase.storage
+        .from('images')
+        .upload(filePath, buffer, { 
+          contentType: 'image/png',
+          upsert: false
+        });
+
+      if (uploadErr) {
+        console.error("[ImageService] Error uploading to Supabase Storage:", uploadErr.message);
+        // Fallback to local storage
+        return this.saveLocal(base64, userId);
+      }
+
+      const { data: urlData } = supabase.storage.from('images').getPublicUrl(filePath);
+      console.log(`[ImageService] Imagen subida a Supabase Storage: ${filePath}`);
+      return urlData.publicUrl;
+    } catch (error) {
+      console.error("[ImageService] Error in uploadToSupabase:", error);
+      return this.saveLocal(base64, userId);
+    }
+  }
+
+  /**
+   * Save image locally as fallback.
    */
   static async saveLocal(base64: string, userId: string): Promise<string | null> {
     try {
       const fileName = `art-${userId}-${Date.now()}.png`;
       const uploadDir = path.join(__dirname, '../uploads');
       
-      // Asegurar que el directorio existe
       if (!fs.existsSync(uploadDir)) {
         fs.mkdirSync(uploadDir, { recursive: true });
       }
@@ -85,20 +116,14 @@ export class ImageService {
       
       fs.writeFileSync(filePath, buffer);
 
-      // URL relativa para que el frontend la use (el servidor sirve /uploads)
-      // En desarrollo local será http://localhost:3001/uploads/..., en prod la URL de Railway.
       const port = process.env.PORT || 3001;
       const baseUrl = process.env.BACKEND_URL || `http://localhost:${port}`;
       
+      console.log(`[ImageService] Imagen guardada localmente: ${filePath}`);
       return `${baseUrl}/uploads/${fileName}`;
     } catch (error) {
       console.error("[ImageService] Error saving local image:", error);
       return null;
     }
-  }
-
-  // Mantenemos este alias por compatibilidad inmediata con el controlador si no lo hemos actualizado
-  static async uploadToSupabase(base64: string, userId: string): Promise<string | null> {
-    return this.saveLocal(base64, userId);
   }
 }

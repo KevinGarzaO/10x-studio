@@ -285,12 +285,59 @@ export const getSubstackPosts = async (req: Request, res: Response) => {
     const { type } = req.params // 'published', 'drafts', 'scheduled'
     const limit = Number(req.query.limit) || 25
     const offset = Number(req.query.offset) || 0
-    const order_by = req.query.order_by as string || 'post_date'
+    const order_by = req.query.order_by as string || 'published_at'
     const order_direction = req.query.order_direction as string || 'desc'
 
-    const result = await SubstackService.getSubstackPosts(user.id, type, offset, limit, order_by, order_direction)
-    res.json(result)
+    // Map frontend sort fields to DB columns
+    const sortMap: Record<string, string> = {
+      'post_date': 'published_at',
+      'published_at': 'published_at',
+      'draft_updated_at': 'synced_at',
+      'trigger_at': 'published_at',
+    }
+    const dbSort = sortMap[order_by] || 'published_at'
+    const ascending = order_direction === 'asc'
+
+    let query = supabase
+      .from('posts')
+      .select('*')
+      .eq('user_id', user.id)
+
+    if (type === 'published') {
+      query = query.eq('is_published', true)
+    } else if (type === 'drafts') {
+      query = query.eq('is_published', false)
+    }
+
+    const { data, error } = await query
+      .order(dbSort, { ascending })
+      .range(offset, offset + limit - 1)
+
+    if (error) throw error
+
+    // Transform to match frontend expected format
+    const posts = (data || []).map((p: any) => ({
+      id: p.post_id,
+      title: p.title,
+      subtitle: p.subtitle,
+      cover_image: p.cover_image_url,
+      post_date: p.published_at,
+      audience: p.audience,
+      type: p.post_type || 'newsletter',
+      word_count: p.word_count,
+      stats: {
+        signups: p.signups || 0,
+        views: p.views || 0,
+        open_rate: p.open_rate || 0,
+      },
+      reactions: { total: p.reaction_count || 0 },
+      comment_count: p.comment_count || 0,
+      publishedBylines: [{ name: 'Kevin Garza' }],
+    }))
+
+    res.json({ posts, offset, limit, total: posts.length })
   } catch (err: any) {
+    console.error('[SubstackController] Error en getSubstackPosts:', err)
     res.status(500).json({ error: err.message })
   }
 }

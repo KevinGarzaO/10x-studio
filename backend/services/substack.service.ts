@@ -132,6 +132,13 @@ const resolvedUserId = updatedUser?.id || userId
       published_at: p.post_date,
       audience: p.audience || 'everyone',
       is_published: true,
+      post_type: p.type || 'newsletter',
+      word_count: p.word_count || 0,
+      signups: p.stats?.signups || 0,
+      views: p.stats?.views || 0,
+      open_rate: p.stats?.open_rate || 0,
+      reaction_count: p.reactions?.total || Object.values(p.reactions || {}).reduce((a: number, b: any) => a + (typeof b === 'number' ? b : 0), 0) as number,
+      comment_count: p.comment_count || 0,
       synced_at: new Date().toISOString()
     }))
 

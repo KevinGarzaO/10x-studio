@@ -91,7 +91,21 @@ export const initCron = () => {
     await SchedulerService.processPendingPosts()
   })
 
-  console.log('Cron services initialized (Sync=15m, Substack=L,M,V 12PM, LinkedIn=L-S 12PM&5PM, Scheduler=15m)')
+  // 6. Blog Auto Publisher - Turno 1 (L-S a las 10:00 AM Monterrey = 16:00 UTC)
+  cron.schedule('0 16 * * 1-6', async () => {
+    console.log('[BlogAuto] Turno 10:00 AM iniciado...');
+    const { data: users } = await supabase.from('users').select('id').limit(1).single();
+    if (users) await AutoPublisherService.publishBlogForUser(users.id)
+  })
+
+  // 7. Blog Auto Publisher - Turno 2 (L-S a las 6:00 PM Monterrey = 00:00 UTC)
+  cron.schedule('0 0 * * 2-7', async () => {
+    console.log('[BlogAuto] Turno 6:00 PM iniciado...');
+    const { data: users } = await supabase.from('users').select('id').limit(1).single();
+    if (users) await AutoPublisherService.publishBlogForUser(users.id)
+  })
+
+  console.log('Cron services initialized (Sync=15m, Substack=L,M,V 12PM, LinkedIn=L-S 12PM&5PM, Blog=L-S 10AM&6PM, Scheduler=15m)')
 }
 
 
