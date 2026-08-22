@@ -35,8 +35,8 @@ export function SubstackPostDetail({ postId, onBack }: { postId: string; onBack:
   useEffect(() => {
     async function load() {
       try {
-        const data = await api<PostDetail>(`/api/substack/posts/detail/${postId}`)
-        if (data && !data.error) {
+        const data = await api<any>(`/api/substack/posts/detail/${postId}`)
+        if (data && !data.error && data.post_id) {
           setPost(data)
         } else {
           setError('Post no encontrado')
