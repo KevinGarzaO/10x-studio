@@ -5,6 +5,7 @@ import path from 'path'
 import { buildPrompt } from '../lib/prompts'
 import { ImageService } from '../services/image.service'
 import { ContentService } from '../services/content.service'
+import { supabase } from '../services/supabase.service'
 
 /**
  * Helper to parse Claude JSON response
@@ -305,6 +306,134 @@ export const getAnalyticsSummary = async (req: Request, res: Response) => {
     const summary = await ContentService.getAnalyticsSummary(userId)
     res.json(summary)
   } catch (error: any) {
+    res.status(500).json({ error: error.message })
+  }
+}
+
+/**
+ * Get web blog posts with analytics from post_events
+ */
+export const getWebPosts = async (req: Request, res: Response) => {
+  try {
+    const { limit = 25, offset = 0, status = 'published' } = req.query
+
+    const { data: posts, error } = await supabase
+      .from('content')
+      .select('*')
+      .eq('content_type', 'blog_post')
+      .eq('status', status)
+      .order('published_at', { ascending: false })
+      .range(Number(offset), Number(offset) + Number(limit) - 1)
+
+    if (error) throw error
+
+    // Get analytics for each post from post_events
+    const postsWithAnalytics = await Promise.all((posts || []).map(async (post: any) => {
+      const { data: events } = await supabase
+        .from('post_events')
+        .select('event_type, visitor_id')
+        .eq('content_id', post.id)
+
+      const views = events?.filter(e => e.event_type === 'page_view').length || 0
+      const uniqueVisitors = new Set(events?.filter(e => e.event_type === 'page_view').map(e => e.visitor_id)).size
+      const shareClicks = events?.filter(e => e.event_type === 'share_click').length || 0
+      const ctaClicks = events?.filter(e => e.event_type === 'cta_click').length || 0
+      const subscribeSubmits = events?.filter(e => e.event_type === 'subscribe_submit').length || 0
+
+      return {
+        id: post.id,
+        title: post.title,
+        slug: post.slug,
+        excerpt: post.excerpt,
+        image_url: post.image_url,
+        published_at: post.published_at,
+        status: post.status,
+        word_count: post.word_count,
+        destination: post.destination,
+        stats: {
+          views,
+          unique_visitors: uniqueVisitors,
+          share_clicks: shareClicks,
+          cta_clicks: ctaClicks,
+          subscribe_submits: subscribeSubmits,
+        },
+        post_url: `https://transformateck.com/blog/${post.slug}`,
+      }
+    }))
+
+    res.json({ posts: postsWithAnalytics, total: postsWithAnalytics.length })
+  } catch (error: any) {
+    console.error('[BlogController] Error en getWebPosts:', error)
+    res.status(500).json({ error: error.message })
+  }
+}
+
+/**
+ * Get web post detail with analytics
+ */
+export const getWebPostDetail = async (req: Request, res: Response) => {
+  try {
+    const { postId } = req.params
+
+    const { data: post, error } = await supabase
+      .from('content')
+      .select('*')
+      .eq('id', postId)
+      .eq('content_type', 'blog_post')
+      .single()
+
+    if (error || !post) return res.status(404).json({ error: 'Post no encontrado' })
+
+    // Get analytics events
+    const { data: events } = await supabase
+      .from('post_events')
+      .select('*')
+      .eq('content_id', post.id)
+      .order('recorded_at', { ascending: false })
+
+    const views = events?.filter(e => e.event_type === 'page_view').length || 0
+    const uniqueVisitors = new Set(events?.filter(e => e.event_type === 'page_view').map(e => e.visitor_id)).size
+    const shareClicks = events?.filter(e => e.event_type === 'share_click') || []
+    const ctaClicks = events?.filter(e => e.event_type === 'cta_click') || []
+    const subscribeSubmits = events?.filter(e => e.event_type === 'subscribe_submit').length || 0
+    const scrollDepths = events?.filter(e => e.event_type === 'scroll_depth') || []
+
+    // Share breakdown by platform
+    const shareBreakdown: Record<string, number> = {}
+    shareClicks.forEach(e => {
+      const platform = e.metadata?.platform || 'unknown'
+      shareBreakdown[platform] = (shareBreakdown[platform] || 0) + 1
+    })
+
+    // CTA breakdown
+    const ctaBreakdown: Record<string, number> = {}
+    ctaClicks.forEach(e => {
+      const name = e.metadata?.cta_name || 'unknown'
+      ctaBreakdown[name] = (ctaBreakdown[name] || 0) + 1
+    })
+
+    // Max scroll depth
+    const maxScroll = scrollDepths.length > 0
+      ? Math.max(...scrollDepths.map(e => e.metadata?.depth_percent || 0))
+      : 0
+
+    res.json({
+      ...post,
+      analytics: {
+        views,
+        unique_visitors: uniqueVisitors,
+        share_clicks: shareClicks.length,
+        share_breakdown: shareBreakdown,
+        cta_clicks: ctaClicks.length,
+        cta_breakdown: ctaBreakdown,
+        subscribe_submits: subscribeSubmits,
+        max_scroll_depth: maxScroll,
+        total_events: events?.length || 0,
+      },
+      post_url: `https://transformateck.com/blog/${post.slug}`,
+    })
+  } catch (error: any) {
+    console.error('[BlogController] Error en getWebPostDetail:', error)
     res.status(500).json({ error: error.message })
   }
 }

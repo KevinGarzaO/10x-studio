@@ -13,6 +13,7 @@ import { SubstackSection } from '@/components/substack/SubstackSection'
 import { IntegrationsSection } from '@/components/integrations/IntegrationsSection'
 import { LinkedInSection } from '@/components/linkedin/LinkedInSection'
 import { SettingsSection } from '@/components/settings/SettingsSection'
+import { WebSection } from '@/components/web/WebSection'
 import AvocadoStatusBar from '@/components/layout/StatusBar'
 
 export type NavSection = 
@@ -33,6 +34,7 @@ export type NavSection =
   | 'wp-dash' | 'wp-posts' | 'wp-create' | 'wp-config'
   | 'li-dash' | 'li-posts' | 'li-create' | 'li-config'
   | 'x-dash' | 'x-posts' | 'x-create' | 'x-config'
+  | 'web-dash' | 'web-posts' | 'web-detail'
   | 'multichannel-create' | 'multichannel-schedule' | 'multichannel-history'
   | 'webhooks-mine' | 'webhooks-create' | 'webhooks-logs'
   | 'zapier-connections' | 'zapier-config'
@@ -77,6 +79,7 @@ export default function Home() {
       case 'templates-mine': return <TemplatesSection />
       case 'substack-dash':  return <SubstackSection />
       case 'li-dash':        return <LinkedInSection />
+      case 'web-dash':       return <WebSection />
       case 'integrations':   return <IntegrationsSection />
       case 'security-password': return <SettingsSection />
       case 'profile-data':      return <div className="p-8 text-center text-stone-500 mt-20"><i className="pi pi-user text-4xl mb-4 opacity-50 block"></i><h2>Perfil & Facturación</h2><p className="text-sm mt-2">Gestión de cuenta y suscripción. (Próximamente)</p></div>

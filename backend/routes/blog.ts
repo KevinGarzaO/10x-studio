@@ -6,7 +6,9 @@ import {
   updateBlogPost, 
   deleteBlogPost,
   getBlogAnalytics,
-  getAnalyticsSummary
+  getAnalyticsSummary,
+  getWebPosts,
+  getWebPostDetail
 } from '../controllers/blog.controller'
 
 const router = Router()
@@ -17,26 +19,35 @@ const router = Router()
  *   post:
  *     summary: Generate a new blog post with AI
  *     tags: [Blog]
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             properties:
- *               topic:
- *                 type: string
- *               length:
- *                 type: string
- *               tone:
- *                 type: string
- *               extract:
- *                 type: string
- *               destination:
- *                 type: string
- *                 enum: [web, substack, wordpress]
  */
 router.post('/generate', generateBlog)
+
+/**
+ * @swagger
+ * /api/blog/web-posts:
+ *   get:
+ *     summary: Get web blog posts with analytics from post_events
+ *     tags: [Blog]
+ */
+router.get('/web-posts', getWebPosts)
+
+/**
+ * @swagger
+ * /api/blog/web-posts/{postId}:
+ *   get:
+ *     summary: Get web post detail with analytics
+ *     tags: [Blog]
+ */
+router.get('/web-posts/:postId', getWebPostDetail)
+
+/**
+ * @swagger
+ * /api/blog/analytics/summary:
+ *   get:
+ *     summary: Get analytics summary for all posts
+ *     tags: [Blog]
+ */
+router.get('/analytics/summary', getAnalyticsSummary)
 
 /**
  * @swagger
@@ -44,23 +55,6 @@ router.post('/generate', generateBlog)
  *   get:
  *     summary: List all blog posts
  *     tags: [Blog]
- *     parameters:
- *       - in: query
- *         name: destination
- *         schema:
- *           type: string
- *       - in: query
- *         name: status
- *         schema:
- *           type: string
- *       - in: query
- *         name: limit
- *         schema:
- *           type: integer
- *       - in: query
- *         name: offset
- *         schema:
- *           type: integer
  */
 router.get('/', listBlogPosts)
 
@@ -99,14 +93,5 @@ router.delete('/:id', deleteBlogPost)
  *     tags: [Blog]
  */
 router.get('/:id/analytics', getBlogAnalytics)
-
-/**
- * @swagger
- * /api/blog/analytics/summary:
- *   get:
- *     summary: Get analytics summary for all posts
- *     tags: [Blog]
- */
-router.get('/analytics/summary', getAnalyticsSummary)
 
 export default router

@@ -22,6 +22,7 @@ const NAV_ITEMS: NavItem[] = [
   { id: 'history-all', label: 'Historial', icon: '📜' },
   { id: 'li-dash', label: 'LinkedIn', icon: '💼', badge: 1 },
   { id: 'substack-dash', label: 'Substack', icon: '📧', badge: 2 },
+  { id: 'web-dash', label: 'Web', icon: '🌍' },
 ]
 
 interface SidebarProps {
