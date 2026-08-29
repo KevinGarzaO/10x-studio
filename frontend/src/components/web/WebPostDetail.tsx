@@ -96,7 +96,12 @@ export function WebPostDetail({ postId, onBack }: { postId: string; onBack: () =
         <div className="flex items-start gap-5">
           {post.image_url ? (
             <div className="w-24 h-24 rounded-xl overflow-hidden flex-shrink-0 relative border border-white/10">
-              <img src={post.image_url} alt={post.title} className="w-full h-full object-cover" />
+              <img
+                src={post.image_url}
+                alt={post.title}
+                className="w-full h-full object-cover"
+                onError={(e) => { (e.target as HTMLImageElement).style.display = 'none' }}
+              />
             </div>
           ) : (
             <div className="w-24 h-24 rounded-xl bg-brand-bg flex items-center justify-center text-brand-secondary flex-shrink-0">

@@ -101,12 +101,16 @@ export function WebArticles({ onPostClick }: { onPostClick?: (postId: string) =>
                 {/* Thumbnail */}
                 <div className="w-28 h-16 rounded-md overflow-hidden bg-brand-bg flex-shrink-0 relative border border-white/10 flex items-center justify-center text-brand-secondary">
                   {post.image_url ? (
-                    <img src={post.image_url} alt={post.title} className="w-full h-full object-cover" />
-                  ) : (
-                    <div className="flex flex-col items-center gap-1 opacity-50">
+                    <img
+                      src={post.image_url}
+                      alt={post.title}
+                      className="w-full h-full object-cover"
+                      onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; (e.target as HTMLImageElement).nextElementSibling?.classList.remove('hidden') }}
+                    />
+                  ) : null}
+                    <div className={`flex flex-col items-center gap-1 opacity-50 ${post.image_url ? 'hidden' : ''}`}>
                       <span className="text-[10px]">No image</span>
                     </div>
-                  )}
                 </div>
 
                 {/* Info */}
