@@ -63,7 +63,7 @@ export function SubstackArticles({ onCompose }: { onCompose?: () => void }) {
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
           <span className="text-sm font-bold text-brand-primary">Publicado</span>
-          <span className="text-[11px] font-bold bg-[#1e1e1e] text-[#a0a0a0] px-2 py-0.5 rounded-full min-w-[24px] text-center shadow-inner">
+          <span className="text-[11px] font-bold bg-[var(--bg-muted)] text-[var(--text-muted)] px-2 py-0.5 rounded-full min-w-[24px] text-center">
             {publishedSWR.data ? publishedSWR.data.posts.length : '—'}
           </span>
         </div>
@@ -109,10 +109,10 @@ export function SubstackArticles({ onCompose }: { onCompose?: () => void }) {
               <div
                 key={post.id}
                 onClick={() => router.push(`/substack/${post.id}`)}
-                className={`flex items-center p-4 gap-4 ${idx !== filteredPosts.length - 1 ? 'border-b border-white/5' : ''} hover:bg-white/5 transition-colors cursor-pointer group`}
+                className={`flex items-center p-4 gap-4 ${idx !== filteredPosts.length - 1 ? 'border-b border-[var(--border-light)]' : ''} hover:bg-[var(--bg-hover)] transition-colors cursor-pointer group`}
               >
                 {/* Thumbnail */}
-                <div className="w-28 h-16 rounded-md overflow-hidden bg-brand-bg flex-shrink-0 relative border border-white/10 flex items-center justify-center text-brand-secondary">
+                <div className="w-28 h-16 rounded-md overflow-hidden bg-[var(--bg-muted)] flex-shrink-0 relative border border-[var(--border)] flex items-center justify-center text-[var(--text-muted)]">
                   {post.cover_image ? (
                     <img
                       src={post.cover_image}
@@ -149,7 +149,7 @@ export function SubstackArticles({ onCompose }: { onCompose?: () => void }) {
 
                 {/* Stats */}
                 {activeTab === 'published' && post.stats && (
-                  <div className="flex items-center gap-6 pl-8 border-l border-white/10 text-xs">
+                  <div className="flex items-center gap-6 pl-8 border-l border-[var(--border)] text-xs">
                     <div className="flex flex-col">
                       <span className="text-brand-primary font-bold text-[13px]">{post.stats.signups || 0}</span>
                       <span className="text-brand-secondary text-[11px]">Suscripciones</span>

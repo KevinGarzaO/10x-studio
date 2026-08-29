@@ -10,7 +10,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
   return (
     <div className="app-layout">
-      <Header pathname={pathname} />
+      <Header />
       <SidebarNew pathname={pathname} />
       <main className="main-content">
         {children}
