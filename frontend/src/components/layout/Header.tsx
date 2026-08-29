@@ -1,122 +1,33 @@
 'use client'
 
 import { useEffect } from 'react'
-import { useApp } from './AppProvider'
-import type { NavSection } from '@/app/page'
 import AvocadoAppSwitcher from './AppSwitcher'
 
-function getSectionLabel(active: string): string {
-  const ERP_MENU = [
-    {
-      title: 'CORE',
-      categories: [
-        {
-          title: '🏠 Dashboard',
-          items: [
-            { id: 'dashboard', label: 'Resumen general' },
-            { id: 'recent-activity', label: 'Actividad reciente' },
-            { id: 'notifications', label: 'Notificaciones' },
-          ]
-        },
-        {
-          title: '👤 Mi Perfil',
-          items: [
-            { id: 'profile-data', label: 'Datos personales' },
-            { id: 'photo-brand', label: 'Foto & marca' },
-            { id: 'preferences', label: 'Preferencias' },
-          ]
-        },
-        {
-          title: '💳 Facturación',
-          items: [
-            { id: 'billing-plan', label: 'Plan actual' },
-            { id: 'payment-history', label: 'Historial de pagos' },
-            { id: 'change-plan', label: 'Cambiar plan' },
-          ]
-        },
-        {
-          title: '🔒 Seguridad',
-          items: [
-            { id: 'security-password', label: 'Contraseña' },
-            { id: 'active-sessions', label: 'Sesiones activas' },
-            { id: 'api-keys', label: 'API Keys' },
-          ]
-        },
-        {
-          title: '❓ Ayuda',
-          items: [
-            { id: 'help-docs', label: 'Documentación' },
-            { id: 'tutorials', label: 'Tutoriales' },
-            { id: 'support', label: 'Soporte' },
-            { id: 'feedback', label: 'Dar feedback' },
-          ]
-        },
-      ]
-    },
-    {
-      title: 'CMS',
-      categories: [
-        {
-          title: '📊 Estrategia',
-          items: [
-            { id: 'cms-dashboard', label: 'Dashboard CMS' },
-            { id: 'calendar-month', label: 'Calendario editorial' },
-            { id: 'content-report', label: 'Auditoría & análisis' },
-            { id: 'ai-chat', label: 'Co-pilot de Negocio', pro: true },
-          ]
-        },
-        {
-          title: '✏️ Content Ops',
-          items: [
-            { id: 'topics-all', label: 'Banco de temas' },
-            { id: 'redactor-new', label: 'Redactor IA' },
-            { id: 'templates-mine', label: 'Plantillas & formatos' },
-            { id: 'history-all', label: 'Historial' },
-            { id: 'auto-gen-style', label: 'Generador automático', pro: true },
-          ]
-        },
-        {
-          title: '📡 Canales',
-          items: [
-            { id: 'li-dash', label: 'LinkedIn' },
-            { id: 'substack-dash', label: 'Substack' },
-            { id: 'wp-dash', label: 'WordPress', soon: true },
-            { id: 'x-dash', label: 'X / Twitter', soon: true },
-            { id: 'multichannel-create', label: 'Multicanal', pro: true },
-          ]
-        },
-        {
-          title: '⚡ Automatización',
-          items: [
-            { id: 'webhooks-mine', label: 'Webhooks' },
-            { id: 'zapier-connections', label: 'Zapier / Make' },
-            { id: 'integrations-wp', label: 'Integraciones' },
-            { id: 'flows-mine', label: 'Flujos automáticos', pro: true },
-          ]
-        },
-      ]
-    },
-  ];
-
-  for (const group of ERP_MENU) {
-    for (const cat of group.categories) {
-      for (const item of cat.items) {
-        if (item.id === active) return item.label;
-      }
-    }
-  }
-  return 'Sección';
+const ROUTE_LABELS: Record<string, string> = {
+  '/dashboard': 'Resumen general',
+  '/settings': 'Contraseña',
+  '/calendar': 'Calendario editorial',
+  '/topics': 'Banco de temas',
+  '/redactor': 'Redactor IA',
+  '/linkedin': 'LinkedIn',
+  '/substack': 'Substack',
+  '/web': 'Web',
 }
 
-interface Props { 
-  activeSection: NavSection;
+function getSectionLabel(pathname: string): string {
+  const base = '/' + (pathname.split('/')[1] || '')
+  return ROUTE_LABELS[base] || 'Sección'
+}
+
+interface Props {
+  pathname: string;
   onMenuClick?: () => void;
 }
 
-export function Header({ activeSection, onMenuClick }: Props) {
+export function Header({ pathname, onMenuClick }: Props) {
   useEffect(() => {
-    document.title = `Avocado Estudio | ${getSectionLabel(activeSection)}`
-  }, [activeSection])
+    document.title = `Avocado Estudio | ${getSectionLabel(pathname)}`
+  }, [pathname])
 
   return (
     <header className="topbar">
@@ -140,7 +51,7 @@ export function Header({ activeSection, onMenuClick }: Props) {
       <div className="av-topbar-breadcrumb">
         <span style={{ color: '#7D8FA9', fontWeight: 600 }}>Avocado Estudio</span>
         <span className="sep" style={{ color: '#3D4F63' }}>/</span>
-        <span className="current" style={{ color: '#F0F6FC', fontWeight: 500 }}>{getSectionLabel(activeSection)}</span>
+        <span className="current" style={{ color: '#F0F6FC', fontWeight: 500 }}>{getSectionLabel(pathname)}</span>
       </div>
 
       <div className="av-topbar-search" style={{ position: 'relative', flex: 1, maxWidth: 480, margin: '0 auto' }}>

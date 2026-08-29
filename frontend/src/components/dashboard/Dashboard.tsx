@@ -2,7 +2,7 @@
 import { useApp } from '@/components/layout/AppProvider'
 import { PLATFORMS } from '@/types'
 import { fmtDate, dateStr } from '@/lib/utils'
-import type { NavSection } from '@/app/page'
+import type { NavSection } from '@/types'
 
 export function Dashboard({ onNav }: { onNav: (s: NavSection) => void }) {
   const { topics, history, calendar } = useApp()

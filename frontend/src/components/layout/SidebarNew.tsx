@@ -1,42 +1,46 @@
 'use client'
 
-import { useState } from 'react'
-import type { NavSection } from '@/app/page'
+import Link from 'next/link'
 
 interface NavItem {
   id: string;
   label: string;
   icon: string;
+  href: string;
   badge?: number;
   pro?: boolean;
   soon?: boolean;
 }
 
 const NAV_ITEMS: NavItem[] = [
-  { id: 'dashboard', label: 'Resumen general', icon: '🏠' },
-  { id: 'security-password', label: 'Contraseña', icon: '🔒' },
-  { id: 'calendar-month', label: 'Calendario editorial', icon: '🗓️' },
-  { id: 'topics-all', label: 'Banco de temas', icon: '💡', badge: 5 },
-  { id: 'redactor-new', label: 'Redactor IA', icon: '✏️' },
-  { id: 'li-dash', label: 'LinkedIn', icon: '💼', badge: 1 },
-  { id: 'substack-dash', label: 'Substack', icon: '📧', badge: 2 },
-  { id: 'web-dash', label: 'Web', icon: '🌍' },
+  { id: 'dashboard', label: 'Resumen general', icon: '🏠', href: '/dashboard' },
+  { id: 'security-password', label: 'Contraseña', icon: '🔒', href: '/settings' },
+  { id: 'calendar-month', label: 'Calendario editorial', icon: '🗓️', href: '/calendar' },
+  { id: 'topics-all', label: 'Banco de temas', icon: '💡', href: '/topics', badge: 5 },
+  { id: 'redactor-new', label: 'Redactor IA', icon: '✏️', href: '/redactor' },
+  { id: 'li-dash', label: 'LinkedIn', icon: '💼', href: '/linkedin', badge: 1 },
+  { id: 'substack-dash', label: 'Substack', icon: '📧', href: '/substack', badge: 2 },
+  { id: 'web-dash', label: 'Web', icon: '🌍', href: '/web' },
 ]
 
 interface SidebarProps {
-  currentSection: NavSection;
-  onNavigate: (section: NavSection) => void;
+  pathname: string;
 }
 
-export default function Sidebar({ currentSection, onNavigate }: SidebarProps) {
+function isActive(href: string, pathname: string): boolean {
+  if (href === '/dashboard') return pathname === '/dashboard' || pathname === '/'
+  return pathname.startsWith(href)
+}
+
+export default function Sidebar({ pathname }: SidebarProps) {
   return (
     <div className="sidebar">
       <div className="av-sidebar-nav">
         {NAV_ITEMS.map((item) => (
-          <div
+          <Link
             key={item.id}
-            onClick={() => onNavigate(item.id as NavSection)}
-            className={`av-sidebar-nav-item ${currentSection === item.id ? 'active' : ''}`}
+            href={item.href}
+            className={`av-sidebar-nav-item ${isActive(item.href, pathname) ? 'active' : ''}`}
           >
             <span className="nav-icon">{item.icon}</span>
             <span className="label">{item.label}</span>
@@ -49,7 +53,7 @@ export default function Sidebar({ currentSection, onNavigate }: SidebarProps) {
             {item.soon && (
               <span className="av-badge-soon">SOON</span>
             )}
-          </div>
+          </Link>
         ))}
       </div>
     </div>

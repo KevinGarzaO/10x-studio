@@ -1,7 +1,7 @@
 'use client'
 import { useState, useEffect } from 'react'
 import { useApp } from './AppProvider'
-import type { NavSection } from '@/app/page'
+import type { NavSection } from '@/types'
 import { Button } from 'primereact/button'
 import { InputText } from 'primereact/inputtext'
 
