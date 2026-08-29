@@ -1,7 +1,7 @@
 'use client'
 import { useState } from 'react'
 import useSWR from 'swr'
-import { ExternalLink, MoreHorizontal, Loader2, Eye, Users, Share2, MousePointerClick, Mail } from 'lucide-react'
+import { ExternalLink, MoreHorizontal, Loader2 } from 'lucide-react'
 import { api } from '@/lib/api'
 
 interface WebPost {
@@ -31,11 +31,15 @@ interface APIResponse {
 
 const PAGE_SIZE = 15
 
+type SortKey = 'views' | 'unique_visitors' | 'share_clicks' | 'subscribe_submits'
+
 const fetcher = (url: string) => api<APIResponse>(url)
 
 export function WebArticles({ onPostClick }: { onPostClick?: (postId: string) => void }) {
   const [search, setSearch] = useState('')
   const [page, setPage] = useState(0)
+  const [sortKey, setSortKey] = useState<SortKey | null>(null)
+  const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc')
 
   const { data, error, isLoading } = useSWR<APIResponse>(
     `/api/blog/web-posts?status=published&limit=${PAGE_SIZE}&offset=${page * PAGE_SIZE}`,
@@ -46,12 +50,39 @@ export function WebArticles({ onPostClick }: { onPostClick?: (postId: string) =>
   const total = data?.total || 0
   const totalPages = Math.ceil(total / PAGE_SIZE)
 
-  const filteredPosts = posts.filter((post: WebPost) =>
-    post.title.toLowerCase().includes(search.toLowerCase())
-  )
+  const filteredPosts = posts
+    .filter((post: WebPost) => post.title.toLowerCase().includes(search.toLowerCase()))
+    .sort((a: WebPost, b: WebPost) => {
+      if (!sortKey) return 0
+      const aVal = a.stats[sortKey]
+      const bVal = b.stats[sortKey]
+      return sortDir === 'desc' ? bVal - aVal : aVal - bVal
+    })
+
+  function handleSort(key: SortKey) {
+    if (sortKey === key) {
+      setSortDir(prev => prev === 'desc' ? 'asc' : 'desc')
+    } else {
+      setSortKey(key)
+      setSortDir('desc')
+    }
+  }
+
+  function SortIcon({ active, dir }: { active: boolean; dir: 'asc' | 'desc' }) {
+    if (!active) return (
+      <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#cbd5e1" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ marginLeft: 2 }}>
+        <path d="M8 9l4-4 4 4"/><path d="M16 15l-4 4-4-4"/>
+      </svg>
+    )
+    return (
+      <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#10b981" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ marginLeft: 2 }}>
+        {dir === 'desc' ? <path d="M8 13l4 4 4-4"/> : <path d="M8 9l4-4 4 4"/>}
+      </svg>
+    )
+  }
 
   return (
-    <div className="max-w-4xl mx-auto flex flex-col h-full gap-6">
+    <div className="flex flex-col h-full gap-6">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
           <span className="text-sm font-bold text-brand-primary">Publicado</span>
@@ -92,6 +123,27 @@ export function WebArticles({ onPostClick }: { onPostClick?: (postId: string) =>
           </div>
         ) : (
           <div className="flex flex-col">
+            {/* Header row with sortable columns */}
+            <div className="flex items-center px-4 py-2.5 border-b border-[var(--border-light)] bg-[var(--bg-muted)] text-[11px] font-bold text-[var(--text-muted)] uppercase tracking-wide select-none">
+              <div className="w-28 flex-shrink-0" />
+              <div className="flex-1 min-w-0">Artículo</div>
+              <div className="flex items-center gap-6 pl-8">
+                <button onClick={() => handleSort('views')} className="flex items-center gap-0.5 cursor-pointer hover:text-[var(--text-primary)] transition-colors">
+                  Visitas <SortIcon active={sortKey === 'views'} dir={sortDir} />
+                </button>
+                <button onClick={() => handleSort('unique_visitors')} className="flex items-center gap-0.5 cursor-pointer hover:text-[var(--text-primary)] transition-colors">
+                  Visitantes <SortIcon active={sortKey === 'unique_visitors'} dir={sortDir} />
+                </button>
+                <button onClick={() => handleSort('share_clicks')} className="flex items-center gap-0.5 cursor-pointer hover:text-[var(--text-primary)] transition-colors">
+                  Shares <SortIcon active={sortKey === 'share_clicks'} dir={sortDir} />
+                </button>
+                <button onClick={() => handleSort('subscribe_submits')} className="flex items-center gap-0.5 cursor-pointer hover:text-[var(--text-primary)] transition-colors">
+                  Suscripciones <SortIcon active={sortKey === 'subscribe_submits'} dir={sortDir} />
+                </button>
+              </div>
+              <div className="w-20 flex-shrink-0" />
+            </div>
+
             {filteredPosts.map((post: WebPost, idx: number) => (
               <div
                 key={post.id}

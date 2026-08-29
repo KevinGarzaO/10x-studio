@@ -228,9 +228,13 @@ ${parsed.image_prompt}
  */
 export const getContentStats = async (req: Request, res: Response) => {
   try {
-    const { data: allContent, error } = await supabase
+    const { year, month } = req.query
+
+    let query = supabase
       .from('content')
       .select('content_type, status, created_at, published_at')
+
+    const { data: allContent, error } = await query
 
     if (error) throw error
 
@@ -238,26 +242,44 @@ export const getContentStats = async (req: Request, res: Response) => {
     const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000)
     const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000)
 
-    const content = allContent || []
+    let content = allContent || []
+
+    const allFiltered = content
+
+    if (year && month) {
+      const y = Number(year)
+      const m = Number(month) - 1
+      content = content.filter(c => {
+        const d = new Date(c.created_at || c.published_at)
+        return d.getFullYear() === y && d.getMonth() === m
+      })
+    }
 
     const stats = {
-      total: content.length,
+      total: allFiltered.length,
+      month_total: year && month ? content.length : undefined,
       by_type: {
+        blog_post: allFiltered.filter(c => c.content_type === 'blog_post').length,
+        newsletter: allFiltered.filter(c => c.content_type === 'newsletter').length,
+        linkedin_post: allFiltered.filter(c => c.content_type === 'linkedin_post').length,
+        note: allFiltered.filter(c => c.content_type === 'note').length,
+      },
+      by_type_month: year && month ? {
         blog_post: content.filter(c => c.content_type === 'blog_post').length,
         newsletter: content.filter(c => c.content_type === 'newsletter').length,
         linkedin_post: content.filter(c => c.content_type === 'linkedin_post').length,
         note: content.filter(c => c.content_type === 'note').length,
-      },
+      } : undefined,
       by_status: {
-        published: content.filter(c => c.status === 'published').length,
-        draft: content.filter(c => c.status === 'draft').length,
-        scheduled: content.filter(c => c.status === 'scheduled').length,
+        published: allFiltered.filter(c => c.status === 'published').length,
+        draft: allFiltered.filter(c => c.status === 'draft').length,
+        scheduled: allFiltered.filter(c => c.status === 'scheduled').length,
       },
-      recent_30d: content.filter(c => {
+      recent_30d: allFiltered.filter(c => {
         const d = new Date(c.created_at || c.published_at)
         return d >= thirtyDaysAgo
       }).length,
-      recent_7d: content.filter(c => {
+      recent_7d: allFiltered.filter(c => {
         const d = new Date(c.created_at || c.published_at)
         return d >= sevenDaysAgo
       }).length,
@@ -266,6 +288,206 @@ export const getContentStats = async (req: Request, res: Response) => {
     res.json(stats)
   } catch (error: any) {
     console.error('[BlogController] Error en getContentStats:', error)
+    res.status(500).json({ error: error.message })
+  }
+}
+
+/**
+ * Get content items for calendar and dashboard (lightweight)
+ */
+export const getContentItems = async (req: Request, res: Response) => {
+  try {
+    const { year, month } = req.query
+
+    let query = supabase
+      .from('content')
+      .select('id, title, content_type, status, created_at, published_at, destination, word_count')
+      .order('created_at', { ascending: false })
+      .limit(500)
+
+    const { data, error } = await query
+
+    if (error) throw error
+
+    let items = data || []
+
+    if (year && month) {
+      const y = Number(year)
+      const m = Number(month) - 1
+      items = items.filter(i => {
+        const d = new Date(i.created_at || i.published_at)
+        return d.getFullYear() === y && d.getMonth() === m
+      })
+    }
+
+    res.json(items)
+  } catch (error: any) {
+    console.error('[BlogController] Error en getContentItems:', error)
+    res.status(500).json({ error: error.message })
+  }
+}
+
+const BOT_PATTERN = /bot|crawl|spider|slurp|mediapartners|feedly|rss|baiduspider|yandex|sogou|exabot|ia_archiver|facebookexternalhit|curl|wget|python|java\/|ruby|go-http|headlesschrome|puppeteer|semrush|ahrefs|mj12bot|dotbot|zoominfobot|seznambot|opensiteexplorer|bytespider|gptbot|chatgpt-user|ccbot|claudebot|anthropic|applebot|bingpreview/i
+const isBotUa = (ua: string) => BOT_PATTERN.test(ua || '')
+
+/**
+ * Get aggregated dashboard stats with analytics for a given month
+ */
+export const getDashboardStats = async (req: Request, res: Response) => {
+  try {
+    const y = Number(req.query.year) || new Date().getFullYear()
+    const m = Number(req.query.month) || (new Date().getMonth() + 1)
+    const monthStart = new Date(y, m - 1, 1).toISOString()
+    const monthEnd = new Date(y, m, 0, 23, 59, 59, 999).toISOString()
+
+    const { data: monthContent, error: cErr } = await supabase
+      .from('content')
+      .select('id, content_type, status, created_at, published_at, destination, word_count, title')
+      .gte('created_at', monthStart)
+      .lte('created_at', monthEnd)
+      .order('created_at', { ascending: false })
+
+    if (cErr) throw cErr
+
+    const content = monthContent || []
+    const contentIds = content.map(c => c.id)
+
+    // --- WEB analytics from post_events ---
+    let webViews = 0
+    let webVisitors = 0
+    let webShares = 0
+    let webCta = 0
+    let webSubscribes = 0
+    let totalScrollDepth = 0
+    let scrollVisitors = 0
+
+    if (contentIds.length > 0) {
+      const { data: events } = await supabase
+        .from('post_events')
+        .select('content_id, event_type, visitor_id, user_agent, metadata')
+
+      const humanEvents = (events || []).filter(e => !isBotUa(e.user_agent))
+      const monthContentIds = new Set(contentIds)
+      const monthEvents = humanEvents.filter(e => monthContentIds.has(e.content_id))
+
+      for (const e of monthEvents) {
+        if (e.event_type === 'page_view') webViews++
+        if (e.event_type === 'share_click') webShares++
+        if (e.event_type === 'cta_click') webCta++
+        if (e.event_type === 'subscribe_submit') webSubscribes++
+        if (e.event_type === 'scroll_depth') {
+          totalScrollDepth += e.metadata?.depth_percent || 0
+          scrollVisitors++
+        }
+      }
+      webVisitors = new Set(monthEvents.filter(e => e.event_type === 'page_view').map(e => e.visitor_id)).size
+    }
+
+    // --- SUBSTACK analytics from posts table ---
+    let substackViews = 0
+    let substackLikes = 0
+    let substackOpenRates: number[] = []
+
+    const { data: subPosts } = await supabase
+      .from('posts')
+      .select('post_id, title, views, open_rate, reaction_count, published_at, post_type')
+
+    const monthSubPosts = (subPosts || []).filter((p: any) => {
+      if (!p.published_at) return false
+      const d = new Date(p.published_at)
+      return d.getFullYear() === y && d.getMonth() === m - 1
+    })
+
+    for (const p of monthSubPosts) {
+      substackViews += p.views || 0
+      substackLikes += p.reaction_count || 0
+      if (p.open_rate && p.open_rate > 0) substackOpenRates.push(p.open_rate)
+    }
+
+    const substackAvgOpen = substackOpenRates.length > 0
+      ? substackOpenRates.reduce((a, b) => a + b, 0) / substackOpenRates.length
+      : 0
+
+    // --- Aggregate ---
+    const totalViews = webViews + substackViews
+    const totalVisitors = webVisitors + (monthSubPosts.length || 0)
+    const totalLikes = substackLikes
+    const avgScrollDepth = scrollVisitors > 0 ? Math.round(totalScrollDepth / scrollVisitors) : 0
+
+    const byType: Record<string, number> = {}
+    content.forEach(c => { byType[c.content_type] = (byType[c.content_type] || 0) + 1 })
+
+    const byStatus: Record<string, number> = {}
+    content.forEach(c => { byStatus[c.status] = (byStatus[c.status] || 0) + 1 })
+
+    const analyticsByType: Record<string, { views: number; visitors: number; shares: number; likes: number; open_rate: number; content_count: number }> = {}
+
+    // Blog (web)
+    const blogContent = content.filter(c => c.content_type === 'blog_post')
+    analyticsByType.blog_post = {
+      views: webViews,
+      visitors: webVisitors,
+      shares: webShares,
+      likes: 0,
+      open_rate: 0,
+      content_count: blogContent.length,
+    }
+
+    // Newsletter (substack)
+    analyticsByType.newsletter = {
+      views: substackViews,
+      visitors: monthSubPosts.length,
+      shares: 0,
+      likes: substackLikes,
+      open_rate: Math.round(substackAvgOpen * 100) / 100,
+      content_count: monthSubPosts.length,
+    }
+
+    // LinkedIn
+    const linkedinContent = content.filter(c => c.content_type === 'linkedin_post')
+    analyticsByType.linkedin_post = {
+      views: 0,
+      visitors: 0,
+      shares: 0,
+      likes: 0,
+      open_rate: 0,
+      content_count: linkedinContent.length,
+    }
+
+    // Notes
+    const notesContent = content.filter(c => c.content_type === 'note')
+    analyticsByType.note = {
+      views: 0,
+      visitors: 0,
+      shares: 0,
+      likes: 0,
+      open_rate: 0,
+      content_count: notesContent.length,
+    }
+
+    res.json({
+      period: { year: y, month: m },
+      content: {
+        total: content.length,
+        by_type: byType,
+        by_status: byStatus,
+        items: content,
+      },
+      analytics: {
+        views: totalViews,
+        unique_visitors: totalVisitors,
+        shares: webShares,
+        cta_clicks: webCta,
+        subscribes: webSubscribes,
+        avg_scroll_depth: avgScrollDepth,
+        scroll_visitors: scrollVisitors,
+        likes: totalLikes,
+        avg_open_rate: Math.round(substackAvgOpen * 100) / 100,
+      },
+      analytics_by_type: analyticsByType,
+    })
+  } catch (error: any) {
+    console.error('[BlogController] Error en getDashboardStats:', error)
     res.status(500).json({ error: error.message })
   }
 }
@@ -374,9 +596,7 @@ export const getWebPosts = async (req: Request, res: Response) => {
 
     if (error) throw error
 
-    const BOT_PATTERN = /bot|crawl|spider|slurp|mediapartners|feedly|rss|baiduspider|yandex|sogou|exabot|ia_archiver|facebookexternalhit|curl|wget|python|java\/|ruby|go-http|headlesschrome|puppeteer|semrush|ahrefs|mj12bot|dotbot|zoominfobot|seznambot|opensiteexplorer|bytespider|gptbot|chatgpt-user|ccbot|claudebot|anthropic|applebot|bingpreview/i
-
-    const isBot = (ua: string) => BOT_PATTERN.test(ua || '')
+    const isBot = isBotUa
 
     // Get analytics for each post from post_events
     const postsWithAnalytics = await Promise.all((posts || []).map(async (post: any) => {
@@ -444,10 +664,7 @@ export const getWebPostDetail = async (req: Request, res: Response) => {
       .eq('content_id', post.id)
       .order('recorded_at', { ascending: false })
 
-    const BOT_PATTERN = /bot|crawl|spider|slurp|mediapartners|feedly|rss|baiduspider|yandex|sogou|exabot|ia_archiver|facebookexternalhit|curl|wget|python|java\/|ruby|go-http|headlesschrome|puppeteer|semrush|ahrefs|mj12bot|dotbot|zoominfobot|seznambot|opensiteexplorer|bytespider|gptbot|chatgpt-user|ccbot|claudebot|anthropic|applebot|bingpreview/i
-    const isBot = (ua: string) => BOT_PATTERN.test(ua || '')
-
-    const humanEvents = (events || []).filter(e => !isBot(e.user_agent))
+    const humanEvents = (events || []).filter(e => !isBotUa(e.user_agent))
 
     const views = humanEvents.filter(e => e.event_type === 'page_view').length
     const uniqueVisitors = new Set(humanEvents.filter(e => e.event_type === 'page_view').map(e => e.visitor_id)).size

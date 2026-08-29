@@ -9,7 +9,9 @@ import {
   getAnalyticsSummary,
   getWebPosts,
   getWebPostDetail,
-  getContentStats
+  getContentStats,
+  getContentItems,
+  getDashboardStats
 } from '../controllers/blog.controller'
 
 const router = Router()
@@ -31,6 +33,24 @@ router.post('/generate', generateBlog)
  *     tags: [Blog]
  */
 router.get('/content-stats', getContentStats)
+
+/**
+ * @swagger
+ * /api/blog/content-items:
+ *   get:
+ *     summary: Get content items for calendar and dashboard
+ *     tags: [Blog]
+ */
+router.get('/content-items', getContentItems)
+
+/**
+ * @swagger
+ * /api/blog/dashboard-stats:
+ *   get:
+ *     summary: Get aggregated dashboard stats with analytics for a month
+ *     tags: [Blog]
+ */
+router.get('/dashboard-stats', getDashboardStats)
 
 /**
  * @swagger

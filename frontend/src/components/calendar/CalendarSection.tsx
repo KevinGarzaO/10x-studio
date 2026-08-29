@@ -11,7 +11,7 @@ type CalView = 'month' | 'week'
 const DAYS = ['Lun','Mar','Mié','Jue','Vie','Sáb','Dom']
 
 export function CalendarSection() {
-  const { topics, calendar, addCalEvent, updateCalEvent, deleteCalEvent, settings } = useApp()
+  const { topics, calendar, addCalEvent, updateCalEvent, deleteCalEvent, settings, contentItems } = useApp()
   const [view, setView]             = useState<CalView>('month')
   const [curDate, setCurDate]       = useState(new Date())
   const [modalOpen, setModalOpen]   = useState(false)
@@ -91,6 +91,12 @@ export function CalendarSection() {
                 const isCurrentMonth = date.getMonth() === m
                 const isToday = ds === today
                 const dayEvents = allEvents.filter(e => e.date === ds)
+                const dayContent = contentItems.filter(c => {
+                  const d = new Date(c.created_at || c.published_at || '')
+                  return dateStr(d) === ds
+                })
+                const contentByDest: Record<string, number> = {}
+                dayContent.forEach(c => { contentByDest[c.destination] = (contentByDest[c.destination] || 0) + 1 })
                 return (
                   <div key={i}
                     onClick={() => openAddEvent(ds)}
@@ -107,6 +113,18 @@ export function CalendarSection() {
                         </div>
                       )
                     })}
+                    {dayContent.length > 0 && (
+                      <div className="flex gap-1 mt-0.5 flex-wrap">
+                        {Object.entries(contentByDest).map(([dest, count]) => (
+                          <span key={dest} className="text-[9px] px-1 py-0.5 rounded font-semibold" style={{
+                            background: dest === 'web' ? 'rgba(139,92,246,0.1)' : dest === 'substack' ? 'rgba(239,68,68,0.1)' : 'rgba(14,165,233,0.1)',
+                            color: dest === 'web' ? '#8b5cf6' : dest === 'substack' ? '#ef4444' : '#0ea5e9',
+                          }}>
+                            {count} {dest === 'web' ? 'blog' : dest === 'substack' ? 'newsletter' : 'linkedin'}
+                          </span>
+                        ))}
+                      </div>
+                    )}
                   </div>
                 )
               })}

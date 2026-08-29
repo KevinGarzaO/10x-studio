@@ -3,6 +3,39 @@ import { useState, useEffect, useCallback } from 'react'
 import type { Topic, HistoryEntry, CalendarEvent, AppSettings, PromptTemplate, Campaign } from '@/types'
 import { api } from '@/lib/api'
 
+export interface ContentItem {
+  id: string
+  title: string
+  content_type: string
+  status: string
+  created_at: string
+  published_at: string | null
+  destination: string
+  word_count: number
+}
+
+export interface DashboardStats {
+  period: { year: number; month: number }
+  content: {
+    total: number
+    by_type: Record<string, number>
+    by_status: Record<string, number>
+    items: ContentItem[]
+  }
+  analytics: {
+    views: number
+    unique_visitors: number
+    shares: number
+    cta_clicks: number
+    subscribes: number
+    avg_scroll_depth: number
+    scroll_visitors: number
+    likes: number
+    avg_open_rate: number
+  }
+  analytics_by_type: Record<string, { views: number; visitors: number; shares: number; likes: number; open_rate: number; content_count: number }>
+}
+
 export function useAppData() {
   const [topics,     setTopics]     = useState<Topic[]>([])
   const [history,    setHistory]    = useState<HistoryEntry[]>([])
@@ -11,12 +44,18 @@ export function useAppData() {
   const [templates,  setTemplates]  = useState<PromptTemplate[]>([])
   const [campaigns,  setCampaigns]  = useState<Campaign[]>([])
   const [loading,    setLoading]    = useState(true)
+  const [contentStats, setContentStats] = useState<any>(null)
+  const [contentItems, setContentItems] = useState<ContentItem[]>([])
+  const [dashboardStats, setDashboardStats] = useState<DashboardStats | null>(null)
   // Substack connection state — global so all components can use it
   const [substackConnected,    setSubstackConnected]    = useState(false)
   const [substackPublication,  setSubstackPublication]  = useState('')
   const [editorPrefill,        setEditorPrefill]        = useState<{ type: 'article' | 'note' | 'linkedin-post' | 'linkedin-article', content: any, title?: string, subtitle?: string, draftId?: string | null, imageUrl?: string } | null>(null)
 
   useEffect(() => {
+    const now = new Date()
+    const y = now.getFullYear()
+    const m = now.getMonth() + 1
     Promise.all([
       api<Topic[]>('/api/topics'),
       api<HistoryEntry[]>('/api/history'),
@@ -25,12 +64,25 @@ export function useAppData() {
       api<PromptTemplate[]>('/api/templates'),
       api<Campaign[]>('/api/campaigns'),
       api<any>('/api/substack/profile'),
-    ]).then(([t, h, c, s, tmpl, camp, sub]) => {
+      api<any>(`/api/blog/content-stats?year=${y}&month=${m}`),
+      api<ContentItem[]>('/api/blog/content-items'),
+      api<DashboardStats>(`/api/blog/dashboard-stats?year=${y}&month=${m}`),
+    ]).then(([t, h, c, s, tmpl, camp, sub, cs, ci, ds]) => {
       setTopics(t); setHistory(h); setCalendar(c)
       setSettingsState(s); setTemplates(tmpl); setCampaigns(camp)
+      setContentStats(cs); setContentItems(ci); setDashboardStats(ds)
       setSubstackConnected(!!sub && !sub.error)
       setSubstackPublication(sub?.subdomain || sub?.publication_name || sub?.substack_slug || '')
     }).finally(() => setLoading(false))
+  }, [])
+
+  const fetchContentForMonth = useCallback(async (year: number, month: number) => {
+    const [cs, ds] = await Promise.all([
+      api<any>(`/api/blog/content-stats?year=${year}&month=${month}`),
+      api<DashboardStats>(`/api/blog/dashboard-stats?year=${year}&month=${month}`),
+    ])
+    setContentStats(cs)
+    setDashboardStats(ds)
   }, [])
 
   // Topics
@@ -73,8 +125,8 @@ export function useAppData() {
   }, [])
 
   return {
-    topics, history, calendar, settings, templates, campaigns, loading,
-    substackConnected, substackPublication, reloadSubstackProfile,
+    topics, history, calendar, settings, templates, campaigns, loading, contentStats, contentItems, dashboardStats,
+    substackConnected, substackPublication, reloadSubstackProfile, fetchContentForMonth,
     editorPrefill, setEditorPrefill,
     addTopic, updateTopic, deleteTopic,
     addHistory, deleteHistory,
