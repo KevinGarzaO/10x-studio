@@ -3,6 +3,7 @@ import { useState, useEffect, useRef } from 'react'
 import { api } from '@/lib/api'
 import { useApp } from '@/components/layout/AppProvider'
 import { uid, dateStr } from '@/lib/utils'
+import { Platform } from '@/types'
 import Swal from 'sweetalert2'
 import { SuggestModal } from '../topics/SuggestModal'
 
@@ -147,7 +148,7 @@ export function RedactorSection({ prefill, onNav }: Props) {
       const wordCount = typeof contenido === 'string' ? contenido.split(/\s+/).length : JSON.stringify(contenido).split(/\s+/).length
       const matchedTopic = topics.find(t => t.title.toLowerCase() === topic.trim().toLowerCase())
 
-      const platformKey = isBlog ? 'web' : platform === 'article' ? 'substack-article' : platform === 'note' ? 'substack-note' : 'linkedin-post'
+      const platformKey: Platform = isBlog ? 'blog' : platform === 'article' ? 'substack-article' : platform === 'note' ? 'substack-note' : 'linkedin-post'
       await addHistory({
         id: uid(),
         topic: topic.trim(),
