@@ -178,7 +178,7 @@ export function RedactorSection({ prefill, onNav }: Props) {
       }
 
       setEditorPrefill({
-        type: platform,
+        type: platform === 'web-post' ? 'article' : platform,
         content: (platform === 'note' || platform === 'linkedin-post') ? contenido_raw : contenido,
         title: titulo,
         subtitle: subtitulo,
