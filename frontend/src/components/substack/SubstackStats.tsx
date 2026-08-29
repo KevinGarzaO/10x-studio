@@ -127,7 +127,7 @@ export function SubstackStats() {
         </div>
         {data.posts.length === 0 ? (
           <div className="text-center py-16">
-            <div className="text-4xl mb-3 opacity-20">📭</div>
+            <div className="text-4xl mb-3 opacity-20"><i className="fa-regular fa-envelope"></i></div>
             <p className="text-sm font-semibold text-brand-secondary">No hay publicaciones detectadas</p>
           </div>
         ) : (
@@ -135,7 +135,7 @@ export function SubstackStats() {
             {data.posts.map(p => (
               <div key={p.id} className="px-6 py-4 flex items-start gap-4 hover:bg-brand-bg/50 transition-colors group">
                 <div className="mt-1 w-11 h-11 rounded-xl bg-brand-bg flex items-center justify-center border border-brand-border shadow-sm shrink-0 group-hover:scale-110 transition-transform">
-                  <span className="text-lg">{p.type === 'newsletter' ? '📋' : '🗒️'}</span>
+                  <span className="text-lg">{p.type === 'newsletter' ? <i className="fa-regular fa-clipboard"></i> : <i className="fa-solid fa-note-sticky"></i>}</span>
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-start justify-between gap-2.5">
@@ -152,17 +152,17 @@ export function SubstackStats() {
                     )}
                     {p.comments > 0 && (
                       <span className="text-[10px] font-bold text-blue-400 bg-blue-500/10 border border-blue-500/20 px-2.5 py-1 rounded-md flex items-center gap-1.5 shadow-sm">
-                        <span className="text-[9px]">💬</span> {p.comments.toLocaleString()}
+                        <span className="text-[9px]"><i className="fa-regular fa-comment"></i></span> {p.comments.toLocaleString()}
                       </span>
                     )}
                     {p.openRate !== null && (
                       <span className="text-[10px] font-bold text-green-400 bg-green-500/10 border border-green-500/20 px-2.5 py-1 rounded-md flex items-center gap-1.5 shadow-sm">
-                        <span className="text-[9px]">📬</span> {p.openRate}%
+                        <span className="text-[9px]"><i className="fa-solid fa-inbox"></i></span> {p.openRate}%
                       </span>
                     )}
                     {p.views !== null && (
                       <span className="text-[10px] font-bold text-brand-secondary bg-brand-bg px-2.5 py-1 rounded-md flex items-center gap-1.5 shadow-sm">
-                        <span className="text-[9px]">👁</span> {p.views.toLocaleString()}
+                        <span className="text-[9px]"><i className="fa-regular fa-eye"></i></span> {p.views.toLocaleString()}
                       </span>
                     )}
                   </div>

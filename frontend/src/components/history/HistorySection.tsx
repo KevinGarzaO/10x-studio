@@ -74,7 +74,7 @@ export function HistorySection({ onRewrite }: { onRewrite: (topic: string) => vo
 
       {filtered.length === 0 ? (
         <div className="text-center py-16 text-brand-secondary">
-          <div className="text-4xl mb-3">📚</div>
+          <div className="text-4xl mb-3"><i className="fa-solid fa-book"></i></div>
           <p>Aún no tienes artículos generados.</p>
         </div>
       ) : (
@@ -138,13 +138,13 @@ export function HistorySection({ onRewrite }: { onRewrite: (topic: string) => vo
                   className="bg-brand-bg border border-brand-border rounded-xl p-4 text-center hover:border-brand-accent transition-all cursor-pointer group/card"
                   onClick={() => publishToSubstack(pubModal.topic, pubModal.topic)}
                 >
-                  <div className="text-2xl mb-1 group-hover/card:scale-110 transition-transform">📄</div>
+                  <div className="text-2xl mb-1 group-hover/card:scale-110 transition-transform"><i className="fa-regular fa-file-lines"></i></div>
                   <div className="text-sm font-semibold text-brand-primary">Publicar Artículo</div>
                   <div className="text-xs text-brand-secondary">Newsletter completo</div>
                 </button>
               </div>
               <p className="text-xs text-brand-secondary mt-2">
-                💡 Para editar o programar el artículo antes de publicar, ve a la sección <strong>Substack → Publicar</strong>.
+                <i className="fa-solid fa-lightbulb"></i> Para editar o programar el artículo antes de publicar, ve a la sección <strong>Substack → Publicar</strong>.
               </p>
             </div>
             <button className="btn btn-secondary w-full" onClick={() => setPubModal(null)}>Cancelar</button>

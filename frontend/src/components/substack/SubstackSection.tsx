@@ -24,16 +24,9 @@ function daysUntil(iso: string) {
   return Math.max(0, Math.round((new Date(iso).getTime() - Date.now()) / (1000 * 60 * 60 * 24)))
 }
 
-function ExpiryBadge({ expiresAt }: { expiresAt: string }) {
-  const days = daysUntil(expiresAt)
-  if (days >= 14) return <span className="text-[13px] bg-[#4ECCA3] text-[#1A1A1A] px-4 py-1.5 rounded-full font-bold shadow-md">✓ Sesión activa — {days} días</span>
-  if (days > 5)  return <span className="text-[13px] bg-amber-500 text-[#1A1A1A] px-4 py-1.5 rounded-full font-bold shadow-md">⚠️ Expira en {days} días</span>
-  return <span className="text-[13px] bg-red-500 text-white px-4 py-1.5 rounded-full font-bold shadow-md animate-pulse">🔴 Expira en {days} días</span>
-}
-
 export function SubstackSection() {
   const { substackConnected, substackPublication, reloadSubstackProfile, editorPrefill } = useApp()
-  const [tab, setTab]         = useState<SubTab>('articles')
+  const [tab, setTab] = useState<SubTab>('articles')
   const [selectedPostId, setSelectedPostId] = useState<string | null>(null)
 
   useEffect(() => {
@@ -41,18 +34,18 @@ export function SubstackSection() {
       setTab(editorPrefill.type === 'note' ? 'notes' : 'publish')
     }
   }, [editorPrefill])
+
   const [profile, setProfile] = useState<SubstackProfile | null>(null)
   const [autoSub, setAutoSub] = useState(true)
+
   const loadProfile = useCallback(async () => {
     try {
       const sub = await api<any>('/api/substack/profile')
       if (sub && !sub.error) {
-        // Parse social_links — might be a JSON string in some DB setups
         let parsedLinks = sub.social_links || []
         if (typeof parsedLinks === 'string') {
           try { parsedLinks = JSON.parse(parsedLinks) } catch { parsedLinks = [] }
         }
-        // Generate labels from type if missing
         const enrichedLinks = Array.isArray(parsedLinks) ? parsedLinks.map((l: any) => ({
           ...l,
           label: l.label || (l.type === 'twitter' ? '𝕏 Twitter' : l.type === 'linkedin' ? 'LinkedIn' : l.type || 'Enlace')
@@ -83,7 +76,7 @@ export function SubstackSection() {
   useEffect(() => { loadProfile() }, [substackConnected, loadProfile])
 
   async function disconnect() {
-    await api('/api/substack/cookies', { method: 'DELETE' }) // Clear session
+    await api('/api/substack/cookies', { method: 'DELETE' })
     await reloadSubstackProfile()
     setProfile(null)
   }
@@ -99,9 +92,10 @@ export function SubstackSection() {
     }
   }
 
+  // 1. Not Connected State
   if (!substackConnected) {
     return (
-      <div className="max-w-lg mx-auto py-10">
+      <div className="max-w-lg mx-auto py-10 animate-fadein">
         <div className="text-center mb-8">
           <div className="text-5xl mb-4">📰</div>
           <h1 className="text-[28px] font-bold tracking-tight text-brand-primary mb-2">Conectar Substack</h1>
@@ -131,7 +125,6 @@ export function SubstackSection() {
           </div>
         </div>
 
-        {/* Feature 1: Auto-subscription Checkbox */}
         <div className="bg-brand-accent/5 border border-brand-accent/10 rounded-xl p-4 mb-6 flex items-start gap-3">
           <input 
             type="checkbox" 
@@ -153,147 +146,84 @@ export function SubstackSection() {
     )
   }
 
+  // 2. Connected State
   return (
-    <div className="max-w-4xl mx-auto pb-20">
-      <div className="flex items-end justify-between mb-8 border-b border-brand-border pb-4">
+    <div className="px-8 py-7 animate-fadein" style={{ maxWidth: 1000 }}>
+      {/* Title & Profile Header */}
+      <div className="flex items-start justify-between mb-8">
         <div>
-          <h1 className="text-[28px] font-bold tracking-tight text-brand-primary flex items-center gap-3">
-            <i className="pi pi-at text-brand-secondary"></i> Substack
-          </h1>
-          <p className="text-sm text-brand-secondary mt-1">Publicación y gestión de suscriptores</p>
-        </div>
-      </div>
-
-    {/* Profile card Rich UI */}
-      {profile && (
-        <div className="relative bg-brand-surface/60 backdrop-blur-2xl border border-brand-border shadow-[var(--shadow)] rounded-3xl p-6 md:p-8 mb-8 overflow-hidden group">
-          {/* Decorative Background Blob */}
-          <div className="absolute top-0 right-0 -mt-24 -mr-24 w-72 h-72 bg-gradient-to-br from-brand-accent/20 to-brand-accent/5 rounded-full blur-3xl pointer-events-none transition-transform duration-700 ease-out group-hover:scale-110" />
-
-          <div className="relative flex items-start gap-6 md:gap-8 flex-wrap md:flex-nowrap">
-            {/* Avatar */}
-            <div className="flex-shrink-0">
-              {profile.avatar ? (
-                /* eslint-disable-next-line @next/next/no-img-element */
-                <img src={profile.avatar} alt={profile.name}
-                  className="w-28 h-28 md:w-32 md:h-32 rounded-full object-cover border-4 border-white shadow-md ring-1 ring-black/5"
-                  onError={(e) => { (e.target as HTMLImageElement).style.display = 'none' }} />
-              ) : (
-                <div className="w-28 h-28 md:w-32 md:h-32 rounded-full bg-gradient-to-tr from-stone-800 to-stone-600 flex items-center justify-center text-white font-bold text-4xl shadow-md ring-1 ring-black/5">
-                  {(profile.name || substackPublication || '?')[0].toUpperCase()}
-                </div>
-              )}
+          <div className="flex items-center gap-3 mb-1">
+            <div className="flex items-center justify-center rounded-lg" style={{ width: 36, height: 36, background: '#ef4444', color: '#fff' }}>
+              <svg width="18" height="18" fill="none" viewBox="0 0 24 24">
+                <path d="M4 4h16M4 9h16M4 20l8-7 8 7V9H4v11z" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" strokeLinecap="round"/>
+              </svg>
             </div>
-            
-            {/* Core Info */}
-            <div className="flex-1 min-w-0 pt-2">
-              <div className="flex items-start justify-between gap-4 flex-wrap">
-                <div>
-                  <a href={profile.handle ? `https://substack.com/@${profile.handle}` : '#'} target="_blank" rel="noopener noreferrer" className="inline-flex flex-col items-start hover:opacity-80 transition-opacity">
-                    <h2 className="text-3xl font-extrabold text-brand-primary tracking-tight">{profile.name || 'Usuario Substack'}</h2>
-                    {profile.handle && <span className="text-brand-secondary font-semibold mt-0.5 text-sm tracking-wide">@{profile.handle}</span>}
-                  </a>
-                  
-                  <div className="flex flex-wrap items-center gap-2 mt-3">
-                    {profile.email && <span className="text-xs text-brand-secondary px-2.5 py-1 bg-brand-bg/80 backdrop-blur-sm rounded-full border border-brand-border shadow-sm font-medium truncate max-w-[200px]">{profile.email}</span>}
-                    {substackPublication && (
-                      <a href={`https://${profile.primaryPublication?.subdomain || profile.handle}.substack.com`} target="_blank" rel="noopener noreferrer" 
-                         className="flex items-center gap-1.5 text-xs font-bold text-brand-accent px-3 py-1 bg-brand-accent/10 hover:bg-brand-accent/20 border border-brand-accent/20 rounded-full shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all duration-300 whitespace-nowrap">
-                        {profile.pubLogo ? (
-                          /* eslint-disable-next-line @next/next/no-img-element */
-                          <img src={profile.pubLogo} className="w-4 h-4 rounded-sm object-cover shadow-sm" alt="Pub Logo" />
-                        ) : (
-                          <span className="text-sm">🗞️</span>
-                        )}
-                        {profile.primaryPublication?.name || profile.publication_name || substackPublication}
-                      </a>
-                    )}
-                  </div>
-                </div>
-                
-                {/* Actions */}
-                <div className="flex flex-col gap-2.5 items-start md:items-end w-full md:w-auto mt-4 md:mt-0">
-                  {profile.expiresAt && <ExpiryBadge expiresAt={profile.expiresAt} />}
-                  <div className="flex items-center gap-2 w-full md:w-auto">
-                    <button onClick={disconnect} className="btn btn-danger px-6">
-                      Desconectar
-                    </button>
-                  </div>
-                </div>
-              </div>
-
-              {/* Bio */}
-              {profile.bio && (
-                <p className="mt-5 text-[15px] text-brand-secondary leading-relaxed max-w-3xl whitespace-pre-wrap font-medium">
-                  {profile.bio.split(/(https?:\/\/[^\s]+)/g).map((part, i) => 
-                    part.match(/^https?:\/\//) ? (
-                      <a key={i} href={part} target="_blank" rel="noopener noreferrer" className="text-brand-accent hover:brightness-110 underline decoration-brand-accent/30 underline-offset-4 font-semibold break-all transition-colors">
-                        {part.replace(/^https?:\/\//, '')}
-                      </a>
-                    ) : (
-                      <span key={i}>{part}</span>
-                    )
-                  )}
-                </p>
-              )}
-
-              {/* Links & Stats row */}
-              <div className="mt-7 flex flex-wrap items-center justify-between gap-6 border-t border-brand-border pt-6">
-                
-                {/* Social Links */}
-                <div className="flex items-center gap-2.5 flex-wrap">
-                  {profile.links && profile.links.length > 0 && profile.links.map((link, i) => {
-                    const icon = link.type === 'twitter' ? '𝕏' : link.type === 'linkedin' ? 'in' : '🔗';
-                    return (
-                      <a key={i} href={link.url} target="_blank" rel="noopener noreferrer" 
-                         className="flex items-center gap-1.5 text-[11px] font-bold text-brand-secondary hover:text-brand-primary bg-brand-bg hover:bg-brand-surface shadow-sm hover:shadow px-3 py-1.5 rounded-lg border border-brand-border transition-all duration-300 hover:-translate-y-0.5">
-                        <span className="opacity-90">{icon}</span>
-                        {link.label || 'Enlace'}
-                      </a>
-                    )
-                  })}
-                </div>
-
-                {/* Substack Metrics */}
-                <div className="flex items-center gap-8 bg-brand-bg/40 px-5 py-2.5 rounded-2xl border border-brand-border shadow-[inset_0_2px_10px_rgb(0,0,0,0.02)]">
-                  <div className="text-center">
-                    <div className="text-2xl font-bold text-brand-primary tracking-tighter leading-none">
-                      {profile.subCount != null ? Number(profile.subCount).toLocaleString('es') : '—'}
-                    </div>
-                    <div className="text-[10px] font-bold text-brand-secondary uppercase tracking-widest mt-2">Suscriptores</div>
-                  </div>
-                  <div className="w-px h-8 bg-brand-border"></div>
-                  <div className="text-center">
-                    <div className="text-2xl font-bold text-brand-primary tracking-tighter leading-none">
-                      {profile.followerCount != null ? Number(profile.followerCount).toLocaleString('es') : '—'}
-                    </div>
-                    <div className="text-[10px] font-bold text-brand-secondary uppercase tracking-widest mt-2">Seguidores</div>
-                  </div>
-                </div>
-
-              </div>
-            </div>
+            <h1 style={{ fontFamily: 'var(--font-heading)', fontWeight: 800, fontSize: 28, letterSpacing: '-0.03em', color: '#0d1117', lineHeight: 1 }}>
+              Substack
+            </h1>
           </div>
+          <p style={{ fontSize: 13.5, color: '#64748b' }}>Publicación y gestión de suscriptores</p>
         </div>
-      )}
 
-      {/* Modern Pill Tabs */}
-      <div className="flex mb-8 overflow-x-auto no-scrollbar pb-2">
-        <div className="inline-flex bg-brand-surface/80 backdrop-blur-md p-1 rounded-xl shadow-inner border border-brand-border whitespace-nowrap">
-          {([
-            ['articles',    'Artículos'],
-            ['subscribers', 'Suscriptores'],
-            ['publish',     'Publicar'],
-            ['notes',       'Notes'],
-          ] as [SubTab, string][]).map(([t, label]) => (
-            <button key={t} onClick={() => setTab(t)}
-              className={`tab ${tab === t ? 'tab-active' : 'tab-inactive'}`}>
-              {label}
+        {profile && (
+          <div className="flex items-center gap-3 bg-white border border-brand-border px-3 py-1.5 rounded-xl shadow-sm">
+            {profile.avatar ? (
+              <img src={profile.avatar} className="w-8 h-8 rounded-full object-cover" alt="Profile" />
+            ) : (
+              <div className="w-8 h-8 rounded-full bg-stone-700 flex items-center justify-center text-white font-bold text-xs">
+                {(profile.name || '?')[0].toUpperCase()}
+              </div>
+            )}
+            <div className="flex flex-col text-left">
+              <span className="text-xs font-bold text-[#0d1117] leading-none">{profile.name}</span>
+              <span className="text-[10px] text-brand-secondary">@{profile.handle}</span>
+            </div>
+            <button onClick={disconnect} className="text-xs font-bold text-red-500 hover:text-red-600 bg-red-50 px-2 py-1 rounded-lg border border-red-100 transition-colors ml-2 cursor-pointer">
+              Salir
             </button>
-          ))}
-        </div>
+          </div>
+        )}
       </div>
 
+      {/* Stats Cards */}
+      <div className="grid grid-cols-4 gap-4 mb-6">
+        {[
+          { label: 'Suscriptores',         value: profile?.subCount != null ? Number(profile.subCount).toLocaleString('es') : '—',   delta: '+12 este mes' },
+          { label: 'Artículos publicados', value: profile?.followerCount != null ? Number(profile.followerCount).toLocaleString('es') : '—',    delta: 'Total histórico' },
+          { label: 'Tasa de apertura',     value: '47%',   delta: 'Promedio' },
+          { label: 'Total visitas',        value: '1,840', delta: 'Acumuladas' },
+        ].map(s => (
+          <div key={s.label} className="rounded-xl p-4" style={{ background: '#fff', border: '1px solid var(--border)', boxShadow: '0 1px 3px rgba(0,0,0,0.04)' }}>
+            <div style={{ fontSize: 12, color: '#64748b', marginBottom: 6 }}>{s.label}</div>
+            <div style={{ fontFamily: 'var(--font-heading)', fontWeight: 800, fontSize: 24, color: '#0d1117' }}>{s.value}</div>
+            <div style={{ fontSize: 11, color: '#94a3b8', marginTop: 3 }}>{s.delta}</div>
+          </div>
+        ))}
+      </div>
+
+      {/* Tabs */}
+      <div className="flex gap-1 mb-5 p-1 rounded-lg" style={{ background: '#f1f5f9', display: 'inline-flex' }}>
+        {([
+          ['articles',    'Artículos'],
+          ['subscribers', 'Suscriptores'],
+          ['publish',     'Publicar'],
+          ['notes',       'Notes'],
+        ] as [SubTab, string][]).map(([t, label]) => (
+          <button key={t} onClick={() => setTab(t)}
+            className="px-4 py-2 rounded-lg transition-all text-xs font-bold border-none"
+            style={{
+              background: tab === t ? '#fff' : 'transparent',
+              color: tab === t ? '#0d1117' : '#94a3b8',
+              boxShadow: tab === t ? '0 1px 3px rgba(0,0,0,0.08)' : 'none',
+              cursor: 'pointer',
+            }}
+          >
+            {label}
+          </button>
+        ))}
+      </div>
+
+      {/* Tab Render */}
       {tab === 'stats'       && <SubstackStats />}
       {tab === 'subscribers' && <SubstackSubscribers />}
       {tab === 'publish'     && <SubstackPublish />}

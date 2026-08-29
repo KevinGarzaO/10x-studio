@@ -117,7 +117,7 @@ export function IntegrationsSection() {
       <div className="bg-brand-surface border border-brand-border rounded-2xl mb-5 overflow-hidden shadow-[var(--shadow)]">
         <div className="bg-brand-bg/50 border-b border-brand-border px-6 py-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <span className="text-2xl drop-shadow-md">🌐</span>
+            <span className="text-2xl drop-shadow-md"><i className="fa-solid fa-globe"></i></span>
             <div>
               <span className="text-sm font-bold text-brand-primary uppercase tracking-wide">WordPress</span>
               <p className="text-xs text-brand-secondary mt-0.5">REST API / Application Password</p>
@@ -175,7 +175,7 @@ export function IntegrationsSection() {
       <div className="bg-brand-surface border border-brand-border rounded-2xl mb-5 overflow-hidden shadow-[var(--shadow)]">
         <div className="bg-brand-bg/50 border-b border-brand-border px-6 py-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <span className="text-2xl drop-shadow-md">💼</span>
+            <span className="text-2xl drop-shadow-md"><i className="fa-solid fa-briefcase"></i></span>
             <div>
               <span className="text-sm font-bold text-brand-primary uppercase tracking-wide">LinkedIn</span>
               <p className="text-xs text-brand-secondary mt-0.5">OAuth 2.0 Access Token</p>
@@ -212,7 +212,7 @@ export function IntegrationsSection() {
       <div className="bg-brand-surface border border-brand-border rounded-2xl overflow-hidden shadow-[var(--shadow)]">
         <div className="bg-brand-bg/50 border-b border-brand-border px-6 py-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <span className="text-2xl drop-shadow-md">🔗</span>
+            <span className="text-2xl drop-shadow-md"><i className="fa-solid fa-link"></i></span>
             <div>
               <div className="flex items-center gap-2">
                 <span className="text-sm font-bold text-brand-primary uppercase tracking-wide">Webhooks</span>

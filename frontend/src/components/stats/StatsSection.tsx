@@ -201,7 +201,7 @@ export function StatsSection() {
               </div>
             </div>
             <div className="flex items-start gap-4">
-              <span className="text-2xl mt-0.5">🎯</span>
+              <span className="text-2xl mt-0.5"><i className="fa-solid fa-bullseye"></i></span>
               <div>
                 <div className="text-sm font-bold text-brand-primary">Temas completados</div>
                 <div className="text-xs text-brand-secondary mt-0.5">

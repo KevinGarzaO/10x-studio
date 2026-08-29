@@ -121,7 +121,7 @@ export function TemplatesSection() {
 
       {filtered.length === 0 ? (
         <div className="text-center py-20 text-brand-secondary bg-brand-surface rounded-2xl border border-dotted border-brand-border">
-          <div className="text-5xl mb-4 opacity-20">🗂️</div>
+          <div className="text-5xl mb-4 opacity-20"><i className="fa-solid fa-folder-open"></i></div>
           <p className="mb-6 font-medium">No hay plantillas aún. ¡Crea una para personalizar tu estilo!</p>
           <button className="btn btn-primary shadow-lg" onClick={() => setModalOpen(true)}>Nueva plantilla</button>
         </div>

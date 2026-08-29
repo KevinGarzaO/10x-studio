@@ -106,7 +106,7 @@ export function SuggestModal({ apiKey, open, initialQuery, minRelevance = 0, onC
         <div className="px-6 py-4 border-b border-brand-border flex justify-between items-center bg-brand-surface">
           <div>
             <h2 className="text-lg font-bold text-brand-primary flex items-center gap-2">
-              <span className="text-xl">🔍</span> Tendencias Web con IA
+              <i className="fa-solid fa-magnifying-glass"></i> Tendencias Web con IA
             </h2>
             <p className="text-xs text-brand-secondary mt-1">Busca en internet ideas relevantes para publicar</p>
           </div>
@@ -179,11 +179,11 @@ export function SuggestModal({ apiKey, open, initialQuery, minRelevance = 0, onC
                   </div>
                   <div className="space-y-3 mb-5 pr-4">
                     <p className="text-sm text-brand-secondary leading-relaxed bg-brand-bg p-3 rounded-lg border border-brand-border/50">
-                      <span className="font-semibold text-brand-primary mb-1 block">📝 Descripción:</span>
+                      <span className="font-semibold text-brand-primary mb-1 block"><i className="fa-solid fa-pen"></i> Descripción:</span>
                       {item.descripcion}
                     </p>
                     <p className="text-sm text-brand-secondary leading-relaxed bg-brand-bg p-3 rounded-lg border border-brand-border/50">
-                      <span className="font-semibold text-brand-accent mb-1 block">💡 Por qué ahora:</span>
+                      <span className="font-semibold text-brand-accent mb-1 block"><i className="fa-solid fa-lightbulb"></i> Por qué ahora:</span>
                       {item.por_que}
                     </p>
                   </div>

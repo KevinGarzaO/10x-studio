@@ -24,7 +24,7 @@ const NAV_ITEMS: NavItem[] = [
     ),
   },
   {
-    id: 'calendar-month',
+    id: 'calendar',
     label: 'Calendario Editorial',
     href: '/calendar',
     icon: (
@@ -35,7 +35,7 @@ const NAV_ITEMS: NavItem[] = [
     ),
   },
   {
-    id: 'topics-all',
+    id: 'topics',
     label: 'Banco de Temas',
     href: '/topics',
     badge: 5,
@@ -47,7 +47,7 @@ const NAV_ITEMS: NavItem[] = [
     ),
   },
   {
-    id: 'redactor-new',
+    id: 'redactor',
     label: 'Redactor IA',
     href: '/redactor',
     icon: (
@@ -59,7 +59,7 @@ const NAV_ITEMS: NavItem[] = [
     ),
   },
   {
-    id: 'li-dash',
+    id: 'linkedin',
     label: 'LinkedIn',
     href: '/linkedin',
     badge: 1,
@@ -71,7 +71,7 @@ const NAV_ITEMS: NavItem[] = [
     ),
   },
   {
-    id: 'substack-dash',
+    id: 'substack',
     label: 'Substack',
     href: '/substack',
     badge: 2,
@@ -82,7 +82,7 @@ const NAV_ITEMS: NavItem[] = [
     ),
   },
   {
-    id: 'web-dash',
+    id: 'web',
     label: 'Web',
     href: '/web',
     icon: (
@@ -103,13 +103,13 @@ function isActive(href: string, pathname: string): boolean {
   return pathname.startsWith(href)
 }
 
-export default function Sidebar({ pathname }: SidebarProps) {
+export default function SidebarNew({ pathname }: SidebarProps) {
   const [collapsed, setCollapsed] = useState(false)
 
   return (
     <aside
       className="sidebar"
-      style={{ width: collapsed ? 64 : 228, transition: 'width 0.3s' }}
+      style={{ width: collapsed ? 64 : 228, transition: 'width 0.3s', flexShrink: 0 }}
     >
       {/* Logo */}
       <div
@@ -117,6 +117,7 @@ export default function Sidebar({ pathname }: SidebarProps) {
         style={{
           padding: '20px 16px',
           borderBottom: '1px solid rgba(255,255,255,0.06)',
+          justifyContent: collapsed ? 'center' : undefined,
         }}
       >
         <div
@@ -127,13 +128,10 @@ export default function Sidebar({ pathname }: SidebarProps) {
             borderRadius: 9,
             background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
             boxShadow: '0 0 16px rgba(16,185,129,0.35)',
+            fontSize: 18,
           }}
         >
-          <span style={{ fontSize: 18 }}>
-            <svg width="18" height="18" fill="white" viewBox="0 0 24 24">
-              <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
-            </svg>
-          </span>
+          🥑
         </div>
         {!collapsed && (
           <div>

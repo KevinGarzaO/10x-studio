@@ -59,7 +59,7 @@ export function ResearchModal({ topic, apiKey, niche, audience, onClose, onSave 
 
         {!research && !loading && (
           <div className="text-center py-8">
-            <div className="text-4xl mb-3">🔍</div>
+            <div className="text-4xl mb-3"><i className="fa-solid fa-magnifying-glass"></i></div>
             <p className="text-sm text-brand-secondary mb-5">La IA analizará el tema y te dará ángulos, puntos clave, keyword principal y nivel de competencia SEO.</p>
             <button className="btn btn-primary" onClick={doResearch}>Investigar tema</button>
             {error && <p className="text-red-500 text-sm mt-3">{error}</p>}
