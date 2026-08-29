@@ -164,13 +164,21 @@ export function CalendarSection() {
     : (() => { const d = new Date(curDate); d.setDate(d.getDate() - ((d.getDay() + 6) % 7)); return `Semana del ${fmtDate(dateStr(d))}` })()
 
   return (
-    <div className="max-w-4xl mx-auto pb-20">
-      <div className="flex items-end justify-between mb-8 flex-wrap gap-3 border-b border-brand-border pb-4">
+    <div className="px-8 py-7" style={{ maxWidth: 1100 }}>
+      <div className="flex items-end justify-between mb-8 flex-wrap gap-3">
         <div>
-          <h1 className="text-[28px] font-bold tracking-tight text-brand-primary flex items-center gap-3">
-            <i className="pi pi-calendar text-brand-secondary"></i> Calendario
-          </h1>
-          <p className="text-sm text-brand-secondary mt-1">Planifica tu estrategia de publicación</p>
+          <div className="flex items-center gap-3 mb-1">
+            <div className="flex items-center justify-center rounded-lg" style={{ width: 36, height: 36, background: '#3b82f6', color: '#fff' }}>
+              <svg width="18" height="18" fill="none" viewBox="0 0 24 24">
+                <rect x="3" y="4" width="18" height="18" rx="2" stroke="currentColor" strokeWidth="2"/>
+                <path d="M16 2v4M8 2v4M3 10h18" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+              </svg>
+            </div>
+            <h1 style={{ fontFamily: 'var(--font-heading)', fontWeight: 800, fontSize: 28, letterSpacing: '-0.03em', color: '#0d1117', lineHeight: 1 }}>
+              Calendario
+            </h1>
+          </div>
+          <p style={{ fontSize: 13.5, color: '#64748b' }}>Planifica tu estrategia de publicación</p>
         </div>
         <button className="btn btn-secondary btn-sm" onClick={suggestSchedule} disabled={suggesting}>
           {suggesting ? 'Analizando...' : 'Sugerir fechas con IA'}

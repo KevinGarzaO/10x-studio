@@ -5,10 +5,10 @@ import { api } from '@/lib/api'
 import Swal from 'sweetalert2'
 
 const AvocadoAlert = Swal.mixin({
-  background: '#1A1A1A',
-  color: '#E8E8E8',
-  confirmButtonColor: '#4ECCA3',
-  iconColor: '#4ECCA3',
+  background: '#ffffff',
+  color: '#0d1117',
+  confirmButtonColor: '#10b981',
+  iconColor: '#10b981',
 })
 
 type LinkedInTab = 'post' | 'stats'
@@ -216,7 +216,7 @@ export function LinkedInSection() {
   }
 
   return (
-    <div className="px-8 py-7 animate-fadein" style={{ maxWidth: 1000 }}>
+    <div className="px-8 py-7" style={{ maxWidth: 1100 }}>
       {/* Title */}
       <div className="flex items-start justify-between mb-8">
         <div>

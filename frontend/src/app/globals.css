@@ -420,10 +420,6 @@
   display: none;
 }
 
-@import "primereact/resources/themes/lara-light-green/theme.css";
-@import "primereact/resources/primereact.min.css";
-@import "primeicons/primeicons.css";
-
 .p-inputtext {
   font-family: var(--font-body);
   font-size: 13px;
@@ -501,4 +497,9 @@
 .p-paginator .p-paginator-pages .p-paginator-page.p-highlight {
   background-color: var(--primary);
   color: white;
+}
+
+@keyframes fadeSlideUp {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: translateY(0); }
 }

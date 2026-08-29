@@ -5,10 +5,10 @@ import { Loader2, Plus, PenLine, Trash2, Search, X } from 'lucide-react'
 import Swal from 'sweetalert2'
 
 const AvocadoAlert = Swal.mixin({
-  background: '#131313',
-  color: '#e0e0e0',
+  background: '#ffffff',
+  color: '#0d1117',
   customClass: {
-    popup: 'border border-white/10 rounded-2xl shadow-2xl',
+    popup: 'border border-gray-200 rounded-2xl shadow-2xl',
     confirmButton: 'btn btn-primary px-6 h-10',
     cancelButton: 'btn btn-secondary px-6 h-10'
   },

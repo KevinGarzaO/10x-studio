@@ -87,13 +87,21 @@ export function TopicsSection({ onWriteTopic }: Props) {
   }
 
   return (
-    <div className="max-w-4xl mx-auto pb-20 px-4 sm:px-0">
-      <div className="flex items-end justify-between mb-8 flex-wrap gap-4 border-b border-brand-border pb-4">
+    <div className="px-8 py-7" style={{ maxWidth: 1100 }}>
+      <div className="flex items-end justify-between mb-8 flex-wrap gap-4">
         <div>
-          <h1 className="text-2xl md:text-[28px] font-bold tracking-tight text-brand-primary flex items-center gap-3">
-            <i className="pi pi-lightbulb text-brand-secondary"></i> Banco de Temas
-          </h1>
-          <p className="text-sm text-brand-secondary mt-1">Gestiona tus ideas de contenido</p>
+          <div className="flex items-center gap-3 mb-1">
+            <div className="flex items-center justify-center rounded-lg" style={{ width: 36, height: 36, background: '#f59e0b', color: '#fff' }}>
+              <svg width="18" height="18" fill="none" viewBox="0 0 24 24">
+                <circle cx="12" cy="12" r="4" stroke="currentColor" strokeWidth="2"/>
+                <path d="M12 2v2M12 20v2M2 12h2M20 12h2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+              </svg>
+            </div>
+            <h1 style={{ fontFamily: 'var(--font-heading)', fontWeight: 800, fontSize: 28, letterSpacing: '-0.03em', color: '#0d1117', lineHeight: 1 }}>
+              Banco de Temas
+            </h1>
+          </div>
+          <p style={{ fontSize: 13.5, color: '#64748b' }}>Gestiona tus ideas de contenido</p>
         </div>
         <div className="flex gap-2 flex-wrap w-full md:w-auto">
           <button className="btn btn-primary btn-sm justify-center shadow-lg" onClick={() => setSuggestModal(true)}>

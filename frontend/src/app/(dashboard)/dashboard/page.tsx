@@ -1,6 +1,5 @@
 'use client'
 
-import DashboardLayout from '@/components/layout/DashboardLayout'
 import { Dashboard } from '@/components/dashboard/Dashboard'
 import { useRouter } from 'next/navigation'
 
@@ -16,9 +15,5 @@ export default function DashboardPage() {
     router.push(routeMap[section] || '/dashboard')
   }
 
-  return (
-    <DashboardLayout>
-      <Dashboard onNav={navTo as any} />
-    </DashboardLayout>
-  )
+  return <Dashboard onNav={navTo as any} />
 }

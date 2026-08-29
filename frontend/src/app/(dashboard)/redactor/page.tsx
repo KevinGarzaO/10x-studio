@@ -1,6 +1,5 @@
 'use client'
 
-import DashboardLayout from '@/components/layout/DashboardLayout'
 import { RedactorSection } from '@/components/redactor/RedactorSection'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { Suspense } from 'react'
@@ -38,10 +37,8 @@ function RedactorContent() {
 
 export default function RedactorPage() {
   return (
-    <DashboardLayout>
-      <Suspense>
-        <RedactorContent />
-      </Suspense>
-    </DashboardLayout>
+    <Suspense>
+      <RedactorContent />
+    </Suspense>
   )
 }

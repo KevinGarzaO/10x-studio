@@ -1,28 +1,17 @@
 'use client'
 
 import Link from 'next/link'
-import { useState } from 'react'
+import { useRouter } from 'next/navigation'
+import { useState, useRef, useEffect } from 'react'
 
 interface NavItem {
   id: string;
   label: string;
   icon: React.ReactNode;
   href: string;
-  badge?: number;
 }
 
 const NAV_ITEMS: NavItem[] = [
-  {
-    id: 'dashboard',
-    label: 'Resumen General',
-    href: '/dashboard',
-    icon: (
-      <svg width="16" height="16" fill="none" viewBox="0 0 24 24">
-        <path d="M3 9.5L12 3l9 6.5V20a1 1 0 01-1 1H4a1 1 0 01-1-1V9.5z" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round"/>
-        <path d="M9 21V12h6v9" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round"/>
-      </svg>
-    ),
-  },
   {
     id: 'calendar',
     label: 'Calendario Editorial',
@@ -38,7 +27,6 @@ const NAV_ITEMS: NavItem[] = [
     id: 'topics',
     label: 'Banco de Temas',
     href: '/topics',
-    badge: 5,
     icon: (
       <svg width="16" height="16" fill="none" viewBox="0 0 24 24">
         <circle cx="12" cy="12" r="3" stroke="currentColor" strokeWidth="1.8"/>
@@ -62,7 +50,6 @@ const NAV_ITEMS: NavItem[] = [
     id: 'linkedin',
     label: 'LinkedIn',
     href: '/linkedin',
-    badge: 1,
     icon: (
       <svg width="16" height="16" fill="currentColor" viewBox="0 0 24 24">
         <path d="M16 8a6 6 0 016 6v7h-4v-7a2 2 0 00-2-2 2 2 0 00-2 2v7h-4v-7a6 6 0 016-6zM2 9h4v12H2z"/>
@@ -74,7 +61,6 @@ const NAV_ITEMS: NavItem[] = [
     id: 'substack',
     label: 'Substack',
     href: '/substack',
-    badge: 2,
     icon: (
       <svg width="16" height="16" fill="none" viewBox="0 0 24 24">
         <path d="M4 4h16M4 9h16M4 20l8-7 8 7V9H4v11z" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round" strokeLinecap="round"/>
@@ -104,20 +90,35 @@ function isActive(href: string, pathname: string): boolean {
 }
 
 export default function SidebarNew({ pathname }: SidebarProps) {
+  const router = useRouter()
   const [collapsed, setCollapsed] = useState(false)
+  const [userMenuOpen, setUserMenuOpen] = useState(false)
+  const menuRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    function handleClickOutside(e: MouseEvent) {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+        setUserMenuOpen(false)
+      }
+    }
+    if (userMenuOpen) document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [userMenuOpen])
 
   return (
     <aside
       className="sidebar"
       style={{ width: collapsed ? 64 : 228, transition: 'width 0.3s', flexShrink: 0 }}
     >
-      {/* Logo */}
-      <div
+      {/* Logo — links to /dashboard */}
+      <Link
+        href="/dashboard"
         className="flex items-center gap-3 flex-shrink-0"
         style={{
           padding: '20px 16px',
           borderBottom: '1px solid rgba(255,255,255,0.06)',
           justifyContent: collapsed ? 'center' : undefined,
+          textDecoration: 'none',
         }}
       >
         <div
@@ -154,7 +155,7 @@ export default function SidebarNew({ pathname }: SidebarProps) {
             <path d={collapsed ? 'M9 18l6-6-6-6' : 'M15 18l-6-6 6-6'} stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
           </svg>
         </button>
-      </div>
+      </Link>
 
       {/* Nav */}
       <div className="av-sidebar-nav">
@@ -183,12 +184,7 @@ export default function SidebarNew({ pathname }: SidebarProps) {
                   {item.icon}
                 </span>
                 {!collapsed && (
-                  <>
-                    <span className="label">{item.label}</span>
-                    {item.badge !== undefined && (
-                      <span className="nav-badge">{item.badge}</span>
-                    )}
-                  </>
+                  <span className="label">{item.label}</span>
                 )}
               </Link>
             )
@@ -202,11 +198,47 @@ export default function SidebarNew({ pathname }: SidebarProps) {
         style={{
           padding: '12px 8px',
           borderTop: '1px solid rgba(255,255,255,0.06)',
+          position: 'relative',
         }}
+        ref={menuRef}
       >
+        {/* Settings dropdown */}
+        {userMenuOpen && (
+          <>
+            {/* Invisible backdrop to catch clicks */}
+            <div style={{ position: 'fixed', inset: 0, zIndex: 49 }} onClick={() => setUserMenuOpen(false)} />
+            <div style={{
+              position: 'absolute', bottom: 'calc(100% + 4px)', left: 8, right: 8, zIndex: 50,
+              background: 'rgba(255,255,255,0.95)', backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)',
+              borderRadius: 10, border: '1px solid rgba(226,232,240,0.8)',
+              boxShadow: '0 4px 20px rgba(0,0,0,0.18), 0 0 0 1px rgba(0,0,0,0.03)',
+              overflow: 'hidden', animation: 'fadeSlideUp 0.18s cubic-bezier(0.16,1,0.3,1)'
+            }}>
+              <button
+                onClick={() => { router.push('/settings'); setUserMenuOpen(false) }}
+                style={{
+                  width: '100%', padding: '11px 14px', border: 'none', background: 'transparent',
+                  display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer',
+                  fontFamily: 'var(--font-body)', fontSize: 13, fontWeight: 500, color: '#334155', textAlign: 'left',
+                  transition: 'all 0.1s ease'
+                }}
+                onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(16,185,129,0.08)'; e.currentTarget.style.color = '#0d1117' }}
+                onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = '#334155' }}
+              >
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" style={{ opacity: 0.5, flexShrink: 0 }}>
+                  <circle cx="12" cy="12" r="3"/>
+                  <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+                </svg>
+                Configuración
+              </button>
+            </div>
+          </>
+        )}
+
         <div
           className="flex items-center gap-3 px-2 py-2 rounded-lg cursor-pointer transition-all"
           style={{ justifyContent: collapsed ? 'center' : undefined }}
+          onClick={() => setUserMenuOpen(!userMenuOpen)}
           onMouseEnter={(e) => (e.currentTarget.style.background = 'var(--sidebar-item-hover)')}
           onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
         >
@@ -217,12 +249,17 @@ export default function SidebarNew({ pathname }: SidebarProps) {
             KG
           </div>
           {!collapsed && (
-            <div className="flex-1 min-w-0">
-              <div style={{ fontSize: 13, fontWeight: 600, color: '#e2e8f0', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                Kevin Garza
+            <>
+              <div className="flex-1 min-w-0">
+                <div style={{ fontSize: 13, fontWeight: 600, color: '#e2e8f0', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                  Kevin Garza
+                </div>
+                <div style={{ fontSize: 11, color: '#475569' }}>Pro</div>
               </div>
-              <div style={{ fontSize: 11, color: '#475569' }}>Pro</div>
-            </div>
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#475569" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0, transition: 'transform 0.15s', transform: userMenuOpen ? 'rotate(180deg)' : 'rotate(0deg)' }}>
+                <polyline points="6 9 12 15 18 9"/>
+              </svg>
+            </>
           )}
         </div>
       </div>

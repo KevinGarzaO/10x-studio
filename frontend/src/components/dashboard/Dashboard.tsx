@@ -92,12 +92,18 @@ export function Dashboard({ onNav }: { onNav: (s: any) => void }) {
       {/* Header */}
       <div className="flex items-start justify-between mb-8">
         <div>
-          <h1 style={{ fontFamily: 'var(--font-heading)', fontWeight: 800, fontSize: 28, letterSpacing: '-0.03em', color: '#0d1117', lineHeight: 1.1 }}>
-            Dashboard
-          </h1>
-          <p style={{ fontSize: 14, color: '#64748b', marginTop: 4 }}>
-            Buen día, Kevin. Aquí está el resumen de tu estrategia de contenido.
-          </p>
+          <div className="flex items-center gap-3 mb-1">
+            <div className="flex items-center justify-center rounded-lg" style={{ width: 36, height: 36, background: '#10b981', color: '#fff' }}>
+              <svg width="18" height="18" fill="none" viewBox="0 0 24 24">
+                <path d="M3 9.5L12 3l9 6.5V20a1 1 0 01-1 1H4a1 1 0 01-1-1V9.5z" stroke="currentColor" strokeWidth="2" strokeLinejoin="round"/>
+                <path d="M9 21V12h6v9" stroke="currentColor" strokeWidth="2" strokeLinejoin="round"/>
+              </svg>
+            </div>
+            <h1 style={{ fontFamily: 'var(--font-heading)', fontWeight: 800, fontSize: 28, letterSpacing: '-0.03em', color: '#0d1117', lineHeight: 1 }}>
+              Dashboard
+            </h1>
+          </div>
+          <p style={{ fontSize: 13.5, color: '#64748b' }}>Buen día, Kevin. Aquí está el resumen de tu estrategia de contenido.</p>
         </div>
         <div
           className="flex items-center gap-2 px-3 py-2 rounded-lg"
