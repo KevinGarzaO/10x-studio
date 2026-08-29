@@ -86,8 +86,7 @@ export class ImageService {
 
       if (uploadErr) {
         console.error("[ImageService] Error uploading to Supabase Storage:", uploadErr.message);
-        // Fallback to local storage
-        return this.saveLocal(base64, userId);
+        return null;
       }
 
       const { data: urlData } = supabase.storage.from('images').getPublicUrl(filePath);
@@ -95,7 +94,7 @@ export class ImageService {
       return urlData.publicUrl;
     } catch (error) {
       console.error("[ImageService] Error in uploadToSupabase:", error);
-      return this.saveLocal(base64, userId);
+      return null;
     }
   }
 
