@@ -333,7 +333,7 @@ export const getSubstackPosts = async (req: Request, res: Response) => {
 
     let query = supabase
       .from('posts')
-      .select('*')
+      .select('*', { count: 'exact' })
       .eq('user_id', user.id)
 
     if (type === 'published') {
@@ -342,7 +342,7 @@ export const getSubstackPosts = async (req: Request, res: Response) => {
       query = query.eq('is_published', false)
     }
 
-    const { data, error } = await query
+    const { data, error, count } = await query
       .order(dbSort, { ascending })
       .range(offset, offset + limit - 1)
 
@@ -369,7 +369,7 @@ export const getSubstackPosts = async (req: Request, res: Response) => {
       publishedBylines: [{ name: 'Kevin Garza' }],
     }))
 
-    res.json({ posts, offset, limit, total: posts.length })
+    res.json({ posts, offset, limit, total: count || posts.length })
   } catch (err: any) {
     console.error('[SubstackController] Error en getSubstackPosts:', err)
     res.status(500).json({ error: err.message })
