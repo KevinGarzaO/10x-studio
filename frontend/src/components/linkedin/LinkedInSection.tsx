@@ -17,25 +17,30 @@ export function LinkedInSection() {
   const { settings, saveSettings, editorPrefill, setEditorPrefill } = useApp()
   const [tab, setTab]           = useState<LinkedInTab>('post')
   const [text, setText]         = useState('')
+  const [charCount, setCharCount] = useState(0)
+  const MAX_CHARS = 3000
   const [loading, setLoading]   = useState(false)
-  const [image, setImage]       = useState<string | null>(null) // URL or Base64
+  const [image, setImage]       = useState<string | null>(null)
   const [showSchedule, setShowSchedule] = useState(false)
   const [scheduledDate, setScheduledDate] = useState<string>('')
   
   const [posts, setPosts] = useState<any[]>([])
   const [statsLoading, setStatsLoading] = useState(false)
+
+  const handleChange = (val: string) => {
+    if (val.length <= MAX_CHARS) {
+      setText(val)
+      setCharCount(val.length)
+    }
+  }
   
-  // Clean Backend URL for Production (prevents /api/api substitution)
   const getBackendUrl = () => {
     const rawUrl = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:3001'
-    // Remove trailing slashes and /api prefix if it's already there
     return rawUrl.replace(/\/api\/?$/, '').replace(/\/+$/, '')
   }
   const backendUrl = getBackendUrl()
-  
   const fileInputRef = useRef<HTMLInputElement>(null)
 
-  // Prefill check
   useEffect(() => {
     if (editorPrefill && (editorPrefill.type === 'linkedin-post' || editorPrefill.type === 'linkedin-article')) {
       setTab('post')
@@ -44,27 +49,20 @@ export function LinkedInSection() {
         content = content.text || content.contenido || JSON.stringify(content)
       }
       setText(content)
-      
-      // Handle Image from AI
       if (editorPrefill.imageUrl) {
         setImage(editorPrefill.imageUrl)
       }
-      
       setEditorPrefill(null)
     }
   }, [editorPrefill, setEditorPrefill])
 
   const [imgError, setImgError] = useState(false)
   
-  // Reset image error when photo changes
   useEffect(() => {
     setImgError(false)
   }, [settings.linkedinPhoto])
 
   const isConnected = !!settings.linkedinToken
-
-  // Reset imgError when photo changes
-  useEffect(() => { setImgError(false) }, [settings.linkedinPhoto])
 
   async function handlePublish() {
     if (!text.trim()) return AvocadoAlert.fire({ icon: 'warning', title: 'Texto vacío', text: 'Escribe el contenido del post antes de publicar.' })
@@ -125,20 +123,16 @@ export function LinkedInSection() {
       'linkedin-oauth', 'width=600,height=700,scrollbars=yes'
     )
     const handler = (e: MessageEvent) => {
-      // Sometimes e.data is stringified, depends on browser/context
       const data = typeof e.data === 'string' ? JSON.parse(e.data) : e.data;
-
       if (data?.type === 'LINKEDIN_AUTH') {
-        console.log('[LinkedIn Auth] Datos recibidos:', data)
-        const d = data;
         saveSettings({ 
           ...settings, 
-          linkedinToken: d.token, 
-          linkedinUrn: d.urn, 
-          linkedinName: d.name,
-          linkedinPhoto: d.photo,
-          linkedinEmail: d.email,
-          linkedinHeadline: d.headline
+          linkedinToken: data.token, 
+          linkedinUrn: data.urn, 
+          linkedinName: data.name,
+          linkedinPhoto: data.photo,
+          linkedinEmail: data.email,
+          linkedinHeadline: data.headline
         })
         window.removeEventListener('message', handler)
         popup?.close()
@@ -178,10 +172,10 @@ export function LinkedInSection() {
     }
   }, [tab, isConnected])
 
-  // 1. Not Connected State (Matches Substack style)
+  // Not Connected State
   if (!isConnected) {
     return (
-      <div className="max-w-lg mx-auto py-10">
+      <div className="max-w-lg mx-auto py-10 animate-fadein">
         <div className="text-center mb-8">
           <div className="text-6xl mb-4 grayscale hover:grayscale-0 transition-all duration-500 cursor-default">💼</div>
           <h1 className="text-[32px] font-black tracking-tight text-brand-primary mb-2">LinkedIn Studio</h1>
@@ -191,10 +185,10 @@ export function LinkedInSection() {
         </div>
 
         <div className="card overflow-hidden mb-8 shadow-2xl relative border-brand-accent/20">
-            <div className="absolute inset-0 bg-brand-accent/5 pointer-events-none"></div>
+          <div className="absolute inset-0 bg-brand-accent/5 pointer-events-none"></div>
           <div className="bg-brand-surface/80 backdrop-blur-md border-b border-brand-border px-6 py-4 relative">
             <span className="text-xs font-black text-brand-primary uppercase tracking-widest flex items-center gap-2">
-                <i className="pi pi-bolt text-brand-accent"></i> Pasos para empezar
+              <i className="pi pi-bolt text-brand-accent"></i> Pasos para empezar
             </span>
           </div>
           <div className="p-6 space-y-5 relative">
@@ -221,103 +215,116 @@ export function LinkedInSection() {
     )
   }
 
-  // 2. Connected State
   return (
-    <div className="max-w-4xl mx-auto pb-20">
-      <div className="flex items-end justify-between mb-8 border-b border-brand-border pb-4">
+    <div className="px-8 py-7 animate-fadein" style={{ maxWidth: 1000 }}>
+      {/* Title */}
+      <div className="flex items-start justify-between mb-8">
         <div>
-          <h1 className="text-[28px] font-bold tracking-tight text-brand-primary flex items-center gap-3">
-            <i className="pi pi-linkedin text-[#0A66C2]"></i> LinkedIn Studio
-          </h1>
-          <p className="text-sm text-brand-secondary mt-1 tracking-wide uppercase font-black opacity-60">Gestión de presencia profesional</p>
+          <div className="flex items-center gap-3 mb-1">
+            <div className="flex items-center justify-center rounded-lg" style={{ width: 36, height: 36, background: '#0ea5e9', color: '#fff' }}>
+              <svg width="18" height="18" fill="currentColor" viewBox="0 0 24 24">
+                <path d="M16 8a6 6 0 016 6v7h-4v-7a2 2 0 00-2-2 2 2 0 00-2 2v7h-4v-7a6 6 0 016-6zM2 9h4v12H2z"/>
+                <circle cx="4" cy="4" r="2"/>
+              </svg>
+            </div>
+            <h1 style={{ fontFamily: 'var(--font-heading)', fontWeight: 800, fontSize: 28, letterSpacing: '-0.03em', color: '#0d1117', lineHeight: 1 }}>
+              LinkedIn Studio
+            </h1>
+          </div>
+          <p style={{ fontSize: 13.5, fontWeight: 600, color: '#94a3b8', letterSpacing: '0.04em', textTransform: 'uppercase' }}>
+            Gestión de presencia profesional
+          </p>
         </div>
       </div>
 
-      {/* Profile Card (Matches Substack style) */}
-      <div className="relative bg-brand-surface/60 backdrop-blur-2xl border border-brand-border shadow-[var(--shadow)] rounded-3xl p-6 md:p-8 mb-8 overflow-hidden group">
-        <div className="absolute top-0 right-0 -mt-24 -mr-24 w-72 h-72 bg-gradient-to-br from-[#0A66C2]/20 to-[#0A66C2]/5 rounded-full blur-3xl pointer-events-none transition-transform duration-700 ease-out group-hover:scale-110" />
-
-        <div className="relative flex items-start gap-6 md:gap-8 flex-wrap md:flex-nowrap">
-          {/* Avatar Area */}
-          <div className="flex-shrink-0 w-28 h-28 md:w-32 md:h-32 relative">
-            {(settings.linkedinPhoto && !imgError) ? (
-              /* eslint-disable-next-line @next/next/no-img-element */
-              <img 
-                src={`${backendUrl}/api/linkedin/proxy-image?url=${encodeURIComponent(settings.linkedinPhoto)}`} 
-                alt={settings.linkedinName}
-                className="w-full h-full rounded-full object-cover border-4 border-white shadow-md ring-1 ring-black/5" 
-                onError={() => {
-                  console.warn('LinkedIn Proxy Avatar load failed, using fallback.');
-                  setImgError(true);
-                }}
-              />
-            ) : (
-              <div className="w-full h-full rounded-full bg-gradient-to-tr from-[#0A66C2] to-[#004182] flex items-center justify-center text-white font-bold text-4xl shadow-md ring-1 ring-black/5">
-                {(settings.linkedinName || 'L')[0].toUpperCase()}
-              </div>
-            )}
-            <div className="absolute -bottom-1 -right-1 w-8 h-8 bg-green-500 border-4 border-[#1A1A1A] rounded-full flex items-center justify-center">
-                <i className="pi pi-check text-[10px] text-white"></i>
+      {/* Verified Profile card */}
+      <div
+        className="flex items-center gap-4 p-5 rounded-xl mb-6"
+        style={{ background: '#fff', border: '1px solid var(--border)', boxShadow: '0 1px 3px rgba(0,0,0,0.04)' }}
+      >
+        <div className="relative flex-shrink-0 w-14 h-14">
+          {settings.linkedinPhoto && !imgError ? (
+            <img 
+              src={`${backendUrl}/api/linkedin/proxy-image?url=${encodeURIComponent(settings.linkedinPhoto)}`} 
+              alt={settings.linkedinName}
+              className="w-full h-full rounded-full object-cover border-2 border-white shadow-md" 
+              onError={() => setImgError(true)}
+            />
+          ) : (
+            <div className="w-full h-full rounded-full bg-gradient-to-tr from-[#0A66C2] to-[#004182] flex items-center justify-center text-white font-bold text-xl shadow-md">
+              {(settings.linkedinName || 'L')[0].toUpperCase()}
             </div>
-          </div>
-          
-          {/* Core Info */}
-          <div className="flex-1 min-w-0 pt-2">
-            <div className="flex items-start justify-between gap-4 flex-wrap">
-              <div>
-                <h2 className="text-3xl font-extrabold text-brand-primary tracking-tight leading-tight">{settings.linkedinName || 'Usuario LinkedIn'}</h2>
-                <p className="text-[#4ECCA3] font-bold mt-1 text-sm tracking-wide uppercase italic">
-                  {settings.linkedinHeadline || (settings.linkedinEmail ? 'Perfil Profesional Verificado' : 'Conectado con LinkedIn')}
-                </p>
-                <div className="flex flex-wrap items-center gap-2 mt-4 text-xs">
-                  <span className="text-brand-primary px-3 py-1 bg-white/5 rounded-full border border-white/10 font-bold flex items-center gap-1.5">
-                    <i className="pi pi-shield text-[10px]"></i> Sesión Activa
-                  </span>
-                  {settings.linkedinEmail && (
-                    <span className="text-brand-secondary px-3 py-1 bg-white/5 rounded-full border border-white/10">
-                      {settings.linkedinEmail}
-                    </span>
-                  )}
-                </div>
-              </div>
-              
-              <div className="flex flex-col gap-2.5 items-start md:items-end w-full md:w-auto">
-                <span className="text-[13px] bg-green-500 text-[#1A1A1A] px-4 py-1.5 rounded-full font-bold shadow-md flex items-center gap-2">
-                  <span className="w-2 h-2 bg-white rounded-full animate-pulse"></span> Conectado
-                </span>
-                <button onClick={disconnect} className="btn btn-danger btn-sm px-6 opacity-60 hover:opacity-100 transition-opacity">
-                  Desconectar
-                </button>
-              </div>
-            </div>
+          )}
+          <div className="absolute bottom-0 right-0 rounded-full flex items-center justify-center"
+            style={{ width: 18, height: 18, background: '#10b981', border: '2px solid #fff' }}>
+            <svg width="8" height="8" fill="none" viewBox="0 0 24 24"><path d="M5 13l4 4L19 7" stroke="#fff" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"/></svg>
           </div>
         </div>
+        <div className="flex-1">
+          <div style={{ fontFamily: 'var(--font-heading)', fontWeight: 800, fontSize: 18, color: '#0d1117' }}>{settings.linkedinName || 'Kevin Garza'}</div>
+          <div style={{ fontSize: 13, fontWeight: 700, color: '#0ea5e9', letterSpacing: '0.02em' }}>PERFIL PROFESIONAL VERIFICADO</div>
+          <div className="flex items-center gap-3 mt-1">
+            <div className="flex items-center gap-1.5" style={{ fontSize: 12, color: '#64748b' }}>
+              <div className="rounded-full" style={{ width: 6, height: 6, background: '#10b981' }}/>
+              Sesión Activa
+            </div>
+            {settings.linkedinEmail && <span style={{ fontSize: 12, color: '#94a3b8' }}>{settings.linkedinEmail}</span>}
+          </div>
+        </div>
+        <div className="flex gap-2">
+          <div className="flex items-center gap-2 px-4 py-2 rounded-lg"
+            style={{ background: 'rgba(16,185,129,0.1)', border: '1px solid rgba(16,185,129,0.2)' }}>
+            <div className="rounded-full" style={{ width: 7, height: 7, background: '#10b981' }}/>
+            <span style={{ fontSize: 13, fontWeight: 600, color: '#10b981' }}>Conectado</span>
+          </div>
+          <button onClick={disconnect} className="px-4 py-2 rounded-lg transition-all"
+            style={{ fontSize: 12.5, fontWeight: 600, color: '#ef4444', border: '1px solid rgba(239,68,68,0.3)', background: 'rgba(239,68,68,0.05)', cursor: 'pointer' }}>
+            Desconectar
+          </button>
+        </div>
+      </div>
+
+      {/* Stats row */}
+      <div className="grid grid-cols-4 gap-4 mb-6">
+        {[
+          { label: 'Impresiones totales', value: '4,230' },
+          { label: 'Reacciones',          value: '167' },
+          { label: 'Comentarios',         value: '41' },
+          { label: 'Posts publicados',    value: posts.length || '3' },
+        ].map(s => (
+          <div key={s.label} className="rounded-xl p-4" style={{ background: '#fff', border: '1px solid var(--border)', boxShadow: '0 1px 3px rgba(0,0,0,0.04)' }}>
+            <div style={{ fontSize: 12, color: '#64748b', marginBottom: 6 }}>{s.label}</div>
+            <div style={{ fontFamily: 'var(--font-heading)', fontWeight: 800, fontSize: 24, color: '#0d1117' }}>{s.value}</div>
+          </div>
+        ))}
       </div>
 
       {/* Tabs */}
-      <div className="flex mb-8 overflow-x-auto no-scrollbar pb-2">
-        <div className="inline-flex bg-brand-surface/80 backdrop-blur-md p-1 rounded-xl shadow-inner border border-brand-border whitespace-nowrap">
-          {([
-            ['post',     'Crear Post'],
-            ['stats',    'Historial'],
-          ] as [LinkedInTab, string][]).map(([t, label]) => (
-            <button key={t} onClick={() => setTab(t)}
-              className={`tab ${tab === t ? 'tab-active' : 'tab-inactive'}`}>
-              {label}
-            </button>
-          ))}
-        </div>
+      <div className="flex gap-1 mb-5 p-1 rounded-lg" style={{ background: '#f1f5f9', display: 'inline-flex' }}>
+        {([
+          ['post',     'Crear Post'],
+          ['stats',    'Historial'],
+        ] as [LinkedInTab, string][]).map(([t, label]) => (
+          <button key={t} onClick={() => setTab(t)}
+            className="px-5 py-2 rounded-lg capitalize transition-all border-none"
+            style={{ fontSize: 13, fontWeight: 600, cursor: 'pointer',
+              background: tab === t ? '#fff' : 'transparent',
+              color: tab === t ? '#0d1117' : '#94a3b8',
+              boxShadow: tab === t ? '0 1px 3px rgba(0,0,0,0.08)' : 'none',
+            }}
+          >
+            {label}
+          </button>
+        ))}
       </div>
 
-      {/* Post Creator (LinkedIn Style) */}
+      {/* Tab content */}
       {tab === 'post' && (
-        <div className="bg-brand-surface/80 backdrop-blur-xl border border-brand-border rounded-3xl p-0 shadow-2xl animate-in fade-in slide-in-from-bottom-4 duration-700 overflow-hidden relative">
-          
-          {/* Editor Header: Profile & Visibility */}
-          <div className="flex items-center gap-3 px-6 py-5 border-b border-white/[0.03]">
-            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[#0A66C2] to-[#004182] flex items-center justify-center text-white overflow-hidden shadow-sm border border-white/10">
+        <div className="rounded-xl p-5 relative overflow-hidden" style={{ background: '#fff', border: '1px solid var(--border)', boxShadow: '0 1px 3px rgba(0,0,0,0.04)' }}>
+          {/* Header */}
+          <div className="flex items-center gap-3 mb-4">
+            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[#0A66C2] to-[#004182] flex items-center justify-center text-white overflow-hidden shadow-sm">
               {settings.linkedinPhoto && !imgError ? (
-                /* eslint-disable-next-line @next/next/no-img-element */
                 <img 
                   src={`${backendUrl}/api/linkedin/proxy-image?url=${encodeURIComponent(settings.linkedinPhoto)}`}
                   alt="Me" 
@@ -329,53 +336,51 @@ export function LinkedInSection() {
               )}
             </div>
             <div>
-              <div className="text-[15px] font-bold text-brand-primary leading-tight">{settings.linkedinName || 'Tu nombre'}</div>
-              <button className="flex items-center gap-1.5 mt-0.5 px-2 py-0.5 bg-white/5 border border-white/10 rounded-full hover:bg-white/10 transition-colors">
-                <i className="pi pi-globe text-[10px] text-brand-secondary opacity-70"></i>
-                <span className="text-[11px] font-bold text-brand-secondary opacity-80 uppercase tracking-tighter">Cualquiera</span>
-                <i className="pi pi-chevron-down text-[8px] text-brand-secondary opacity-40"></i>
-              </button>
+              <div style={{ fontFamily: 'var(--font-heading)', fontWeight: 700, fontSize: 14, color: '#0d1117' }}>{settings.linkedinName || 'Kevin Garza'}</div>
+              <div className="flex items-center gap-1.5 mt-0.5 px-2 py-0.5 rounded-full"
+                style={{ background: '#f1f5f9', display: 'inline-flex', fontSize: 11, color: '#64748b' }}>
+                <svg width="10" height="10" fill="none" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" stroke="currentColor" strokeWidth="2"/><path d="M12 3c-2.5 3-4 5.7-4 9s1.5 6 4 9M12 3c2.5 3 4 5.7 4 9s-1.5 6-4 9M3 12h18" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/></svg>
+                Cualquiera ▾
+              </div>
             </div>
           </div>
 
-          {/* Main Content Area */}
-          <div className="px-6 py-4 min-h-[220px]">
-            <textarea
-              value={text}
-              onChange={e => setText(e.target.value)}
-              rows={10}
-              className="w-full bg-transparent border-none focus:ring-0 text-brand-primary text-[17px] leading-relaxed resize-none placeholder-brand-secondary/40 font-normal outline-none scrollbar-thin scrollbar-thumb-white/10"
-              placeholder="¿De qué quieres hablar hoy?"
-            />
-            
-            {/* Image Preview */}
-            {image && (
-              <div className="relative mt-4 rounded-xl overflow-hidden group shadow-2xl border border-white/10">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img 
-                  src={image.startsWith('http') ? (image.includes('proxy-image') ? image : `${backendUrl}/api/linkedin/proxy-image?url=${encodeURIComponent(image)}`) : image} 
-                  alt="Preview" 
-                  className="w-full max-h-[400px] object-cover" 
-                />
-                <button 
-                  onClick={() => setImage(null)}
-                  className="absolute top-3 right-3 w-8 h-8 rounded-full bg-black/60 text-white flex items-center justify-center hover:bg-brand-danger transition-colors border border-white/20"
-                >
-                  <i className="pi pi-times text-xs"></i>
-                </button>
-              </div>
-            )}
-          </div>
+          <textarea
+            value={text}
+            onChange={e => handleChange(e.target.value)}
+            placeholder="¿Sobre qué te gustaría hablar? Comparte tu experiencia, insights o ideas..."
+            rows={7}
+            style={{ width: '100%', background: '#fafbfc', border: '1.5px solid var(--border)', borderRadius: 10, padding: '12px 14px', fontSize: 14, color: '#0d1117', outline: 'none', resize: 'none', fontFamily: 'var(--font-body)', lineHeight: 1.6 }}
+            onFocus={(e) => (e.currentTarget.style.borderColor = '#0ea5e9')}
+            onBlur={(e) => (e.currentTarget.style.borderColor = 'var(--border)')}
+          />
 
-          {/* Schedule Panel Overlay */}
+          {image && (
+            <div className="relative mt-4 rounded-xl overflow-hidden group shadow-md border border-brand-border">
+              <img 
+                src={image.startsWith('http') ? (image.includes('proxy-image') ? image : `${backendUrl}/api/linkedin/proxy-image?url=${encodeURIComponent(image)}`) : image} 
+                alt="Preview" 
+                className="w-full max-h-[300px] object-cover" 
+              />
+              <button 
+                onClick={() => setImage(null)}
+                className="absolute top-3 right-3 w-8 h-8 rounded-full bg-black/60 text-white flex items-center justify-center hover:bg-red-500 transition-colors border border-white/20 cursor-pointer"
+              >
+                <i className="pi pi-times text-xs"></i>
+              </button>
+            </div>
+          )}
+
+          {/* Schedule Overlay */}
           {showSchedule && (
-            <div className="absolute inset-x-0 bottom-[72px] bg-brand-surface/95 backdrop-blur-xl border-t border-brand-border p-5 animate-in slide-in-from-bottom-2 z-10 shadow-2xl">
-              <div className="flex items-center justify-between mb-4">
-                <span className="text-sm font-bold text-brand-primary flex items-center gap-2">
+            <div className="mt-4 p-4 rounded-lg bg-[#f8f9fb] border border-brand-border flex flex-col gap-3">
+              <div className="flex items-center justify-between">
+                <span className="text-sm font-bold text-[#0d1117] flex items-center gap-2">
                   <i className="pi pi-calendar-plus text-orange-400"></i> Programar Publicación
                 </span>
-                <button onClick={() => setShowSchedule(false)} className="text-brand-secondary hover:text-white"><i className="pi pi-times"></i></button>
-               <div className="flex flex-col sm:flex-row gap-3">
+                <button onClick={() => setShowSchedule(false)} className="text-brand-secondary hover:text-[#0d1117] border-none bg-transparent cursor-pointer"><i className="pi pi-times"></i></button>
+              </div>
+              <div className="flex flex-col sm:flex-row gap-3">
                 <input 
                   type="date" 
                   value={scheduledDate ? scheduledDate.split('T')[0] : ''}
@@ -383,7 +388,7 @@ export function LinkedInSection() {
                     const timePart = scheduledDate ? scheduledDate.split('T')[1] || '12:00' : '12:00'
                     setScheduledDate(e.target.value ? `${e.target.value}T${timePart}` : '')
                   }}
-                  className="input !h-11 flex-1"
+                  className="input !h-10 flex-1 px-3 border border-brand-border rounded-lg bg-white"
                 />
                 <select 
                   value={scheduledDate ? (scheduledDate.split('T')[1] || '12:00') : '12:00'}
@@ -391,7 +396,7 @@ export function LinkedInSection() {
                     const datePart = scheduledDate ? scheduledDate.split('T')[0] : new Date().toISOString().split('T')[0]
                     setScheduledDate(`${datePart}T${e.target.value}`)
                   }}
-                  className="input !h-11 w-full sm:w-32 bg-brand-surface text-brand-primary"
+                  className="input !h-10 w-full sm:w-32 bg-white text-[#0d1117] px-2 border border-brand-border rounded-lg"
                 >
                   {Array.from({ length: 96 }).map((_, i) => {
                     const h = Math.floor(i / 4).toString().padStart(2, '0')
@@ -400,76 +405,59 @@ export function LinkedInSection() {
                     return <option key={timeStr} value={timeStr}>{timeStr}</option>
                   })}
                 </select>
-                <button onClick={() => setShowSchedule(false)} className="btn btn-primary px-6 h-11">Confirmar</button>
+                <button onClick={() => setShowSchedule(false)} className="btn btn-primary px-6 h-10">Confirmar</button>
               </div>
-             </div>
-              <p className="text-[11px] text-brand-secondary mt-3 opacity-60 italic">Automáticamente se publicará en LinkedIn en la fecha elegida.</p>
             </div>
           )}
 
-          {/* Media Toolbar & Footer */}
-          <div className="px-5 py-4 bg-brand-bg/30 border-t border-white/[0.03] flex items-center justify-between gap-4">
-            <div className="flex items-center gap-1">
-              {/* Hidden File Input */}
+          <div className="flex items-center justify-between mt-3">
+            <div className="flex gap-2">
               <input type="file" ref={fileInputRef} onChange={handleFileChange} accept="image/*" className="hidden" />
-              
-              <button onClick={handleImageClick} className="w-10 h-10 rounded-full flex items-center justify-center transition-all text-blue-400 bg-white/0 hover:bg-white/5 active:scale-90" title="Cargar Imagen">
-                <i className="pi pi-image text-lg"></i>
+              <button onClick={handleImageClick} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg transition-all border border-brand-border bg-[#f8f9fb] text-[#64748b] hover:bg-stone-100 cursor-pointer" title="Cargar Imagen">
+                📷 Imagen
               </button>
-              <button onClick={() => setShowSchedule(!showSchedule)} className={`w-10 h-10 rounded-full flex items-center justify-center transition-all ${showSchedule ? 'text-orange-400 bg-white/10' : 'text-orange-400 bg-white/0 hover:bg-white/5'} active:scale-90`} title="Programar">
-                <i className="pi pi-calendar text-lg"></i>
+              <button onClick={() => setShowSchedule(!showSchedule)} className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg transition-all border border-brand-border cursor-pointer ${showSchedule ? 'text-orange-500 bg-orange-50' : 'bg-[#f8f9fb] text-[#64748b] hover:bg-stone-100'}`} title="Programar">
+                🗓️ Programar
               </button>
             </div>
-
-            <div className="flex items-center gap-4">
-              <div className="flex flex-col items-end">
-                <span className={`text-[11px] font-mono font-bold tracking-widest ${text.length > 3000 ? 'text-red-400' : 'text-brand-secondary opacity-40'}`}>
-                  {text.length.toLocaleString()} / 3,000
+            <div className="flex items-center gap-3">
+              <span className={`text-xs ${charCount > MAX_CHARS * 0.85 ? 'text-orange-500' : 'text-brand-secondary'}`}>
+                {charCount}/{MAX_CHARS}
+              </span>
+              {scheduledDate && (
+                <span className="text-[11px] text-orange-400 font-bold uppercase tracking-tighter animate-pulse">
+                   ⏰ {new Date(scheduledDate).toLocaleString('es-ES', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })}
                 </span>
-                {scheduledDate && (
-                  <span className="text-[10px] text-orange-400 font-bold uppercase tracking-tighter animate-pulse">
-                     ⏰ {new Date(scheduledDate).toLocaleString('es-ES', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })}
-                  </span>
-                )}
-              </div>
-              <button
-                className="btn py-2.5 px-8 rounded-full bg-[#0A66C2] hover:bg-[#004182] disabled:opacity-40 disabled:hover:bg-[#0A66C2] transition-all font-bold text-sm shadow-lg shadow-[#0A66C2]/10"
+              )}
+              <button 
                 onClick={handlePublish}
                 disabled={loading || !text.trim()}
+                className="px-4 py-2 rounded-lg text-white transition-all border-none"
+                style={{ fontSize: 13, fontWeight: 600, fontFamily: 'var(--font-heading)', background: 'linear-gradient(135deg,#0ea5e9,#0284c7)', cursor: loading || !text.trim() ? 'not-allowed' : 'pointer' }}
               >
-                {loading ? <><i className="pi pi-spin pi-spinner mr-2"></i>Enviando...</> : (scheduledDate ? 'Programar' : 'Publicar')}
+                {loading ? 'Publicando...' : (scheduledDate ? 'Programar' : 'Publicar ahora')}
               </button>
             </div>
           </div>
         </div>
       )}
 
-      {/* No articles tab anymore */}
-
       {tab === 'stats' && (
-        <div className="animate-in fade-in slide-in-from-bottom-4 duration-700">
-          <div className="flex items-center justify-between mb-6">
-            <h3 className="text-xl font-bold text-brand-primary flex items-center gap-2">
-              <i className="pi pi-history text-brand-accent"></i> Historial de Publicaciones
-            </h3>
-            <button 
-              onClick={fetchStats} 
-              disabled={statsLoading}
-              className="btn btn-secondary btn-sm flex items-center gap-2"
-            >
-              <i className={`pi pi-sync ${statsLoading ? 'pi-spin' : ''}`}></i>
-              {statsLoading ? 'Actualizando...' : 'Actualizar'}
+        <div className="space-y-6">
+          <div className="flex items-center justify-between mb-4">
+            <h3 style={{ fontFamily: 'var(--font-heading)', fontSize: 18, fontWeight: 700, color: '#0d1117' }}>Historial de Publicaciones</h3>
+            <button onClick={fetchStats} disabled={statsLoading} className="btn btn-secondary btn-sm h-8 px-3 font-bold">
+              <i className={`pi pi-sync mr-1 ${statsLoading ? 'pi-spin' : ''}`}></i>
+              Actualizar
             </button>
           </div>
 
-          <div className="space-y-6">
+          <div className="space-y-4">
             {posts.length > 0 ? posts.map((p) => (
-              <div key={p.post_id} className="bg-brand-surface/60 backdrop-blur-xl border border-brand-border rounded-3xl overflow-hidden shadow-[var(--shadow)] animate-in fade-in slide-in-from-bottom-2 duration-500">
-                {/* Post Header */}
-                <div className="flex items-center gap-3 px-6 py-5">
-                  <div className="w-12 h-12 rounded-full bg-gradient-to-br from-[#0A66C2] to-[#004182] flex items-center justify-center text-white overflow-hidden shadow-sm border-2 border-brand-border/20">
+              <div key={p.post_id} className="bg-white border border-brand-border rounded-xl p-5 shadow-sm">
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[#0A66C2] to-[#004182] flex items-center justify-center text-white overflow-hidden shadow-sm">
                     {settings.linkedinPhoto && !imgError ? (
-                      /* eslint-disable-next-line @next/next/no-img-element */
                       <img 
                         src={`${backendUrl}/api/linkedin/proxy-image?url=${encodeURIComponent(settings.linkedinPhoto)}`}
                         alt="Me" 
@@ -477,64 +465,40 @@ export function LinkedInSection() {
                         onError={() => setImgError(true)}
                       />
                     ) : (
-                      <span className="font-bold text-xl">{(settings.linkedinName || 'U')[0].toUpperCase()}</span>
+                      <span className="font-bold">{(settings.linkedinName || 'U')[0].toUpperCase()}</span>
                     )}
                   </div>
-                  <div className="flex-1">
-                    <div className="text-[17px] font-bold text-brand-primary leading-tight">{settings.linkedinName || 'Tu nombre'}</div>
-                    <div className="flex items-center gap-2 mt-1">
-                      <span className="text-xs text-brand-secondary font-medium tracking-wide">
-                        {new Date(p.published_at).toLocaleDateString('es-ES', { day: '2-digit', month: 'short', year: 'numeric' })}
-                      </span>
-                      <span className="w-1 h-1 bg-brand-secondary/30 rounded-full"></span>
-                      <span className="text-[10px] text-brand-accent font-black uppercase tracking-tighter flex items-center gap-1">
-                        <i className="pi pi-check-circle text-[8px]"></i> Enviado desde Avocado
-                      </span>
+                  <div>
+                    <div style={{ fontFamily: 'var(--font-heading)', fontWeight: 700, fontSize: 14, color: '#0d1117' }}>{settings.linkedinName || 'Kevin Garza'}</div>
+                    <div style={{ fontSize: 11, color: '#94a3b8' }}>
+                      {new Date(p.published_at).toLocaleDateString('es-ES', { day: '2-digit', month: 'short', year: 'numeric' })}
                     </div>
                   </div>
                 </div>
-
-                {/* Post Content */}
-                <div className="px-6 pb-6 whitespace-pre-wrap text-brand-primary text-[15px] leading-relaxed opacity-90 font-normal">
-                  {p.text || <span className="italic opacity-30">Contenido multimedia sin texto acompañante</span>}
+                <div style={{ fontSize: 14, color: '#0d1117', whiteSpace: 'pre-wrap', lineHeight: 1.5 }}>
+                  {p.text}
                 </div>
-
-                {/* Simple Footer/ID Info */}
-                <div className="px-6 py-3 bg-brand-bg/20 border-t border-white/[0.02] flex justify-between items-center">
-                  <div className="text-[9px] font-mono text-brand-secondary opacity-30 uppercase tracking-widest">
-                    ID: {p.post_id.split(':').pop()}
-                  </div>
-                  <div className="flex items-center gap-4 opacity-50 text-brand-secondary">
-                    <span className="flex items-center gap-1.5 text-[11px]"><i className="pi pi-thumbs-up"></i> 0</span>
-                    <span className="flex items-center gap-1.5 text-[11px]"><i className="pi pi-comment"></i> 0</span>
+                <div className="mt-4 pt-3 border-t border-[#f8f9fb] flex justify-between items-center text-xs text-[#94a3b8]">
+                  <span>ID: {p.post_id.split(':').pop()}</span>
+                  <div className="flex gap-4">
+                    <span>👁️ 0 impresiones</span>
+                    <span>❤️ 0 reacciones</span>
                   </div>
                 </div>
               </div>
             )) : (
-              <div className="bg-brand-bg border border-dashed border-brand-border rounded-2xl p-20 flex flex-col items-center justify-center text-center animate-in fade-in duration-700">
+              <div className="bg-white border border-brand-border rounded-xl p-16 text-center flex flex-col items-center justify-center text-[#94a3b8]">
                 {statsLoading ? (
-                  <div className="flex flex-col items-center gap-3">
-                    <i className="pi pi-spin pi-spinner text-3xl text-brand-accent"></i>
-                    <p className="text-sm text-brand-secondary">Consultando historial local...</p>
-                  </div>
+                  <p>Consultando historial local...</p>
                 ) : (
-                  <div className="flex flex-col items-center gap-3 opacity-40">
-                    <i className="pi pi-inbox text-4xl"></i>
-                    <p className="text-sm">Aún no hay publicaciones para mostrar en tu feed.</p>
-                  </div>
+                  <>
+                    <i className="pi pi-inbox text-3xl mb-2"></i>
+                    <p>Aún no hay publicaciones registradas en tu historial.</p>
+                  </>
                 )}
               </div>
             )}
           </div>
-          
-          {posts.length > 0 && (
-            <div className="mt-10 pt-6 border-t border-brand-border flex flex-col items-center justify-center text-center opacity-40">
-               <i className="pi pi-shield text-xl mb-2"></i>
-               <p className="text-[11px] font-bold uppercase tracking-widest">
-                 Seguimiento interno activado • {posts.length} contenidos registrados
-               </p>
-            </div>
-          )}
         </div>
       )}
     </div>

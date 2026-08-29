@@ -3,7 +3,6 @@ import { useState } from 'react'
 import useSWR from 'swr'
 import { useRouter } from 'next/navigation'
 import { useApp } from '@/components/layout/AppProvider'
-import { ExternalLink, MoreHorizontal, Loader2 } from 'lucide-react'
 import { api } from '@/lib/api'
 
 type ArticleType = 'published' | 'scheduled' | 'drafts'
@@ -51,7 +50,6 @@ export function SubstackArticles({ onCompose }: { onCompose?: () => void }) {
 
   const posts = data?.posts || []
   const total = data?.total || posts.length
-  const hasMore = posts.length === PAGE_SIZE
   const totalPages = Math.ceil(total / PAGE_SIZE)
 
   const filteredPosts = posts.filter((post: any) =>
@@ -59,159 +57,170 @@ export function SubstackArticles({ onCompose }: { onCompose?: () => void }) {
   )
 
   return (
-    <div className="max-w-4xl mx-auto flex flex-col h-full gap-6">
+    <div className="flex flex-col gap-5">
+      {/* Toolbar */}
       <div className="flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <span className="text-sm font-bold text-brand-primary">Publicado</span>
-          <span className="text-[11px] font-bold bg-[var(--bg-muted)] text-[var(--text-muted)] px-2 py-0.5 rounded-full min-w-[24px] text-center">
+        <div className="flex items-center gap-2">
+          <div className="flex items-center justify-center rounded-lg px-3 py-1.5"
+            style={{ background: '#0d1117', color: '#fff', fontSize: 13, fontWeight: 700, fontFamily: 'var(--font-heading)' }}>
+            Publicado
+          </div>
+          <span className="flex items-center justify-center rounded-full text-white"
+            style={{ width: 22, height: 22, fontSize: 11, fontWeight: 700, background: '#0d1117' }}>
             {publishedSWR.data ? publishedSWR.data.posts.length : '—'}
           </span>
         </div>
-        <button
-          onClick={onCompose}
-          className="bg-[#6b21a8] hover:bg-[#581c87] text-white px-4 py-1.5 rounded-lg text-sm font-semibold flex items-center gap-2 transition-colors">
-          Crear artículo <span className="text-[10px]">↗</span>
-        </button>
-      </div>
-
-      <div className="flex gap-4">
-        <div className="relative flex-1">
-          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-brand-secondary">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
-          </span>
-          <input
-            type="text"
-            placeholder="Search..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="w-full bg-brand-surface border border-brand-border rounded-lg pl-10 pr-4 py-2 text-sm focus:outline-none focus:border-brand-accent transition-colors"
-          />
+        <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 px-3 rounded-lg"
+            style={{ height: 36, background: '#fff', border: '1px solid var(--border)', minWidth: 200 }}>
+            <svg width="13" height="13" fill="none" viewBox="0 0 24 24" style={{ color: '#94a3b8' }}>
+              <circle cx="11" cy="11" r="7" stroke="currentColor" strokeWidth="2"/>
+              <path d="M20 20l-3-3" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+            </svg>
+            <input
+              type="text"
+              placeholder="Buscar artículos..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              style={{ background: 'none', border: 'none', outline: 'none', fontSize: 13, width: '100%', color: '#0d1117' }}
+            />
+          </div>
+          <button
+            onClick={onCompose}
+            className="flex items-center gap-2 px-4 py-2 rounded-lg text-white transition-all"
+            style={{
+              fontSize: 13, fontWeight: 700, fontFamily: 'var(--font-heading)',
+              background: 'linear-gradient(135deg,#ef4444,#dc2626)',
+              boxShadow: '0 2px 8px rgba(239,68,68,0.3)',
+            }}
+          >
+            <svg width="13" height="13" fill="none" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"/></svg>
+            Crear artículo
+          </button>
         </div>
       </div>
 
-      <div className="card overflow-hidden min-h-[400px]">
+      {/* Article list */}
+      <div className="rounded-xl overflow-hidden" style={{ background: '#fff', border: '1px solid var(--border)', boxShadow: '0 1px 3px rgba(0,0,0,0.04)' }}>
+        {/* Table header */}
+        <div className="grid px-5 py-3" style={{
+          gridTemplateColumns: '1fr 80px 60px 60px 60px 80px 40px',
+          borderBottom: '1px solid var(--border)',
+          fontSize: 11, fontWeight: 700, color: '#94a3b8', letterSpacing: '0.06em', textTransform: 'uppercase'
+        }}>
+          <div>Título</div>
+          <div className="text-center">Suscripciones</div>
+          <div className="text-center">Visitas</div>
+          <div className="text-center">Apertura</div>
+          <div className="text-center">Likes</div>
+          <div className="text-center">Estado</div>
+          <div />
+        </div>
+
         {isLoading ? (
-          <div className="h-40 flex items-center justify-center text-brand-secondary">
-            <Loader2 className="animate-spin w-6 h-6" />
+          <div className="h-40 flex items-center justify-center" style={{ color: '#94a3b8' }}>
+            <div className="animate-spin w-6 h-6 border-2 border-t-transparent rounded-full" style={{ borderColor: '#e2e8f0', borderTopColor: '#10b981' }} />
           </div>
         ) : error ? (
-          <div className="h-40 flex flex-col items-center justify-center text-brand-secondary p-8 text-center">
-            <p className="text-red-400 mb-2">Error al cargar artículos</p>
-            <p className="text-xs opacity-70">Asegúrate de que el backend esté conectado a Substack</p>
+          <div className="h-40 flex flex-col items-center justify-center p-8 text-center" style={{ color: '#94a3b8' }}>
+            <p style={{ color: '#ef4444', marginBottom: 8 }}>Error al cargar artículos</p>
+            <p style={{ fontSize: 12, opacity: 0.7 }}>Asegúrate de que el backend esté conectado a Substack</p>
           </div>
         ) : filteredPosts.length === 0 ? (
-          <div className="h-40 flex items-center justify-center text-brand-secondary text-sm">
+          <div className="h-40 flex items-center justify-center text-sm" style={{ color: '#94a3b8' }}>
             No se encontraron artículos {search && 'con esa búsqueda'}
           </div>
         ) : (
-          <div className="flex flex-col">
-            {filteredPosts.map((post: any, idx: number) => (
-              <div
-                key={post.id}
-                onClick={() => router.push(`/substack/${post.id}`)}
-                className={`flex items-center p-4 gap-4 ${idx !== filteredPosts.length - 1 ? 'border-b border-[var(--border-light)]' : ''} hover:bg-[var(--bg-hover)] transition-colors cursor-pointer group`}
-              >
-                {/* Thumbnail */}
-                <div className="w-28 h-16 rounded-md overflow-hidden bg-[var(--bg-muted)] flex-shrink-0 relative border border-[var(--border)] flex items-center justify-center text-[var(--text-muted)]">
-                  {post.cover_image ? (
-                    <img
-                      src={post.cover_image}
-                      alt={post.title}
-                      className="w-full h-full object-cover"
-                      onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; (e.target as HTMLImageElement).nextElementSibling?.classList.remove('hidden') }}
-                    />
-                  ) : null}
-                  <div className={`flex flex-col items-center gap-1 opacity-50 ${post.cover_image ? 'hidden' : ''}`}>
-                    <span className="text-[10px]">No image</span>
+          filteredPosts.map((post: any, i: number) => (
+            <div
+              key={post.id}
+              className="grid items-center px-5 py-3.5 cursor-pointer transition-all"
+              style={{
+                gridTemplateColumns: '1fr 80px 60px 60px 60px 80px 40px',
+                borderBottom: i < filteredPosts.length - 1 ? '1px solid #f8f9fb' : 'none',
+              }}
+              onClick={() => router.push(`/substack/${post.id}`)}
+              onMouseEnter={(e) => (e.currentTarget.style.background = '#fafbfc')}
+              onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
+            >
+              <div>
+                <div className="flex items-center gap-2">
+                  <div className="flex-shrink-0 rounded" style={{ width: 36, height: 36, background: '#f1f5f9', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <svg width="14" height="14" fill="none" viewBox="0 0 24 24" style={{ color: '#94a3b8' }}>
+                      <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8l-6-6z" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round"/>
+                    </svg>
                   </div>
-                </div>
-
-                {/* Info */}
-                <div className="flex-1 min-w-0 flex flex-col justify-center">
-                  <h3 className="font-bold text-sm text-brand-primary truncate">{post.title || post.draft_title}</h3>
-                  <div className="flex items-center gap-1.5 mt-1 text-xs text-brand-secondary truncate">
-                    <span>
-                      {activeTab === 'scheduled' && post.trigger_at ? (
-                        <>Programado {new Date(post.trigger_at).toLocaleDateString('es-ES', { day: 'numeric', month: 'short' })}</>
-                      ) : activeTab === 'drafts' ? (
-                        <>Modificado {new Date(post.draft_updated_at).toLocaleDateString('es-ES', { day: 'numeric', month: 'short' })}</>
-                      ) : (
-                        <>{post.post_date ? new Date(post.post_date).toLocaleDateString('es-ES', { day: 'numeric', month: 'short' }) : 'Sin fecha'}</>
-                      )}
-                    </span>
-                    <span>•</span>
-                    <span className="truncate">Kevin Garza</span>
-                  </div>
-                  <div className="flex items-center gap-3 mt-1.5 text-xs text-brand-secondary opacity-80">
-                    {post.word_count > 0 && <span>{post.word_count} palabras</span>}
-                  </div>
-                </div>
-
-                {/* Stats */}
-                {activeTab === 'published' && post.stats && (
-                  <div className="flex items-center gap-6 pl-8 border-l border-[var(--border)] text-xs">
-                    <div className="flex flex-col">
-                      <span className="text-brand-primary font-bold text-[13px]">{post.stats.signups || 0}</span>
-                      <span className="text-brand-secondary text-[11px]">Suscripciones</span>
-                    </div>
-                    <div className="flex flex-col">
-                      <span className="text-brand-primary font-bold text-[13px]">{post.stats.views || 0}</span>
-                      <span className="text-brand-secondary text-[11px]">Visitas</span>
-                    </div>
-                    <div className="flex flex-col">
-                      <span className="text-brand-primary font-bold text-[13px]">{post.stats.open_rate ? `${Math.round(post.stats.open_rate * 100)}%` : '0%'}</span>
-                      <span className="text-brand-secondary text-[11px]">Abierto</span>
-                    </div>
-                    <div className="flex flex-col">
-                      <span className="text-brand-primary font-bold text-[13px]">{post.likes || post.reactions?.total || 0}</span>
-                      <span className="text-brand-secondary text-[11px]">Me gusta</span>
+                  <div>
+                    <div style={{ fontSize: 13, fontWeight: 600, color: '#0d1117', lineHeight: 1.3 }}>{post.title || post.draft_title}</div>
+                    <div style={{ fontSize: 11, color: '#94a3b8' }}>
+                      {activeTab === 'scheduled' && post.trigger_at
+                        ? `Programado ${new Date(post.trigger_at).toLocaleDateString('es-ES', { day: 'numeric', month: 'short' })}`
+                        : activeTab === 'drafts'
+                          ? `Modificado ${new Date(post.draft_updated_at).toLocaleDateString('es-ES', { day: 'numeric', month: 'short' })}`
+                          : post.post_date ? new Date(post.post_date).toLocaleDateString('es-ES', { day: 'numeric', month: 'short' }) : 'Sin fecha'
+                      } · Kevin Garza
                     </div>
                   </div>
-                )}
-
-                {/* Actions */}
-                <div className="flex items-center gap-2 pl-4 ml-2 opacity-50 group-hover:opacity-100 transition-opacity">
-                  <button
-                    onClick={(e) => { e.stopPropagation(); router.push(`/substack/${post.id}`); }}
-                    className="p-2 hover:bg-brand-bg rounded-md text-brand-secondary hover:text-brand-primary transition-colors"
-                  >
-                    <ExternalLink size={16} />
-                  </button>
-                  <button className="p-2 hover:bg-brand-bg rounded-md text-brand-secondary hover:text-brand-primary transition-colors">
-                    <MoreHorizontal size={16} />
-                  </button>
                 </div>
               </div>
-            ))}
-          </div>
+              <div className="text-center" style={{ fontSize: 14, fontWeight: 700, color: '#0d1117' }}>{post.stats?.signups || 0}</div>
+              <div className="text-center" style={{ fontSize: 14, fontWeight: 700, color: '#0d1117' }}>{post.stats?.views || 0}</div>
+              <div className="text-center" style={{ fontSize: 14, fontWeight: 700, color: post.stats?.open_rate ? '#10b981' : '#94a3b8' }}>
+                {post.stats?.open_rate ? `${Math.round(post.stats.open_rate * 100)}%` : '—'}
+              </div>
+              <div className="text-center" style={{ fontSize: 14, fontWeight: 700, color: '#0d1117' }}>{post.likes || post.reactions?.total || 0}</div>
+              <div className="text-center">
+                <span className="px-2 py-1 rounded-lg" style={{
+                  fontSize: 10.5, fontWeight: 600,
+                  background: activeTab === 'published' ? 'rgba(16,185,129,0.1)' : activeTab === 'scheduled' ? 'rgba(245,158,11,0.1)' : 'rgba(148,163,184,0.1)',
+                  color: activeTab === 'published' ? '#10b981' : activeTab === 'scheduled' ? '#f59e0b' : '#94a3b8',
+                }}>
+                  {activeTab === 'published' ? 'Publicado' : activeTab === 'scheduled' ? 'Agendado' : 'Borrador'}
+                </span>
+              </div>
+              <div className="flex justify-end">
+                <button
+                  onClick={(e) => { e.stopPropagation(); router.push(`/substack/${post.id}`); }}
+                  className="flex items-center justify-center rounded-lg transition-all"
+                  style={{ width: 28, height: 28, color: '#94a3b8', background: '#f8f9fb' }}
+                >
+                  <svg width="12" height="12" fill="none" viewBox="0 0 24 24"><path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/><path d="M15 3h6v6M10 14L21 3" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                </button>
+              </div>
+            </div>
+          ))
         )}
       </div>
 
       {/* Pagination */}
-      <div className="flex items-center justify-between py-4">
-        <span className="text-xs text-brand-secondary">
-          {data ? `Mostrando ${page * PAGE_SIZE + 1}-${Math.min((page + 1) * PAGE_SIZE, total)} de ${total} posts` : 'Cargando...'}
-        </span>
-        <div className="flex items-center gap-2">
-          <button
-            onClick={() => setPage(p => Math.max(0, p - 1))}
-            disabled={page === 0}
-            className="px-3 py-1.5 rounded-lg border border-brand-border text-xs font-bold text-brand-secondary hover:text-brand-primary hover:bg-brand-surface disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
-          >
-            ← Anterior
-          </button>
-          <span className="text-xs text-brand-secondary px-2">
-            {page + 1} / {totalPages || 1}
+      {!isLoading && filteredPosts.length > 0 && (
+        <div className="flex items-center justify-between py-2">
+          <span style={{ fontSize: 12, color: '#94a3b8' }}>
+            Mostrando {page * PAGE_SIZE + 1}-{Math.min((page + 1) * PAGE_SIZE, total)} de {total} posts
           </span>
-          <button
-            onClick={() => setPage(p => Math.min(totalPages - 1, p + 1))}
-            disabled={page >= totalPages - 1}
-            className="px-3 py-1.5 rounded-lg border border-brand-border text-xs font-bold text-brand-secondary hover:text-brand-primary hover:bg-brand-surface disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
-          >
-            Siguiente →
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setPage(p => Math.max(0, p - 1))}
+              disabled={page === 0}
+              className="px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors"
+              style={{ border: '1px solid var(--border)', color: '#64748b', background: '#fff', opacity: page === 0 ? 0.3 : 1, cursor: page === 0 ? 'not-allowed' : 'pointer' }}
+            >
+              Anterior
+            </button>
+            <span style={{ fontSize: 12, color: '#94a3b8', padding: '0 8px' }}>
+              {page + 1} / {totalPages || 1}
+            </span>
+            <button
+              onClick={() => setPage(p => Math.min(totalPages - 1, p + 1))}
+              disabled={page >= totalPages - 1}
+              className="px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors"
+              style={{ border: '1px solid var(--border)', color: '#64748b', background: '#fff', opacity: page >= totalPages - 1 ? 0.3 : 1, cursor: page >= totalPages - 1 ? 'not-allowed' : 'pointer' }}
+            >
+              Siguiente
+            </button>
+          </div>
         </div>
-      </div>
+      )}
     </div>
   )
 }
