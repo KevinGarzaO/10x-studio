@@ -297,7 +297,7 @@ export function SubstackSection() {
       {tab === 'stats'       && <SubstackStats />}
       {tab === 'subscribers' && <SubstackSubscribers />}
       {tab === 'publish'     && <SubstackPublish />}
-      {tab === 'articles'    && <SubstackArticles onCompose={() => setTab('publish')} onPostClick={(postId) => { setSelectedPostId(postId); setTab('detail'); }} />}
+      {tab === 'articles'    && <SubstackArticles onCompose={() => setTab('publish')} />}
       {tab === 'notes'       && <SubstackNotes />}
       {tab === 'detail'      && selectedPostId && <SubstackPostDetail postId={selectedPostId} onBack={() => { setSelectedPostId(null); setTab('articles'); }} />}
     </div>

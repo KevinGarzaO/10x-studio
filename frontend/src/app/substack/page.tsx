@@ -9,10 +9,6 @@ export default function SubstackArticlesPage() {
   return (
     <SubstackArticles
       onCompose={() => router.push('/substack/publish')}
-      onPostClick={(postId) => {
-        sessionStorage.setItem('substackDetailPostId', postId)
-        router.push('/substack/publish')
-      }}
     />
   )
 }
