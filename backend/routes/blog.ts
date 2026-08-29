@@ -8,7 +8,8 @@ import {
   getBlogAnalytics,
   getAnalyticsSummary,
   getWebPosts,
-  getWebPostDetail
+  getWebPostDetail,
+  getContentStats
 } from '../controllers/blog.controller'
 
 const router = Router()
@@ -21,6 +22,15 @@ const router = Router()
  *     tags: [Blog]
  */
 router.post('/generate', generateBlog)
+
+/**
+ * @swagger
+ * /api/blog/content-stats:
+ *   get:
+ *     summary: Get content stats by type (all content_types)
+ *     tags: [Blog]
+ */
+router.get('/content-stats', getContentStats)
 
 /**
  * @swagger

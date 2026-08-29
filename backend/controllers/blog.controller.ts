@@ -224,6 +224,53 @@ ${parsed.image_prompt}
 }
 
 /**
+ * Get content stats by type from content table
+ */
+export const getContentStats = async (req: Request, res: Response) => {
+  try {
+    const { data: allContent, error } = await supabase
+      .from('content')
+      .select('content_type, status, created_at, published_at')
+
+    if (error) throw error
+
+    const now = new Date()
+    const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000)
+    const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000)
+
+    const content = allContent || []
+
+    const stats = {
+      total: content.length,
+      by_type: {
+        blog_post: content.filter(c => c.content_type === 'blog_post').length,
+        newsletter: content.filter(c => c.content_type === 'newsletter').length,
+        linkedin_post: content.filter(c => c.content_type === 'linkedin_post').length,
+        note: content.filter(c => c.content_type === 'note').length,
+      },
+      by_status: {
+        published: content.filter(c => c.status === 'published').length,
+        draft: content.filter(c => c.status === 'draft').length,
+        scheduled: content.filter(c => c.status === 'scheduled').length,
+      },
+      recent_30d: content.filter(c => {
+        const d = new Date(c.created_at || c.published_at)
+        return d >= thirtyDaysAgo
+      }).length,
+      recent_7d: content.filter(c => {
+        const d = new Date(c.created_at || c.published_at)
+        return d >= sevenDaysAgo
+      }).length,
+    }
+
+    res.json(stats)
+  } catch (error: any) {
+    console.error('[BlogController] Error en getContentStats:', error)
+    res.status(500).json({ error: error.message })
+  }
+}
+
+/**
  * List blog posts from content table
  */
 export const listBlogPosts = async (req: Request, res: Response) => {
@@ -327,18 +374,24 @@ export const getWebPosts = async (req: Request, res: Response) => {
 
     if (error) throw error
 
+    const BOT_PATTERN = /bot|crawl|spider|slurp|mediapartners|feedly|rss|baiduspider|yandex|sogou|exabot|ia_archiver|facebookexternalhit|curl|wget|python|java\/|ruby|go-http|headlesschrome|puppeteer|semrush|ahrefs|mj12bot|dotbot|zoominfobot|seznambot|opensiteexplorer|bytespider|gptbot|chatgpt-user|ccbot|claudebot|anthropic|applebot|bingpreview/i
+
+    const isBot = (ua: string) => BOT_PATTERN.test(ua || '')
+
     // Get analytics for each post from post_events
     const postsWithAnalytics = await Promise.all((posts || []).map(async (post: any) => {
       const { data: events } = await supabase
         .from('post_events')
-        .select('event_type, visitor_id')
+        .select('event_type, visitor_id, user_agent')
         .eq('content_id', post.id)
 
-      const views = events?.filter(e => e.event_type === 'page_view').length || 0
-      const uniqueVisitors = new Set(events?.filter(e => e.event_type === 'page_view').map(e => e.visitor_id)).size
-      const shareClicks = events?.filter(e => e.event_type === 'share_click').length || 0
-      const ctaClicks = events?.filter(e => e.event_type === 'cta_click').length || 0
-      const subscribeSubmits = events?.filter(e => e.event_type === 'subscribe_submit').length || 0
+      const humanEvents = (events || []).filter(e => !isBot(e.user_agent))
+
+      const views = humanEvents.filter(e => e.event_type === 'page_view').length
+      const uniqueVisitors = new Set(humanEvents.filter(e => e.event_type === 'page_view').map(e => e.visitor_id)).size
+      const shareClicks = humanEvents.filter(e => e.event_type === 'share_click').length
+      const ctaClicks = humanEvents.filter(e => e.event_type === 'cta_click').length
+      const subscribeSubmits = humanEvents.filter(e => e.event_type === 'subscribe_submit').length
 
       return {
         id: post.id,
@@ -391,12 +444,17 @@ export const getWebPostDetail = async (req: Request, res: Response) => {
       .eq('content_id', post.id)
       .order('recorded_at', { ascending: false })
 
-    const views = events?.filter(e => e.event_type === 'page_view').length || 0
-    const uniqueVisitors = new Set(events?.filter(e => e.event_type === 'page_view').map(e => e.visitor_id)).size
-    const shareClicks = events?.filter(e => e.event_type === 'share_click') || []
-    const ctaClicks = events?.filter(e => e.event_type === 'cta_click') || []
-    const subscribeSubmits = events?.filter(e => e.event_type === 'subscribe_submit').length || 0
-    const scrollDepths = events?.filter(e => e.event_type === 'scroll_depth') || []
+    const BOT_PATTERN = /bot|crawl|spider|slurp|mediapartners|feedly|rss|baiduspider|yandex|sogou|exabot|ia_archiver|facebookexternalhit|curl|wget|python|java\/|ruby|go-http|headlesschrome|puppeteer|semrush|ahrefs|mj12bot|dotbot|zoominfobot|seznambot|opensiteexplorer|bytespider|gptbot|chatgpt-user|ccbot|claudebot|anthropic|applebot|bingpreview/i
+    const isBot = (ua: string) => BOT_PATTERN.test(ua || '')
+
+    const humanEvents = (events || []).filter(e => !isBot(e.user_agent))
+
+    const views = humanEvents.filter(e => e.event_type === 'page_view').length
+    const uniqueVisitors = new Set(humanEvents.filter(e => e.event_type === 'page_view').map(e => e.visitor_id)).size
+    const shareClicks = humanEvents.filter(e => e.event_type === 'share_click') || []
+    const ctaClicks = humanEvents.filter(e => e.event_type === 'cta_click') || []
+    const subscribeSubmits = humanEvents.filter(e => e.event_type === 'subscribe_submit').length
+    const scrollDepths = humanEvents.filter(e => e.event_type === 'scroll_depth') || []
 
     // Share breakdown by platform
     const shareBreakdown: Record<string, number> = {}
@@ -428,7 +486,7 @@ export const getWebPostDetail = async (req: Request, res: Response) => {
     const scrollVisitors = visitorScrollValues.length
 
     // Events with timestamps for timeline
-    const recentEvents = (events || []).slice(0, 20).map(e => ({
+    const recentEvents = humanEvents.slice(0, 20).map(e => ({
       event_type: e.event_type,
       visitor_id: e.visitor_id,
       recorded_at: e.recorded_at,
