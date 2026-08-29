@@ -5,7 +5,7 @@ import { PWARegister } from '@/components/layout/PWARegister'
 import { InstallPWA } from '@/components/layout/InstallPWA'
 
 export const viewport = {
-  themeColor: '#000000',
+  themeColor: '#ffffff',
 }
 
 export const metadata: Metadata = {
@@ -18,7 +18,7 @@ export const metadata: Metadata = {
   },
   appleWebApp: {
     capable: true,
-    statusBarStyle: 'black',
+    statusBarStyle: 'default',
     title: 'Avocado Estudio',
   }
 }
@@ -26,6 +26,9 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="es">
+      <head>
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
+      </head>
       <body>
         <PWARegister />
         <InstallPWA />

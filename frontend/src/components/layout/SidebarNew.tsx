@@ -8,19 +8,16 @@ interface NavItem {
   icon: string;
   href: string;
   badge?: number;
-  pro?: boolean;
-  soon?: boolean;
 }
 
 const NAV_ITEMS: NavItem[] = [
-  { id: 'dashboard', label: 'Resumen general', icon: '🏠', href: '/dashboard' },
-  { id: 'security-password', label: 'Contraseña', icon: '🔒', href: '/settings' },
-  { id: 'calendar-month', label: 'Calendario editorial', icon: '🗓️', href: '/calendar' },
-  { id: 'topics-all', label: 'Banco de temas', icon: '💡', href: '/topics', badge: 5 },
-  { id: 'redactor-new', label: 'Redactor IA', icon: '✏️', href: '/redactor' },
-  { id: 'li-dash', label: 'LinkedIn', icon: '💼', href: '/linkedin', badge: 1 },
-  { id: 'substack-dash', label: 'Substack', icon: '📧', href: '/substack', badge: 2 },
-  { id: 'web-dash', label: 'Web', icon: '🌍', href: '/web' },
+  { id: 'dashboard', label: 'Resumen general', icon: 'fa-solid fa-house', href: '/dashboard' },
+  { id: 'calendar-month', label: 'Calendario editorial', icon: 'fa-solid fa-calendar-days', href: '/calendar' },
+  { id: 'topics-all', label: 'Banco de temas', icon: 'fa-solid fa-lightbulb', href: '/topics', badge: 5 },
+  { id: 'redactor-new', label: 'Redactor IA', icon: 'fa-solid fa-pen-nib', href: '/redactor' },
+  { id: 'li-dash', label: 'LinkedIn', icon: 'fa-brands fa-linkedin', href: '/linkedin', badge: 1 },
+  { id: 'substack-dash', label: 'Substack', icon: 'fa-solid fa-envelope', href: '/substack', badge: 2 },
+  { id: 'web-dash', label: 'Web', icon: 'fa-solid fa-globe', href: '/web' },
 ]
 
 interface SidebarProps {
@@ -42,16 +39,10 @@ export default function Sidebar({ pathname }: SidebarProps) {
             href={item.href}
             className={`av-sidebar-nav-item ${isActive(item.href, pathname) ? 'active' : ''}`}
           >
-            <span className="nav-icon">{item.icon}</span>
+            <i className={`nav-icon ${item.icon}`}></i>
             <span className="label">{item.label}</span>
             {item.badge && (
               <span className="nav-badge">{item.badge}</span>
-            )}
-            {item.pro && (
-              <span className="av-badge-pro">PRO</span>
-            )}
-            {item.soon && (
-              <span className="av-badge-soon">SOON</span>
             )}
           </Link>
         ))}
