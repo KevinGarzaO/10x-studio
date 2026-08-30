@@ -9,6 +9,12 @@ const IMG_MODEL = { label: 'Gemini Flash (Google)', value: 'nanobanana', icon: '
 const TEXT_PROVIDER = { label: 'API Key de Anthropic (Claude)', url: 'https://console.anthropic.com/', ph: 'sk-ant-...' }
 const IMG_PROVIDER = { label: 'API Key de Google (Gemini)', url: 'https://aistudio.google.com/app/apikey', ph: 'AIzaSy...' }
 
+const BACKEND_BASE = (process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:3001').replace(/\/api\/?$/, '').replace(/\/+$/, '')
+
+function backendUrl(path: string) {
+  return `${BACKEND_BASE}${path.startsWith('/') ? path : `/${path}`}`
+}
+
 function daysUntil(iso: string) {
   return Math.max(0, Math.round((new Date(iso).getTime() - Date.now()) / (1000 * 60 * 60 * 24)))
 }
@@ -154,7 +160,7 @@ export function SettingsSection() {
                 <div className="relative flex-shrink-0 w-14 h-14">
                   {settings.linkedinPhoto ? (
                     <img 
-                      src={`${process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:3001'}/api/linkedin/proxy-image?url=${encodeURIComponent(settings.linkedinPhoto)}`} 
+                      src={backendUrl(`/api/linkedin/proxy-image?url=${encodeURIComponent(settings.linkedinPhoto)}`)} 
                       alt={settings.linkedinName || 'LinkedIn'}
                       className="w-full h-full rounded-full object-cover border-2 border-white shadow-md" 
                       onError={(e) => { (e.target as HTMLImageElement).style.display = 'none' }}
@@ -191,12 +197,13 @@ export function SettingsSection() {
                   )}
                 </div>
                 <div className="flex items-center gap-2">
+                {settings.linkedinExpiresAt && daysUntil(settings.linkedinExpiresAt) <= 7 && (
                 <button
                   className="px-4 py-2 rounded-lg transition-all"
                   style={{ fontSize: 12.5, fontWeight: 600, color: '#0ea5e9', border: '1px solid rgba(14,165,233,0.3)', background: 'rgba(14,165,233,0.05)', cursor: 'pointer' }}
                   onClick={() => {
                     const popup = window.open(
-                      `${process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:3001'}/api/linkedin/auth`,
+                      backendUrl('/api/linkedin/auth'),
                       'linkedin-oauth',
                       'width=600,height=700,scrollbars=yes'
                     )
@@ -222,15 +229,14 @@ export function SettingsSection() {
                 >
                   Reconectar
                 </button>
-                {settings.linkedinExpiresAt && daysUntil(settings.linkedinExpiresAt) <= 7 && (
+                )}
                 <button
                   className="px-4 py-2 rounded-lg transition-all"
                   style={{ fontSize: 12.5, fontWeight: 600, color: '#ef4444', border: '1px solid rgba(239,68,68,0.3)', background: 'rgba(239,68,68,0.05)', cursor: 'pointer' }}
-                  onClick={async () => { await saveSettings({ ...settings, linkedinToken: '', linkedinUrn: '', linkedinName: '', linkedinPhoto: '', linkedinEmail: '' }) }}
+                  onClick={async () => { await saveSettings({ ...settings, linkedinToken: '', linkedinUrn: '', linkedinName: '', linkedinPhoto: '', linkedinEmail: '', linkedinExpiresAt: '' }) }}
                 >
                   Desconectar
                 </button>
-                )}
                 </div>
               </div>
             ) : (
@@ -243,7 +249,7 @@ export function SettingsSection() {
                   className="btn btn-sm bg-[#0A66C2] text-white hover:bg-[#0A66C2]/90 transition-colors"
                   onClick={() => {
                     const popup = window.open(
-                      `${process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:3001'}/api/linkedin/auth`,
+                      backendUrl('/api/linkedin/auth'),
                       'linkedin-oauth',
                       'width=600,height=700,scrollbars=yes'
                     )
@@ -325,6 +331,7 @@ export function SettingsSection() {
                   )}
                 </div>
                 <div className="flex items-center gap-2">
+                {substackProfile.expires_at && daysUntil(substackProfile.expires_at) <= 7 && (
                 <button
                   className="px-4 py-2 rounded-lg transition-all"
                   style={{ fontSize: 12.5, fontWeight: 600, color: '#ff6719', border: '1px solid rgba(255,103,25,0.3)', background: 'rgba(255,103,25,0.05)', cursor: 'pointer' }}
@@ -332,7 +339,7 @@ export function SettingsSection() {
                 >
                   Reconectar
                 </button>
-                {substackProfile.expires_at && daysUntil(substackProfile.expires_at) <= 7 && (
+                )}
                 <button
                   className="px-4 py-2 rounded-lg transition-all"
                   style={{ fontSize: 12.5, fontWeight: 600, color: '#ef4444', border: '1px solid rgba(239,68,68,0.3)', background: 'rgba(239,68,68,0.05)', cursor: 'pointer' }}
@@ -340,7 +347,6 @@ export function SettingsSection() {
                 >
                   Desconectar
                 </button>
-                )}
                 </div>
               </div>
             ) : (
