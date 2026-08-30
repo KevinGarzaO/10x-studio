@@ -39,6 +39,7 @@ export const getProfile = async (req: Request, res: Response) => {
     // 4. Build response
     const responseData = {
       ...user,
+      connected_at: user.created_at || null,
       expires_at: expiresAt,
       publication_name: primaryPub?.name || null,
       subdomain: primaryPub?.subdomain || null,

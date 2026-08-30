@@ -1,219 +1,64 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { useApp } from '@/components/layout/AppProvider'
 import { Password } from 'primereact/password'
-import { Dropdown } from 'primereact/dropdown'
+import { api } from '@/lib/api'
 
-const TEXT_MODELS = [
-  { label: 'Claude (Anthropic)', value: 'claude', icon: 'pi-bolt' },
-  { label: 'ChatGPT (OpenAI)',   value: 'chatgpt', icon: 'pi-comment' },
-  { label: 'Gemini (Google)',    value: 'gemini', icon: 'pi-sparkles' },
-  { label: 'Mistral AI',         value: 'mistral', icon: 'pi-cloud' },
-  { label: 'Llama (Meta/Together)', value: 'llama', icon: 'pi-facebook' },
-  { label: 'Grok (xAI)',         value: 'grok', icon: 'pi-twitter' },
-  { label: 'Command (Cohere)',   value: 'cohere', icon: 'pi-comment' },
-  { label: 'DeepSeek',           value: 'deepseek', icon: 'pi-code' },
-]
+const TEXT_MODEL = { label: 'Claude (Anthropic)', value: 'claude', icon: 'pi-bolt' }
+const IMG_MODEL = { label: 'Gemini Flash (Google)', value: 'nanobanana', icon: 'pi-sparkles' }
 
-const IMG_MODELS = [
-  { label: 'DALL-E & GPT Visión (OpenAI)', value: 'dalle', icon: 'pi-image' },
-  { label: 'Imagen (Google Vertex)',       value: 'imagen', icon: 'pi-google' },
-  { label: 'Nano Banana (Gemini Flash)',   value: 'nanobanana', icon: 'pi-bolt' },
-  { label: 'FLUX (Black Forest Labs)',     value: 'flux', icon: 'pi-bolt' },
-  { label: 'Stable Diffusion (Stability)', value: 'stable-diffusion', icon: 'pi-box' },
-  { label: 'Ideogram',                     value: 'ideogram', icon: 'pi-image' },
-  { label: 'Midjourney (Alternativa)',     value: 'midjourney', icon: 'pi-palette' },
-  { label: 'Firefly (Adobe)',              value: 'firefly', icon: 'pi-pencil' },
-]
+const TEXT_PROVIDER = { label: 'API Key de Anthropic (Claude)', url: 'https://console.anthropic.com/', ph: 'sk-ant-...' }
+const IMG_PROVIDER = { label: 'API Key de Google (Gemini)', url: 'https://aistudio.google.com/app/apikey', ph: 'AIzaSy...' }
 
-const VERSIONS: Record<string, { label: string; value: string }[]> = {
-  // Texto
-  claude: [
-    { label: 'Claude Opus 4.6', value: 'claude-opus-4-6' },
-    { label: 'Claude Sonnet 4.6', value: 'claude-sonnet-4-6' },
-    { label: 'Claude Haiku 4.5', value: 'claude-haiku-4-5-20251001' },
-    { label: 'Claude Sonnet 4.5', value: 'claude-sonnet-4-5-20250929' },
-    { label: 'Claude Opus 4.5', value: 'claude-opus-4-5' },
-    { label: 'Claude Sonnet 4', value: 'claude-sonnet-4-20250514' },
-    { label: 'Claude Opus 4', value: 'claude-opus-4-20250514' }
-  ],
-  chatgpt: [
-    { label: 'GPT-5.4', value: 'gpt-5.4' },
-    { label: 'GPT-5.2', value: 'gpt-5.2' },
-    { label: 'GPT-5 mini', value: 'gpt-5-mini' },
-    { label: 'GPT-4.1', value: 'gpt-4.1-2025-04-14' },
-    { label: 'GPT-4.1 Mini', value: 'gpt-4.1-mini-2025-04-14' },
-    { label: 'GPT-4.1 Nano', value: 'gpt-4.1-nano-2025-04-14' },
-    { label: 'GPT-4o', value: 'gpt-4o' },
-    { label: 'GPT-4o Mini', value: 'gpt-4o-mini' },
-    { label: 'o3', value: 'openai/o3-2025-04-16' },
-    { label: 'o4-mini', value: 'openai/o4-mini-2025-04-16' },
-    { label: 'GPT OSS 120B (open)', value: 'openai/gpt-oss-120b' },
-    { label: 'GPT OSS 20B (open)', value: 'openai/gpt-oss-20b' }
-  ],
-  gemini: [
-    { label: 'Gemini 3.1 Pro Preview', value: 'gemini-3.1-pro-preview' },
-    { label: 'Gemini 2.5 Pro', value: 'gemini-2.5-pro' },
-    { label: 'Gemini 2.5 Flash', value: 'gemini-2.5-flash' },
-    { label: 'Gemini 2.5 Flash-Lite', value: 'gemini-2.5-flash-lite' },
-    { label: 'Gemini 2.0 Flash', value: 'gemini-2.0-flash' },
-    { label: 'Gemini 2.0 Flash-Lite', value: 'gemini-2.0-flash-lite' }
-  ],
-  mistral: [
-    { label: 'Mistral Large 3', value: 'mistral-large-latest' },
-    { label: 'Mistral Small 3', value: 'mistral-small-latest' },
-    { label: 'Codestral 25.01', value: 'codestral-latest' },
-    { label: 'Pixtral Large', value: 'pixtral-large-latest' },
-    { label: 'Mistral 7B', value: 'open-mistral-7b' }
-  ],
-  llama: [
-    { label: 'Llama 3.3 70B', value: 'meta-llama/Llama-3.3-70B-Instruct-Turbo' },
-    { label: 'Llama 3.2 90B Vision', value: 'meta-llama/Llama-3.2-90B-Vision-Instruct-Turbo' },
-    { label: 'Llama 3.2 11B Vision', value: 'meta-llama/Llama-3.2-11B-Vision-Instruct-Turbo' },
-    { label: 'Llama 3.2 3B', value: 'meta-llama/Llama-3.2-3B-Instruct-Turbo' },
-    { label: 'Llama 3.2 1B', value: 'meta-llama/Llama-3.2-1B-Instruct-Turbo' }
-  ],
-  grok: [
-    { label: 'Grok 4', value: 'grok-4' },
-    { label: 'Grok 4 Fast', value: 'grok-4-fast-reasoning' },
-    { label: 'Grok 3', value: 'grok-3' },
-    { label: 'Grok 3 Mini', value: 'grok-3-mini' }
-  ],
-  cohere: [
-    { label: 'Command A', value: 'command-a-03-2025' },
-    { label: 'Command R+', value: 'command-r-plus' },
-    { label: 'Command R', value: 'command-r' },
-    { label: 'Command R7B', value: 'command-r7b-12-2024' }
-  ],
-  deepseek: [
-    { label: 'DeepSeek V3', value: 'deepseek-chat' },
-    { label: 'DeepSeek R1', value: 'deepseek-reasoner' },
-    { label: 'DeepSeek V3.2', value: 'DeepSeek-V3.2' }
-  ],
-  // Imágenes
-  dalle: [
-    { label: 'GPT Image 1.5', value: 'gpt-image-1.5' },
-    { label: 'DALL-E 3', value: 'dall-e-3' }
-  ],
-  imagen: [
-    { label: 'Imagen 4 Ultra', value: 'imagen-4-0-ultra-generate-001' },
-    { label: 'Imagen 4 Standard', value: 'imagen-4-0-generate-001' }
-  ],
-  nanobanana: [
-    { label: 'Gemini 3.1 Flash Image', value: 'gemini-3.1-flash-image' }
-  ],
-  flux: [
-    { label: 'FLUX 1.1 Pro (Replicate)', value: 'black-forest-labs/flux-1.1-pro' },
-    { label: 'FLUX 1.1 Pro Ultra', value: 'black-forest-labs/flux-1.1-pro-ultra' },
-    { label: 'FLUX Kontext Pro', value: 'black-forest-labs/flux-kontext-pro' },
-    { label: 'FLUX Schnell', value: 'black-forest-labs/flux-schnell' }
-  ],
-  'stable-diffusion': [
-    { label: 'Stable Diffusion 3.5 Large', value: 'stability/stable-diffusion-3-5-large' }
-  ],
-  ideogram: [
-    { label: 'Ideogram v3', value: 'ideogram-ai/ideogram-v3' },
-    { label: 'Ideogram v3 Turbo', value: 'ideogram-ai/ideogram-v3-turbo' }
-  ],
-  midjourney: [
-    { label: 'V7', value: 'v7' }
-  ],
-  firefly: [
-    { label: 'Firefly 3', value: 'firefly-3' }
-  ]
-}
-
-const PROVIDER_INFO: Record<string, { label: string; url?: string; ph: string }> = {
-  claude: { label: 'API Key de Anthropic (Claude)', url: 'https://console.anthropic.com/', ph: 'sk-ant-...' },
-  chatgpt: { label: 'API Key de OpenAI (ChatGPT)', url: 'https://platform.openai.com/api-keys', ph: 'sk-proj-...' },
-  gemini: { label: 'API Key de Google (Gemini/Vertex)', url: 'https://aistudio.google.com/app/apikey', ph: 'AIzaSy...' },
-  mistral: { label: 'API Key de Mistral AI', url: 'https://console.mistral.ai/', ph: '...' },
-  llama: { label: 'API Key de Together AI (Llama)', url: 'https://api.together.xyz/settings/api-keys', ph: '...' },
-  grok: { label: 'API Key de xAI (Grok)', url: 'https://console.x.ai/', ph: 'xai-...' },
-  cohere: { label: 'API Key de Cohere', url: 'https://dashboard.cohere.com/api-keys', ph: '...' },
-  deepseek: { label: 'API Key de DeepSeek', url: 'https://platform.deepseek.com/', ph: 'sk-...' },
-  dalle: { label: 'API Key de OpenAI (GPT Visión)', url: 'https://platform.openai.com/api-keys', ph: 'sk-proj-...' },
-  imagen: { label: 'API Key de Google Cloud (Imagen)', url: 'https://console.cloud.google.com/', ph: '...' },
-  nanobanana: { label: 'API Key de Nano Banana', ph: 'nb-...' },
-  flux: { label: 'API Key de Replicate (FLUX)', url: 'https://replicate.com/', ph: 'r8_...' },
-  'stable-diffusion': { label: 'API Key de Stability AI', url: 'https://platform.stability.ai/account/keys', ph: 'sk-...' },
-  ideogram: { label: 'API Key de Ideogram', url: 'https://ideogram.ai/manage-api', ph: '...' },
-  midjourney: { label: 'Token de API Alternativa (Midjourney)', ph: '...' },
-  firefly: { label: 'Credentials de Adobe Firefly', url: 'https://developer.adobe.com/', ph: '...' },
+function daysUntil(iso: string) {
+  return Math.max(0, Math.round((new Date(iso).getTime() - Date.now()) / (1000 * 60 * 60 * 24)))
 }
 
 export function SettingsSection() {
-  const { settings, saveSettings } = useApp()
+  const { settings, saveSettings, substackConnected, reloadSubstackProfile } = useApp()
   
-  // Local state for smooth typing before saving
   const [localSettings, setLocalSettings] = useState({
-    textModel: settings.textModel || 'claude',
-    imgModel:  settings.imgModel  || 'dalle',
-    apiKeys:   settings.apiKeys   || { claude: settings.apiKey || '' },
-    modelVersions: settings.modelVersions || {}
+    claudeKey: settings.apiKeys?.claude || settings.apiKey || '',
+    geminiKey: settings.apiKeys?.nanobanana || ''
   })
 
-  // Sync when global settings change (e.g., initial load)
+  const [substackProfile, setSubstackProfile] = useState<any>(null)
+
+  const loadSubstackProfile = useCallback(async () => {
+    try {
+      const sub = await api<any>('/api/substack/profile')
+      if (sub && !sub.error) {
+        setSubstackProfile(sub)
+      }
+    } catch {}
+  }, [])
+
+  useEffect(() => { loadSubstackProfile() }, [substackConnected, loadSubstackProfile])
+
   useEffect(() => {
     setLocalSettings({
-      textModel: settings.textModel || 'claude',
-      imgModel:  settings.imgModel  || 'dalle',
-      apiKeys:   settings.apiKeys   || { claude: settings.apiKey || '' },
-      modelVersions: settings.modelVersions || {}
+      claudeKey: settings.apiKeys?.claude || settings.apiKey || '',
+      geminiKey: settings.apiKeys?.nanobanana || ''
     })
-  }, [settings.textModel, settings.imgModel, settings.apiKeys, settings.apiKey, settings.modelVersions])
+  }, [settings.apiKeys, settings.apiKey, settings.modelVersions])
+
+  useEffect(() => {
+    if (window.location.hash) {
+      const el = document.getElementById(window.location.hash.slice(1))
+      if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    }
+  }, [])
 
   const handleSave = async (updated: typeof localSettings) => {
-    // Keep internal legacy apiKey synced with claude for backward compatibility if needed
     await saveSettings({ 
       ...settings, 
-      textModel: updated.textModel,
-      imgModel: updated.imgModel,
-      apiKeys: updated.apiKeys,
-      modelVersions: updated.modelVersions,
-      apiKey: updated.apiKeys.claude || settings.apiKey
+      textModel: 'claude',
+      imgModel: 'nanobanana',
+      apiKeys: { claude: updated.claudeKey, nanobanana: updated.geminiKey },
+      apiKey: updated.claudeKey || settings.apiKey
     })
-  }
-
-  const updateKey = (provider: string, value: string) => {
-    const next = { ...localSettings, apiKeys: { ...localSettings.apiKeys, [provider as keyof typeof localSettings.apiKeys]: value } }
-    setLocalSettings(next)
-  }
-
-  const updateVersion = (provider: string, value: string) => {
-    const next = { ...localSettings, modelVersions: { ...localSettings.modelVersions, [provider as keyof typeof localSettings.modelVersions]: value } }
-    setLocalSettings(next)
-    handleSave(next)
   }
 
   const blurKey = () => handleSave(localSettings)
-
-  const changeTextModel = (val: string) => {
-    const next = { ...localSettings, textModel: val as any }
-    setLocalSettings(next)
-    handleSave(next)
-  }
-
-  const changeImgModel = (val: string) => {
-    const next = { ...localSettings, imgModel: val as any }
-    setLocalSettings(next)
-    handleSave(next)
-  }
-
-  const itemTemplate = (option: any) => (
-    <div className="flex items-center gap-2">
-      <i className={`pi ${option.icon} text-brand-secondary`}></i>
-      <span className="font-medium">{option.label}</span>
-    </div>
-  )
-
-  const activeTextVersions = VERSIONS[localSettings.textModel] || []
-  const currentTextVersion = localSettings.modelVersions[localSettings.textModel as keyof typeof localSettings.modelVersions] || activeTextVersions[0]?.value
-
-  const activeImgVersions = VERSIONS[localSettings.imgModel] || []
-  const currentImgVersion = localSettings.modelVersions[localSettings.imgModel as keyof typeof localSettings.modelVersions] || activeImgVersions[0]?.value
-
-  const txtProv = PROVIDER_INFO[localSettings.textModel] || { label: `API Key (${localSettings.textModel})`, ph: '...' }
-  const imgProv = PROVIDER_INFO[localSettings.imgModel] || { label: `API Key (${localSettings.imgModel})`, ph: '...' }
 
   return (
     <div className="px-8 py-7" style={{ maxWidth: 1100 }}>
@@ -233,143 +78,160 @@ export function SettingsSection() {
       </div>
 
       <div className="grid gap-8">
-        {/* IA de Texto */}
+        {/* Claude - Texto */}
         <section className="bg-brand-surface border border-brand-border rounded-2xl overflow-hidden shadow-[var(--shadow)]">
           <div className="bg-brand-bg/50 border-b border-brand-border px-6 py-4 flex items-center gap-3">
-            <i className="pi pi-align-left text-brand-secondary"></i>
-            <h2 className="text-sm font-bold text-brand-primary uppercase tracking-wide">Modelo de Texto Principal</h2>
+            <i className="pi pi-bolt text-brand-secondary"></i>
+            <h2 className="text-sm font-bold text-brand-primary uppercase tracking-wide">Claude (Anthropic) - Texto</h2>
           </div>
           <div className="p-6">
             <div className="grid gap-6">
-              
-              <div className="flex flex-col md:flex-row gap-6">
-                <div className="flex flex-col gap-2 flex-1">
-                  <label className="text-xs font-black text-brand-secondary uppercase tracking-widest">Proveedor de IA</label>
-                  <Dropdown 
-                    value={localSettings.textModel} 
-                    options={TEXT_MODELS} 
-                    onChange={(e) => changeTextModel(e.value)} 
-                    itemTemplate={itemTemplate}
-                    valueTemplate={itemTemplate}
-                    className="w-full input text-sm !bg-brand-bg" 
-                  />
-                  <p className="text-xs text-brand-secondary mt-1.5 leading-relaxed">Este modelo se usará para el Redactor IA y la generación de ideas.</p>
-                </div>
-
-                <div className="flex flex-col gap-2 flex-1">
-                  <label className="text-xs font-black text-brand-secondary uppercase tracking-widest">Versión del Modelo</label>
-                  <Dropdown 
-                    value={currentTextVersion} 
-                    options={activeTextVersions} 
-                    onChange={(e) => updateVersion(localSettings.textModel, e.value)} 
-                    className="w-full input text-sm !bg-brand-bg" 
-                    placeholder="Selecciona versión..."
-                  />
-                  <p className="text-xs text-brand-secondary mt-1.5 leading-relaxed">Selecciona la versión específica que deseas usar.</p>
-                </div>
+              <div className="flex flex-col gap-2">
+                <label className="text-xs font-black text-brand-secondary uppercase tracking-widest">Versión del Modelo</label>
+                <p className="text-sm font-medium text-brand-primary">Claude Opus 4.6</p>
               </div>
 
               <div className="flex flex-col gap-2 border-t border-brand-border pt-6">
-                <label className="text-xs font-black text-brand-secondary uppercase tracking-widest">{txtProv.label}</label>
+                <label className="text-xs font-black text-brand-secondary uppercase tracking-widest">{TEXT_PROVIDER.label}</label>
                 <Password
-                  value={localSettings.apiKeys[localSettings.textModel as keyof typeof localSettings.apiKeys] || ''}
-                  onChange={(e: any) => updateKey(localSettings.textModel, e.target.value)}
+                  value={localSettings.claudeKey}
+                  onChange={(e: any) => setLocalSettings({ ...localSettings, claudeKey: e.target.value })}
                   onBlur={blurKey}
-                  placeholder={txtProv.ph}
+                  placeholder={TEXT_PROVIDER.ph}
                   feedback={false}
                   toggleMask
                   inputClassName="input w-full md:w-[600px] font-mono text-sm !bg-brand-bg"
                 />
-                {txtProv.url && (
-                  <a href={txtProv.url} target="_blank" rel="noreferrer" className="text-xs text-brand-accent font-bold hover:brightness-110 flex items-center gap-1.5 mt-2 w-fit underline transition-all">
-                    Obtener API Key <i className="pi pi-external-link text-[10px]"></i>
-                  </a>
-                )}
+                <a href={TEXT_PROVIDER.url} target="_blank" rel="noreferrer" className="text-xs text-brand-accent font-bold hover:brightness-110 flex items-center gap-1.5 mt-2 w-fit underline transition-all">
+                  Obtener API Key <i className="pi pi-external-link text-[10px]"></i>
+                </a>
               </div>
-
             </div>
           </div>
         </section>
 
-        {/* IA de Imagenes */}
+        {/* Gemini - Imagenes */}
         <section className="bg-brand-surface border border-brand-border rounded-2xl overflow-hidden shadow-[var(--shadow)]">
           <div className="bg-brand-bg/50 border-b border-brand-border px-6 py-4 flex items-center gap-3">
-            <i className="pi pi-image text-brand-secondary"></i>
-            <h2 className="text-sm font-bold text-brand-primary uppercase tracking-wide">Modelo de Imágenes Generativas</h2>
+            <i className="pi pi-sparkles text-brand-secondary"></i>
+            <h2 className="text-sm font-bold text-brand-primary uppercase tracking-wide">Gemini Flash (Google) - Imágenes</h2>
           </div>
           <div className="p-6">
             <div className="grid gap-6">
-              
-              <div className="flex flex-col md:flex-row gap-6">
-                <div className="flex flex-col gap-2 flex-1">
-                  <label className="text-xs font-black text-brand-secondary uppercase tracking-widest">Proveedor de Imágenes</label>
-                  <Dropdown 
-                    value={localSettings.imgModel} 
-                    options={IMG_MODELS} 
-                    onChange={(e) => changeImgModel(e.value)} 
-                    itemTemplate={itemTemplate}
-                    valueTemplate={itemTemplate}
-                    className="w-full input text-sm !bg-brand-bg" 
-                  />
-                  <p className="text-xs text-brand-secondary mt-1.5 leading-relaxed">Este modelo se usará para generar portadas y miniaturas automáticas.</p>
-                </div>
-
-                <div className="flex flex-col gap-2 flex-1">
-                  <label className="text-xs font-black text-brand-secondary uppercase tracking-widest">Versión del Modelo</label>
-                  <Dropdown 
-                    value={currentImgVersion} 
-                    options={activeImgVersions} 
-                    onChange={(e) => updateVersion(localSettings.imgModel, e.value)} 
-                    className="w-full input text-sm !bg-brand-bg" 
-                    placeholder="Selecciona versión..."
-                  />
-                  <p className="text-xs text-brand-secondary mt-1.5 leading-relaxed">Selecciona la versión específica que deseas usar.</p>
-                </div>
+              <div className="flex flex-col gap-2">
+                <label className="text-xs font-black text-brand-secondary uppercase tracking-widest">Versión del Modelo</label>
+                <p className="text-sm font-medium text-brand-primary">Gemini 3.1 Flash Image</p>
               </div>
 
               <div className="flex flex-col gap-2 border-t border-brand-border pt-6">
-                <label className="text-xs font-black text-brand-secondary uppercase tracking-widest">{imgProv.label}</label>
+                <label className="text-xs font-black text-brand-secondary uppercase tracking-widest">{IMG_PROVIDER.label}</label>
                 <Password
-                  value={localSettings.apiKeys[localSettings.imgModel as keyof typeof localSettings.apiKeys] || ''}
-                  onChange={(e: any) => updateKey(localSettings.imgModel, e.target.value)}
+                  value={localSettings.geminiKey}
+                  onChange={(e: any) => setLocalSettings({ ...localSettings, geminiKey: e.target.value })}
                   onBlur={blurKey}
-                  placeholder={imgProv.ph}
+                  placeholder={IMG_PROVIDER.ph}
                   feedback={false}
                   toggleMask
                   inputClassName="input w-full md:w-[600px] font-mono text-sm !bg-brand-bg"
                 />
-                {imgProv.url && (
-                  <a href={imgProv.url} target="_blank" rel="noreferrer" className="text-xs text-brand-accent font-bold hover:brightness-110 flex items-center gap-1.5 mt-2 w-fit underline transition-all">
-                    Obtener API Key <i className="pi pi-external-link text-[10px]"></i>
-                  </a>
-                )}
+                <a href={IMG_PROVIDER.url} target="_blank" rel="noreferrer" className="text-xs text-brand-accent font-bold hover:brightness-110 flex items-center gap-1.5 mt-2 w-fit underline transition-all">
+                  Obtener API Key <i className="pi pi-external-link text-[10px]"></i>
+                </a>
               </div>
-
             </div>
           </div>
         </section>
+
         {/* LinkedIn */}
-        <section className="bg-brand-surface border border-brand-border rounded-2xl overflow-hidden shadow-[var(--shadow)]">
+        <section id="linkedin" className="bg-brand-surface border border-brand-border rounded-2xl overflow-hidden shadow-[var(--shadow)]">
           <div className="bg-brand-bg/50 border-b border-brand-border px-6 py-4 flex items-center gap-3">
             <i className="pi pi-linkedin text-[#0A66C2]"></i>
             <h2 className="text-sm font-bold text-brand-primary uppercase tracking-wide">LinkedIn</h2>
           </div>
           <div className="p-6">
             {settings.linkedinToken ? (
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <span className="w-2.5 h-2.5 rounded-full bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.6)]"></span>
-                  <div>
-                    <p className="text-sm font-bold text-brand-primary">Conectado como {settings.linkedinName || 'LinkedIn User'}</p>
-                    <p className="text-xs text-brand-secondary mt-0.5">Tu cuenta está lista para publicar</p>
+              <div className="flex items-center gap-4 p-5 rounded-xl" style={{ background: '#fff', border: '1px solid var(--border)', boxShadow: '0 1px 3px rgba(0,0,0,0.04)' }}>
+                <div className="relative flex-shrink-0 w-14 h-14">
+                  {settings.linkedinPhoto ? (
+                    <img 
+                      src={`${process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:3001'}/api/linkedin/proxy-image?url=${encodeURIComponent(settings.linkedinPhoto)}`} 
+                      alt={settings.linkedinName || 'LinkedIn'}
+                      className="w-full h-full rounded-full object-cover border-2 border-white shadow-md" 
+                      onError={(e) => { (e.target as HTMLImageElement).style.display = 'none' }}
+                    />
+                  ) : (
+                    <div className="w-full h-full rounded-full bg-gradient-to-tr from-[#0A66C2] to-[#004182] flex items-center justify-center text-white font-bold text-xl shadow-md">
+                      {(settings.linkedinName || 'L')[0].toUpperCase()}
+                    </div>
+                  )}
+                  <div className="absolute bottom-0 right-0 rounded-full flex items-center justify-center"
+                    style={{ width: 18, height: 18, background: '#10b981', border: '2px solid #fff' }}>
+                    <svg width="8" height="8" fill="none" viewBox="0 0 24 24"><path d="M5 13l4 4L19 7" stroke="#fff" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"/></svg>
                   </div>
                 </div>
+                <div className="flex-1">
+                  <div style={{ fontFamily: 'var(--font-heading)', fontWeight: 800, fontSize: 18, color: '#0d1117' }}>{settings.linkedinName || 'LinkedIn User'}</div>
+                  <div style={{ fontSize: 13, fontWeight: 700, color: '#0ea5e9', letterSpacing: '0.02em' }}>PERFIL PROFESIONAL VERIFICADO</div>
+                  <div className="flex items-center gap-3 mt-1">
+                    <div className="flex items-center gap-1.5" style={{ fontSize: 12, color: '#64748b' }}>
+                      <div className="rounded-full" style={{ width: 6, height: 6, background: '#10b981' }}/>
+                      Sesión Activa
+                    </div>
+                    {settings.linkedinEmail && <span style={{ fontSize: 12, color: '#94a3b8' }}>{settings.linkedinEmail}</span>}
+                  </div>
+                  {settings.linkedinExpiresAt && (
+                    <div className="flex items-center gap-2 mt-2">
+                      <span style={{ fontSize: 11, color: '#94a3b8' }}>
+                        Expira el {new Date(settings.linkedinExpiresAt).toLocaleDateString('es-ES', { day: '2-digit', month: 'short', year: 'numeric' })}
+                      </span>
+                      <span style={{ fontSize: 11, color: Math.max(0, Math.round((new Date(settings.linkedinExpiresAt).getTime() - Date.now()) / (1000 * 60 * 60 * 24))) <= 7 ? '#ef4444' : '#10b981', fontWeight: 600 }}>
+                        ({Math.max(0, Math.round((new Date(settings.linkedinExpiresAt).getTime() - Date.now()) / (1000 * 60 * 60 * 24)))} días)
+                      </span>
+                    </div>
+                  )}
+                </div>
+                <div className="flex items-center gap-2">
                 <button
-                  className="btn btn-sm btn-secondary text-xs"
-                  onClick={async () => { await saveSettings({ ...settings, linkedinToken: '', linkedinUrn: '', linkedinName: '' }) }}
+                  className="px-4 py-2 rounded-lg transition-all"
+                  style={{ fontSize: 12.5, fontWeight: 600, color: '#0ea5e9', border: '1px solid rgba(14,165,233,0.3)', background: 'rgba(14,165,233,0.05)', cursor: 'pointer' }}
+                  onClick={() => {
+                    const popup = window.open(
+                      `${process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:3001'}/api/linkedin/auth`,
+                      'linkedin-oauth',
+                      'width=600,height=700,scrollbars=yes'
+                    )
+                    const handler = (e: MessageEvent) => {
+                      if (e.data?.type === 'LINKEDIN_AUTH') {
+                        saveSettings({ 
+                          ...settings, 
+                          linkedinToken: e.data.token, 
+                          linkedinUrn: e.data.urn, 
+                          linkedinName: e.data.name,
+                          linkedinPhoto: e.data.photo,
+                          linkedinEmail: e.data.email,
+                          linkedinHeadline: e.data.headline,
+                          linkedinConnectedAt: e.data.connectedAt,
+                          linkedinExpiresAt: e.data.expiresAt
+                        })
+                        window.removeEventListener('message', handler)
+                        popup?.close()
+                      }
+                    }
+                    window.addEventListener('message', handler)
+                  }}
                 >
-                  <i className="pi pi-sign-out mr-1 text-[10px]"></i>Desconectar
+                  Reconectar
                 </button>
+                {settings.linkedinExpiresAt && daysUntil(settings.linkedinExpiresAt) <= 7 && (
+                <button
+                  className="px-4 py-2 rounded-lg transition-all"
+                  style={{ fontSize: 12.5, fontWeight: 600, color: '#ef4444', border: '1px solid rgba(239,68,68,0.3)', background: 'rgba(239,68,68,0.05)', cursor: 'pointer' }}
+                  onClick={async () => { await saveSettings({ ...settings, linkedinToken: '', linkedinUrn: '', linkedinName: '', linkedinPhoto: '', linkedinEmail: '' }) }}
+                >
+                  Desconectar
+                </button>
+                )}
+                </div>
               </div>
             ) : (
               <div className="flex items-center justify-between">
@@ -394,7 +256,9 @@ export function SettingsSection() {
                           linkedinName: e.data.name,
                           linkedinPhoto: e.data.photo,
                           linkedinEmail: e.data.email,
-                          linkedinHeadline: e.data.headline
+                          linkedinHeadline: e.data.headline,
+                          linkedinConnectedAt: e.data.connectedAt,
+                          linkedinExpiresAt: e.data.expiresAt
                         })
                         window.removeEventListener('message', handler)
                         popup?.close()
@@ -409,8 +273,87 @@ export function SettingsSection() {
             )}
           </div>
         </section>
-      </div>
 
+        {/* Substack */}
+        <section id="substack" className="bg-brand-surface border border-brand-border rounded-2xl overflow-hidden shadow-[var(--shadow)]">
+          <div className="bg-brand-bg/50 border-b border-brand-border px-6 py-4 flex items-center gap-3">
+            <div className="w-5 h-5 rounded flex items-center justify-center" style={{ background: '#ff6719' }}>
+              <svg width="12" height="12" fill="white" viewBox="0 0 24 24"><path d="M22.539 8.242H1.46V5.406h21.08v2.836zM1.46 10.812V24L12 18.11 22.54 24V10.812H1.46zM22.54 0H1.46v2.836h21.08V0z"/></svg>
+            </div>
+            <h2 className="text-sm font-bold text-brand-primary uppercase tracking-wide">Substack</h2>
+          </div>
+          <div className="p-6">
+            {substackConnected && substackProfile ? (
+              <div className="flex items-center gap-4 p-5 rounded-xl" style={{ background: '#fff', border: '1px solid var(--border)', boxShadow: '0 1px 3px rgba(0,0,0,0.04)' }}>
+                <div className="relative flex-shrink-0 w-14 h-14">
+                  {substackProfile.photo_url ? (
+                    <img 
+                      src={substackProfile.photo_url} 
+                      alt={substackProfile.name || 'Substack'}
+                      className="w-full h-full rounded-full object-cover border-2 border-white shadow-md" 
+                      onError={(e) => { (e.target as HTMLImageElement).style.display = 'none' }}
+                    />
+                  ) : (
+                    <div className="w-full h-full rounded-full flex items-center justify-center text-white font-bold text-xl shadow-md" style={{ background: '#ff6719' }}>
+                      {(substackProfile.name || 'S')[0].toUpperCase()}
+                    </div>
+                  )}
+                  <div className="absolute bottom-0 right-0 rounded-full flex items-center justify-center"
+                    style={{ width: 18, height: 18, background: '#10b981', border: '2px solid #fff' }}>
+                    <svg width="8" height="8" fill="none" viewBox="0 0 24 24"><path d="M5 13l4 4L19 7" stroke="#fff" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                  </div>
+                </div>
+                <div className="flex-1">
+                  <div style={{ fontFamily: 'var(--font-heading)', fontWeight: 800, fontSize: 18, color: '#0d1117' }}>{substackProfile.name || 'Substack User'}</div>
+                  <div style={{ fontSize: 13, fontWeight: 700, color: '#ff6719', letterSpacing: '0.02em' }}>PERFIL VERIFICADO</div>
+                  <div className="flex items-center gap-3 mt-1">
+                    <div className="flex items-center gap-1.5" style={{ fontSize: 12, color: '#64748b' }}>
+                      <div className="rounded-full" style={{ width: 6, height: 6, background: '#10b981' }}/>
+                      Sesión Activa
+                    </div>
+                    {substackProfile.email && <span style={{ fontSize: 12, color: '#94a3b8' }}>{substackProfile.email}</span>}
+                  </div>
+                  {substackProfile.expires_at && (
+                    <div className="flex items-center gap-2 mt-2">
+                      <span style={{ fontSize: 11, color: '#94a3b8' }}>
+                        Expira el {new Date(substackProfile.expires_at).toLocaleDateString('es-ES', { day: '2-digit', month: 'short', year: 'numeric' })}
+                      </span>
+                      <span style={{ fontSize: 11, color: Math.max(0, Math.round((new Date(substackProfile.expires_at).getTime() - Date.now()) / (1000 * 60 * 60 * 24))) <= 7 ? '#ef4444' : '#10b981', fontWeight: 600 }}>
+                        ({Math.max(0, Math.round((new Date(substackProfile.expires_at).getTime() - Date.now()) / (1000 * 60 * 60 * 24)))} días)
+                      </span>
+                    </div>
+                  )}
+                </div>
+                <div className="flex items-center gap-2">
+                <button
+                  className="px-4 py-2 rounded-lg transition-all"
+                  style={{ fontSize: 12.5, fontWeight: 600, color: '#ff6719', border: '1px solid rgba(255,103,25,0.3)', background: 'rgba(255,103,25,0.05)', cursor: 'pointer' }}
+                  onClick={async () => { await loadSubstackProfile() }}
+                >
+                  Reconectar
+                </button>
+                {substackProfile.expires_at && daysUntil(substackProfile.expires_at) <= 7 && (
+                <button
+                  className="px-4 py-2 rounded-lg transition-all"
+                  style={{ fontSize: 12.5, fontWeight: 600, color: '#ef4444', border: '1px solid rgba(239,68,68,0.3)', background: 'rgba(239,68,68,0.05)', cursor: 'pointer' }}
+                  onClick={async () => { await api('/api/substack/cookies', { method: 'DELETE' }); await reloadSubstackProfile(); setSubstackProfile(null) }}
+                >
+                  Desconectar
+                </button>
+                )}
+                </div>
+              </div>
+            ) : (
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-bold text-brand-primary">No conectado</p>
+                  <p className="text-xs text-brand-secondary mt-0.5">Conecta tu Substack desde la extensión de Chrome</p>
+                </div>
+              </div>
+            )}
+          </div>
+        </section>
+      </div>
     </div>
   )
 }

@@ -108,8 +108,27 @@ export default function SidebarNew({ pathname }: SidebarProps) {
   return (
     <aside
       className="sidebar"
-      style={{ width: collapsed ? 64 : 228, transition: 'width 0.3s', flexShrink: 0 }}
+      style={{ width: collapsed ? 64 : 228, transition: 'width 0.3s', flexShrink: 0, position: 'relative' }}
     >
+      {/* Collapse Toggle */}
+      <button
+        onClick={() => setCollapsed(!collapsed)}
+        style={{
+          position: 'absolute', top: 22, right: 4, zIndex: 10,
+          width: 22, height: 22, borderRadius: '50%',
+          background: '#0f172a', border: '1.5px solid #334155',
+          color: '#94a3b8', cursor: 'pointer',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          transition: 'all 0.15s',
+        }}
+        onMouseEnter={(e) => { e.currentTarget.style.background = '#334155'; e.currentTarget.style.color = '#e2e8f0' }}
+        onMouseLeave={(e) => { e.currentTarget.style.background = '#0f172a'; e.currentTarget.style.color = '#94a3b8' }}
+      >
+        <svg width="10" height="10" fill="none" viewBox="0 0 24 24">
+          <path d={collapsed ? 'M9 18l6-6-6-6' : 'M15 18l-6-6 6-6'} stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/>
+        </svg>
+      </button>
+
       {/* Logo — links to /dashboard */}
       <Link
         href="/dashboard"
@@ -144,17 +163,6 @@ export default function SidebarNew({ pathname }: SidebarProps) {
             </div>
           </div>
         )}
-        <button
-          onClick={() => setCollapsed(!collapsed)}
-          className="ml-auto flex-shrink-0"
-          style={{ color: '#475569', transition: 'color 0.15s', background: 'none', border: 'none', cursor: 'pointer' }}
-          onMouseEnter={(e) => (e.currentTarget.style.color = '#94a3b8')}
-          onMouseLeave={(e) => (e.currentTarget.style.color = '#475569')}
-        >
-          <svg width="14" height="14" fill="none" viewBox="0 0 24 24">
-            <path d={collapsed ? 'M9 18l6-6-6-6' : 'M15 18l-6-6 6-6'} stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-          </svg>
-        </button>
       </Link>
 
       {/* Nav */}

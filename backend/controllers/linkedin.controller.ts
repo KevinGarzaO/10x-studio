@@ -74,6 +74,8 @@ export const linkedinCallback = async (req: Request, res: Response) => {
       headline: headline,
       photo_url: photoUrl,
       access_token: accessToken, // Store for background sync
+      connected_at: new Date().toISOString(),
+      expires_at: new Date(Date.now() + 60 * 24 * 60 * 60 * 1000).toISOString(), // 60 days
       updated_at: new Date().toISOString()
     }
 
@@ -84,6 +86,8 @@ export const linkedinCallback = async (req: Request, res: Response) => {
     }
 
     // Settings Sync
+    const connectedAt = new Date().toISOString()
+    const expiresAt = new Date(Date.now() + 60 * 24 * 60 * 60 * 1000).toISOString() // 60 days
     const postMsgData = { 
       type: 'LINKEDIN_AUTH', 
       token: accessToken, 
@@ -91,7 +95,9 @@ export const linkedinCallback = async (req: Request, res: Response) => {
       name: fullName,
       photo: photoUrl,
       email: email,
-      headline: headline
+      headline: headline,
+      connectedAt: connectedAt,
+      expiresAt: expiresAt
     };
 
     // Return to Frontend

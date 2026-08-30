@@ -1,14 +1,7 @@
 'use client'
 
-import { SubstackArticles } from '@/components/substack/SubstackArticles'
-import { useRouter } from 'next/navigation'
+import { SubstackSection } from '@/components/substack/SubstackSection'
 
-export default function SubstackArticlesPage() {
-  const router = useRouter()
-
-  return (
-    <SubstackArticles
-      onCompose={() => router.push('/substack/publish')}
-    />
-  )
+export default function SubstackPage() {
+  return <SubstackSection />
 }

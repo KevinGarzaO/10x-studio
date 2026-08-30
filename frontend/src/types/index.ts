@@ -98,6 +98,8 @@ export interface AppSettings {
   linkedinPhoto?: string
   linkedinEmail?: string
   linkedinHeadline?: string
+  linkedinConnectedAt?: string
+  linkedinExpiresAt?: string
 }
 
 export interface GeneratedResult {

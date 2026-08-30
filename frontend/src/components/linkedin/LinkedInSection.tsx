@@ -1,5 +1,6 @@
 'use client'
 import { useState, useEffect, useRef } from 'react'
+import { useRouter } from 'next/navigation'
 import { useApp } from '@/components/layout/AppProvider'
 import { api } from '@/lib/api'
 import Swal from 'sweetalert2'
@@ -14,6 +15,7 @@ const AvocadoAlert = Swal.mixin({
 type LinkedInTab = 'post' | 'stats'
 
 export function LinkedInSection() {
+  const router = useRouter()
   const { settings, saveSettings, editorPrefill, setEditorPrefill } = useApp()
   const [tab, setTab]           = useState<LinkedInTab>('post')
   const [text, setText]         = useState('')
@@ -132,7 +134,9 @@ export function LinkedInSection() {
           linkedinName: data.name,
           linkedinPhoto: data.photo,
           linkedinEmail: data.email,
-          linkedinHeadline: data.headline
+          linkedinHeadline: data.headline,
+          linkedinConnectedAt: data.connectedAt,
+          linkedinExpiresAt: data.expiresAt
         })
         window.removeEventListener('message', handler)
         popup?.close()
@@ -177,39 +181,45 @@ export function LinkedInSection() {
     return (
       <div className="max-w-lg mx-auto py-10 animate-fadein">
         <div className="text-center mb-8">
-          <div className="text-6xl mb-4 grayscale hover:grayscale-0 transition-all duration-500 cursor-default">💼</div>
-          <h1 className="text-[32px] font-black tracking-tight text-brand-primary mb-2">LinkedIn Studio</h1>
-          <p className="text-brand-secondary text-base leading-relaxed">
-            Conecta tu cuenta profesional para publicar directamente desde Avocado Studio y automatizar tu presencia en LinkedIn.
+          <div className="w-16 h-16 rounded-2xl mx-auto mb-4 flex items-center justify-center" style={{ background: '#0A66C2', color: '#fff' }}>
+            <svg width="28" height="28" fill="currentColor" viewBox="0 0 24 24">
+              <path d="M16 8a6 6 0 016 6v7h-4v-7a2 2 0 00-2-2 2 2 0 00-2 2v7h-4v-7a6 6 0 016-6zM2 9h4v12H2z"/>
+              <circle cx="4" cy="4" r="2"/>
+            </svg>
+          </div>
+          <h1 className="text-[28px] font-bold tracking-tight text-brand-primary mb-2">Conectar LinkedIn</h1>
+          <p className="text-brand-secondary text-sm leading-relaxed">
+            Conecta tu cuenta profesional para publicar directamente desde Avocado Studio.
           </p>
         </div>
 
-        <div className="card overflow-hidden mb-8 shadow-2xl relative border-brand-accent/20">
-          <div className="absolute inset-0 bg-brand-accent/5 pointer-events-none"></div>
-          <div className="bg-brand-surface/80 backdrop-blur-md border-b border-brand-border px-6 py-4 relative">
-            <span className="text-xs font-black text-brand-primary uppercase tracking-widest flex items-center gap-2">
-              <i className="pi pi-bolt text-brand-accent"></i> Pasos para empezar
-            </span>
+        <div className="card overflow-hidden mb-6">
+          <div className="bg-brand-surface border-b border-brand-border px-5 py-3">
+            <span className="text-xs font-bold text-brand-primary uppercase tracking-wide">Cómo conectar</span>
           </div>
-          <div className="p-6 space-y-5 relative">
+          <div className="p-5 space-y-4">
             {[
-              { n: '1', t: 'Autoriza la App', d: 'Conecta tu cuenta de LinkedIn de forma segura usando OAuth 2.0.' },
-              { n: '2', t: 'Genera contenido', d: 'Usa el Redactor IA para crear posts virales optimizados para LinkedIn.' },
-              { n: '3', t: 'Publica en un clic', d: 'Envía tus posts directamente a tu feed sin salir de Avocado.' },
+              { n: '1', t: 'Ve a Configuración', d: 'Abre la sección de LinkedIn en Configuración y presiona "Conectar LinkedIn".' },
+              { n: '2', t: 'Autoriza la App', d: 'Completa la autorización OAuth de LinkedIn de forma segura.' },
+              { n: '3', t: 'Genera contenido', d: 'Usa el Redactor IA para crear posts virales optimizados para LinkedIn.' },
             ].map(step => (
-              <div key={step.n} className="flex gap-4 group">
-                <div className="w-8 h-8 rounded-full bg-brand-accent text-[#1A1A1A] text-sm font-black flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform">{step.n}</div>
+              <div key={step.n} className="flex gap-3">
+                <div className="w-7 h-7 rounded-full bg-brand-accent text-[#1A1A1A] text-sm font-bold flex items-center justify-center flex-shrink-0">{step.n}</div>
                 <div>
-                  <div className="text-[15px] font-bold text-brand-primary group-hover:text-brand-accent transition-colors">{step.t}</div>
-                  <div className="text-sm text-brand-secondary mt-1 leading-normal opacity-80">{step.d}</div>
+                  <div className="text-sm font-bold text-brand-primary">{step.t}</div>
+                  <div className="text-xs text-brand-secondary mt-0.5 leading-relaxed">{step.d}</div>
                 </div>
               </div>
             ))}
           </div>
         </div>
 
-        <button onClick={handleConnect} className="btn btn-primary w-full py-4 text-base font-bold shadow-xl hover:shadow-brand-accent/20 flex items-center justify-center gap-2">
-          <i className="pi pi-linkedin"></i> Conectar mi LinkedIn
+        <button onClick={() => router.push('/settings#linkedin')} className="btn btn-primary w-full shadow-lg flex items-center justify-center gap-2">
+          <svg width="14" height="14" fill="currentColor" viewBox="0 0 24 24">
+            <path d="M16 8a6 6 0 016 6v7h-4v-7a2 2 0 00-2-2 2 2 0 00-2 2v7h-4v-7a6 6 0 016-6zM2 9h4v12H2z"/>
+            <circle cx="4" cy="4" r="2"/>
+          </svg>
+          Ir a Configuración
         </button>
       </div>
     )
@@ -268,19 +278,7 @@ export function LinkedInSection() {
               <div className="rounded-full" style={{ width: 6, height: 6, background: '#10b981' }}/>
               Sesión Activa
             </div>
-            {settings.linkedinEmail && <span style={{ fontSize: 12, color: '#94a3b8' }}>{settings.linkedinEmail}</span>}
           </div>
-        </div>
-        <div className="flex gap-2">
-          <div className="flex items-center gap-2 px-4 py-2 rounded-lg"
-            style={{ background: 'rgba(16,185,129,0.1)', border: '1px solid rgba(16,185,129,0.2)' }}>
-            <div className="rounded-full" style={{ width: 7, height: 7, background: '#10b981' }}/>
-            <span style={{ fontSize: 13, fontWeight: 600, color: '#10b981' }}>Conectado</span>
-          </div>
-          <button onClick={disconnect} className="px-4 py-2 rounded-lg transition-all"
-            style={{ fontSize: 12.5, fontWeight: 600, color: '#ef4444', border: '1px solid rgba(239,68,68,0.3)', background: 'rgba(239,68,68,0.05)', cursor: 'pointer' }}>
-            Desconectar
-          </button>
         </div>
       </div>
 
