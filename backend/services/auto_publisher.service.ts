@@ -324,12 +324,10 @@ Nota: relevance_score debe ser un número del 0 al 100 indicando qué tan "viral
       }
 
       // ============================================
-      // 3. ENGLISH VERSION (Blog + LinkedIn) → scheduled for 4PM (Mon-Fri)
+      // 3. ENGLISH VERSION (Blog + LinkedIn) → scheduled for 4PM every day
       // ============================================
-      const isWeekday = [1, 2, 3, 4, 5].includes(dayOfWeek) // Mon-Fri
-
-      if (isWeekday) {
-        console.log('[DailyOrchestrator] Es día laboral. Generando contenido en inglés para 4PM...');
+      {
+        console.log('[DailyOrchestrator] Generando contenido en inglés para 4PM...');
         try {
           // Schedule for 4PM Monterrey = 22:00 UTC today
           const fourPM = new Date();
@@ -394,8 +392,6 @@ Nota: relevance_score debe ser un número del 0 al 100 indicando qué tan "viral
         } catch (enErr) {
           console.error('[DailyOrchestrator] Error generando contenido EN:', enErr);
         }
-      } else {
-        console.log(`[DailyOrchestrator] Hoy es día ${dayOfWeek} (fin de semana). Saltando inglés.`);
       }
 
       // ============================================

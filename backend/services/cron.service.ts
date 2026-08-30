@@ -64,9 +64,9 @@ export const initCron = () => {
     if (users) await AutoPublisherService.publishDailyContent(users.id)
   })
 
-  // 3. ENGLISH 4PM PUBLISHER (L-V a las 4:00 PM Monterrey = 22:00 UTC)
+  // 3. ENGLISH 4PM PUBLISHER (L-D a las 4:00 PM Monterrey = 22:00 UTC)
   //    Publica blog EN + LinkedIn EN que fueron programados en el orquestador
-  cron.schedule('0 22 * * 1-5', async () => {
+  cron.schedule('0 22 * * *', async () => {
     console.log('[English4PM] Iniciando publicación de contenido en inglés...');
     if (new Date() < GLOBAL_START_DATE) return;
 
@@ -80,5 +80,5 @@ export const initCron = () => {
     await SchedulerService.processPendingPosts()
   })
 
-  console.log('Cron services initialized (Sync=15m, DailyOrchestrator=11:45AM MT, English4PM=4PM MT Mon-Fri, Scheduler=15m)')
+  console.log('Cron services initialized (Sync=15m, DailyOrchestrator=11:45AM MT, English4PM=4PM MT daily, Scheduler=15m)')
 }
