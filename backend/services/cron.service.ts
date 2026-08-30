@@ -55,7 +55,7 @@ export const initCron = () => {
   const GLOBAL_START_DATE = new Date('2026-05-21T00:00:00.000Z');
 
   // 2. DAILY ORCHESTRATOR (L-D a las 11:45 AM Monterrey = 17:45 UTC)
-  //    1 tema → 1 imagen → Blog + LinkedIn + Newsletter (solo L/M/V)
+  //    1 tema → 1 imagen → Blog ES + LinkedIn ES + Newsletter (solo L/M/V) + Blog EN + LinkedIn EN (solo L-V)
   cron.schedule('45 17 * * *', async () => {
     console.log('[DailyOrchestrator] Iniciando flujo diario...');
     if (new Date() < GLOBAL_START_DATE) return;
@@ -64,11 +64,21 @@ export const initCron = () => {
     if (users) await AutoPublisherService.publishDailyContent(users.id)
   })
 
-  // 3. Global Scheduler (Every 15 minutes for pending posts)
+  // 3. ENGLISH 4PM PUBLISHER (L-V a las 4:00 PM Monterrey = 22:00 UTC)
+  //    Publica blog EN + LinkedIn EN que fueron programados en el orquestador
+  cron.schedule('0 22 * * 1-5', async () => {
+    console.log('[English4PM] Iniciando publicación de contenido en inglés...');
+    if (new Date() < GLOBAL_START_DATE) return;
+
+    const { data: users } = await supabase.from('users').select('id').limit(1).single();
+    if (users) await AutoPublisherService.publishScheduledEnglishContent(users.id)
+  })
+
+  // 4. Global Scheduler (Every 15 minutes for pending posts)
   const { SchedulerService } = require('./scheduler.service')
   cron.schedule('*/15 * * * *', async () => {
     await SchedulerService.processPendingPosts()
   })
 
-  console.log('Cron services initialized (Sync=15m, DailyOrchestrator=11:45AM MT, Scheduler=15m)')
+  console.log('Cron services initialized (Sync=15m, DailyOrchestrator=11:45AM MT, English4PM=4PM MT Mon-Fri, Scheduler=15m)')
 }

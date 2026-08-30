@@ -99,17 +99,18 @@ Nota: relevance_score debe ser un número del 0 al 100 indicando qué tan "viral
     throw new Error('[AutoPublisher] Claude no devolvió texto válido.')
   }
 
-  static async writeArticle(topic: string, extract: string, platform: Platform = 'substack-article') {
+  static async writeArticle(topic: string, extract: string, platform: Platform = 'substack-article', language: 'es' | 'en' = 'es') {
     const apiKey = process.env.CLAUDE_API_KEY
     if (!apiKey) throw new Error('CLAUDE_API_KEY missing.')
 
-    console.log(`[AutoPublisher] Redactando para ${platform} sobre: ${topic}...`);
+    console.log(`[AutoPublisher] Redactando para ${platform} (${language}) sobre: ${topic}...`);
     const prompt = buildPrompt({
       topic,
       platform,
       length: platform.startsWith('linkedin') ? '300' : '1000',
       tone: 'conversacional, persuasivo y experto',
-      extract
+      extract,
+      language
     })
 
     const res = await fetch('https://api.anthropic.com/v1/messages', {
@@ -222,6 +223,9 @@ Nota: relevance_score debe ser un número del 0 al 100 indicando qué tan "viral
         ? `<img src="${imageUrl}" alt="Nano Banana v5">\n\n` + blogMarkdown
         : blogMarkdown
 
+      // F. Determine day of week (used for scheduling decisions)
+      const dayOfWeek = new Date().getUTCDay() // 0=Sun, 1=Mon, ... 6=Sat
+
       // ============================================
       // 1. BLOG POST → publish to web
       // ============================================
@@ -320,9 +324,83 @@ Nota: relevance_score debe ser un número del 0 al 100 indicando qué tan "viral
       }
 
       // ============================================
-      // 3. NEWSLETTER (Substack) → only on L/M/V
+      // 3. ENGLISH VERSION (Blog + LinkedIn) → scheduled for 4PM (Mon-Fri)
       // ============================================
-      const dayOfWeek = new Date().getUTCDay() // 0=Sun, 1=Mon, ... 6=Sat
+      const isWeekday = [1, 2, 3, 4, 5].includes(dayOfWeek) // Mon-Fri
+
+      if (isWeekday) {
+        console.log('[DailyOrchestrator] Es día laboral. Generando contenido en inglés para 4PM...');
+        try {
+          // Schedule for 4PM Monterrey = 22:00 UTC today
+          const fourPM = new Date();
+          fourPM.setUTCHours(22, 0, 0, 0);
+
+          // Blog English
+          const blogEnObj = await this.writeArticle(topic, extract, 'blog', 'en')
+          console.log(`[DailyOrchestrator] Blog EN redactado: ${blogEnObj.titulo}`);
+
+          const blogEnMarkdown = blogEnObj.contenido || ''
+          const blogEnHtml = imageUrl
+            ? `<img src="${imageUrl}" alt="Nano Banana v5">\n\n` + blogEnMarkdown
+            : blogEnMarkdown
+
+          const blogEnSlug = ContentService.generateSlug(blogEnObj.titulo)
+          await ContentService.create({
+            slug: blogEnSlug,
+            title: blogEnObj.titulo,
+            subtitle: blogEnObj.subtitulo || '',
+            excerpt: blogEnMarkdown.substring(0, 200) + '...',
+            markdown_content: blogEnMarkdown,
+            html_content: blogEnHtml,
+            image_url: imageUrl || undefined,
+            image_prompt: blogObj.image_prompt || '',
+            content_type: 'blog_post',
+            source: 'ai_generated',
+            destination: 'web',
+            user_id: userId,
+            word_count: blogEnMarkdown.split(/\s+/).length,
+            tone: 'conversacional, persuasivo y experto',
+            length_target: '1000',
+            status: 'scheduled',
+            published_at: fourPM.toISOString()
+          })
+          console.log(`[DailyOrchestrator] Blog EN programado para 4PM`);
+
+          // LinkedIn English
+          const liEnObj = await this.writeArticle(topic, extract, 'linkedin-post', 'en')
+          console.log(`[DailyOrchestrator] LinkedIn EN redactado: ${liEnObj.titulo}`);
+
+          const liEnSlug = ContentService.generateSlug(liEnObj.titulo || topic)
+          await ContentService.create({
+            slug: liEnSlug,
+            title: liEnObj.titulo || topic,
+            subtitle: '',
+            excerpt: (liEnObj.contenido || '').substring(0, 200) + '...',
+            markdown_content: liEnObj.contenido || '',
+            html_content: liEnObj.contenido || '',
+            image_url: imageUrl || undefined,
+            image_prompt: blogObj.image_prompt || '',
+            content_type: 'linkedin_post',
+            source: 'ai_generated',
+            destination: 'linkedin',
+            user_id: userId,
+            word_count: (liEnObj.contenido || '').split(/\s+/).length,
+            tone: 'conversacional, persuasivo y experto',
+            length_target: '300',
+            status: 'scheduled',
+            published_at: fourPM.toISOString()
+          })
+          console.log(`[DailyOrchestrator] LinkedIn EN programado para 4PM`);
+        } catch (enErr) {
+          console.error('[DailyOrchestrator] Error generando contenido EN:', enErr);
+        }
+      } else {
+        console.log(`[DailyOrchestrator] Hoy es día ${dayOfWeek} (fin de semana). Saltando inglés.`);
+      }
+
+      // ============================================
+      // 4. NEWSLETTER (Substack) → only on L/M/V
+      // ============================================
       const isSubstackDay = [1, 3, 5].includes(dayOfWeek) // Mon, Wed, Fri
 
       if (isSubstackDay) {
@@ -400,14 +478,122 @@ Nota: relevance_score debe ser un número del 0 al 100 indicando qué tan "viral
       })
 
       console.log(`[DailyOrchestrator] ✅ FLUJO DIARIO COMPLETADO`);
-      console.log(`  - Blog: ${blogContent.id}`);
-      console.log(`  - LinkedIn: ${linkedinPostId || 'saltado'}`);
+      console.log(`  - Blog ES: ${blogContent.id}`);
+      console.log(`  - LinkedIn ES: ${linkedinPostId || 'saltado'}`);
+      console.log(`  - Blog EN: programado 4PM`);
+      console.log(`  - LinkedIn EN: programado 4PM`);
       console.log(`  - Newsletter: ${isSubstackDay ? 'programado' : 'no es día L/M/V'}`);
       console.log(`  - Imagen: ${imageUrl ? 'compartida' : 'no generada'}`);
       console.log('================ DAILY ORCHESTRATOR END ==================')
 
     } catch (e) {
       console.error('[DailyOrchestrator] FALLO GENERAL:', e);
+    }
+  }
+
+  /**
+   * PUBLISH SCHEDULED ENGLISH CONTENT
+   * 
+   * Runs Mon-Fri at 4PM Monterrey (22:00 UTC).
+   * Publishes blog + LinkedIn posts that were scheduled earlier today.
+   */
+  static async publishScheduledEnglishContent(userId: string) {
+    try {
+      const { supabase } = require('./supabase.service')
+      const { ContentService } = require('./content.service')
+
+      console.log('================ ENGLISH 4PM PUBLISHER START ================')
+
+      // Find scheduled English content for today
+      const today = new Date()
+      today.setUTCHours(0, 0, 0, 0)
+      const tomorrow = new Date(today)
+      tomorrow.setUTCDate(tomorrow.getUTCDate() + 1)
+
+      const { data: scheduledPosts, error } = await supabase
+        .from('content')
+        .select('*')
+        .eq('user_id', userId)
+        .eq('status', 'scheduled')
+        .eq('source', 'ai_generated')
+        .gte('published_at', today.toISOString())
+        .lt('published_at', tomorrow.toISOString())
+
+      if (error) throw error
+      if (!scheduledPosts || scheduledPosts.length === 0) {
+        console.log('[English4PM] No hay contenido programado para hoy.');
+        console.log('================ ENGLISH 4PM PUBLISHER END ==================')
+        return
+      }
+
+      console.log(`[English4PM] Encontrados ${scheduledPosts.length} posts programados`);
+
+      for (const post of scheduledPosts) {
+        try {
+          if (post.content_type === 'blog_post') {
+            // Blog is already in content table, just mark as published
+            await ContentService.update(post.id, { status: 'published' })
+            console.log(`[English4PM] Blog EN publicado: ${post.title}`);
+
+          } else if (post.content_type === 'linkedin_post') {
+            // Publish to LinkedIn API
+            const { data: profile } = await supabase
+              .from('linkedin_profiles')
+              .select('*')
+              .eq('user_id', userId)
+              .single()
+
+            if (profile?.access_token) {
+              const { LinkedInService } = require('./linkedin.service')
+
+              // Download image from URL if available
+              let imageBase64 = null
+              if (post.image_url) {
+                try {
+                  const imgFetch = await fetch(post.image_url)
+                  const imgBuf = Buffer.from(await imgFetch.arrayBuffer())
+                  imageBase64 = imgBuf.toString('base64')
+                } catch (imgErr) {
+                  console.warn('[English4PM] No se pudo descargar imagen:', imgErr)
+                }
+              }
+
+              const postId = await LinkedInService.publish({
+                token: profile.access_token,
+                urn: `urn:li:person:${profile.linkedin_id}`,
+                text: post.markdown_content || post.html_content || '',
+                imageBase64,
+                imageUrl: post.image_url
+              })
+
+              // Update content table
+              await ContentService.update(post.id, {
+                status: 'published',
+                external_id: postId
+              })
+
+              // Save to linkedin_posts
+              await supabase.from('linkedin_posts').insert({
+                user_id: userId,
+                post_id: postId,
+                text: post.markdown_content || '',
+                published_at: new Date().toISOString(),
+                synced_at: new Date().toISOString()
+              })
+
+              console.log(`[English4PM] LinkedIn EN publicado: ${postId}`);
+            } else {
+              console.warn('[English4PM] No hay credenciales de LinkedIn.');
+            }
+          }
+        } catch (postErr) {
+          console.error(`[English4PM] Error publicando "${post.title}":`, postErr);
+        }
+      }
+
+      console.log('================ ENGLISH 4PM PUBLISHER END ==================')
+    } catch (e) {
+      console.error('[English4PM] FALLO GENERAL:', e);
     }
   }
 }

@@ -14,6 +14,7 @@ interface PromptParams {
   audience?: string
   keywords?: string
   extract?: string
+  language?: 'es' | 'en'
 }
 
 const KEVIN_VOICE_RULES = `
@@ -55,44 +56,66 @@ PROMPT FINAL: (Genera el prompt narrativo de forma hiper-compacta, en inglés, e
 ESTILO OBLIGATORIO: vibrant cartoon illustration, comic book art style, bold outlines, cel-shading, NOT photorealistic, NOT 3D render. Colorful and expressive.
 `;
 
+const KEVIN_VOICE_RULES_EN = `
+STYLE GUIDE "NANO BANANA STUDIO" (Fresh & Tech AI News):
+- Write with an agile, hyper-modern, fresh and catchy tone. You are a star reporter covering the latest and hottest tech trends.
+- Skip the dramatic/vulnerable style. Get straight to the point, use powerful analogies and keep the reader glued to the screen feeling like they're reading the TOP Newsletter from Silicon Valley (but in digestible, assertive language).
+- CRITICAL: Use the "Source material" as your Bible. Extract real metrics, companies and facts from the provided internet context. DO NOT make up information not in the source.
+- Ideal structure: Explosive Hook -> Hard Context (the news) -> Implications (why it matters) → Closing and call to action.
+- CLOSING: WhatsApp Transformateck (direct invitation, 600+ members, aiming for 1000). Hashtags (max 5).
+`;
+
 export function buildPrompt(p: PromptParams): string {
   const isLI      = p.platform.startsWith('linkedin');
   const isArticle = p.platform === 'substack-article' || p.platform === 'blog' || p.platform === 'article' || p.platform === 'linkedin-article';
   const isShort   = p.platform === 'linkedin-post' || p.platform === 'substack-note';
+  const isEN      = p.language === 'en';
 
   let platformGoal = '';
-  if (isArticle) platformGoal = `un ARTÍCULO largo y detallado para ${p.platform}`;
-  else if (isShort) platformGoal = `un POST corto y viral para ${p.platform}`;
-  else platformGoal = `un contenido para ${p.platform}`;
+  if (isArticle) platformGoal = isEN ? `a long and detailed ARTICLE for ${p.platform}` : `un ARTÍCULO largo y detallado para ${p.platform}`;
+  else if (isShort) platformGoal = isEN ? `a short viral POST for ${p.platform}` : `un POST corto y viral para ${p.platform}`;
+  else platformGoal = isEN ? `content for ${p.platform}` : `un contenido para ${p.platform}`;
 
-  // Formato especial para LinkedIn: Texto "Puro" sin Markdown
-  const liFormatting = isLI ? `
+  // LinkedIn formatting rules
+  const liFormatting = isLI ? (isEN ? `
+CRITICAL FORMAT RULE FOR LINKEDIN:
+- NO Markdown. No asterisks (**) for bold.
+- NO hashtags (#) for titles or headings.
+- Use clean plain text and EMOJIS to highlight points or separate sections.
+- Be extremely brief and direct. Even if "Long" is requested, do not exceed 2,600 characters (approx 400 words) to ensure it fits on LinkedIn without cuts.
+` : `
 REGLA DE FORMATO CRÍTICA PARA LINKEDIN:
 - NO usar Markdown. Prohibido usar asteriscos (**) para negritas.
 - NO usar almohadillas (#) para títulos o encabezados.
 - Usa texto plano limpio y EMOJIS para resaltar puntos o separar secciones.
 - Sé extremadamente breve y directo. Aunque se pida "Largo", no superes los 2,600 caracteres (aprox 400 palabras) para asegurar que quepa en LinkedIn sin cortes.
-` : '';
+`) : '';
+
+  const langInstruction = isEN ? 'Write ALL content in ENGLISH.' : 'Escribe TODO el contenido en ESPAÑOL.';
+  const responseLang = isEN ? 'Title in English' : 'Titular gancho';
+  const subtitleLang = isEN ? 'Descriptive subtitle' : 'Subtítulo descriptivo';
+  const contentLang = isEN ? 'Plain text content (EMOJIS allowed, Markdown PROHIBITED for LinkedIn)' : 'Contenido en texto plano (EMOJIS permitidos, Markdown PROHIBIDO si es LinkedIn)';
 
   return `
-Escribe ${platformGoal} sobre: "${p.topic}"
-- Longitud sugerida: ~${p.length} palabras. 
-- Tono: ${p.tone}.
-${p.audience ? `- Audiencia: ${p.audience}` : ''}
-${p.keywords ? `- Palabras clave: ${p.keywords}` : ''}
-${p.extract ? `\nMaterial base (FUENTE PRIMARIA):\n${p.extract}` : '\nSin material base. Usa datos reales de finales de 2024/2025 y tendencias actuales.'}
+Write ${platformGoal} about: "${p.topic}"
+- Suggested length: ~${p.length} words.
+- Tone: ${p.tone}.
+- Language: ${langInstruction}
+${p.audience ? `- Audience: ${p.audience}` : ''}
+${p.keywords ? `- Keywords: ${p.keywords}` : ''}
+${p.extract ? `\nSource material:\n${p.extract}` : '\nNo source material. Use real data from late 2024/2025 and current trends.'}
 
-${KEVIN_VOICE_RULES}
+${isEN ? KEVIN_VOICE_RULES_EN : KEVIN_VOICE_RULES}
 ${liFormatting}
 
 ${(isArticle || isLI) ? NANO_BANANA_META_PROMPT : ''}
 
-RESPUESTA (JSON PURO):
+RESPONSE (PURE JSON):
 {
-  "titulo": "Titular gancho",
-  "subtitulo": "${isArticle ? 'Subtítulo descriptivo' : ''}",
-  "contenido": "Contenido en texto plano (EMOJIS permitidos, Markdown PROHIBIDO si es LinkedIn)",
-  "image_prompt": "${(isArticle || isLI) ? 'Prompt para DALL-E (Paso 2)' : ''}"
+  "titulo": "${responseLang}",
+  "subtitulo": "${isArticle ? subtitleLang : ''}",
+  "contenido": "${contentLang}",
+  "image_prompt": "${(isArticle || isLI) ? 'Prompt for DALL-E (Step 2)' : ''}"
 }
 `;
 }
