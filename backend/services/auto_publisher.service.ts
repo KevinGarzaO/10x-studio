@@ -6,18 +6,13 @@ import fs from 'fs'
 import path from 'path'
 import { SearchService } from './search.service'
 
-// Helper to reliably parse JSON coming from Claude
 function parseClaudeJson(rawText: string) {
   let cleaned = rawText.trim()
-  
-  // Try to find the JSON block if it exists
   const firstBrace = cleaned.indexOf('{')
   const lastBrace = cleaned.lastIndexOf('}')
-  
   if (firstBrace !== -1 && lastBrace !== -1 && lastBrace > firstBrace) {
     cleaned = cleaned.substring(firstBrace, lastBrace + 1)
   }
-
   try {
     return JSON.parse(cleaned)
   } catch (e) {
@@ -26,21 +21,37 @@ function parseClaudeJson(rawText: string) {
   }
 }
 
-// Reuse logic from controller for HTML formatting
-// Removed duplicated mdToHtml, now handled by SubstackService with mdToAST
+async function loadRefImages(): Promise<{ data: string, mimeType: string }[]> {
+  const refImages: { data: string, mimeType: string }[] = []
+  const refPaths = [
+    path.join(__dirname, '../assets/references/ref1.jpg'),
+    path.join(__dirname, '../assets/references/ref2.jpg')
+  ]
+  for (const p of refPaths) {
+    if (fs.existsSync(p)) {
+      refImages.push({ data: fs.readFileSync(p).toString('base64'), mimeType: 'image/jpeg' })
+    }
+  }
+  return refImages
+}
+
+const IDENTITY_PROMPT = `
+INSTRUCCIONES DE IDENTIDAD (PARA GEMINI):
+Kevin Garza: Basar rostro y físico en fotos adjuntas. Gorra deportiva siempre puesta. Jersey deportivo global al azar (NO Tigres/America).
+NUNCA poner máscara en la cara. NUNCA escribir códigos hexadecimales.
+
+PROMPT ARTÍSTICO (CREA UNA INFOGRAFÍA VISUAL!):
+`
 
 export class AutoPublisherService {
-  /**
-   * 1. Usa Claude con Tools para buscar noticias recientes de IA y seleccionar un tema ganador.
-   */
+
   static async findTrendingTopicForToday(excludedTopics: string[] = []): Promise<{ topic: string, extract: string, relevance_score: number }> {
     const apiKey = process.env.CLAUDE_API_KEY
     if (!apiKey) throw new Error('CLAUDE_API_KEY no configurada.')
 
-    // 1. Obtener noticias reales de Google News
     const newsContext = await SearchService.getLatestAINews();
     console.log('[AutoPublisher] Noticias reales obtenidas. Consultando a Claude...');
-    
+
     const prompt = `
 Eres un analista de tendencias tech de alto nivel para Transformateck.
 He buscado noticias recientes sobre IA y aquí tienes los resultados más frescos:
@@ -75,31 +86,28 @@ Nota: relevance_score debe ser un número del 0 al 100 indicando qué tan "viral
 
     const data: any = await res.json()
     if (!data.content) throw new Error(`[AutoPublisher] Claude error: ${JSON.stringify(data)}`)
-    
+
     const textBlock = data.content.find((b: any) => b.type === 'text');
     if (textBlock) {
       const result = parseClaudeJson(textBlock.text)
-      return { 
-        topic: result.topic, 
-        extract: result.extract, 
-        relevance_score: result.relevance_score || 0 
+      return {
+        topic: result.topic,
+        extract: result.extract,
+        relevance_score: result.relevance_score || 0
       }
     }
     throw new Error('[AutoPublisher] Claude no devolvió texto válido.')
   }
 
-  /**
-   * 2. Escribe el contenido con la base de datos usando buildPrompt.
-   */
   static async writeArticle(topic: string, extract: string, platform: Platform = 'substack-article') {
     const apiKey = process.env.CLAUDE_API_KEY
     if (!apiKey) throw new Error('CLAUDE_API_KEY missing.')
 
     console.log(`[AutoPublisher] Redactando para ${platform} sobre: ${topic}...`);
-    const prompt = buildPrompt({ 
-      topic, 
-      platform, 
-      length: platform.startsWith('linkedin') ? '300' : '1000', 
+    const prompt = buildPrompt({
+      topic,
+      platform,
+      length: platform.startsWith('linkedin') ? '300' : '1000',
       tone: 'conversacional, persuasivo y experto',
       extract
     })
@@ -117,19 +125,18 @@ Nota: relevance_score debe ser un número del 0 al 100 indicando qué tan "viral
     const data: any = await res.json()
     let parsed = parseClaudeJson(data.content[0].text)
 
-    // Robustez de imagen
     if (!parsed.image_prompt || parsed.image_prompt.length < 50) {
-      console.log('[AutoPublisher] Refinando image_prompt compacto Nano Banana (80-100 palabras)...');
+      console.log('[AutoPublisher] Refinando image_prompt...');
       const refineReq = await fetch('https://api.anthropic.com/v1/messages', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'x-api-key': apiKey, 'anthropic-version': '2023-06-01' },
-        body: JSON.stringify({ 
-          model: 'claude-haiku-4-5-20251001', max_tokens: 2000, 
+        body: JSON.stringify({
+          model: 'claude-haiku-4-5-20251001', max_tokens: 2000,
           messages: [
             { role: 'user', content: prompt },
             { role: 'assistant', content: data.content[0].text },
-            { role: 'user', content: "Ahora, genera EXCLUSIVAMENTE el image_prompt de 80 a 100 palabras (en inglés) siguiendo las reglas visuales de Nano Banana v4 (Gorra siempre, Máscara en mesa). Sé increíblemente conciso y descriptivo en un solo párrafo." }
-          ] 
+            { role: 'user', content: "Ahora, genera EXCLUSIVAMENTE el image_prompt de 80 a 100 palabras (en inglés) siguiendo las reglas visuales de Nano Banana v5 (Gorra siempre, Máscara en mesa). Sé increíblemente conciso y descriptivo en un solo párrafo." }
+          ]
         })
       })
       const refineData: any = await refineReq.json()
@@ -142,371 +149,265 @@ Nota: relevance_score debe ser un número del 0 al 100 indicando qué tan "viral
   }
 
   /**
-   * 3. Genera la imagen y arma todo, luego crea un DRAFT en Substack.
+   * Generate image once and upload to Supabase. Returns { imageUrl, imageBase64 }.
    */
-  static async publishFlowForUser(userId: string) {
-    try {
-      const { supabase } = require('./supabase.service')
-      console.log('================ SUBSTACK AUTO START ================')
-      console.log(`[SubstackAuto] Iniciando flujo para el usuario ${userId}`);
-
-      // A. Consultar Memoria (últimos temas publicados tanto en LI como Substack)
-      const { data: recentHistory } = await supabase
-        .from('history')
-        .select('topic')
-        .eq('user_id', userId)
-        .order('id', { ascending: false })
-        .limit(15)
-      
-      const excluded = recentHistory?.map((h: any) => h.topic).filter(Boolean) || []
-
-      // 1. Obtener Trending Topic con Scoring
-      const { topic, extract, relevance_score } = await this.findTrendingTopicForToday(excluded);
-      console.log(`[SubstackAuto] Noticia: "${topic}" | Score: ${relevance_score}`);
-
-      if (relevance_score < 85) {
-        console.log(`[SubstackAuto] Score (${relevance_score}) insuficiente para artículo. Abortando.`);
-        return;
-      }
-
-      // 2. Redactar el contenido (Plataforma: substack-article)
-      const articleObj = await this.writeArticle(topic, extract, 'substack-article');
-      console.log(`[SubstackAuto] Artículo redactado: ${articleObj.titulo}`);
-
-      // 3. Generar Imagen Nano Banana v5
-      let imageUrl = null;
-      if (articleObj.image_prompt && process.env.GEMINI_API_KEY) {
-        console.log(`[AutoPublisher] Dibujando infografía Nano Banana v5...`);
-        const refImages: any[] = []
-        const refPaths = [path.join(__dirname, '../assets/references/ref1.jpg'), path.join(__dirname, '../assets/references/ref2.jpg')]
-        for (const p of refPaths) {
-          if (fs.existsSync(p)) {
-            refImages.push({ data: fs.readFileSync(p).toString('base64'), mimeType: 'image/jpeg' })
-          }
-        }
-        
-        const finalImgPrompt = `
-INSTRUCCIONES DE IDENTIDAD (PARA GEMINI):
-Kevin Garza: Basar rostro y físico en fotos adjuntas. Gorra deportiva siempre puesta. Jersey México/Latam.
-NUNCA poner máscara en la cara. NUNCA escribir códigos hexadecimales.
-
-PROMPT ARTÍSTICO (CREA UNA INFOGRAFÍA VISUAL!):
-${articleObj.image_prompt}
-`;
-        
-        const imgRes = await ImageService.generate(finalImgPrompt, refImages)
-        if (imgRes?.base64) {
-          imageUrl = await ImageService.uploadToSupabase(imgRes.base64, userId)
-        }
-      }
-
-      // 4. Armar el cuerpo (Markdown + Imagen HTML para que el conversor la reconozca)
-      const markdownContent = articleObj.contenido || ''
-      const finalBody = imageUrl ? `<img src="${imageUrl}" alt="Nano Banana v5">\n\n` + markdownContent : markdownContent
-
-      // 5. Crear DRAFT en Substack
-      console.log('[SubstackAuto] Iniciando carga a Substack...');
-      const draft = await SubstackService.createDraft(userId, {
-        draft_title: articleObj.titulo.trim(),
-        draft_subtitle: articleObj.subtitulo.trim()
-      })
-
-      // 6. Actualizar borrador con contenido
-      await SubstackService.updateDraft(userId, String(draft.id), {
-        draft_title: articleObj.titulo.trim(),
-        draft_subtitle: articleObj.subtitulo.trim(),
-        draft_body: finalBody,
-        audience: 'everyone',
-        type: 'newsletter'
-      })
-
-      // 7. PROGRAMAR PARA HOY (con un margen de 5 minutos para evitar que Substack lo rechace si la hora ya pasó)
-      const scheduledDate = new Date();
-      scheduledDate.setMinutes(scheduledDate.getMinutes() + 5);
-      
-      console.log(`[SubstackAuto] Programando artículo para hoy (+5min): ${scheduledDate.toISOString()}`);
-      await SubstackService.scheduleDraft(userId, String(draft.id), scheduledDate.toISOString());
-
-      // 8. Registrar en el Historial para Memoria
-      await supabase.from('history').insert({
-        user_id: userId,
-        topic: topic,
-        type: 'substack-article',
-        content: articleObj.contenido,
-        status: 'scheduled'
-      })
-
-      // 9. Guardar en tabla content (unified storage)
-      try {
-        const { ContentService } = require('./content.service')
-        const slug = ContentService.generateSlug(articleObj.titulo)
-        const wordCount = (articleObj.contenido || '').split(/\s+/).length
-        
-        await ContentService.create({
-          slug,
-          title: articleObj.titulo,
-          subtitle: articleObj.subtitulo || '',
-          excerpt: (articleObj.contenido || '').substring(0, 200) + '...',
-          markdown_content: articleObj.contenido || '',
-          html_content: finalBody,
-          image_url: imageUrl || undefined,
-          image_prompt: articleObj.image_prompt || '',
-          content_type: 'newsletter',
-          source: 'ai_generated',
-          destination: 'substack',
-          user_id: userId,
-          word_count: wordCount,
-          tone: 'conversacional, persuasivo y experto',
-          length_target: '1000',
-          status: 'published',
-          published_at: new Date().toISOString(),
-          external_id: String(draft.id)
-        })
-        console.log(`[SubstackAuto] Artículo guardado en content table`)
-      } catch (contentErr) {
-        console.error('[SubstackAuto] Error guardando en content:', contentErr)
-      }
-
-      console.log(`[SubstackAuto] ✅ ÉXITO: Artículo programado para próximamente con ID ${draft.id}`);
-      console.log('================ SUBSTACK AUTO END ==================')
-    } catch (e) {
-      console.error('[AutoPublisher] FALLO GENERAL:', e);
+  private static async generateImage(imagePrompt: string, userId: string): Promise<{ imageUrl: string | null, imageBase64: string | null }> {
+    if (!imagePrompt || !process.env.GEMINI_API_KEY) {
+      console.log('[DailyOrchestrator] No image_prompt or GEMINI_API_KEY, skipping image generation.');
+      return { imageUrl: null, imageBase64: null }
     }
+
+    console.log('[DailyOrchestrator] Generando imagen (una sola para todos los formatos)...');
+    const refImages = await loadRefImages()
+    const finalImgPrompt = `${IDENTITY_PROMPT}${imagePrompt}`
+
+    const imgRes = await ImageService.generate(finalImgPrompt, refImages)
+    if (imgRes?.base64) {
+      const imageUrl = await ImageService.uploadToSupabase(imgRes.base64, userId)
+      console.log(`[DailyOrchestrator] Imagen generada y subida: ${imageUrl ? 'OK' : 'FALLO'}`);
+      return { imageUrl, imageBase64: imgRes.base64 }
+    }
+
+    console.warn('[DailyOrchestrator] No se pudo generar la imagen.');
+    return { imageUrl: null, imageBase64: null }
   }
 
   /**
-   * 4. Flujo Autónomo para LinkedIn (Busca, Califica y Pública si score > 85)
+   * UNIFIED DAILY ORCHESTRATOR
+   * 
+   * Runs once daily at 11:45 AM Monterrey.
+   * 1. Finds 1 trending topic
+   * 2. Generates 1 image (shared across all formats)
+   * 3. Creates blog post → publishes to web (content table, status: published)
+   * 4. Creates LinkedIn post → publishes to LinkedIn (API + content table)
+   * 5. Creates newsletter draft → schedules on Substack (only L/M/V)
    */
-  static async publishLinkedInAutoFlow(userId: string) {
-    try {
-      const { supabase } = require('./supabase.service')
-      const { LinkedInService } = require('./linkedin.service')
-      
-      console.log('================ LINKEDIN AUTO START ================')
-      
-      // A. Consultar Memoria (últimos temas publicados)
-      const { data: recentHistory } = await supabase
-        .from('history')
-        .select('topic')
-        .eq('user_id', userId)
-        .order('id', { ascending: false })
-        .limit(15)
-      
-      const excluded = recentHistory?.map((h: any) => h.topic).filter(Boolean) || []
-
-      // 1. Encontrar Tema Trending con Scoring
-      const { topic, extract, relevance_score } = await this.findTrendingTopicForToday(excluded)
-      console.log(`[LinkedInAuto] Noticia: "${topic}" | Score: ${relevance_score}`)
-
-      if (relevance_score < 85) {
-        console.log(`[LinkedInAuto] Score (${relevance_score}) insuficiente para LinkedIn. Abortando.`);
-        return;
-      }
-
-      // 2. Obtener Credenciales de LinkedIn
-      const { data: profile } = await supabase.from('linkedin_profiles').select('*').eq('user_id', userId).single()
-      if (!profile || !profile.access_token) {
-        console.error('[LinkedInAuto] No se encontraron credenciales de LinkedIn para el usuario.');
-        return;
-      }
-
-      // 3. Redactar Post
-      const postObj = await this.writeArticle(topic, extract, 'linkedin-post')
-      
-      // 4. Generar Imagen Nano Banana v5
-      let imageUrl = null;
-      let imageBase64 = null;
-      if (postObj.image_prompt && process.env.GEMINI_API_KEY) {
-        console.log(`[LinkedInAuto] Generando infografía para LinkedIn...`);
-        const refImages: any[] = []
-        const refPaths = [path.join(__dirname, '../assets/references/ref1.jpg'), path.join(__dirname, '../assets/references/ref2.jpg')]
-        for (const p of refPaths) {
-          if (fs.existsSync(p)) {
-            refImages.push({ data: fs.readFileSync(p).toString('base64'), mimeType: 'image/jpeg' })
-          }
-        }
-        
-        const finalImgPrompt = `
-INSTRUCCIONES DE IDENTIDAD (PARA GEMINI):
-Kevin Garza: Basar rostro y físico en fotos adjuntas. Gorra deportiva siempre puesta. Jersey deportivo global al azar (NO Tigres/America).
-NUNCA poner máscara en la cara. NUNCA escribir códigos hexadecimales.
-
-PROMPT ARTÍSTICO (INFOGRAFÍA DINÁMICA):
-${postObj.image_prompt}
-`;
-        const imgRes = await ImageService.generate(finalImgPrompt, refImages)
-        if (imgRes?.base64) {
-          imageBase64 = imgRes.base64
-          imageUrl = await ImageService.uploadToSupabase(imgRes.base64, userId)
-        }
-      }
-
-      // 5. Publicar Directamente
-      console.log(`[LinkedInAuto] Publicando en LinkedIn...`);
-      const postId = await LinkedInService.publish({
-        token: profile.access_token,
-        urn: `urn:li:person:${profile.linkedin_id}`,
-        text: postObj.contenido,
-        imageBase64: imageBase64,
-        imageUrl: imageUrl
-      })
-
-      // 6. Registrar en el Historial para Memoria
-      await supabase.from('history').insert({
-        user_id: userId,
-        topic: topic,
-        type: 'linkedin-post',
-        content: postObj.contenido,
-        status: 'published'
-      })
-
-      // 7. Registrar en la tabla de posts específica
-      await supabase.from('linkedin_posts').insert({
-        user_id: userId,
-        post_id: postId,
-        text: postObj.contenido,
-        published_at: new Date().toISOString()
-      })
-
-      // 8. Guardar en tabla content (unified storage)
-      try {
-        const { ContentService } = require('./content.service')
-        const slug = ContentService.generateSlug(postObj.titulo || topic)
-        const wordCount = (postObj.contenido || '').split(/\s+/).length
-        
-        await ContentService.create({
-          slug,
-          title: postObj.titulo || topic,
-          subtitle: '',
-          excerpt: (postObj.contenido || '').substring(0, 200) + '...',
-          markdown_content: postObj.contenido || '',
-          html_content: postObj.contenido || '',
-          image_url: imageUrl || undefined,
-          image_prompt: postObj.image_prompt || '',
-          content_type: 'linkedin_post',
-          source: 'ai_generated',
-          destination: 'linkedin',
-          user_id: userId,
-          word_count: wordCount,
-          tone: 'conversacional, persuasivo y experto',
-          length_target: '300',
-          status: 'published',
-          published_at: new Date().toISOString(),
-          external_id: postId
-        })
-        console.log(`[LinkedInAuto] Post guardado en content table`)
-      } catch (contentErr) {
-        console.error('[LinkedInAuto] Error guardando en content:', contentErr)
-      }
-
-      console.log(`[LinkedInAuto] ✅ ÉXITO: Publicado en LinkedIn con ID ${postId}`);
-      console.log('================ LINKEDIN AUTO END ==================')
-    } catch (e) {
-      console.error('[LinkedInAuto] FALLO:', e);
-    }
-  }
-
-  /**
-   * 5. Flujo Autónomo para Blog Posts (2x/día: 10AM y 6PM Monterrey)
-   */
-  static async publishBlogForUser(userId: string) {
+  static async publishDailyContent(userId: string) {
     try {
       const { supabase } = require('./supabase.service')
       const { ContentService } = require('./content.service')
-      
-      console.log('================ BLOG AUTO START ================')
-      
-      // A. Consultar Memoria (últimos temas publicados)
+
+      console.log('================ DAILY ORCHESTRATOR START ================')
+      console.log(`[DailyOrchestrator] Iniciando flujo diario para usuario ${userId}`);
+
+      // A. Get excluded topics (recent history across ALL formats)
       const { data: recentHistory } = await supabase
         .from('history')
         .select('topic')
         .eq('user_id', userId)
         .order('id', { ascending: false })
-        .limit(15)
-      
+        .limit(20)
+
       const excluded = recentHistory?.map((h: any) => h.topic).filter(Boolean) || []
 
-      // 1. Encontrar Tema Trending con Scoring
-      const { topic, extract, relevance_score } = await this.findTrendingTopicForToday(excluded)
-      console.log(`[BlogAuto] Noticia: "${topic}" | Score: ${relevance_score}`)
+      // B. Find 1 trending topic
+      const { topic, extract, relevance_score } = await this.findTrendingTopicForToday(excluded);
+      console.log(`[DailyOrchestrator] Tema: "${topic}" | Score: ${relevance_score}`);
 
       if (relevance_score < 85) {
-        console.log(`[BlogAuto] Score (${relevance_score}) insuficiente para blog. Abortando.`);
+        console.log(`[DailyOrchestrator] Score (${relevance_score}) insuficiente. Abortando.`);
         return;
       }
 
-      // 2. Redactar el contenido (Plataforma: blog)
-      const articleObj = await this.writeArticle(topic, extract, 'blog')
-      console.log(`[BlogAuto] Artículo redactado: ${articleObj.titulo}`);
+      // C. Write blog content FIRST (to get the image_prompt)
+      const blogObj = await this.writeArticle(topic, extract, 'blog')
+      console.log(`[DailyOrchestrator] Blog redactado: ${blogObj.titulo}`);
 
-      // 3. Generar Imagen Nano Banana v5
-      let imageUrl = null;
-      if (articleObj.image_prompt && process.env.GEMINI_API_KEY) {
-        console.log(`[BlogAuto] Dibujando infografía Nano Banana v5...`);
-        const refImages: any[] = []
-        const refPaths = [path.join(__dirname, '../assets/references/ref1.jpg'), path.join(__dirname, '../assets/references/ref2.jpg')]
-        for (const p of refPaths) {
-          if (fs.existsSync(p)) {
-            refImages.push({ data: fs.readFileSync(p).toString('base64'), mimeType: 'image/jpeg' })
-          }
-        }
-        
-        const finalImgPrompt = `
-INSTRUCCIONES DE IDENTIDAD (PARA GEMINI):
-Kevin Garza: Basar rostro y físico en fotos adjuntas. Gorra deportiva siempre puesta. Jersey México/Latam.
-NUNCA poner máscara en la cara. NUNCA escribir códigos hexadecimales.
+      // D. Generate ONE image (shared across blog, linkedin, newsletter)
+      const { imageUrl, imageBase64 } = await this.generateImage(blogObj.image_prompt, userId)
 
-PROMPT ARTÍSTICO (CREA UNA INFOGRAFÍA VISUAL!):
-${articleObj.image_prompt}
-`;
-        
-        const imgRes = await ImageService.generate(finalImgPrompt, refImages)
-        if (imgRes?.base64) {
-          imageUrl = await ImageService.uploadToSupabase(imgRes.base64, userId)
-        }
-      }
+      // E. Build blog body with image
+      const blogMarkdown = blogObj.contenido || ''
+      const blogHtml = imageUrl
+        ? `<img src="${imageUrl}" alt="Nano Banana v5">\n\n` + blogMarkdown
+        : blogMarkdown
 
-      // 4. Armar el body HTML
-      const markdownContent = articleObj.contenido || ''
-      const finalBody = imageUrl ? `<img src="${imageUrl}" alt="Nano Banana v5">\n\n` + markdownContent : markdownContent
+      // ============================================
+      // 1. BLOG POST → publish to web
+      // ============================================
+      console.log('[DailyOrchestrator] Guardando blog post...');
+      const blogSlug = ContentService.generateSlug(blogObj.titulo)
+      const blogWordCount = blogMarkdown.split(/\s+/).length
 
-      // 5. Guardar en tabla content
-      const slug = ContentService.generateSlug(articleObj.titulo)
-      const wordCount = markdownContent.split(/\s+/).length
-      
-      const content = await ContentService.create({
-        slug,
-        title: articleObj.titulo,
-        subtitle: articleObj.subtitulo || '',
-        excerpt: markdownContent.substring(0, 200) + '...',
-        markdown_content: markdownContent,
-        html_content: finalBody,
-        image_url: imageUrl,
-        image_prompt: articleObj.image_prompt || '',
+      const blogContent = await ContentService.create({
+        slug: blogSlug,
+        title: blogObj.titulo,
+        subtitle: blogObj.subtitulo || '',
+        excerpt: blogMarkdown.substring(0, 200) + '...',
+        markdown_content: blogMarkdown,
+        html_content: blogHtml,
+        image_url: imageUrl || undefined,
+        image_prompt: blogObj.image_prompt || '',
         content_type: 'blog_post',
         source: 'ai_generated',
         destination: 'web',
         user_id: userId,
-        word_count: wordCount,
+        word_count: blogWordCount,
         tone: 'conversacional, persuasivo y experto',
         length_target: '1000',
         status: 'published',
         published_at: new Date().toISOString()
       })
+      console.log(`[DailyOrchestrator] Blog publicado: ${blogContent.id}`);
 
-      // 6. Registrar en el Historial para Memoria
+      // ============================================
+      // 2. LINKEDIN POST → publish to LinkedIn API
+      // ============================================
+      console.log('[DailyOrchestrator] Publicando en LinkedIn...');
+      let linkedinPostId = null;
+
+      try {
+        const { data: profile } = await supabase
+          .from('linkedin_profiles')
+          .select('*')
+          .eq('user_id', userId)
+          .single()
+
+        if (profile?.access_token) {
+          const { LinkedInService } = require('./linkedin.service')
+
+          // Write LinkedIn content using the SAME topic/extract
+          const liObj = await this.writeArticle(topic, extract, 'linkedin-post')
+          console.log(`[DailyOrchestrator] LinkedIn redactado: ${liObj.titulo}`);
+
+          // Publish to LinkedIn with the SAME image
+          linkedinPostId = await LinkedInService.publish({
+            token: profile.access_token,
+            urn: `urn:li:person:${profile.linkedin_id}`,
+            text: liObj.contenido,
+            imageBase64: imageBase64,
+            imageUrl: imageUrl
+          })
+
+          // Save to linkedin_posts table
+          await supabase.from('linkedin_posts').insert({
+            user_id: userId,
+            post_id: linkedinPostId,
+            text: liObj.contenido,
+            published_at: new Date().toISOString(),
+            synced_at: new Date().toISOString()
+          })
+
+          // Save to content table
+          const liSlug = ContentService.generateSlug(liObj.titulo || topic)
+          await ContentService.create({
+            slug: liSlug,
+            title: liObj.titulo || topic,
+            subtitle: '',
+            excerpt: (liObj.contenido || '').substring(0, 200) + '...',
+            markdown_content: liObj.contenido || '',
+            html_content: liObj.contenido || '',
+            image_url: imageUrl || undefined,
+            image_prompt: blogObj.image_prompt || '',
+            content_type: 'linkedin_post',
+            source: 'ai_generated',
+            destination: 'linkedin',
+            user_id: userId,
+            word_count: (liObj.contenido || '').split(/\s+/).length,
+            tone: 'conversacional, persuasivo y experto',
+            length_target: '300',
+            status: 'published',
+            published_at: new Date().toISOString(),
+            external_id: linkedinPostId
+          })
+
+          console.log(`[DailyOrchestrator] LinkedIn publicado: ${linkedinPostId}`);
+        } else {
+          console.warn('[DailyOrchestrator] No hay credenciales de LinkedIn. Saltando.');
+        }
+      } catch (liErr) {
+        console.error('[DailyOrchestrator] Error publicando en LinkedIn:', liErr);
+      }
+
+      // ============================================
+      // 3. NEWSLETTER (Substack) → only on L/M/V
+      // ============================================
+      const dayOfWeek = new Date().getUTCDay() // 0=Sun, 1=Mon, ... 6=Sat
+      const isSubstackDay = [1, 3, 5].includes(dayOfWeek) // Mon, Wed, Fri
+
+      if (isSubstackDay) {
+        console.log('[DailyOrchestrator] Es día de Substack (L/M/V). Creando draft...');
+        try {
+          // Write newsletter content using the SAME topic/extract
+          const nlObj = await this.writeArticle(topic, extract, 'substack-article')
+          console.log(`[DailyOrchestrator] Newsletter redactado: ${nlObj.titulo}`);
+
+          // Build body with the SAME image
+          const nlMarkdown = nlObj.contenido || ''
+          const nlBody = imageUrl
+            ? `<img src="${imageUrl}" alt="Nano Banana v5">\n\n` + nlMarkdown
+            : nlMarkdown
+
+          // Create Substack draft
+          const draft = await SubstackService.createDraft(userId, {
+            draft_title: nlObj.titulo.trim(),
+            draft_subtitle: nlObj.subtitulo?.trim() || ''
+          })
+
+          await SubstackService.updateDraft(userId, String(draft.id), {
+            draft_title: nlObj.titulo.trim(),
+            draft_subtitle: nlObj.subtitulo?.trim() || '',
+            draft_body: nlBody,
+            audience: 'everyone',
+            type: 'newsletter'
+          })
+
+          // Schedule for today (+5 min margin)
+          const scheduledDate = new Date();
+          scheduledDate.setMinutes(scheduledDate.getMinutes() + 5);
+          await SubstackService.scheduleDraft(userId, String(draft.id), scheduledDate.toISOString())
+
+          // Save to content table
+          const nlSlug = ContentService.generateSlug(nlObj.titulo)
+          await ContentService.create({
+            slug: nlSlug,
+            title: nlObj.titulo,
+            subtitle: nlObj.subtitulo || '',
+            excerpt: nlMarkdown.substring(0, 200) + '...',
+            markdown_content: nlMarkdown,
+            html_content: nlBody,
+            image_url: imageUrl || undefined,
+            image_prompt: blogObj.image_prompt || '',
+            content_type: 'newsletter',
+            source: 'ai_generated',
+            destination: 'substack',
+            user_id: userId,
+            word_count: nlMarkdown.split(/\s+/).length,
+            tone: 'conversacional, persuasivo y experto',
+            length_target: '1000',
+            status: 'published',
+            published_at: new Date().toISOString(),
+            external_id: String(draft.id)
+          })
+
+          console.log(`[DailyOrchestrator] Newsletter programado: ${draft.id}`);
+        } catch (nlErr) {
+          console.error('[DailyOrchestrator] Error creando newsletter:', nlErr);
+        }
+      } else {
+        console.log(`[DailyOrchestrator] Hoy es día ${dayOfWeek} (no L/M/V). Saltando newsletter.`);
+      }
+
+      // ============================================
+      // 4. Register in history (memory for dedup)
+      // ============================================
       await supabase.from('history').insert({
         user_id: userId,
         topic: topic,
-        type: 'blog_post',
-        content: articleObj.contenido,
+        type: 'daily_orchestrator',
+        content: blogMarkdown.substring(0, 500),
         status: 'published'
       })
 
-      console.log(`[BlogAuto] ✅ ÉXITO: Blog post guardado con ID ${content.id}`);
-      console.log('================ BLOG AUTO END ==================')
+      console.log(`[DailyOrchestrator] ✅ FLUJO DIARIO COMPLETADO`);
+      console.log(`  - Blog: ${blogContent.id}`);
+      console.log(`  - LinkedIn: ${linkedinPostId || 'saltado'}`);
+      console.log(`  - Newsletter: ${isSubstackDay ? 'programado' : 'no es día L/M/V'}`);
+      console.log(`  - Imagen: ${imageUrl ? 'compartida' : 'no generada'}`);
+      console.log('================ DAILY ORCHESTRATOR END ==================')
+
     } catch (e) {
-      console.error('[BlogAuto] FALLO:', e);
+      console.error('[DailyOrchestrator] FALLO GENERAL:', e);
     }
   }
 }

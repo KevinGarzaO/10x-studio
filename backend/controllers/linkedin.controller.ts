@@ -116,13 +116,29 @@ export const linkedinCallback = async (req: Request, res: Response) => {
 
 /** POST /api/linkedin/post — Publish a post (text + optional image) */
 export const linkedinPost = async (req: Request, res: Response) => {
-  const { token, urn, text, imageBase64, imageUrl, scheduledAt } = req.body
+  const { token, urn, text, imageBase64, imageUrl, scheduledAt, title, type } = req.body
+  const postText = text || title || ''
   
   try {
     const { supabase } = require('../services/supabase.service')
     const { data: userData } = await supabase.from('users').select('id').limit(1).single()
     const userId = userData?.id
     if (!userId) throw new Error('No user found in database')
+
+    // Look up credentials from DB if not provided in body
+    let authToken = token || process.env.LINKEDIN_ACCESS_TOKEN
+    let authorUrn = urn || process.env.LINKEDIN_AUTHOR_URN
+    if (!authToken || !authorUrn) {
+      const { data: profile } = await supabase
+        .from('linkedin_profiles')
+        .select('access_token, linkedin_id')
+        .eq('user_id', userId)
+        .single()
+      if (profile?.access_token) {
+        authToken = authToken || profile.access_token
+        authorUrn = authorUrn || `urn:li:person:${profile.linkedin_id}`
+      }
+    }
 
     // If scheduled for future, save to queue instead of publishing
     if (scheduledAt && new Date(scheduledAt) > new Date()) {
@@ -131,7 +147,7 @@ export const linkedinPost = async (req: Request, res: Response) => {
       const { error: schedError } = await supabase.from('scheduled_posts').insert({
         user_id: userId,
         platform: 'linkedin',
-        content: { token, urn, text, imageBase64, imageUrl },
+        content: { token: authToken, urn: authorUrn, text: postText, imageBase64, imageUrl },
         scheduled_at: new Date(scheduledAt).toISOString(),
         status: 'pending'
       })
@@ -142,17 +158,15 @@ export const linkedinPost = async (req: Request, res: Response) => {
 
     // Immediate publication
     console.log('[LinkedIn] Publicando post inmediato...')
-    const authToken = token || process.env.LINKEDIN_ACCESS_TOKEN
-    const authorUrn = urn || process.env.LINKEDIN_AUTHOR_URN
 
-    if (!authToken || !authorUrn) return res.status(400).json({ error: 'Falta token o URN de LinkedIn' })
-    if (!text) return res.status(400).json({ error: 'El texto del post es requerido' })
+    if (!authToken || !authorUrn) return res.status(400).json({ error: 'Falta token o URN de LinkedIn. Conecta tu cuenta de LinkedIn primero.' })
+    if (!postText) return res.status(400).json({ error: 'El texto del post es requerido' })
 
     const { LinkedInService } = require('../services/linkedin.service')
     const postId = await LinkedInService.publish({
       token: authToken,
       urn: authorUrn,
-      text: text.trim(),
+      text: postText.trim(),
       imageBase64,
       imageUrl
     })
@@ -165,7 +179,7 @@ export const linkedinPost = async (req: Request, res: Response) => {
         await supabase.from('linkedin_posts').insert({
           user_id: userId,
           post_id: postId,
-          text: text.trim(),
+          text: postText.trim(),
           likes: 0,
           comments: 0,
           shares: 0,

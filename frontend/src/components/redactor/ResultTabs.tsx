@@ -61,9 +61,9 @@ export function ResultTabs({ results, topic }: Props) {
           body: JSON.stringify({ title: topic, content: current.text }),
         })
       } else if (target === 'linkedin') {
-        data = await api<any>('/api/publish/linkedin', {
+        data = await api<any>('/api/linkedin/post', {
           method: 'POST',
-          body: JSON.stringify({ content: current.text, title: topic, type: isLinkedinPost ? 'post' : 'article' }),
+          body: JSON.stringify({ text: current.text, title: topic, type: isLinkedinPost ? 'post' : 'article' }),
         })
       } else {
         data = await api<any>('/api/publish/webhook', {
