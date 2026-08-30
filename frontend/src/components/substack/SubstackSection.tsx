@@ -71,12 +71,6 @@ export function SubstackSection() {
 
   useEffect(() => { loadProfile() }, [substackConnected, loadProfile])
 
-  async function disconnect() {
-    await api('/api/substack/cookies', { method: 'DELETE' })
-    await reloadSubstackProfile()
-    setProfile(null)
-  }
-
   async function verifyAndSubscribe() {
     await reloadSubstackProfile()
     const sub = await api<any>('/api/substack/profile')

@@ -119,43 +119,6 @@ export function LinkedInSection() {
     reader.readAsDataURL(file)
   }
 
-  function handleConnect() {
-    const popup = window.open(
-      `${backendUrl}/api/linkedin/auth`,
-      'linkedin-oauth', 'width=600,height=700,scrollbars=yes'
-    )
-    const handler = (e: MessageEvent) => {
-      const data = typeof e.data === 'string' ? JSON.parse(e.data) : e.data;
-      if (data?.type === 'LINKEDIN_AUTH') {
-        saveSettings({ 
-          ...settings, 
-          linkedinToken: data.token, 
-          linkedinUrn: data.urn, 
-          linkedinName: data.name,
-          linkedinPhoto: data.photo,
-          linkedinEmail: data.email,
-          linkedinHeadline: data.headline,
-          linkedinConnectedAt: data.connectedAt,
-          linkedinExpiresAt: data.expiresAt
-        })
-        window.removeEventListener('message', handler)
-        popup?.close()
-      }
-    }
-    window.addEventListener('message', handler)
-  }
-
-  async function disconnect() {
-    await saveSettings({ 
-      ...settings, 
-      linkedinToken: '', 
-      linkedinUrn: '', 
-      linkedinName: '', 
-      linkedinPhoto: '', 
-      linkedinEmail: '' 
-    })
-  }
-
   async function fetchStats() {
     setStatsLoading(true)
     try {
