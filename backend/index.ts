@@ -12,6 +12,14 @@ import blogRoutes from './routes/blog'
 import { linkedinCallback } from './controllers/linkedin.controller'
 import { initCron } from './services/cron.service'
 import { authMiddleware } from './middleware/auth.middleware'
+import { communityAuthMiddleware } from './middleware/community-auth.middleware'
+
+// Community Hub routes
+import communityAuthRoutes from './routes/community/auth.routes'
+import communityPostsRoutes from './routes/community/posts.routes'
+import communityCommentsRoutes from './routes/community/comments.routes'
+import communityUsersRoutes from './routes/community/users.routes'
+import communitySavedRoutes from './routes/community/saved.routes'
 
 import path from 'path'
 
@@ -53,6 +61,13 @@ app.use('/api/blog', authMiddleware, blogRoutes)
 // LinkedIn: callback is public (OAuth redirect), rest requires auth
 app.get('/api/linkedin/callback', linkedinCallback)
 app.use('/api/linkedin', authMiddleware, linkedinRoutes)
+
+// Community Hub routes (public auth endpoints, protected community endpoints)
+app.use('/api/community/auth', communityAuthRoutes)
+app.use('/api/community/posts', communityPostsRoutes)
+app.use('/api/community/posts', communityCommentsRoutes)
+app.use('/api/community/users', communityUsersRoutes)
+app.use('/api/community/saved', communityAuthMiddleware, communitySavedRoutes)
 
 // Root route
 app.get('/', (req, res) => {
