@@ -23,7 +23,7 @@ type ContentPlatform = 'article' | 'note' | 'linkedin-post' | 'web-post'
 type ContentTone = 'Informativo' | 'Conversacional' | 'Persuasivo' | 'Educativo' | 'Inspiracional'
 type ContentLength = '500' | '1000' | '2000'
 
-const PLATFORMS: { id: ContentPlatform; label: string; desc: string; color: string; icon: JSX.Element }[] = [
+const PLATFORMS: { id: ContentPlatform; label: string; desc: string; color: string; icon: React.JSX.Element }[] = [
   {
     id: 'article', label: 'Substack Artículo', desc: 'Artículo largo + 1000 palabras',
     color: '#ff6347',
