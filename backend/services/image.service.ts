@@ -21,7 +21,7 @@ export class ImageService {
   }
 
   static async generate(prompt: string, referenceImages: { data: string, mimeType: string }[] = []): Promise<{ base64: string } | null> {
-    const client = this.getClient();
+    const client = await this.getClient();
     if (!client) return null;
 
     try {
