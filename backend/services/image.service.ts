@@ -1,5 +1,4 @@
 
-import { GoogleGenAI } from "@google/genai";
 import fs from 'fs';
 import path from 'path';
 import { supabase } from './supabase.service';
@@ -7,13 +6,14 @@ import { supabase } from './supabase.service';
 export class ImageService {
   private static client: any = null;
 
-  private static getClient() {
+  private static async getClient() {
     const apiKey = process.env.GEMINI_API_KEY;
     if (!apiKey) {
       console.warn("[ImageService] GEMINI_API_KEY no configurada.");
       return null;
     }
     if (!this.client) {
+      const { GoogleGenAI } = await import("@google/genai");
       // @ts-ignore - SDK initialization
       this.client = new GoogleGenAI({ apiKey });
     }
