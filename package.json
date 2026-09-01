@@ -6,13 +6,10 @@
     "dev:avocado": "pnpm --filter avocado dev",
     "dev:community": "pnpm --filter community dev",
     "dev:backend": "pnpm --filter backend dev",
-    "build": "pnpm --filter avocado build && pnpm --filter community build && pnpm --filter backend build",
+    "build": "pnpm --filter backend build",
     "build:avocado": "pnpm --filter avocado build",
     "build:community": "pnpm --filter community build",
-    "build:backend": "pnpm --filter backend build",
-    "railway:install": "cd backend && npm install",
-    "railway:build": "cd backend && npm run build",
-    "railway:start": "cd backend && npm start"
+    "build:backend": "pnpm --filter backend build"
   },
   "devDependencies": {
     "concurrently": "^9.0.0"

@@ -1,6 +1,0 @@
-{
-  "buildCommand": "cd apps/avocado && npm run build",
-  "outputDirectory": "apps/avocado/.next",
-  "framework": "nextjs",
-  "installCommand": "npm install"
-}
