@@ -75,7 +75,7 @@ function PostCard({ post, onUnlock }: { post: FeedPost; onUnlock: () => void }) 
   const router = useRouter(); const [voted, setVoted] = useState(false); const [saved, setSaved] = useState(false)
 
   const isEditorial = (post as EditorialPost).type === 'editorial'
-  const author = isEditorial ? (post as EditorialPost).author.display_name : (post as any).author
+  const author = isEditorial ? ((post as EditorialPost).author?.display_name || 'Avocado Studio') : ((post as any).author || 'Anónimo')
   const initials = isEditorial ? 'AS' : (post as any).initials || '?'
   const avatar = isEditorial ? null : (post as any).avatar
   const badge = isEditorial ? 'Staff Avocado' : (post as any).badge || ''
