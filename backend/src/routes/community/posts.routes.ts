@@ -4,6 +4,58 @@ import { communityAuthMiddleware, AuthRequest } from '../../middleware/community
 
 const router = Router()
 
+router.get('/editorial', async (req: Request, res: Response) => {
+  try {
+    const page = parseInt((req.query.page as string) || '1', 10)
+    const limit = parseInt((req.query.limit as string) || '20', 10)
+    const from = (page - 1) * limit
+    const to = from + limit - 1
+
+    const { data: blogPosts, count, error } = await supabase
+      .from('content')
+      .select('id, title, html_content, markdown_content, excerpt, image_url, slug, published_at, word_count', { count: 'exact' })
+      .eq('content_type', 'blog_post')
+      .eq('status', 'published')
+      .order('published_at', { ascending: false })
+      .range(from, to)
+
+    if (error) throw error
+
+    const editorialPosts = (blogPosts || []).map((post: any) => ({
+      id: post.id,
+      title: post.title,
+      content: post.excerpt || post.markdown_content?.substring(0, 500) || '',
+      type: 'editorial',
+      author: {
+        id: null,
+        username: 'avocado',
+        display_name: 'Avocado Studio',
+        avatar_url: null,
+      },
+      tags: [],
+      votesCount: 0,
+      commentsCount: 0,
+      image_url: post.image_url,
+      slug: post.slug,
+      word_count: post.word_count,
+      created_at: post.published_at,
+    }))
+
+    res.json({
+      posts: editorialPosts,
+      pagination: {
+        page,
+        limit,
+        total: count || 0,
+        pages: Math.ceil((count || 0) / limit),
+      },
+    })
+  } catch (error) {
+    console.error('Community Editorial posts error:', error)
+    res.status(500).json({ error: 'Error al obtener los posts editoriales' })
+  }
+})
+
 router.get('/', async (req: Request, res: Response) => {
   try {
     const type = req.query.type as string | undefined

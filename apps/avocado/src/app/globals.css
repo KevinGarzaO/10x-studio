@@ -1,5 +1,28 @@
 @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Inter:wght@300;400;500;600&display=swap');
 
+@import "primereact/resources/themes/lara-light-green/theme.css";
+@import "primereact/resources/primereact.min.css";
+@import "primeicons/primeicons.css";
+
+@import "tailwindcss";
+@import "tw-animate-css";
+
+@theme inline {
+  --font-sans: 'Inter', system-ui, sans-serif;
+  --font-mono: 'IBM Plex Mono', ui-monospace, monospace;
+  --font-heading: 'Outfit', sans-serif;
+  --font-body: 'Inter', sans-serif;
+
+  --color-brand-bg: var(--background);
+  --color-brand-surface: var(--card);
+  --color-brand-primary: var(--foreground);
+  --color-brand-secondary: var(--muted-foreground);
+  --color-brand-accent: var(--accent);
+  --color-brand-border: var(--border);
+  --color-brand-nav-bg: var(--sidebar-bg);
+  --color-brand-nav-border: var(--sidebar-bg);
+}
+
 :root {
   --background: #f8f9fb;
   --foreground: #0d1117;
@@ -41,20 +64,9 @@
   --error: #ef4444;
   --info: #0ea5e9;
 
-  --font-heading: 'Outfit', sans-serif;
-  --font-body: 'Inter', sans-serif;
-
   --topbar-height: 56px;
   --sidebar-width: 228px;
 }
-
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
-
-@import "primereact/resources/themes/lara-light-green/theme.css";
-@import "primereact/resources/primereact.min.css";
-@import "primeicons/primeicons.css";
 
 @layer base {
   html, body {

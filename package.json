@@ -1,10 +1,20 @@
 {
-  "name": "10x-studio-root",
-  "version": "1.0.0",
-  "description": "Root package to help Railway/Nixpacks detection",
+  "name": "avocado-studio",
+  "private": true,
   "scripts": {
-    "install": "cd backend && npm install",
-    "build": "cd backend && npm run build",
-    "start": "cd backend && npm start"
+    "dev": "concurrently \"pnpm --filter avocado dev\" \"pnpm --filter community dev\" \"pnpm --filter backend dev\"",
+    "dev:avocado": "pnpm --filter avocado dev",
+    "dev:community": "pnpm --filter community dev",
+    "dev:backend": "pnpm --filter backend dev",
+    "build": "pnpm --filter avocado build && pnpm --filter community build && pnpm --filter backend build",
+    "build:avocado": "pnpm --filter avocado build",
+    "build:community": "pnpm --filter community build",
+    "build:backend": "pnpm --filter backend build",
+    "railway:install": "cd backend && npm install",
+    "railway:build": "cd backend && npm run build",
+    "railway:start": "cd backend && npm start"
+  },
+  "devDependencies": {
+    "concurrently": "^9.0.0"
   }
 }
