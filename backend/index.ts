@@ -15,11 +15,11 @@ import { authMiddleware } from './middleware/auth.middleware'
 import { communityAuthMiddleware } from './middleware/community-auth.middleware'
 
 // Community Hub routes
-import communityAuthRoutes from './routes/community/auth.routes'
-import communityPostsRoutes from './routes/community/posts.routes'
-import communityCommentsRoutes from './routes/community/comments.routes'
-import communityUsersRoutes from './routes/community/users.routes'
-import communitySavedRoutes from './routes/community/saved.routes'
+import communityAuthRoutes from './src/routes/community/auth.routes'
+import communityPostsRoutes from './src/routes/community/posts.routes'
+import communityCommentsRoutes from './src/routes/community/comments.routes'
+import communityUsersRoutes from './src/routes/community/users.routes'
+import communitySavedRoutes from './src/routes/community/saved.routes'
 
 import path from 'path'
 
