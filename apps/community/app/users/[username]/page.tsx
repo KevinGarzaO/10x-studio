@@ -1,5 +1,5 @@
 import Link from 'next/link'
-import { ArrowLeft, Award, CalendarDays, ExternalLink, Flame, Github, MapPin, MessageCircle, ShieldCheck, Share2, Sparkles, Users } from 'lucide-react'
+import { ArrowLeft, Award, CalendarDays, ExternalLink, Flame, MapPin, MessageCircle, ShieldCheck, Share2, Sparkles, Users } from 'lucide-react'
 
 const profiles: Record<string, { name: string; initials: string; role: string; bio: string; tone: string; posts: string; reputation: string; avatar: string; location: string; link: string; joined: string }> = {
   'avocado-studio': { name: 'Avocado Studio', initials: 'AS', role: 'Staff Avocado', bio: 'Construimos herramientas y conversaciones para que la comunidad de developers crezca junta.', tone: 'cyan', posts: '184', reputation: '12.8k', avatar: '/avatars/avocado-studio.png', location: 'Ciudad de México · Remoto', link: 'avocado.dev', joined: '2023' },

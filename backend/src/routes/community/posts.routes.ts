@@ -116,17 +116,46 @@ router.get('/:id', async (req: Request, res: Response) => {
       .eq('id', id)
       .single()
 
-    if (error || !post) {
-      return res.status(404).json({ error: 'Publicación no encontrada' })
+    if (!error && post) {
+      return res.json({
+        ...post,
+        author: post.author,
+        tags: (post as any).community_post_tags?.map((pt: any) => pt.tag?.name).filter(Boolean) || [],
+        votesCount: (post as any).votes_count || 0,
+        commentsCount: (post as any).comments_count || 0,
+      })
     }
 
-    res.json({
-      ...post,
-      author: post.author,
-      tags: (post as any).community_post_tags?.map((pt: any) => pt.tag?.name).filter(Boolean) || [],
-      votesCount: (post as any).votes_count || 0,
-      commentsCount: (post as any).comments_count || 0,
-    })
+    const { data: editorialPost, error: editorialError } = await supabase
+      .from('content')
+      .select('id, title, html_content, markdown_content, excerpt, image_url, slug, published_at, word_count')
+      .eq('id', id)
+      .single()
+
+    if (!editorialError && editorialPost) {
+      return res.json({
+        id: editorialPost.id,
+        title: editorialPost.title,
+        content: editorialPost.html_content || editorialPost.markdown_content || '',
+        excerpt: editorialPost.excerpt || '',
+        type: 'editorial',
+        author: {
+          id: null,
+          username: 'avocado',
+          display_name: 'Avocado Studio',
+          avatar_url: null,
+        },
+        tags: [],
+        votesCount: 0,
+        commentsCount: 0,
+        image_url: editorialPost.image_url,
+        slug: editorialPost.slug,
+        word_count: editorialPost.word_count,
+        created_at: editorialPost.published_at,
+      })
+    }
+
+    return res.status(404).json({ error: 'Publicación no encontrada' })
   } catch (error) {
     console.error('Community Get post error:', error)
     res.status(500).json({ error: 'Error al obtener la publicación' })

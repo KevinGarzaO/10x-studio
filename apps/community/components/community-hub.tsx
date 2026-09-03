@@ -75,26 +75,66 @@ function PostCard({ post, onUnlock }: { post: FeedPost; onUnlock: () => void }) 
   const router = useRouter(); const [voted, setVoted] = useState(false); const [saved, setSaved] = useState(false)
 
   const isEditorial = (post as EditorialPost).type === 'editorial'
-  const author = isEditorial ? ((post as EditorialPost).author?.display_name || 'Avocado Studio') : ((post as any).author || 'Anónimo')
-  const initials = isEditorial ? 'AS' : (post as any).initials || '?'
-  const avatar = isEditorial ? null : (post as any).avatar
-  const badge = isEditorial ? 'Staff Avocado' : (post as any).badge || ''
+  const isScraperJob = (post as any).is_scraper_post === true
+  const author = isEditorial ? ((post as EditorialPost).author?.display_name || 'Avocado Studio') : isScraperJob ? 'Avocado Jobs Bot' : ((post as any).author || 'Anónimo')
+  const initials = isEditorial ? 'AS' : isScraperJob ? '🤖' : (post as any).initials || '?'
+  const avatar = isEditorial ? '' : (post as any).avatar
+  const badge = isEditorial ? 'Staff Avocado' : isScraperJob ? 'Auto-encontrado' : (post as any).badge || ''
   const time = isEditorial ? formatTime((post as EditorialPost).created_at) : (post as any).time || ''
   const stack = isEditorial ? (post as EditorialPost).tags || [] : (post as any).stack || []
   const votes = isEditorial ? (post as EditorialPost).votesCount : (post as any).votes || 0
   const comments = isEditorial ? (post as EditorialPost).commentsCount : (post as any).comments || 0
   const excerpt = isEditorial ? (post as EditorialPost).content : (post as any).excerpt || ''
-  const postType = (post as EditorialPost).type || (post as any).type
+  const postType = (post as any).type || 'normal'
   const color = isEditorial ? 'cyan' : (post as any).color || 'gray'
 
+  // Scraper-specific fields
+  const platform = (post as any).platform as string | undefined
+  const sourceName = (post as any).source_name as string | undefined
+  const sourceUrl = (post as any).source_url as string | undefined
+  const contacts = (post as any).contacts as { emails?: string[]; whatsapp?: string[]; telegramLinks?: string[] } | undefined
+  const location = (post as any).location as string | undefined
+  const workModality = (post as any).work_modality as string | undefined
+  const budget = (post as any).budget as string | undefined
+  const modalidad = (post as any).modalidad as string | undefined
+
   const openPost = (e?: React.MouseEvent<HTMLElement>) => { if (e?.target instanceof HTMLElement && e.target.closest('button, a, input, textarea, select')) return; router.push(`/post/${post.id}`) }
+
+  const platformIcons: Record<string, string> = { telegram: '✈️', forobeta: '💬', reddit: '🔴' }
+  const platformNames: Record<string, string> = { telegram: 'Telegram', forobeta: 'Forobeta', reddit: 'Reddit' }
+  const modalityLabels: Record<string, string> = { remote: '🌍 Remoto', onsite: '🏢 Presencial', hybrid: '🔄 Híbrido', unknown: '📍 No especificado' }
 
   return <article className={`post-card ${postType === 'job' ? 'job-card' : ''}`} onClick={openPost}>
     {postType === 'job' && <div className="job-line" />}
     <div className="post-top"><Link className="author-row author-link" href={`/users/${author.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`} onClick={e => e.stopPropagation()}><Avatar initials={initials} tone={color} avatar={avatar} /><div><div className="author-name">{author} {badge === 'Staff Avocado' && <ShieldCheck size={13} className="verified" />}</div><div className="post-meta">{badge} <span>·</span> {time}</div></div></Link><button className="icon-button" aria-label="Más opciones"><MoreHorizontal size={18} /></button></div>
     <div className="post-type-label">{postType === 'job' ? 'VACANTE / PROYECTO' : postType === 'showcase' ? 'MOSTRAR PROYECTO' : postType === 'editorial' ? 'ARTÍCULO' : 'POST NORMAL'}</div><h2>{post.title}</h2><p className="post-excerpt">{excerpt}</p>
+    {isEditorial && (post as EditorialPost).image_url && <div style={{ margin: '10px 0', borderRadius: 8, overflow: 'hidden' }}><img src={(post as EditorialPost).image_url!} alt="" style={{ width: '100%', height: 200, objectFit: 'cover', display: 'block' }} /></div>}
     {stack.length > 0 && <div className="stack-row">{stack.map((item: string) => <span className={`stack-badge stack-${item.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`} key={item}>{item}</span>)}</div>}
-    {postType === 'job' && <div className="job-details"><div><span className="detail-label">Presupuesto</span><strong>{(post as any).budget}</strong></div><div><span className="detail-label">Modalidad</span><strong>Remoto · Contrato</strong></div><button className="unlock-button" onClick={onUnlock}><LockKeyhole size={14} /> Ver contacto directo</button></div>}
+    {postType === 'job' && <div className="job-details">
+      {/* Info row: Budget + Modalidad + Location */}
+      <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', marginBottom: 8 }}>
+        {budget && <div style={{ padding: '4px 10px', background: '#f0fdf4', borderRadius: 6, fontSize: 12, fontWeight: 600, color: '#166534' }}>💰 {budget}</div>}
+        {(modalidad || (workModality && workModality !== 'unknown')) && <div style={{ padding: '4px 10px', background: '#eff6ff', borderRadius: 6, fontSize: 12, fontWeight: 600, color: '#1e40af' }}>{modalityLabels[workModality || 'unknown'] || modalidad}</div>}
+        {location && <div style={{ padding: '4px 10px', background: '#fefce8', borderRadius: 6, fontSize: 12, fontWeight: 600, color: '#854d0e' }}>📍 {location}</div>}
+      </div>
+      {/* Platform source */}
+      {isScraperJob && platform && <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, color: '#64748b', marginBottom: 8 }}>
+        <span>{platformIcons[platform] || '🔗'}</span>
+        <span>{platformNames[platform] || platform}</span>
+        {sourceName && <span>· {sourceName}</span>}
+        {sourceUrl && <a href={sourceUrl} target="_blank" rel="noopener noreferrer" onClick={e => e.stopPropagation()} style={{ color: '#3b82f6', textDecoration: 'none' }}> (ver original)</a>}
+      </div>}
+      {/* Contact info */}
+      {contacts && (contacts.emails?.length || contacts.whatsapp?.length || contacts.telegramLinks?.length) ? (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 4, fontSize: 12, color: '#374151', padding: '8px 12px', background: '#f8fafc', borderRadius: 8, border: '1px solid #e2e8f0', marginBottom: 8 }}>
+          {contacts.emails?.map((email: string) => <div key={email} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>📧 <a href={`mailto:${email}`} onClick={e => e.stopPropagation()} style={{ color: '#3b82f6' }}>{email}</a></div>)}
+          {contacts.whatsapp?.map((wa: string) => <div key={wa} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>📱 <a href={wa} target="_blank" rel="noopener noreferrer" onClick={e => e.stopPropagation()} style={{ color: '#25d366' }}>WhatsApp</a></div>)}
+          {contacts.telegramLinks?.map((tg: string) => <div key={tg} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>✈️ <a href={tg} target="_blank" rel="noopener noreferrer" onClick={e => e.stopPropagation()} style={{ color: '#0088cc' }}>{tg}</a></div>)}
+        </div>
+      ) : (
+        <button className="unlock-button" onClick={onUnlock}><LockKeyhole size={14} /> Ver contacto directo</button>
+      )}
+    </div>}
     <div className="post-footer"><button className={`vote-button ${voted ? 'voted' : ''}`} onClick={() => setVoted(!voted)}><ArrowBigUp size={17} fill={voted ? 'currentColor' : 'none'} />{votes + (voted ? 1 : 0)}</button><button className="engagement"><MessageCircle size={16} />{comments} comentarios</button><span className="footer-spacer" /><button className={`icon-button ${saved ? 'saved' : ''}`} onClick={() => setSaved(!saved)} aria-label="Guardar"><Bookmark size={17} fill={saved ? 'currentColor' : 'none'} /></button><button className="icon-button" aria-label="Compartir"><Share2 size={16} /></button></div>
   </article>
 }
@@ -130,7 +170,7 @@ export function CommunityHub() {
       ...p,
       author: p.author.display_name,
       initials: 'AS',
-      avatar: undefined as string | undefined,
+      avatar: '',
       badge: 'Staff Avocado' as const,
       time: formatTime(p.created_at),
       tag: p.tags[0] || 'avocado',
@@ -140,11 +180,11 @@ export function CommunityHub() {
       comments: p.commentsCount,
       color: 'cyan',
     }))
-    return [...editorialMapped, ...mockPosts]
+    return [...editorialMapped, ...mockPosts] as FeedPost[]
   }, [editorialPosts])
 
   const filteredPosts = useMemo(() => allPosts.filter(p => {
-    const type = (p as EditorialPost).type || (p as any).type
+    const type = (p as any).type
     const matchesTab = activeTab === 'Tendencias' || (activeTab === 'Últimos Envíos') || (activeTab === 'Vacantes & Freelance' && type === 'job') || (activeTab === 'Showcase Projects' && type === 'showcase')
     const searchStr = `${(p as any).title || ''} ${(p as any).excerpt || ''} ${((p as any).stack || []).join(' ')}`.toLowerCase()
     return matchesTab && searchStr.includes(search.toLowerCase())
