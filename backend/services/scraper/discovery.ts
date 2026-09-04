@@ -36,11 +36,15 @@ export async function runDiscovery(
   const newChannels: string[] = [];
 
   // Generate queries with AI
-  const queries = await generateDiscoveryQueries(profile.name);
-  log(`[Discovery] ${queries.length} queries generadas: ${queries.join(", ")}`);
+  const aiQueries = await generateDiscoveryQueries(profile.name);
+  log(`[Discovery] ${aiQueries.length} queries IA generadas: ${aiQueries.join(", ")}`);
+
+  // Combine hardcoded + AI-generated queries
+  const allQueries = [...new Set([...profile.telegramQueries, ...aiQueries])];
+  log(`[Discovery] Total queries: ${allQueries.length}`);
 
   // Search Telegram channels by scraping t.me/s/<query>
-  for (const query of profile.telegramQueries) {
+  for (const query of allQueries) {
     const sourceId = query.toLowerCase().replace(/\s+/g, "_").replace(/[^a-z0-9_]/g, "");
     const key = `telegram:${sourceId}`;
 

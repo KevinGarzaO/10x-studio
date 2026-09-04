@@ -24,6 +24,7 @@ export interface EnrichedVacancy {
     emails: string[];
     whatsapp: string[];
     telegramLinks: string[];
+    phones: string[];
     applyUrl: string | null;
   };
   qualityScore: number;
@@ -48,17 +49,25 @@ export async function enrichVacancyWithAI(
     const existingContactsStr = JSON.stringify(existingContacts);
 
     const prompt = [
-      "Eres un experto en reclutamiento tech. Analiza este post de " + platform + "/" + source + " y extrae/genera información estructurada de la vacante.",
+      "Eres un experto en reclutamiento tech y extracción de información. Analiza este post de " + platform + "/" + source + " y extrae TODA la información posible.",
       "",
       "TEXTO ORIGINAL:",
       truncated,
       "",
-      "CONTACTOS YA DETECTADOS:",
+      "CONTACTOS YA DETECTADOS POR REGEX:",
       existingContactsStr,
       "",
+      'INSTRUCCIONES CRÍTICAS:',
+      '- DEBES extraer TODOS los medios de contacto del texto (emails, teléfonos, whatsapp, links)',
+      '- Si el texto contiene un email, inclúyelo en contacts.emails',
+      '- Si contiene un número de teléfono o link de whatsapp, inclúyelo en contacts.whatsapp',
+      '- Si contiene un link de telegram, inclúyelo en contacts.telegramLinks',
+      '- Si hay un link de postulación (apply, postularse, apply now), inclúyelo en contacts.applyUrl',
+      '- Si no hay contacto explícito pero el post pide "enviar CV" o similar, busca si hay algún medio',
+      '',
       'Responde SOLO con un JSON válido (sin markdown, sin backticks):',
       "{",
-      '  "title": "título conciso de la vacante (ej: Frontend Developer React)",',
+      '  "title": "título conciso de la vacante (ej: Frontend Developer React - Startup Fintech)",',
       '  "company": "nombre de la empresa o null",',
       '  "role": "rol específico (ej: Senior Frontend Developer)",',
       '  "location": "ubicación (ej: Ciudad de México, Remoto Global, España)",',
@@ -66,23 +75,25 @@ export async function enrichVacancyWithAI(
       '  "salary": "rango salarial si se menciona (ej: $3000-5000 USD/mes) o null",',
       '  "requirements": ["requisito 1", "requisito 2", ...],',
       '  "benefits": ["beneficio 1", "beneficio 2", ...],',
-      '  "description": "descripción profesional de 2-4 oraciones de la vacante, bien formateada",',
+      '  "description": "descripción profesional de 3-5 oraciones de la vacante, bien formateada y atractiva",',
       '  "contacts": {',
-      '    "emails": ["email encontrado"],',
-      '    "whatsapp": ["link whatsapp encontrado"],',
-      '    "telegramLinks": ["link telegram encontrado"],',
+      '    "emails": ["TODOS los emails encontrados en el texto"],',
+      '    "whatsapp": ["links de whatsapp encontrados"],',
+      '    "telegramLinks": ["links de telegram encontrados"],',
+      '    "phones": ["números de teléfono encontrados"],',
       '    "applyUrl": "link de aplicación si existe o null"',
       '  },',
-      '  "qualityScore": 0.0 a 1.0,',
+      '  "qualityScore": 0.0 a 1.0 (bajo si no hay contacto, alto si hay email/teléfono directo),',
       '  "summary": "resumen en 1 línea"',
       "}",
       "",
-      "Reglas:",
-      "- Si el texto es muy corto o genérico, devuelve qualityScore bajo",
-      "- Extrae TODOS los contactos posibles (email, whatsapp, telegram, links)",
-      "- Si hay un link de postulación, inclúyelo en applyUrl",
-      "- La description debe ser profesional y atractiva",
-      "- Si no hay información suficiente para un campo, usa null o array vacío",
+      "Reglas importantes:",
+      "- Si el texto es muy corto (< 20 caracteres) o es spam, devuelve qualityScore = 0.1",
+      "- Si no hay NINGÚN contacto visible, qualityScore = 0.2",
+      "- Si hay email directo, qualityScore >= 0.7",
+      "- Si hay teléfono/whatsapp, qualityScore >= 0.6",
+      "- Si solo hay link de postulación (sin contacto directo), qualityScore = 0.5",
+      "- La description debe ser profesional, no el texto crudo",
     ].join("\n");
 
     const response = await client.models.generateContent({
@@ -114,6 +125,7 @@ export async function enrichVacancyWithAI(
         emails: parsed.contacts?.emails || existingContacts.emails || [],
         whatsapp: parsed.contacts?.whatsapp || existingContacts.whatsapp || [],
         telegramLinks: parsed.contacts?.telegramLinks || existingContacts.telegramLinks || [],
+        phones: parsed.contacts?.phones || [],
         applyUrl: parsed.contacts?.applyUrl || null,
       },
       qualityScore: parsed.qualityScore ?? 0.5,
@@ -162,7 +174,10 @@ export function buildEnrichedContent(vacancy: EnrichedVacancy): string {
 
   const contactLines: string[] = [];
   if (vacancy.contacts.emails.length > 0) {
-    contactLines.push(`📧 ${vacancy.contacts.emails.join(", ")}`);
+    contactLines.push(`📧 Email: ${vacancy.contacts.emails.join(", ")}`);
+  }
+  if (vacancy.contacts.phones.length > 0) {
+    contactLines.push(`📞 Teléfono: ${vacancy.contacts.phones.join(", ")}`);
   }
   if (vacancy.contacts.whatsapp.length > 0) {
     contactLines.push(`💬 WhatsApp: ${vacancy.contacts.whatsapp.join(", ")}`);

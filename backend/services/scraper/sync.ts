@@ -153,13 +153,25 @@ export async function syncProfileToUser(
 export async function syncAllPending(
   log: (msg: string) => void = () => {}
 ): Promise<{ vacancies: number; profiles: number }> {
-  // Get unsynced vacancy posts
+  // Get unsynced vacancy posts that have at least one contact method
   const { data: vacancyPosts } = await supabase
     .from("scraper_posts")
-    .select("id")
+    .select("id, contacts")
     .eq("post_type", "vacancy")
     .eq("synced_to_community", false)
     .limit(50);
+
+  // Filter posts that have at least email or phone
+  const postsWithContact = (vacancyPosts ?? []).filter((post) => {
+    const contacts = post.contacts as Record<string, unknown> | null;
+    const hasEmail = (contacts?.emails as string[])?.length ?? 0 > 0;
+    const hasWhatsapp = (contacts?.whatsapp as string[])?.length ?? 0 > 0;
+    const hasTelegram = (contacts?.telegramLinks as string[])?.length ?? 0 > 0;
+    const hasApplyUrl = !!contacts?.applyUrl;
+    return hasEmail || hasWhatsapp || hasTelegram || hasApplyUrl;
+  });
+
+  log(`[Sync] ${postsWithContact.length} vacantes con contacto de ${vacancyPosts?.length ?? 0} totales`);
 
   // Get unsynced profile posts
   const { data: profilePosts } = await supabase
@@ -172,7 +184,7 @@ export async function syncAllPending(
   let vacancies = 0;
   let profiles = 0;
 
-  for (const post of vacancyPosts ?? []) {
+  for (const post of postsWithContact) {
     const result = await syncVacancyToCommunity(post.id, log);
     if (result) vacancies++;
   }
