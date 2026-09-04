@@ -1,13 +1,27 @@
-let genAI: any = null;
+import type { PostType, ProfileInfo, WorkModality } from "./types";
 
-async function getClient() {
-  const apiKey = process.env.GEMINI_API_KEY;
+let anthropicClient: any = null;
+
+async function getClaudeClient() {
+  const apiKey = process.env.ANTHROPIC_API_KEY;
   if (!apiKey) return null;
-  if (!genAI) {
-    const { GoogleGenAI } = await import("@google/genai");
-    genAI = new GoogleGenAI({ apiKey });
+  if (!anthropicClient) {
+    const Anthropic = (await import("@anthropic-ai/sdk")).default;
+    anthropicClient = new Anthropic({ apiKey });
   }
-  return genAI;
+  return anthropicClient;
+}
+
+async function callClaude(prompt: string, maxTokens: number = 1000): Promise<string | null> {
+  const client = await getClaudeClient();
+  if (!client) return null;
+  const response = await client.messages.create({
+    model: "claude-haiku-4-20250414",
+    max_tokens: maxTokens,
+    temperature: 0.2,
+    messages: [{ role: "user", content: prompt }],
+  });
+  return response.content?.[0]?.text ?? null;
 }
 
 export interface EnrichedVacancy {
@@ -41,9 +55,6 @@ export async function enrichVacancyWithAI(
     telegramLinks?: string[];
   } = {}
 ): Promise<EnrichedVacancy | null> {
-  const client = await getClient();
-  if (!client) return null;
-
   try {
     const truncated = rawText.substring(0, 2000);
     const existingContactsStr = JSON.stringify(existingContacts);
@@ -63,7 +74,6 @@ export async function enrichVacancyWithAI(
       '- Si contiene un número de teléfono o link de whatsapp, inclúyelo en contacts.whatsapp',
       '- Si contiene un link de telegram, inclúyelo en contacts.telegramLinks',
       '- Si hay un link de postulación (apply, postularse, apply now), inclúyelo en contacts.applyUrl',
-      '- Si no hay contacto explícito pero el post pide "enviar CV" o similar, busca si hay algún medio',
       '',
       'Responde SOLO con un JSON válido (sin markdown, sin backticks):',
       "{",
@@ -72,40 +82,30 @@ export async function enrichVacancyWithAI(
       '  "role": "rol específico (ej: Senior Frontend Developer)",',
       '  "location": "ubicación (ej: Ciudad de México, Remoto Global, España)",',
       '  "workModality": "remote" | "onsite" | "hybrid" | "unknown",',
-      '  "salary": "rango salarial si se menciona (ej: $3000-5000 USD/mes) o null",',
-      '  "requirements": ["requisito 1", "requisito 2", ...],',
-      '  "benefits": ["beneficio 1", "beneficio 2", ...],',
-      '  "description": "descripción profesional de 3-5 oraciones de la vacante, bien formateada y atractiva",',
+      '  "salary": "rango salarial si se menciona o null",',
+      '  "requirements": ["requisito 1", "requisito 2"],',
+      '  "benefits": ["beneficio 1", "beneficio 2"],',
+      '  "description": "descripción profesional de 3-5 oraciones de la vacante",',
       '  "contacts": {',
-      '    "emails": ["TODOS los emails encontrados en el texto"],',
-      '    "whatsapp": ["links de whatsapp encontrados"],',
-      '    "telegramLinks": ["links de telegram encontrados"],',
-      '    "phones": ["números de teléfono encontrados"],',
-      '    "applyUrl": "link de aplicación si existe o null"',
+      '    "emails": ["TODOS los emails encontrados"],',
+      '    "whatsapp": ["links de whatsapp"],',
+      '    "telegramLinks": ["links de telegram"],',
+      '    "phones": ["números de teléfono"],',
+      '    "applyUrl": "link de aplicación o null"',
       '  },',
-      '  "qualityScore": 0.0 a 1.0 (bajo si no hay contacto, alto si hay email/teléfono directo),',
+      '  "qualityScore": 0.0 a 1.0,',
       '  "summary": "resumen en 1 línea"',
       "}",
       "",
-      "Reglas importantes:",
-      "- Si el texto es muy corto (< 20 caracteres) o es spam, devuelve qualityScore = 0.1",
-      "- Si no hay NINGÚN contacto visible, qualityScore = 0.2",
+      "Reglas:",
+      "- Si el texto es muy corto o spam, qualityScore = 0.1",
+      "- Si no hay contacto, qualityScore = 0.2",
       "- Si hay email directo, qualityScore >= 0.7",
       "- Si hay teléfono/whatsapp, qualityScore >= 0.6",
-      "- Si solo hay link de postulación (sin contacto directo), qualityScore = 0.5",
-      "- La description debe ser profesional, no el texto crudo",
+      "- Si solo hay link de postulación, qualityScore = 0.5",
     ].join("\n");
 
-    const response = await client.models.generateContent({
-      model: "gemini-2.0-flash",
-      contents: [{ role: "user", parts: [{ text: prompt }] }],
-      generationConfig: {
-        temperature: 0.2,
-        maxOutputTokens: 1000,
-      },
-    });
-
-    const textResponse = response.candidates?.[0]?.content?.parts?.[0]?.text;
+    const textResponse = await callClaude(prompt, 1000);
     if (!textResponse) return null;
 
     const cleaned = textResponse.replace(/```json\n?/g, "").replace(/```\n?/g, "").trim();
@@ -198,8 +198,6 @@ export function buildEnrichedContent(vacancy: EnrichedVacancy): string {
   return lines.join("\n");
 }
 
-import type { PostType, ProfileInfo, WorkModality } from "./types";
-
 const PROFILE_PATTERNS: RegExp[] = [
   /\bme\s+ofrezco\b/i,
   /\bofrezco\s+mis\s+servicios\b/i,
@@ -228,31 +226,18 @@ const VACANCY_PATTERNS: RegExp[] = [
   /\brequerimos\b/i,
   /\best[aá]n\s+contratando\b/i,
   /\bbusco\s+(?:un[ao]?\s+)?(?!trabajo\b|empleo\b|proyectos?\b|oportunidad|clientes?\b)[a-záéíóúñ]+(?:\s+[a-záéíóúñ]+){0,2}\s+(?:para|que)\b/i,
-  /(?:👨‍💻|👩‍💻|🧑‍💻|💼|🎯|🚀|🔧|⚡|🛠️)\s*[A-Z]/,
-  /(?:🧑‍💼|👩‍💼|👨‍💼|📋|📝|🏢)\s*[A-Z]/,
   /(?:Senior|Junior|Mid|Lead|Principal|Staff)?\s*(?:Frontend|Backend|Full\s*Stack|DevOps|Data|Mobile|Cloud|Software|Systems|Platform|Infrastructure)\s+(?:Developer|Engineer|Architect|Analyst|Specialist|Manager|Designer|Consultant)/i,
   /(?:Desarrollador[a]?|Dise[ñn]ador[a]?|Ingeniero[a]?|Especialista|Consultor[a]?|Asesor[a]?|Ejecutivo[a]?|Representante)\s+(?:de\s+|en\s+)?[A-Z]/i,
-  /\b(?:estamos?\s+)?contratando\b/i,
   /\bhiring\b/i,
   /\bwe'?re\s+hiring\b/i,
   /\blooking\s+for\b/i,
-  /\bjob\s+opening\b/i,
-  /\bwe\s+are\s+looking\b/i,
   /\bjoin\s+our\s+team\b/i,
   /\bopen\s+position\b/i,
   /\b100%\s+remoto\b/i,
   /\btiempo\s+completo\b/i,
   /\binicio\s+inmediato\b/i,
-  /\bremoto.*(?:global|internacional|latinoam[eé]rica)\b/i,
-  /(?:💼|📢|🔥|✅|👥|🎯|🏆|💰|📝)\s*.{0,30}(?:busca|buscamos|se busca|hiring|vacante|vacancy)/i,
   /[$€]\s?\d[\d,.]*(?:\s?(?:USD|MXN|EUR|\/\s?(?:hora|hr|mes|month)))\b/i,
-  /(?:linkedin\.com\/posts|lnkd\.in)/i,
-  /\bsomos\s+(?:una?\s+)?(?:empresa|compañía|startup)\b.*?\bbuscamos\b/is,
-  /\bofrecemos\b.*?\b(?:salario|beneficio|remoto|puesto|vacante)\b/is,
-  /\bsalario\b.*?\b(?:bueno|atractivo|competitivo)\b/i,
-  /\b(?:aplica|apliquen|envía|envian)\s+(?:tu\s+)?(?:cv|currículum|hoja\s+de\s+vida|candidatura)\b/i,
   /\boferta\s+(?:remota|laboral|de\s+trabajo|empleo)\b/i,
-  /\bapp\b.*\b(?:lanzamiento|disponible|pronto)\b/i,
 ];
 
 export function classifyPostType(text: string, forumHint?: string | null): PostType {
@@ -330,7 +315,7 @@ const ROLE_KEYWORDS = [
   "Diseñador UX", "Diseñador de Producto", "Marketing Digital",
   "Community Manager", "Copywriter", "Redactor", "Traductor",
   "Asistente Virtual", "Contador", "Abogado", "Fotógrafo", "Editor de Video",
-  "Editor de Vídeo", "SEO", "Social Media", "Automatización", "Data Entry",
+  "SEO", "Social Media", "Automatización", "Data Entry",
   "Ilustrador", "Animador", "Locutor", "Consultor", "Analista",
 ];
 

@@ -1,16 +1,28 @@
-let genAI: any = null;
+let anthropicClient: any = null;
 
-async function getClient() {
-  const apiKey = process.env.GEMINI_API_KEY;
+async function getClaudeClient() {
+  const apiKey = process.env.ANTHROPIC_API_KEY;
   if (!apiKey) {
-    console.warn("[ScraperAI] GEMINI_API_KEY no configurada.");
+    console.warn("[ScraperAI] ANTHROPIC_API_KEY no configurada.");
     return null;
   }
-  if (!genAI) {
-    const { GoogleGenAI } = await import("@google/genai");
-    genAI = new GoogleGenAI({ apiKey });
+  if (!anthropicClient) {
+    const Anthropic = (await import("@anthropic-ai/sdk")).default;
+    anthropicClient = new Anthropic({ apiKey });
   }
-  return genAI;
+  return anthropicClient;
+}
+
+async function callClaude(prompt: string, maxTokens: number = 500, temperature: number = 0.1): Promise<string | null> {
+  const client = await getClaudeClient();
+  if (!client) return null;
+  const response = await client.messages.create({
+    model: "claude-haiku-4-20250414",
+    max_tokens: maxTokens,
+    temperature,
+    messages: [{ role: "user", content: prompt }],
+  });
+  return response.content?.[0]?.text ?? null;
 }
 
 export async function classifyPostWithAI(
@@ -24,9 +36,6 @@ export async function classifyPostWithAI(
   qualityScore: number;
   summary: string;
 } | null> {
-  const client = await getClient();
-  if (!client) return null;
-
   try {
     const truncated = text.substring(0, 1500);
     const prompt = [
@@ -52,16 +61,7 @@ export async function classifyPostWithAI(
       "- qualityScore bajo = generico, sin contacto, spam, o texto muy corto",
     ].join("\n");
 
-    const response = await client.models.generateContent({
-      model: "gemini-2.0-flash",
-      contents: [{ role: "user", parts: [{ text: prompt }] }],
-      generationConfig: {
-        temperature: 0.1,
-        maxOutputTokens: 500,
-      },
-    });
-
-    const textResponse = response.candidates?.[0]?.content?.parts?.[0]?.text;
+    const textResponse = await callClaude(prompt, 500, 0.1);
     if (!textResponse) return null;
 
     const cleaned = textResponse.replace(/```json\n?/g, "").replace(/```\n?/g, "").trim();
@@ -82,9 +82,6 @@ export async function evaluateSourceWithAI(
   categories: string[];
   reason: string;
 } | null> {
-  const client = await getClient();
-  if (!client) return null;
-
   try {
     const samples = samplePosts.map((p, i) => (i + 1) + ". " + p.substring(0, 300)).join("\n\n");
     const prompt = [
@@ -108,16 +105,7 @@ export async function evaluateSourceWithAI(
       "- qualityScore = proporcion de posts que son vacantes/perfiles utiles con contacto",
     ].join("\n");
 
-    const response = await client.models.generateContent({
-      model: "gemini-2.0-flash",
-      contents: [{ role: "user", parts: [{ text: prompt }] }],
-      generationConfig: {
-        temperature: 0.1,
-        maxOutputTokens: 500,
-      },
-    });
-
-    const textResponse = response.candidates?.[0]?.content?.parts?.[0]?.text;
+    const textResponse = await callClaude(prompt, 500, 0.1);
     if (!textResponse) return null;
 
     const cleaned = textResponse.replace(/```json\n?/g, "").replace(/```\n?/g, "").trim();
@@ -131,9 +119,6 @@ export async function evaluateSourceWithAI(
 export async function generateDiscoveryQueries(
   profile: string
 ): Promise<string[]> {
-  const client = await getClient();
-  if (!client) return [];
-
   try {
     const prompt = [
       "Genera 5-8 queries de busqueda para encontrar canales de Telegram, subforos de Forobeta, o subreddits donde se publiquen vacantes de empleo y perfiles de freelancers en espanol para LatAm.",
@@ -150,16 +135,7 @@ export async function generateDiscoveryQueries(
       "- dev jobs LATAM",
     ].join("\n");
 
-    const response = await client.models.generateContent({
-      model: "gemini-2.0-flash",
-      contents: [{ role: "user", parts: [{ text: prompt }] }],
-      generationConfig: {
-        temperature: 0.7,
-        maxOutputTokens: 300,
-      },
-    });
-
-    const textResponse = response.candidates?.[0]?.content?.parts?.[0]?.text;
+    const textResponse = await callClaude(prompt, 300, 0.7);
     if (!textResponse) return [];
 
     const cleaned = textResponse.replace(/```json\n?/g, "").replace(/```\n?/g, "").trim();
