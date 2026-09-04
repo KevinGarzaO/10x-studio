@@ -10,7 +10,7 @@ router.get('/:postId/comments', async (req: Request, res: Response) => {
 
     const { data: comments, error } = await supabase
       .from('community_comments')
-      .select('*, author:users(id, username, display_name, avatar_url)')
+      .select('*, author:users(id, username, display_name, photo_url)')
       .eq('post_id', postId)
       .order('created_at', { ascending: false })
 
@@ -49,7 +49,7 @@ router.post('/:postId/comments', communityAuthMiddleware, async (req: AuthReques
         author_id: req.userId,
         post_id: postId,
       })
-      .select('*, author:users(id, username, display_name, avatar_url)')
+      .select('*, author:users(id, username, display_name, photo_url)')
       .single()
 
     if (error) throw error

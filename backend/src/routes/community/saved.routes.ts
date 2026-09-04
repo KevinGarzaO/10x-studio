@@ -8,7 +8,7 @@ router.get('/', communityAuthMiddleware, async (req: AuthRequest, res: Response)
   try {
     const { data: saved, error } = await supabase
       .from('community_saved_posts')
-      .select('post_id, saved_at, post:community_posts(*, author:users(id, username, display_name, avatar_url), community_post_tags(tag:community_tags(name)))')
+      .select('post_id, saved_at, post:community_posts(*, author:users(id, username, display_name, photo_url), community_post_tags(tag:community_tags(name)))')
       .eq('user_id', req.userId)
       .order('saved_at', { ascending: false })
 

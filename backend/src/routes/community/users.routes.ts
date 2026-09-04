@@ -49,7 +49,7 @@ router.put('/:username', communityAuthMiddleware, async (req: AuthRequest, res: 
       .update({
         display_name: displayName,
         bio,
-        avatar_url: avatarUrl,
+        photo_url: avatarUrl,
         website,
         github_url: githubUrl,
       })

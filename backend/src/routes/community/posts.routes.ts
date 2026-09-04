@@ -74,7 +74,7 @@ router.get('/', async (req: Request, res: Response) => {
 
     let query = supabase
       .from('community_posts')
-      .select('*, author:users(id, username, display_name, avatar_url), community_post_tags(tag:community_tags(name))', { count: 'exact' })
+      .select('*, author:users(id, username, display_name, photo_url), community_post_tags(tag:community_tags(name))', { count: 'exact' })
       .order('created_at', { ascending: false })
       .range(from, to)
 
@@ -116,9 +116,9 @@ router.get('/:id', async (req: Request, res: Response) => {
       .from('community_posts')
       .select(`
         *,
-        author:users(id, username, display_name, avatar_url, bio),
+        author:users(id, username, display_name, photo_url, bio),
         community_post_tags(tag:community_tags(name)),
-        community_comments(*, author:users(id, username, display_name, avatar_url))
+        community_comments(*, author:users(id, username, display_name, photo_url))
       `)
       .eq('id', id)
       .single()
