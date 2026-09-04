@@ -1,7 +1,7 @@
 async function callClaude(prompt: string, maxTokens: number = 500, temperature: number = 0.1): Promise<string | null> {
-  const apiKey = process.env.CLAUDE_API_KEY;
+  const apiKey = process.env.CLAUDE_API_KEY || process.env.ANTHROPIC_API_KEY;
   if (!apiKey) {
-    console.warn("[ScraperAI] CLAUDE_API_KEY no configurada.");
+    console.warn("[ScraperAI] CLAUDE_API_KEY / ANTHROPIC_API_KEY no configurada.");
     return null;
   }
 
@@ -14,7 +14,7 @@ async function callClaude(prompt: string, maxTokens: number = 500, temperature: 
         "anthropic-version": "2023-06-01",
       },
       body: JSON.stringify({
-        model: "claude-haiku-4-20250414",
+        model: "claude-haiku-4-5-20251001",
         max_tokens: maxTokens,
         temperature,
         messages: [{ role: "user", content: prompt }],

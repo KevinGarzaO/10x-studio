@@ -61,6 +61,7 @@ export async function runProduction(
         const aiResult = await classifyPostWithAI(post.text, post.platform, post.source);
         const qualityScore = aiResult?.qualityScore ?? (hasCt ? 0.5 : 0.2);
         const summary = aiResult?.summary ?? post.text.substring(0, 200);
+        if (!aiResult) log(`[Production] AI classify returned null for post ${post.postId}`);
 
         // Enrich vacancy posts with AI
         let enrichedContent = post.text;
@@ -68,6 +69,7 @@ export async function runProduction(
         let enrichedTitle = post.text.split("\n")[0]?.substring(0, 150) || "Sin título";
 
         if (aiResult?.postType === "vacancy") {
+          log(`[Production] Enriching vacancy: ${post.postId}`);
           const enriched = await enrichVacancyWithAI(
             post.text,
             post.platform,

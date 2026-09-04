@@ -20,7 +20,7 @@ export interface EnrichedVacancy {
 }
 
 async function callClaude(prompt: string, maxTokens: number = 1000, temperature: number = 0.2): Promise<string | null> {
-  const apiKey = process.env.CLAUDE_API_KEY;
+  const apiKey = process.env.CLAUDE_API_KEY || process.env.ANTHROPIC_API_KEY;
   if (!apiKey) return null;
 
   try {
@@ -32,7 +32,7 @@ async function callClaude(prompt: string, maxTokens: number = 1000, temperature:
         "anthropic-version": "2023-06-01",
       },
       body: JSON.stringify({
-        model: "claude-haiku-4-20250414",
+        model: "claude-haiku-4-5-20251001",
         max_tokens: maxTokens,
         temperature,
         messages: [{ role: "user", content: prompt }],
