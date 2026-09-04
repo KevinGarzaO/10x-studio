@@ -21,8 +21,8 @@ import communityCommentsRoutes from './src/routes/community/comments.routes'
 import communityUsersRoutes from './src/routes/community/users.routes'
 import communitySavedRoutes from './src/routes/community/saved.routes'
 
-// Scraper routes (uncomment when ready)
-// import scraperRoutes from './routes/scraper'
+// Scraper routes
+import scraperRoutes from './routes/scraper'
 
 import path from 'path'
 
@@ -90,8 +90,8 @@ app.use('/api/community/posts', communityCommentsRoutes)
 app.use('/api/community/users', communityUsersRoutes)
 app.use('/api/community/saved', communityAuthMiddleware, communitySavedRoutes)
 
-// Scraper routes (uncomment when ready)
-// app.use('/api/scraper', scraperRoutes)
+// Scraper routes (internal use, no auth required for now)
+app.use('/api/scraper', scraperRoutes)
 
 // Root route
 app.get('/', (req, res) => {

@@ -80,9 +80,9 @@ export const initCron = () => {
     await SchedulerService.processPendingPosts()
   })
 
-  // 5. Scraper crons (uncomment when scraper tables exist)
-  // const { initScraperCron } = require('./scraper/scheduler')
-  // initScraperCron()
+  // 5. Scraper crons (Discovery=6h, Production=30min, Sync=35min)
+  const { initScraperCron } = require('./scraper/scheduler')
+  initScraperCron()
 
-  console.log('Cron services initialized (Sync=15m, DailyOrchestrator=11:45AM MT, English4PM=4PM MT daily, Scheduler=15m)')
+  console.log('Cron services initialized (Sync=15m, DailyOrchestrator=11:45AM MT, English4PM=4PM MT daily, Scheduler=15m, Scraper=Discovery6h+Production30m)')
 }

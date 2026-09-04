@@ -1,0 +1,22 @@
+{
+  "_comment": "Fuentes por plataforma. Telegram: username del canal (sin @). Forobeta: slug del subforo. Reddit: nombre del subreddit (sin r/).",
+  "telegram": [
+    "trabajovenezuela",
+    "proyectogrowup",
+    "empleo_it_latam",
+    "remotejobscol",
+    "cucodersjobs",
+    "empleositar",
+    "sobrecodigo_trabajos",
+    "vacantesdigitales",
+    "trabajostiperu",
+    "itfreelancers",
+    "lance_jobs",
+    "VacantesyEmpleos",
+    "empleosrecientes",
+    "trabajoenremoto",
+    "Empleos_En_Venezuela"
+  ],
+  "forobeta": ["otros-servicios-gratuitos.476"],
+  "reddit": ["empleos_tech", "MexicoTech", "devsarg", "taquerosprogramadores"]
+}
