@@ -1,5 +1,6 @@
 import { getActiveSources, insertPost, postExists } from "./db";
 import { classifyPostWithAI } from "./ai";
+import { enrichVacancyWithAI, buildEnrichedContent } from "./enrich";
 import { fetchTelegramChannel } from "./sources/telegram";
 import { fetchForobetaForum } from "./sources/forobeta";
 import { fetchRedditListing } from "./sources/reddit";
@@ -61,6 +62,33 @@ export async function runProduction(
         const qualityScore = aiResult?.qualityScore ?? (hasCt ? 0.5 : 0.2);
         const summary = aiResult?.summary ?? post.text.substring(0, 200);
 
+        // Enrich vacancy posts with AI
+        let enrichedContent = post.text;
+        let enrichedContacts = post.contacts as unknown as Record<string, unknown>;
+        let enrichedTitle = post.text.split("\n")[0]?.substring(0, 150) || "Sin título";
+
+        if (aiResult?.postType === "vacancy") {
+          const enriched = await enrichVacancyWithAI(
+            post.text,
+            post.platform,
+            post.source,
+            post.contacts
+          );
+          if (enriched) {
+            enrichedContent = buildEnrichedContent(enriched);
+            enrichedTitle = enriched.title;
+            enrichedContacts = {
+              emails: enriched.contacts.emails,
+              whatsapp: enriched.contacts.whatsapp,
+              telegramLinks: enriched.contacts.telegramLinks,
+              applyUrl: enriched.contacts.applyUrl,
+              company: enriched.company,
+              role: enriched.role,
+              salary: enriched.salary,
+            };
+          }
+        }
+
         await insertPost({
           platform: post.platform,
           source: post.source,
@@ -69,13 +97,13 @@ export async function runProduction(
           post_date: post.postDate,
           author: post.author,
           views: post.views,
-          text: post.text,
+          text: enrichedContent,
           language: post.language,
           post_type: aiResult?.postType ?? post.postType,
           location: aiResult?.location ?? post.location,
           work_modality: aiResult?.workModality ?? post.workModality,
           profile: post.profile ? post.profile as unknown as Record<string, unknown> : null,
-          contacts: post.contacts as unknown as Record<string, unknown>,
+          contacts: enrichedContacts,
           quality_score: qualityScore,
           summary,
           is_spam: false,

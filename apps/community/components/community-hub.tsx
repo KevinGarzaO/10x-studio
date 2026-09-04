@@ -74,22 +74,34 @@ function LeftSidebar({ onPublish, activeTab, setActiveTab }: { onPublish: () => 
 
 function parseJobContent(text: string) {
   const lines = text.split('\n').map(l => l.trim()).filter(Boolean)
-  const company = lines.find(l => /empresa|company/i.test(l))?.replace(/^.*?(empresa|company)\s*:?\s*/i, '') || null
-  const location = lines.find(l => /ubicaci[oó]n|location|remoto|remote/i.test(l))?.replace(/^.*?(ubicaci[oó]n|location)\s*:?\s*/i, '') || null
-  const features = lines.find(l => /caracter[ií]sticas|features|stack/i.test(l))?.replace(/^.*?(caracter[ií]sticas|features|stack)\s*:?\s*/i, '') || null
-  const applyLine = lines.find(l => /postularse|apply|link/i.test(l)) || null
-  const applyUrl = applyLine?.match(/https?:\/\/[^\s]+/)?.[0] || null
-  const salary = text.match(/[$€]\s?\d[\d,.]*(?:\s?[-–]\s?[$€]?\s?\d[\d,.]*)?/)?.[0] || null
-  return { company, location, features, applyUrl, salary }
+  const company = lines.find(l => /\*\*Empresa:?\*\*/i.test(l))?.replace(/\*\*Empresa:?\*\*\s*/i, '') || null
+  const role = lines.find(l => /\*\*Rol:?\*\*/i.test(l))?.replace(/\*\*Rol:?\*\*\s*/i, '') || null
+  const location = lines.find(l => /\*\*Ubicaci[oó]n:?\*\*/i.test(l))?.replace(/\*\*Ubicaci[oó]n:?\*\*\s*/i, '') || null
+  const salary = lines.find(l => /\*\*Presupuesto:?\*\*/i.test(l))?.replace(/\*\*Presupuesto:?\*\*\s*/i, '') || null
+  const modality = lines.find(l => /\*\*Modalidad:?\*\*/i.test(l))?.replace(/\*\*Modalidad:?\*\*\s*/i, '') || null
+
+  const descStart = lines.findIndex(l => /###\s*Descripci/i.test(l))
+  const reqStart = lines.findIndex(l => /###\s*Requisitos/i.test(l))
+  const benStart = lines.findIndex(l => /###\s*Beneficios/i.test(l))
+  const contactStart = lines.findIndex(l => /###\s*Contacto/i.test(l))
+
+  const description = descStart >= 0 ? lines.slice(descStart + 1, reqStart > 0 ? reqStart : benStart > 0 ? benStart : contactStart > 0 ? contactStart : undefined).join(' ').replace(/\*\*/g, '') : null
+  const requirements = reqStart >= 0 ? lines.slice(reqStart + 1, benStart > 0 ? benStart : contactStart > 0 ? contactStart : undefined).filter(l => l.startsWith('-')).map(l => l.replace(/^-\s*/, '')) : []
+  const benefits = benStart >= 0 ? lines.slice(benStart + 1, contactStart > 0 ? contactStart : undefined).filter(l => l.startsWith('-')).map(l => l.replace(/^-\s*/, '')) : []
+
+  const contactSection = contactStart >= 0 ? lines.slice(contactStart + 1).join('\n') : ''
+  const applyUrl = contactSection.match(/https?:\/\/[^\s)]+/)?.[0] || null
+  const emails = contactSection.match(/[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/g) || []
+  const whatsapp = contactSection.match(/https?:\/\/(?:wa\.me|api\.whatsapp\.com\/send)\/?\+?\d+/g) || []
+
+  return { company, role, location, salary, modality, description, requirements, benefits, applyUrl, emails, whatsapp }
 }
 
 function PostCard({ post }: { post: FeedPost }) {
   const router = useRouter(); const [voted, setVoted] = useState(false); const [saved, setSaved] = useState(false)
 
   const isJob = post.type === 'job'
-  const isEditorial = post.type === 'editorial' || !isJob
   const time = formatTime(post.created_at)
-  const excerpt = post.content || ''
   const image = post.image_url
   const job = isJob ? parseJobContent(post.content || post.original_text || '') : null
 
@@ -104,14 +116,17 @@ function PostCard({ post }: { post: FeedPost }) {
         <div><div className="author-name">{post.author?.display_name || 'Avocado Jobs Bot'} <span className="verified-pill" style={{ marginLeft: 6 }}><CheckCircle2 size={12} /> Verificada</span></div><div className="post-meta">{time} · {post.source_name || post.platform || 'Comunidad'}</div></div>
       </div></div>
       <div className="post-type-label" style={{ color: '#10b981' }}>VACANTE</div>
-      <h2 style={{ fontSize: 17, marginBottom: 8 }}>{post.title}</h2>
-      {job && <div className="job-details" style={{ display: 'flex', flexWrap: 'wrap', gap: '8px 16px', margin: '8px 0 12px', fontSize: 13, color: '#8b949e' }}>
-        {job.company && <span>🏢 {job.company}</span>}
-        {job.location && <span>📍 {job.location}</span>}
-        {job.salary && <span style={{ color: '#10b981', fontWeight: 600 }}>{job.salary}</span>}
-        {job.features && <span>✨ {job.features}</span>}
+      <h2 style={{ fontSize: 17, marginBottom: 8 }}>{job?.role || post.title}</h2>
+      {job && <div className="job-details" style={{ display: 'flex', flexWrap: 'wrap', gap: '6px 14px', margin: '6px 0 10px', fontSize: 13, color: '#8b949e' }}>
+        {job.company && <span style={{ background: '#1c2430', padding: '3px 8px', borderRadius: 4 }}>🏢 {job.company}</span>}
+        {job.location && <span style={{ background: '#1c2430', padding: '3px 8px', borderRadius: 4 }}>📍 {job.location}</span>}
+        {job.salary && <span style={{ background: '#0d3320', color: '#10b981', padding: '3px 8px', borderRadius: 4, fontWeight: 600 }}>{job.salary}</span>}
+        {job.modality && <span style={{ background: '#1c2430', padding: '3px 8px', borderRadius: 4 }}>🏠 {job.modality}</span>}
       </div>}
-      {job?.applyUrl && <a href={job.applyUrl} target="_blank" rel="noopener noreferrer" className="unlock-button" style={{ display: 'inline-flex', alignItems: 'center', gap: 6, background: '#10b981', color: '#0d1117', padding: '8px 16px', borderRadius: 6, fontWeight: 600, fontSize: 13, textDecoration: 'none', marginBottom: 12 }} onClick={e => e.stopPropagation()}>Postularse ahora →</a>}
+      {job?.description && <p className="post-excerpt" style={{ fontSize: 13, lineHeight: 1.5, color: '#8b949e', margin: '4px 0 10px' }}>{job.description}</p>}
+      {job?.requirements && job.requirements.length > 0 && <div style={{ margin: '6px 0', fontSize: 12, color: '#8b949e' }}><strong style={{ color: '#c9d1d9' }}>Requisitos:</strong> {job.requirements.slice(0, 3).join(' · ')}{job.requirements.length > 3 ? ` +${job.requirements.length - 3} más` : ''}</div>}
+      {job?.applyUrl && <a href={job.applyUrl} target="_blank" rel="noopener noreferrer" className="unlock-button" style={{ display: 'inline-flex', alignItems: 'center', gap: 6, background: '#10b981', color: '#0d1117', padding: '8px 16px', borderRadius: 6, fontWeight: 600, fontSize: 13, textDecoration: 'none', margin: '8px 0' }} onClick={e => e.stopPropagation()}>Postularse ahora →</a>}
+      {!job?.applyUrl && job?.emails && job.emails.length > 0 && <div style={{ fontSize: 12, color: '#8b949e', margin: '6px 0' }}>📧 {job.emails[0]}</div>}
       <div className="post-footer"><button className={`vote-button ${voted ? 'voted' : ''}`} onClick={() => setVoted(!voted)}><ArrowBigUp size={17} fill={voted ? 'currentColor' : 'none'} />{post.votesCount + (voted ? 1 : 0)}</button><button className="engagement"><MessageCircle size={16} />{post.commentsCount}</button><span className="footer-spacer" /><button className={`icon-button ${saved ? 'saved' : ''}`} onClick={() => setSaved(!saved)} aria-label="Guardar"><Bookmark size={17} fill={saved ? 'currentColor' : 'none'} /></button><button className="icon-button" aria-label="Compartir"><Share2 size={16} /></button></div>
     </article>
   }
@@ -120,7 +135,7 @@ function PostCard({ post }: { post: FeedPost }) {
     <div className="post-top"><div className="author-row"><div className="avatar avatar-cyan" style={{ width: 32, height: 32, borderRadius: '50%', background: '#00A86B', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#0d1117', fontWeight: 800, fontSize: 12 }}>A</div><div><div className="author-name">Avocado Studio <ShieldCheck size={13} className="verified" /></div><div className="post-meta">Staff Avocado <span>·</span> {time}</div></div></div></div>
     <div className="post-type-label">ARTÍCULO</div><h2>{post.title}</h2>
     {image && <div style={{ margin: '10px 0', borderRadius: 8, overflow: 'hidden' }}><img src={image} alt="" style={{ width: '100%', height: 200, objectFit: 'cover', display: 'block' }} /></div>}
-    <p className="post-excerpt">{excerpt.substring(0, 200)}{excerpt.length > 200 ? '...' : ''}</p>
+    <p className="post-excerpt">{(post.content || '').substring(0, 200)}{(post.content || '').length > 200 ? '...' : ''}</p>
     {post.word_count && <div style={{ fontSize: 12, color: '#8b949e', marginTop: 4 }}>📖 {Math.max(1, Math.round(post.word_count / 200))} min de lectura</div>}
     <div className="post-footer"><button className={`vote-button ${voted ? 'voted' : ''}`} onClick={() => setVoted(!voted)}><ArrowBigUp size={17} fill={voted ? 'currentColor' : 'none'} />{post.votesCount + (voted ? 1 : 0)}</button><button className="engagement"><MessageCircle size={16} />{post.commentsCount} comentarios</button><span className="footer-spacer" /><button className={`icon-button ${saved ? 'saved' : ''}`} onClick={() => setSaved(!saved)} aria-label="Guardar"><Bookmark size={17} fill={saved ? 'currentColor' : 'none'} /></button><button className="icon-button" aria-label="Compartir"><Share2 size={16} /></button></div>
   </article>

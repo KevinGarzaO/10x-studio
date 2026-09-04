@@ -25,12 +25,12 @@ export async function syncVacancyToCommunity(
     return post.community_post_id;
   }
 
-  // Build title from text (first line or first 100 chars)
-  const title = post.text.split("\n")[0]?.substring(0, 150) || "Vacante sin título";
+  // Use enriched data from scraper_posts
+  const title = post.text.split("\n")[0]?.replace(/^##\s*/, "")?.substring(0, 150) || "Vacante sin título";
 
-  // Extract budget from text if exists
-  const budgetMatch = post.text.match(/[$€]\s?\d[\d,.]*(?:\s?-\s?[$€]?\s?\d[\d,.]*)?/);
-  const budget = budgetMatch ? budgetMatch[0] : null;
+  // Extract budget from contacts if available
+  const contacts = post.contacts as Record<string, unknown> | null;
+  const budget = (contacts?.salary as string) || null;
 
   // Map work_modality to modalidad
   const modalidadMap: Record<string, string> = {
