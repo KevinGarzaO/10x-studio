@@ -8,16 +8,23 @@ router.get('/editorial', async (req: Request, res: Response) => {
   try {
     const page = parseInt((req.query.page as string) || '1', 10)
     const limit = parseInt((req.query.limit as string) || '20', 10)
+    const days = parseInt((req.query.days as string) || '0', 10)
     const from = (page - 1) * limit
     const to = from + limit - 1
 
-    const { data: blogPosts, count, error } = await supabase
+    let query = supabase
       .from('content')
       .select('id, title, html_content, markdown_content, excerpt, image_url, slug, published_at, word_count', { count: 'exact' })
       .eq('content_type', 'blog_post')
       .eq('status', 'published')
       .order('published_at', { ascending: false })
-      .range(from, to)
+
+    if (days > 0) {
+      const since = new Date(Date.now() - days * 24 * 60 * 60 * 1000).toISOString()
+      query = query.gte('published_at', since)
+    }
+
+    const { data: blogPosts, count, error } = await query.range(from, to)
 
     if (error) throw error
 
