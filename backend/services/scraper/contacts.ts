@@ -1,4 +1,3 @@
-import { franc } from "franc";
 import type { ContactInfo, Post } from "./types";
 
 const EMAIL_RE = /[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/g;
@@ -100,8 +99,15 @@ export function isSpanish(post: Post): boolean {
   return post.language === "spa" || post.language === "und";
 }
 
+const SPANISH_WORDS = /\b(el|la|los|las|de|del|en|es|que|por|con|para|una|uno|como|más|pero|sus|le|ya|o|este|sí|porque|esta|entre|cuando|sobre|también|me|hasta|hay|donde|quien|desde|todo|nos|durante|todos|uno|les|ni|contra|otros|ese|eso|ante|ellos|e|esto|mí|antes|algunos|qué|unos|yo|otro|otras|otra|él|tanto|esa|estos|mucho|quienes|nada|muchos|cual|poco|ella|estar|estas|algunas|algo|nosotros|mi|mis|tú|te|ti|tu|tus|ellas|nosotras|vosotros|vosotras|os|mío|mía|míos|mías|tuyo|tuya|tuyos|tuyas|suyo|suya|suyos|suyas|nuestro|nuestra|nuestros|nuestras|vuestro|vuestra|vuestros|vuestras|esos|esas|estoy|estás|está|estamos|estáis|están|esté|estés|estemos|estéis|estén|estaré|estarás|estará|estaremos|estaréis|estarán|estaría|estarías|estaríamos|estaríais|estarían|estaba|estabas|estábamos|estabais|estaban|estuve|estuviste|estuvo|estuvimos|estuvisteis|estuvieron|estuviera|estuvieras|estuviéramos|estuvierais|estuvieran|estuviese|estuvieses|estuviésemos|estuvieseis|estuviesen|estando|estado|estada|estados|estadas|estad|he|has|ha|hemos|habéis|han|haya|hayas|hayamos|hayáis|hayan|habré|habrás|habrá|habremos|habréis|habrán|habría|habrías|habríamos|habríais|habrían|había|habías|habíamos|habíais|habían|hube|hubiste|hubo|hubimos|hubisteis|hubieron|hubiera|hubieras|hubiéramos|hubierais|hubieran|hubiese|hubieses|hubiésemos|hubieseis|hubiesen|habiendo|habido|habida|habidos|habidas)\b/i;
+
 export function detectLanguage(text: string): string {
-  return franc(text, { minLength: 10 });
+  if (!text) return 'und';
+  const sample = text.substring(0, 500).toLowerCase();
+  const spanishMatches = (sample.match(SPANISH_WORDS) || []).length;
+  const words = sample.split(/\s+/).length;
+  if (words === 0) return 'und';
+  return (spanishMatches / words) > 0.15 ? 'spa' : 'eng';
 }
 
 export function isRecent(post: Post, days: number = 30): boolean {
