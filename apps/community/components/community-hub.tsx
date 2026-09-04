@@ -12,12 +12,6 @@ import {
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'
 
-const mockPosts = [
-  { id: 'mock-1', type: 'job', author: 'Bot Vacantes', initials: 'BV', avatar: '/avatars/bot-vacantes.png', badge: 'Bot Vacantes', time: 'hace 3h', tag: 'empleos', title: 'Buscamos Senior React + Node.js para producto fintech', excerpt: 'Equipo remoto en Latam. Necesitamos a alguien que disfrute construyendo productos con impacto real.', stack: ['React', 'Node.js', 'Remote'], votes: 96, comments: 14, budget: '$35–50 / hr', color: 'emerald' },
-  { id: 'mock-3', type: 'discussion', author: 'Sofía Herrera', initials: 'SH', avatar: '/avatars/sofia-herrera.png', badge: 'Dev', time: 'hace 4h', tag: 'debate', title: '¿Seguimos necesitando una capa de estado global en 2026?', excerpt: 'Entre Server Components, URL state y signals, mi store cada vez tiene menos responsabilidades. ¿Cómo lo están resolviendo?', stack: ['React', 'Arquitectura'], votes: 184, comments: 62, color: 'blue' },
-  { id: 'mock-4', type: 'showcase', author: 'Mateo Lima', initials: 'ML', avatar: '/avatars/mateo-lima.png', badge: 'Dev', time: 'ayer', tag: 'showcase', title: 'Lancé una herramienta para visualizar tus queries de PostgreSQL', excerpt: 'Una pequeña utilidad open source para entender planes de ejecución sin salir del editor.', stack: ['PostgreSQL', 'TypeScript', 'Open Source'], votes: 132, comments: 21, color: 'violet' },
-]
-
 const navItems = [
   { label: 'Inicio', icon: Home }, { label: 'Explorar', icon: Compass },
   { label: 'Empleos', icon: BriefcaseBusiness, count: '12' }, { label: 'Showcase', icon: Trophy },
@@ -69,73 +63,25 @@ function LeftSidebar({ onPublish, activeTab, setActiveTab }: { onPublish: () => 
   </aside>
 }
 
-type FeedPost = EditorialPost | typeof mockPosts[number]
+type FeedPost = EditorialPost
 
-function PostCard({ post, onUnlock }: { post: FeedPost; onUnlock: () => void }) {
+function PostCard({ post }: { post: FeedPost }) {
   const router = useRouter(); const [voted, setVoted] = useState(false); const [saved, setSaved] = useState(false)
 
-  const isEditorial = (post as EditorialPost).type === 'editorial'
-  const isScraperJob = (post as any).is_scraper_post === true
-  const author = isEditorial ? ((post as EditorialPost).author?.display_name || 'Avocado Studio') : isScraperJob ? 'Avocado Jobs Bot' : ((post as any).author || 'Anónimo')
-  const initials = isEditorial ? 'AS' : isScraperJob ? '🤖' : (post as any).initials || '?'
-  const avatar = isEditorial ? '' : (post as any).avatar
-  const badge = isEditorial ? 'Staff Avocado' : isScraperJob ? 'Auto-encontrado' : (post as any).badge || ''
-  const time = isEditorial ? formatTime((post as EditorialPost).created_at) : (post as any).time || ''
-  const stack = isEditorial ? (post as EditorialPost).tags || [] : (post as any).stack || []
-  const votes = isEditorial ? (post as EditorialPost).votesCount : (post as any).votes || 0
-  const comments = isEditorial ? (post as EditorialPost).commentsCount : (post as any).comments || 0
-  const excerpt = isEditorial ? (post as EditorialPost).content : (post as any).excerpt || ''
-  const postType = (post as any).type || 'normal'
-  const color = isEditorial ? 'cyan' : (post as any).color || 'gray'
-
-  // Scraper-specific fields
-  const platform = (post as any).platform as string | undefined
-  const sourceName = (post as any).source_name as string | undefined
-  const sourceUrl = (post as any).source_url as string | undefined
-  const contacts = (post as any).contacts as { emails?: string[]; whatsapp?: string[]; telegramLinks?: string[] } | undefined
-  const location = (post as any).location as string | undefined
-  const workModality = (post as any).work_modality as string | undefined
-  const budget = (post as any).budget as string | undefined
-  const modalidad = (post as any).modalidad as string | undefined
+  const author = post.author?.display_name || 'Avocado Studio'
+  const time = formatTime(post.created_at)
+  const excerpt = post.content || ''
+  const image = post.image_url
 
   const openPost = (e?: React.MouseEvent<HTMLElement>) => { if (e?.target instanceof HTMLElement && e.target.closest('button, a, input, textarea, select')) return; router.push(`/post/${post.id}`) }
 
-  const platformIcons: Record<string, string> = { telegram: '✈️', forobeta: '💬', reddit: '🔴' }
-  const platformNames: Record<string, string> = { telegram: 'Telegram', forobeta: 'Forobeta', reddit: 'Reddit' }
-  const modalityLabels: Record<string, string> = { remote: '🌍 Remoto', onsite: '🏢 Presencial', hybrid: '🔄 Híbrido', unknown: '📍 No especificado' }
-
-  return <article className={`post-card ${postType === 'job' ? 'job-card' : ''}`} onClick={openPost}>
-    {postType === 'job' && <div className="job-line" />}
-    <div className="post-top"><Link className="author-row author-link" href={`/users/${author.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`} onClick={e => e.stopPropagation()}><Avatar initials={initials} tone={color} avatar={avatar} /><div><div className="author-name">{author} {badge === 'Staff Avocado' && <ShieldCheck size={13} className="verified" />}</div><div className="post-meta">{badge} <span>·</span> {time}</div></div></Link><button className="icon-button" aria-label="Más opciones"><MoreHorizontal size={18} /></button></div>
-    <div className="post-type-label">{postType === 'job' ? 'VACANTE / PROYECTO' : postType === 'showcase' ? 'MOSTRAR PROYECTO' : postType === 'editorial' ? 'ARTÍCULO' : 'POST NORMAL'}</div><h2>{post.title}</h2><p className="post-excerpt">{excerpt}</p>
-    {isEditorial && (post as EditorialPost).image_url && <div style={{ margin: '10px 0', borderRadius: 8, overflow: 'hidden' }}><img src={(post as EditorialPost).image_url!} alt="" style={{ width: '100%', height: 200, objectFit: 'cover', display: 'block' }} /></div>}
-    {stack.length > 0 && <div className="stack-row">{stack.map((item: string) => <span className={`stack-badge stack-${item.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`} key={item}>{item}</span>)}</div>}
-    {postType === 'job' && <div className="job-details">
-      {/* Info row: Budget + Modalidad + Location */}
-      <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', marginBottom: 8 }}>
-        {budget && <div style={{ padding: '4px 10px', background: '#f0fdf4', borderRadius: 6, fontSize: 12, fontWeight: 600, color: '#166534' }}>💰 {budget}</div>}
-        {(modalidad || (workModality && workModality !== 'unknown')) && <div style={{ padding: '4px 10px', background: '#eff6ff', borderRadius: 6, fontSize: 12, fontWeight: 600, color: '#1e40af' }}>{modalityLabels[workModality || 'unknown'] || modalidad}</div>}
-        {location && <div style={{ padding: '4px 10px', background: '#fefce8', borderRadius: 6, fontSize: 12, fontWeight: 600, color: '#854d0e' }}>📍 {location}</div>}
-      </div>
-      {/* Platform source */}
-      {isScraperJob && platform && <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, color: '#64748b', marginBottom: 8 }}>
-        <span>{platformIcons[platform] || '🔗'}</span>
-        <span>{platformNames[platform] || platform}</span>
-        {sourceName && <span>· {sourceName}</span>}
-        {sourceUrl && <a href={sourceUrl} target="_blank" rel="noopener noreferrer" onClick={e => e.stopPropagation()} style={{ color: '#3b82f6', textDecoration: 'none' }}> (ver original)</a>}
-      </div>}
-      {/* Contact info */}
-      {contacts && (contacts.emails?.length || contacts.whatsapp?.length || contacts.telegramLinks?.length) ? (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 4, fontSize: 12, color: '#374151', padding: '8px 12px', background: '#f8fafc', borderRadius: 8, border: '1px solid #e2e8f0', marginBottom: 8 }}>
-          {contacts.emails?.map((email: string) => <div key={email} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>📧 <a href={`mailto:${email}`} onClick={e => e.stopPropagation()} style={{ color: '#3b82f6' }}>{email}</a></div>)}
-          {contacts.whatsapp?.map((wa: string) => <div key={wa} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>📱 <a href={wa} target="_blank" rel="noopener noreferrer" onClick={e => e.stopPropagation()} style={{ color: '#25d366' }}>WhatsApp</a></div>)}
-          {contacts.telegramLinks?.map((tg: string) => <div key={tg} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>✈️ <a href={tg} target="_blank" rel="noopener noreferrer" onClick={e => e.stopPropagation()} style={{ color: '#0088cc' }}>{tg}</a></div>)}
-        </div>
-      ) : (
-        <button className="unlock-button" onClick={onUnlock}><LockKeyhole size={14} /> Ver contacto directo</button>
-      )}
-    </div>}
-    <div className="post-footer"><button className={`vote-button ${voted ? 'voted' : ''}`} onClick={() => setVoted(!voted)}><ArrowBigUp size={17} fill={voted ? 'currentColor' : 'none'} />{votes + (voted ? 1 : 0)}</button><button className="engagement"><MessageCircle size={16} />{comments} comentarios</button><span className="footer-spacer" /><button className={`icon-button ${saved ? 'saved' : ''}`} onClick={() => setSaved(!saved)} aria-label="Guardar"><Bookmark size={17} fill={saved ? 'currentColor' : 'none'} /></button><button className="icon-button" aria-label="Compartir"><Share2 size={16} /></button></div>
+  return <article className="post-card" onClick={openPost}>
+    <div className="post-top"><div className="author-row"><div className="avatar avatar-cyan" style={{ width: 32, height: 32, borderRadius: '50%', background: '#00A86B', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#0d1117', fontWeight: 800, fontSize: 12 }}>A</div><div><div className="author-name">Avocado Studio <ShieldCheck size={13} className="verified" /></div><div className="post-meta">Staff Avocado <span>·</span> {time}</div></div></div></div>
+    <div className="post-type-label">ARTÍCULO</div><h2>{post.title}</h2>
+    {image && <div style={{ margin: '10px 0', borderRadius: 8, overflow: 'hidden' }}><img src={image} alt="" style={{ width: '100%', height: 200, objectFit: 'cover', display: 'block' }} /></div>}
+    <p className="post-excerpt">{excerpt.substring(0, 200)}{excerpt.length > 200 ? '...' : ''}</p>
+    {post.word_count && <div style={{ fontSize: 12, color: '#8b949e', marginTop: 4 }}>📖 {Math.max(1, Math.round(post.word_count / 200))} min de lectura</div>}
+    <div className="post-footer"><button className={`vote-button ${voted ? 'voted' : ''}`} onClick={() => setVoted(!voted)}><ArrowBigUp size={17} fill={voted ? 'currentColor' : 'none'} />{post.votesCount + (voted ? 1 : 0)}</button><button className="engagement"><MessageCircle size={16} />{post.commentsCount} comentarios</button><span className="footer-spacer" /><button className={`icon-button ${saved ? 'saved' : ''}`} onClick={() => setSaved(!saved)} aria-label="Guardar"><Bookmark size={17} fill={saved ? 'currentColor' : 'none'} /></button><button className="icon-button" aria-label="Compartir"><Share2 size={16} /></button></div>
   </article>
 }
 
@@ -156,39 +102,50 @@ export function CommunityHub() {
   const [publishOpen, setPublishOpen] = useState(false)
   const [authOpen, setAuthOpen] = useState(false)
   const [mobileMenu, setMobileMenu] = useState(false)
-  const [editorialPosts, setEditorialPosts] = useState<EditorialPost[]>([])
+  const [posts, setPosts] = useState<FeedPost[]>([])
+  const [page, setPage] = useState(1)
+  const [loading, setLoading] = useState(false)
+  const [hasMore, setHasMore] = useState(true)
+
+  const fetchPosts = async (pageNum: number) => {
+    setLoading(true)
+    try {
+      const res = await fetch(`${API_URL}/api/community/posts/editorial?page=${pageNum}&limit=10`)
+      const data = await res.json()
+      const newPosts: FeedPost[] = data.posts || []
+      if (pageNum === 1) {
+        setPosts(newPosts)
+      } else {
+        setPosts(prev => [...prev, ...newPosts])
+      }
+      setHasMore(newPosts.length === 10)
+    } catch {
+    } finally {
+      setLoading(false)
+    }
+  }
 
   useEffect(() => {
-    fetch(`${API_URL}/api/community/posts/editorial?limit=10`)
-      .then(res => res.json())
-      .then(data => { if (data.posts) setEditorialPosts(data.posts) })
-      .catch(() => {})
+    fetchPosts(1)
   }, [])
 
-  const allPosts: FeedPost[] = useMemo(() => {
-    const editorialMapped = editorialPosts.map(p => ({
-      ...p,
-      author: p.author.display_name,
-      initials: 'AS',
-      avatar: '',
-      badge: 'Staff Avocado' as const,
-      time: formatTime(p.created_at),
-      tag: p.tags[0] || 'avocado',
-      excerpt: p.content,
-      stack: p.tags,
-      votes: p.votesCount,
-      comments: p.commentsCount,
-      color: 'cyan',
-    }))
-    return [...editorialMapped, ...mockPosts] as FeedPost[]
-  }, [editorialPosts])
+  useEffect(() => {
+    const handleScroll = () => {
+      if (loading || !hasMore) return
+      if (window.innerHeight + window.scrollY >= document.body.offsetHeight - 800) {
+        const nextPage = page + 1
+        setPage(nextPage)
+        fetchPosts(nextPage)
+      }
+    }
+    window.addEventListener('scroll', handleScroll)
+    return () => window.removeEventListener('scroll', handleScroll)
+  }, [page, loading, hasMore])
 
-  const filteredPosts = useMemo(() => allPosts.filter(p => {
-    const type = (p as any).type
-    const matchesTab = activeTab === 'Tendencias' || (activeTab === 'Últimos Envíos') || (activeTab === 'Vacantes & Freelance' && type === 'job') || (activeTab === 'Showcase Projects' && type === 'showcase')
-    const searchStr = `${(p as any).title || ''} ${(p as any).excerpt || ''} ${((p as any).stack || []).join(' ')}`.toLowerCase()
-    return matchesTab && searchStr.includes(search.toLowerCase())
-  }), [activeTab, search, allPosts])
+  const filteredPosts = useMemo(() => posts.filter(p => {
+    const searchStr = `${(p as any).title || ''} ${(p as any).content || ''}`.toLowerCase()
+    return searchStr.includes(search.toLowerCase())
+  }), [search, posts])
 
-  return <div className="app-shell"><header className="topbar"><button className="mobile-menu-button icon-button" onClick={() => setMobileMenu(!mobileMenu)} aria-label="Abrir menú"><Menu size={20} /></button><div className="brand"><span className="brand-mark">&gt;_</span><span>a<span className="brand-accent">vocado</span></span></div><div className="search-wrap"><Search size={17} /><input value={search} onChange={e => setSearch(e.target.value)} placeholder="Buscar discusiones, tags, personas..." aria-label="Buscar" /><kbd>⌘ K</kbd></div><div className="top-actions"><button className="icon-button notification" aria-label="Notificaciones"><Bell size={18} /><span /></button><button className="publish-button top-publish" onClick={() => window.location.href = '/create'}><Plus size={16} /> Publicar</button><Link href="/profile" className="topbar-profile-link" aria-label="Abrir mi perfil"><Avatar initials="JD" tone="blue" avatar="/avatars/javier-developer.png" /></Link></div></header><div className={`mobile-drawer ${mobileMenu ? 'open' : ''}`}><div className="drawer-head"><strong>Menú</strong><button className="icon-button" onClick={() => setMobileMenu(false)} aria-label="Cerrar menú"><X size={18} /></button></div><LeftSidebar onPublish={() => setPublishOpen(true)} activeTab={activeTab} setActiveTab={setActiveTab} /></div><div className="layout"><LeftSidebar onPublish={() => setPublishOpen(true)} activeTab={activeTab} setActiveTab={setActiveTab} /><main className="feed"><div className="feed-heading"><div><p className="eyebrow">Viernes, 31 de agosto</p><h1>Tu feed <span className="live-dot" /></h1></div><button className="filter-button">Para ti <ChevronDown size={15} /></button></div><div className="feed-tabs" role="tablist">{tabs.map(({ label, icon: Icon }) => <button key={label} role="tab" aria-selected={activeTab === label} className={activeTab === label ? 'active' : ''} onClick={() => setActiveTab(label)}><Icon size={15} />{label}</button>)}</div><div className="post-list">{filteredPosts.map(post => <PostCard key={post.id} post={post} onUnlock={() => setAuthOpen(true)} />)}</div></main><RightSidebar onUnlock={() => setAuthOpen(true)} /></div>{publishOpen && <PublishModal onClose={() => setPublishOpen(false)} />}{authOpen && <AuthModal onClose={() => setAuthOpen(false)} />}</div>
+  return <div className="app-shell"><header className="topbar"><button className="mobile-menu-button icon-button" onClick={() => setMobileMenu(!mobileMenu)} aria-label="Abrir menú"><Menu size={20} /></button><div className="brand"><span className="brand-mark">&gt;_</span><span>a<span className="brand-accent">vocado</span></span></div><div className="search-wrap"><Search size={17} /><input value={search} onChange={e => setSearch(e.target.value)} placeholder="Buscar discusiones, tags, personas..." aria-label="Buscar" /><kbd>⌘ K</kbd></div><div className="top-actions"><button className="icon-button notification" aria-label="Notificaciones"><Bell size={18} /><span /></button><button className="publish-button top-publish" onClick={() => window.location.href = '/create'}><Plus size={16} /> Publicar</button><Link href="/profile" className="topbar-profile-link" aria-label="Abrir mi perfil"><Avatar initials="JD" tone="blue" avatar="/avatars/javier-developer.png" /></Link></div></header><div className={`mobile-drawer ${mobileMenu ? 'open' : ''}`}><div className="drawer-head"><strong>Menú</strong><button className="icon-button" onClick={() => setMobileMenu(false)} aria-label="Cerrar menú"><X size={18} /></button></div><LeftSidebar onPublish={() => setPublishOpen(true)} activeTab={activeTab} setActiveTab={setActiveTab} /></div><div className="layout"><LeftSidebar onPublish={() => setPublishOpen(true)} activeTab={activeTab} setActiveTab={setActiveTab} /><main className="feed"><div className="feed-heading"><div><p className="eyebrow">Viernes, 31 de agosto</p><h1>Tu feed <span className="live-dot" /></h1></div><button className="filter-button">Para ti <ChevronDown size={15} /></button></div><div className="feed-tabs" role="tablist">{tabs.map(({ label, icon: Icon }) => <button key={label} role="tab" aria-selected={activeTab === label} className={activeTab === label ? 'active' : ''} onClick={() => setActiveTab(label)}><Icon size={15} />{label}</button>)}</div><div className="post-list">{filteredPosts.map(post => <PostCard key={post.id} post={post} />)}</div>{loading && <div style={{ textAlign: 'center', padding: 20, color: '#8b949e' }}><Sparkles size={16} className="spin" /> Cargando más posts...</div>}{!hasMore && filteredPosts.length > 0 && <div style={{ textAlign: 'center', padding: 20, color: '#8b949e' }}>No hay más posts</div>}</main><RightSidebar onUnlock={() => setAuthOpen(true)} /></div>{publishOpen && <PublishModal onClose={() => setPublishOpen(false)} />}{authOpen && <AuthModal onClose={() => setAuthOpen(false)} />}</div>
 }

@@ -2,10 +2,13 @@
 
 import Link from 'next/link'
 import { useParams } from 'next/navigation'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { ArrowLeft, ArrowBigUp, Bookmark, MessageCircle, Share2, Send, BriefcaseBusiness, CheckCircle2, Clock3, Users, Flame, ShieldCheck, MoreHorizontal } from 'lucide-react'
+import { marked } from 'marked'
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'
+
+marked.setOptions({ breaks: true, gfm: true })
 
 interface PostData {
   id: string
@@ -200,7 +203,7 @@ export default function PostPage() {
             {isEditorial && post.content && (
               <div
                 className="editorial-content"
-                dangerouslySetInnerHTML={{ __html: post.content }}
+                dangerouslySetInnerHTML={{ __html: marked.parse(post.content) as string }}
                 style={{ marginTop: 16, lineHeight: 1.7, color: '#c9d1d9' }}
               />
             )}
