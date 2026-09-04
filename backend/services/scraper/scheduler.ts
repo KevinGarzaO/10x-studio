@@ -56,7 +56,7 @@ export function initScraperCron(): void {
   });
 
   // Sync: every 35 minutes (offset from production)
-  cron.schedule("5/35 * * * *", async () => {
+  cron.schedule("5,40 * * * *", async () => {
     console.log(`[ScraperCron] Sync iniciado: ${new Date().toISOString()}`);
 
     try {
