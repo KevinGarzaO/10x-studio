@@ -23,8 +23,8 @@ interface EditorialPost {
   id: string
   title: string
   content: string
-  type: 'editorial'
-  author: { id: string | null; username: string; display_name: string; avatar_url: string | null }
+  type: 'editorial' | 'job' | 'showcase' | 'discussion'
+  author: { id: string | null; username: string; display_name: string; photo_url: string | null }
   tags: string[]
   votesCount: number
   commentsCount: number
@@ -32,6 +32,14 @@ interface EditorialPost {
   slug: string
   word_count: number
   created_at: string
+  budget?: string | null
+  modalidad?: string | null
+  source_url?: string | null
+  platform?: string | null
+  source_name?: string | null
+  original_text?: string | null
+  contacts?: Record<string, unknown> | null
+  is_scraper_post?: boolean
 }
 
 function formatTime(dateStr: string) {
@@ -63,17 +71,50 @@ function LeftSidebar({ onPublish, activeTab, setActiveTab }: { onPublish: () => 
   </aside>
 }
 
-type FeedPost = EditorialPost
+
+function parseJobContent(text: string) {
+  const lines = text.split('\n').map(l => l.trim()).filter(Boolean)
+  const company = lines.find(l => /empresa|company/i.test(l))?.replace(/^.*?(empresa|company)\s*:?\s*/i, '') || null
+  const location = lines.find(l => /ubicaci[oó]n|location|remoto|remote/i.test(l))?.replace(/^.*?(ubicaci[oó]n|location)\s*:?\s*/i, '') || null
+  const features = lines.find(l => /caracter[ií]sticas|features|stack/i.test(l))?.replace(/^.*?(caracter[ií]sticas|features|stack)\s*:?\s*/i, '') || null
+  const applyLine = lines.find(l => /postularse|apply|link/i.test(l)) || null
+  const applyUrl = applyLine?.match(/https?:\/\/[^\s]+/)?.[0] || null
+  const salary = text.match(/[$€]\s?\d[\d,.]*(?:\s?[-–]\s?[$€]?\s?\d[\d,.]*)?/)?.[0] || null
+  return { company, location, features, applyUrl, salary }
+}
 
 function PostCard({ post }: { post: FeedPost }) {
   const router = useRouter(); const [voted, setVoted] = useState(false); const [saved, setSaved] = useState(false)
 
-  const author = post.author?.display_name || 'Avocado Studio'
+  const isJob = post.type === 'job'
+  const isEditorial = post.type === 'editorial' || !isJob
   const time = formatTime(post.created_at)
   const excerpt = post.content || ''
   const image = post.image_url
+  const job = isJob ? parseJobContent(post.content || post.original_text || '') : null
 
   const openPost = (e?: React.MouseEvent<HTMLElement>) => { if (e?.target instanceof HTMLElement && e.target.closest('button, a, input, textarea, select')) return; router.push(`/post/${post.id}`) }
+
+  if (isJob) {
+    const initials = (post.author?.display_name || 'AJ').slice(0, 2).toUpperCase()
+    return <article className={`post-card job-card`} onClick={openPost}>
+      <div className="job-line" />
+      <div className="post-top"><div className="author-row">
+        <div className="avatar avatar-emerald" style={{ width: 32, height: 32, borderRadius: '50%', background: '#10b981', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#0d1117', fontWeight: 800, fontSize: 12 }}>{initials}</div>
+        <div><div className="author-name">{post.author?.display_name || 'Avocado Jobs Bot'} <span className="verified-pill" style={{ marginLeft: 6 }}><CheckCircle2 size={12} /> Verificada</span></div><div className="post-meta">{time} · {post.source_name || post.platform || 'Comunidad'}</div></div>
+      </div></div>
+      <div className="post-type-label" style={{ color: '#10b981' }}>VACANTE</div>
+      <h2 style={{ fontSize: 17, marginBottom: 8 }}>{post.title}</h2>
+      {job && <div className="job-details" style={{ display: 'flex', flexWrap: 'wrap', gap: '8px 16px', margin: '8px 0 12px', fontSize: 13, color: '#8b949e' }}>
+        {job.company && <span>🏢 {job.company}</span>}
+        {job.location && <span>📍 {job.location}</span>}
+        {job.salary && <span style={{ color: '#10b981', fontWeight: 600 }}>{job.salary}</span>}
+        {job.features && <span>✨ {job.features}</span>}
+      </div>}
+      {job?.applyUrl && <a href={job.applyUrl} target="_blank" rel="noopener noreferrer" className="unlock-button" style={{ display: 'inline-flex', alignItems: 'center', gap: 6, background: '#10b981', color: '#0d1117', padding: '8px 16px', borderRadius: 6, fontWeight: 600, fontSize: 13, textDecoration: 'none', marginBottom: 12 }} onClick={e => e.stopPropagation()}>Postularse ahora →</a>}
+      <div className="post-footer"><button className={`vote-button ${voted ? 'voted' : ''}`} onClick={() => setVoted(!voted)}><ArrowBigUp size={17} fill={voted ? 'currentColor' : 'none'} />{post.votesCount + (voted ? 1 : 0)}</button><button className="engagement"><MessageCircle size={16} />{post.commentsCount}</button><span className="footer-spacer" /><button className={`icon-button ${saved ? 'saved' : ''}`} onClick={() => setSaved(!saved)} aria-label="Guardar"><Bookmark size={17} fill={saved ? 'currentColor' : 'none'} /></button><button className="icon-button" aria-label="Compartir"><Share2 size={16} /></button></div>
+    </article>
+  }
 
   return <article className="post-card" onClick={openPost}>
     <div className="post-top"><div className="author-row"><div className="avatar avatar-cyan" style={{ width: 32, height: 32, borderRadius: '50%', background: '#00A86B', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#0d1117', fontWeight: 800, fontSize: 12 }}>A</div><div><div className="author-name">Avocado Studio <ShieldCheck size={13} className="verified" /></div><div className="post-meta">Staff Avocado <span>·</span> {time}</div></div></div></div>
