@@ -1,29 +1,3 @@
-import type { PostType, ProfileInfo, WorkModality } from "./types";
-
-let anthropicClient: any = null;
-
-async function getClaudeClient() {
-  const apiKey = process.env.ANTHROPIC_API_KEY;
-  if (!apiKey) return null;
-  if (!anthropicClient) {
-    const Anthropic = (await import("@anthropic-ai/sdk")).default;
-    anthropicClient = new Anthropic({ apiKey });
-  }
-  return anthropicClient;
-}
-
-async function callClaude(prompt: string, maxTokens: number = 1000): Promise<string | null> {
-  const client = await getClaudeClient();
-  if (!client) return null;
-  const response = await client.messages.create({
-    model: "claude-haiku-4-20250414",
-    max_tokens: maxTokens,
-    temperature: 0.2,
-    messages: [{ role: "user", content: prompt }],
-  });
-  return response.content?.[0]?.text ?? null;
-}
-
 export interface EnrichedVacancy {
   title: string;
   company: string | null;
@@ -43,6 +17,37 @@ export interface EnrichedVacancy {
   };
   qualityScore: number;
   summary: string;
+}
+
+async function callClaude(prompt: string, maxTokens: number = 1000, temperature: number = 0.2): Promise<string | null> {
+  const apiKey = process.env.CLAUDE_API_KEY;
+  if (!apiKey) return null;
+
+  try {
+    const res = await fetch("https://api.anthropic.com/v1/messages", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "x-api-key": apiKey,
+        "anthropic-version": "2023-06-01",
+      },
+      body: JSON.stringify({
+        model: "claude-haiku-4-20250414",
+        max_tokens: maxTokens,
+        temperature,
+        messages: [{ role: "user", content: prompt }],
+      }),
+    });
+    const data: any = await res.json();
+    if (data.error) {
+      console.error("[Claude] Error:", data.error.message);
+      return null;
+    }
+    return data.content?.[0]?.text ?? null;
+  } catch (err) {
+    console.error("[Claude] Error llamando API:", (err as Error).message);
+    return null;
+  }
 }
 
 export async function enrichVacancyWithAI(
@@ -105,7 +110,7 @@ export async function enrichVacancyWithAI(
       "- Si solo hay link de postulación, qualityScore = 0.5",
     ].join("\n");
 
-    const textResponse = await callClaude(prompt, 1000);
+    const textResponse = await callClaude(prompt, 1000, 0.2);
     if (!textResponse) return null;
 
     const cleaned = textResponse.replace(/```json\n?/g, "").replace(/```\n?/g, "").trim();
@@ -197,6 +202,8 @@ export function buildEnrichedContent(vacancy: EnrichedVacancy): string {
 
   return lines.join("\n");
 }
+
+import type { PostType, ProfileInfo, WorkModality } from "./types";
 
 const PROFILE_PATTERNS: RegExp[] = [
   /\bme\s+ofrezco\b/i,

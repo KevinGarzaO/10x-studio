@@ -1,28 +1,35 @@
-let anthropicClient: any = null;
-
-async function getClaudeClient() {
-  const apiKey = process.env.ANTHROPIC_API_KEY;
+async function callClaude(prompt: string, maxTokens: number = 500, temperature: number = 0.1): Promise<string | null> {
+  const apiKey = process.env.CLAUDE_API_KEY;
   if (!apiKey) {
-    console.warn("[ScraperAI] ANTHROPIC_API_KEY no configurada.");
+    console.warn("[ScraperAI] CLAUDE_API_KEY no configurada.");
     return null;
   }
-  if (!anthropicClient) {
-    const Anthropic = (await import("@anthropic-ai/sdk")).default;
-    anthropicClient = new Anthropic({ apiKey });
-  }
-  return anthropicClient;
-}
 
-async function callClaude(prompt: string, maxTokens: number = 500, temperature: number = 0.1): Promise<string | null> {
-  const client = await getClaudeClient();
-  if (!client) return null;
-  const response = await client.messages.create({
-    model: "claude-haiku-4-20250414",
-    max_tokens: maxTokens,
-    temperature,
-    messages: [{ role: "user", content: prompt }],
-  });
-  return response.content?.[0]?.text ?? null;
+  try {
+    const res = await fetch("https://api.anthropic.com/v1/messages", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "x-api-key": apiKey,
+        "anthropic-version": "2023-06-01",
+      },
+      body: JSON.stringify({
+        model: "claude-haiku-4-20250414",
+        max_tokens: maxTokens,
+        temperature,
+        messages: [{ role: "user", content: prompt }],
+      }),
+    });
+    const data: any = await res.json();
+    if (data.error) {
+      console.error("[Claude] Error:", data.error.message);
+      return null;
+    }
+    return data.content?.[0]?.text ?? null;
+  } catch (err) {
+    console.error("[Claude] Error llamando API:", (err as Error).message);
+    return null;
+  }
 }
 
 export async function classifyPostWithAI(
