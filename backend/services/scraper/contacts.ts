@@ -123,8 +123,8 @@ export function applyFilters(
   posts: Post[],
   requireEmail: boolean,
   requireSpanish: boolean,
-  requireRecent: boolean = true,
-  maxDays: number = 30
+  requireRecent: boolean = false,
+  maxDays: number = 90
 ): Post[] {
   return posts.filter(
     (p) =>
