@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import { useParams } from 'next/navigation'
+import { useParams, useSearchParams } from 'next/navigation'
 import { useState, useEffect, useMemo } from 'react'
 import { ArrowLeft, ArrowBigUp, Bookmark, MessageCircle, Share2, Send, BriefcaseBusiness, CheckCircle2, Clock3, Users, Flame, ShieldCheck, MoreHorizontal, LockKeyhole } from 'lucide-react'
 import { marked } from 'marked'
@@ -61,24 +61,45 @@ function maskContact(content: string): string {
 }
 
 function DetailSidebar() {
+  const [trending, setTrending] = useState<any[]>([])
+  const [featured, setFeatured] = useState<any[]>([])
+
+  useEffect(() => {
+    fetch(`${API_URL}/api/community/posts/editorial?page=1&limit=3`)
+      .then(r => r.ok ? r.json() : null)
+      .then(d => setTrending(d?.posts || []))
+      .catch(() => {})
+
+    fetch(`${API_URL}/api/community/posts?page=1&limit=3&type=job`)
+      .then(r => r.ok ? r.json() : null)
+      .then(d => setFeatured(d?.posts || []))
+      .catch(() => {})
+  }, [])
+
   return (
     <aside className="detail-sidebar">
       <section className="widget">
         <div className="widget-title"><span>Conversaciones en fuego</span><Flame size={16} /></div>
-        {[['¿El fin de los microservicios?', '128 respuestas'], ['IA generativa en producción', '57 respuestas'], ['Construir para la comunidad', '41 respuestas']].map(([title, replies], i) => (
-          <div className="trend-item" key={title}><span className="trend-number">0{i + 1}</span><span><strong>{title}</strong><small>{replies}</small></span></div>
-        ))}
-        <Link href="/" className="see-all">Ver todas las tendencias <ArrowBigUp size={14} /></Link>
+        {trending.length > 0 ? trending.map((post: any, i: number) => (
+          <Link href={`/post/${post.id}`} className="trend-item" key={post.id}>
+            <span className="trend-number">0{i + 1}</span>
+            <span><strong>{post.title}</strong><small>{post.commentsCount} respuestas</small></span>
+          </Link>
+        )) : (
+          <p style={{ color: '#8b949e', fontSize: 13, padding: '8px 0' }}>Sé el primero en iniciar una conversación</p>
+        )}
       </section>
       <section className="widget opportunities">
         <div className="widget-title"><span>Oportunidades destacadas</span><BriefcaseBusiness size={16} /></div>
-        {[['Frontend Engineer · React', 'Producto B2B · Remoto en Latam', '$40–55 / hr'], ['DevOps / Cloud Engineer', 'Startup seed · España / Remoto', 'Proyecto fijo']].map(([title, company, budget]) => (
-          <div className="mini-job" key={title}>
-            <div className="mini-job-top"><span className="verified-pill"><CheckCircle2 size={12} /> Verificada</span><span className="mini-time">3d restantes</span></div>
-            <strong>{title}</strong><p>{company}</p>
-            <div className="mini-job-bottom"><span>{budget}</span><Link href="/">Ver detalles <ArrowLeft size={13} style={{ transform: 'rotate(180deg)' }} /></Link></div>
-          </div>
-        ))}
+        {featured.length > 0 ? featured.map((post: any) => (
+          <Link href={`/vacantes/${post.slug || post.id}`} className="mini-job" key={post.id}>
+            <div className="mini-job-top"><span className="verified-pill"><CheckCircle2 size={12} /> Verificada</span></div>
+            <strong>{post.title}</strong>
+            <p>{post.source_name || 'Comunidad'}</p>
+          </Link>
+        )) : (
+          <p style={{ color: '#8b949e', fontSize: 13, padding: '8px 0' }}>Próximamente verás aquí las mejores oportunidades</p>
+        )}
       </section>
       <section className="widget community-widget">
         <div className="widget-title"><span>La comunidad</span><Users size={16} /></div>
@@ -91,6 +112,9 @@ function DetailSidebar() {
 
 export default function PostPage() {
   const { id } = useParams<{ id: string }>()
+  const searchParams = useSearchParams()
+  const backTab = searchParams.get('from') || ''
+  const backHref = backTab ? `/?tab=${encodeURIComponent(backTab)}` : '/'
   const [post, setPost] = useState<PostData | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -136,7 +160,7 @@ export default function PostPage() {
       <main className="post-detail-page">
         <div className="post-detail-layout">
           <aside className="detail-rail">
-            <Link href="/" className="back-link"><ArrowLeft size={16} /> Feed</Link>
+            <Link href={backHref} className="back-link"><ArrowLeft size={16} /> Volver</Link>
           </aside>
           <div className="post-detail-wrap" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '60vh' }}>
             <p style={{ color: '#8b949e' }}>Cargando publicación...</p>
@@ -151,12 +175,12 @@ export default function PostPage() {
       <main className="post-detail-page">
         <div className="post-detail-layout">
           <aside className="detail-rail">
-            <Link href="/" className="back-link"><ArrowLeft size={16} /> Feed</Link>
+            <Link href={backHref} className="back-link"><ArrowLeft size={16} /> Volver</Link>
           </aside>
           <div className="post-detail-wrap" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '60vh' }}>
             <div style={{ textAlign: 'center' }}>
               <p style={{ color: '#8b949e', marginBottom: 12 }}>Publicación no encontrada</p>
-              <Link href="/" style={{ color: '#3b82f6' }}>Volver al feed</Link>
+              <Link href={backHref} style={{ color: '#3b82f6' }}>Volver al feed</Link>
             </div>
           </div>
         </div>
@@ -178,7 +202,7 @@ export default function PostPage() {
     <main className="post-detail-page">
       <div className="post-detail-layout">
         <aside className="detail-rail">
-          <Link href="/" className="back-link"><ArrowLeft size={16} /> Feed</Link>
+          <Link href={backHref} className="back-link"><ArrowLeft size={16} /> Volver</Link>
           <button className="detail-rail-action" onClick={() => setVotes(votes + 1)} aria-label="Votar"><ArrowBigUp size={20} /><span>{votes}</span></button>
           <a href="#conversation" className="detail-rail-action" aria-label="Ir a conversación"><MessageCircle size={20} /><span>{post.commentsCount || 0}</span></a>
           <button className={`detail-rail-action ${saved ? 'is-active' : ''}`} onClick={() => setSaved(!saved)} aria-label="Guardar"><Bookmark size={20} /></button>

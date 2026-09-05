@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import { useParams } from 'next/navigation'
+import { useParams, useSearchParams } from 'next/navigation'
 import { useState, useEffect } from 'react'
 import { ArrowLeft, ArrowBigUp, Bookmark, MessageCircle, Share2, Send, BriefcaseBusiness, CheckCircle2, Clock3, Users, Flame, ShieldCheck, LockKeyhole } from 'lucide-react'
 import { marked } from 'marked'
@@ -61,6 +61,9 @@ function maskContact(content: string): string {
 
 export default function VacancyPage() {
   const { slug } = useParams<{ slug: string }>()
+  const searchParams = useSearchParams()
+  const backTab = searchParams.get('from') || ''
+  const backHref = backTab ? `/?tab=${encodeURIComponent(backTab)}` : '/'
   const [post, setPost] = useState<PostData | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -112,7 +115,7 @@ export default function VacancyPage() {
       <main className="post-detail-page">
         <div className="post-detail-layout">
           <aside className="detail-rail">
-            <Link href="/" className="back-link"><ArrowLeft size={16} /> Feed</Link>
+            <Link href={backHref} className="back-link"><ArrowLeft size={16} /> Volver</Link>
           </aside>
           <div className="post-detail-wrap" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '60vh' }}>
             <p style={{ color: '#8b949e' }}>Cargando vacante...</p>
@@ -127,12 +130,12 @@ export default function VacancyPage() {
       <main className="post-detail-page">
         <div className="post-detail-layout">
           <aside className="detail-rail">
-            <Link href="/" className="back-link"><ArrowLeft size={16} /> Feed</Link>
+            <Link href={backHref} className="back-link"><ArrowLeft size={16} /> Volver</Link>
           </aside>
           <div className="post-detail-wrap" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '60vh' }}>
             <div style={{ textAlign: 'center' }}>
               <p style={{ color: '#8b949e', marginBottom: 12 }}>Vacante no encontrada</p>
-              <Link href="/" style={{ color: '#3b82f6' }}>Volver al feed</Link>
+              <Link href={backHref} style={{ color: '#3b82f6' }}>Volver al feed</Link>
             </div>
           </div>
         </div>
@@ -148,8 +151,8 @@ export default function VacancyPage() {
   return (
     <main className="post-detail-page">
       <div className="post-detail-layout">
-        <aside className="detail-rail">
-          <Link href="/" className="back-link"><ArrowLeft size={16} /> Feed</Link>
+          <aside className="detail-rail">
+            <Link href={backHref} className="back-link"><ArrowLeft size={16} /> Volver</Link>
           <button className="detail-rail-action" onClick={() => setVotes(votes + 1)} aria-label="Votar"><ArrowBigUp size={20} /><span>{votes}</span></button>
           <a href="#conversation" className="detail-rail-action" aria-label="Ir a conversación"><MessageCircle size={20} /><span>{post.commentsCount || 0}</span></a>
           <button className={`detail-rail-action ${saved ? 'is-active' : ''}`} onClick={() => setSaved(!saved)} aria-label="Guardar"><Bookmark size={20} /></button>

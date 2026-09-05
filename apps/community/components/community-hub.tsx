@@ -1,8 +1,8 @@
 'use client'
 
-import { useMemo, useState, useEffect } from 'react'
+import { useMemo, useState, useEffect, useCallback } from 'react'
 import Link from 'next/link'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import {
   Bell, Bookmark, BriefcaseBusiness, ChevronDown, Compass, Flame,
   Hash, Home, Menu, MessageCircle, MoreHorizontal, PenLine, Plus, Search,
@@ -99,7 +99,7 @@ function parseJobContent(text: string) {
   return { company, role, location, salary, modality, description, requirements, benefits, applyUrl, emails, whatsapp }
 }
 
-function PostCard({ post, onAuthRequired }: { post: FeedPost; onAuthRequired?: () => void }) {
+function PostCard({ post, onAuthRequired, activeTab }: { post: FeedPost; onAuthRequired?: () => void; activeTab?: string }) {
   const router = useRouter(); const [voted, setVoted] = useState(false); const [saved, setSaved] = useState(false)
   const [user, setUser] = useState<any>(null)
 
@@ -115,7 +115,7 @@ function PostCard({ post, onAuthRequired }: { post: FeedPost; onAuthRequired?: (
   const image = post.image_url
   const job = isJob ? parseJobContent(post.content || post.original_text || '') : null
 
-  const openPost = (e?: React.MouseEvent<HTMLElement>) => { if (e?.target instanceof HTMLElement && e.target.closest('button, a, input, textarea, select')) return; router.push(`/vacantes/${post.slug || post.id}`) }
+  const openPost = (e?: React.MouseEvent<HTMLElement>) => { if (e?.target instanceof HTMLElement && e.target.closest('button, a, input, textarea, select')) return; const tabParam = activeTab && activeTab !== 'Tendencias' ? `?from=${encodeURIComponent(activeTab)}` : ''; router.push(`/vacantes/${post.slug || post.id}${tabParam}`) }
 
   if (isJob) {
     const initials = (post.author?.display_name || 'AJ').slice(0, 2).toUpperCase()
@@ -160,7 +160,72 @@ function PostCard({ post, onAuthRequired }: { post: FeedPost; onAuthRequired?: (
 }
 
 function RightSidebar({ onUnlock }: { onUnlock: () => void }) {
-  return <aside className="right-sidebar"><section className="widget"><div className="widget-title"><span>Conversaciones en fuego</span><Flame size={16} /></div>{[['¿El fin de los microservicios?', '128 respuestas'], ['Bun vs Node: batalla final', '84 respuestas'], ['IA generativa en producción', '57 respuestas']].map(([title, replies], i) => <button className="trend-item" key={title} onClick={() => onUnlock()}><span className="trend-number">0{i + 1}</span><span><strong>{title}</strong><small>{replies}</small></span></button>)}<button className="see-all">Ver todas las tendencias <ArrowBigUp size={14} /></button></section><section className="widget opportunities"><div className="widget-title"><span>Oportunidades destacadas</span><BriefcaseBusiness size={16} /></div><div className="mini-job"><div className="mini-job-top"><span className="verified-pill"><CheckCircle2 size={12} /> Verificada</span><span className="mini-time">3d restantes</span></div><strong>Frontend Engineer · React</strong><p>Producto B2B · Remoto en Latam</p><div className="mini-job-bottom"><span>$40–55 / hr</span><button onClick={onUnlock}>Ver detalles <ArrowBigUp size={13} /></button></div></div><div className="mini-job"><div className="mini-job-top"><span className="verified-pill"><CheckCircle2 size={12} /> Verificada</span><span className="mini-time">5d restantes</span></div><strong>DevOps / Cloud Engineer</strong><p>Startup seed · España / Remoto</p><div className="mini-job-bottom"><span>Proyecto fijo</span><button onClick={onUnlock}>Ver detalles <ArrowBigUp size={13} /></button></div></div></section><section className="widget community-widget"><div className="widget-title"><span>La comunidad</span><Users size={16} /></div><div className="community-stats"><div><strong>18.4k</strong><small>miembros</small></div><div><strong>2.1k</strong><small>publicaciones</small></div><div><strong>94%</strong><small>responden</small></div></div><div className="online-line"><span className="online-dot" /> 342 en línea</div></section></aside>
+  const [trending, setTrending] = useState<FeedPost[]>([])
+  const [featured, setFeatured] = useState<FeedPost[]>([])
+
+  useEffect(() => {
+    fetch(`${API_URL}/api/community/posts/editorial?page=1&limit=3`)
+      .then(r => r.ok ? r.json() : null)
+      .then(d => setTrending(d?.posts || []))
+      .catch(() => {})
+
+    fetch(`${API_URL}/api/community/posts?page=1&limit=3&type=job`)
+      .then(r => r.ok ? r.json() : null)
+      .then(d => setFeatured(d?.posts || []))
+      .catch(() => {})
+  }, [])
+
+  const parseMiniJob = (content: string) => {
+    const lines = content.split('\n').map(l => l.trim()).filter(Boolean)
+    const company = lines.find(l => /\*\*Empresa:?\*\*/i.test(l))?.replace(/\*\*Empresa:?\*\*\s*/i, '') || null
+    const salary = lines.find(l => /\*\*Presupuesto:?\*\*/i.test(l))?.replace(/\*\*Presupuesto:?\*\*\s*/i, '') || null
+    const modality = lines.find(l => /\*\*Modalidad:?\*\*/i.test(l))?.replace(/\*\*Modalidad:?\*\*\s*/i, '') || null
+    return { company, salary, modality }
+  }
+
+  return <aside className="right-sidebar">
+    <section className="widget">
+      <div className="widget-title"><span>Conversaciones en fuego</span><Flame size={16} /></div>
+      {trending.length > 0 ? trending.map((post, i) => (
+        <Link href={`/post/${post.id}`} className="trend-item" key={post.id}>
+          <span className="trend-number">0{i + 1}</span>
+          <span><strong>{post.title}</strong><small>{post.commentsCount} respuestas</small></span>
+        </Link>
+      )) : (
+        <p style={{ color: '#8b949e', fontSize: 13, padding: '8px 0' }}>Sé el primero en iniciar una conversación</p>
+      )}
+    </section>
+
+    <section className="widget opportunities">
+      <div className="widget-title"><span>Oportunidades destacadas</span><BriefcaseBusiness size={16} /></div>
+      {featured.length > 0 ? featured.map(post => {
+        const job = parseMiniJob(post.content || post.original_text || '')
+        return (
+          <Link href={`/vacantes/${post.slug || post.id}`} className="mini-job" key={post.id}>
+            <div className="mini-job-top"><span className="verified-pill"><CheckCircle2 size={12} /> Verificada</span></div>
+            <strong>{post.title}</strong>
+            <p>{job.company || post.source_name || 'Comunidad'}</p>
+            <div className="mini-job-bottom">
+              {job.salary && <span>{job.salary}</span>}
+              <span>{job.modality || 'Remoto'}</span>
+            </div>
+          </Link>
+        )
+      }) : (
+        <p style={{ color: '#8b949e', fontSize: 13, padding: '8px 0' }}>Próximamente verás aquí las mejores oportunidades</p>
+      )}
+    </section>
+
+    <section className="widget community-widget">
+      <div className="widget-title"><span>La comunidad</span><Users size={16} /></div>
+      <div className="community-stats">
+        <div><strong>18.4k</strong><small>miembros</small></div>
+        <div><strong>2.1k</strong><small>publicaciones</small></div>
+        <div><strong>94%</strong><small>responden</small></div>
+      </div>
+      <div className="online-line"><span className="online-dot" /> 342 developers online</div>
+    </section>
+  </aside>
 }
 
 function PublishModal({ onClose }: { onClose: () => void }) {
@@ -171,7 +236,13 @@ function PublishModal({ onClose }: { onClose: () => void }) {
 function AuthModal({ onClose }: { onClose: () => void }) { return <div className="modal-backdrop" role="presentation" onMouseDown={e => e.target === e.currentTarget && onClose()}><section className="auth-modal" role="dialog" aria-modal="true" aria-labelledby="auth-title"><button className="modal-close icon-button" onClick={onClose} aria-label="Cerrar"><X size={19} /></button><div className="lock-orb"><LockKeyhole size={20} /></div><p className="eyebrow">Contacto directo</p><h2 id="auth-title">Desbloquea esta oportunidad</h2><p>Regístrate en 1 clic con GitHub o Google para acceder a los datos de contacto y unirte a la conversación.</p><button className="oauth-button github-button"><img className="brand-auth-icon github-brand-icon" src="https://cdn.jsdelivr.net/gh/glincker/thesvg@main/public/icons/github/light.svg" alt="" aria-hidden="true" /> Continuar con GitHub</button><button className="oauth-button google-button"><img className="brand-auth-icon" src="https://cdn.jsdelivr.net/gh/glincker/thesvg@main/public/icons/google/default.svg" alt="" aria-hidden="true" /> Continuar con Google</button><small>Al continuar aceptas nuestras reglas de comunidad.</small></section></div> }
 
 export function CommunityHub() {
-  const [activeTab, setActiveTab] = useState('Tendencias')
+  const router = useRouter()
+  const searchParams = useSearchParams()
+  const tabFromUrl = searchParams.get('tab')
+  const validTabs = ['Tendencias', 'Últimos Envíos', 'Vacantes & Freelance', 'Showcase Projects']
+  const initialTab = validTabs.includes(tabFromUrl || '') ? tabFromUrl! : 'Tendencias'
+
+  const [activeTab, setActiveTabState] = useState(initialTab)
   const [search, setSearch] = useState('')
   const [publishOpen, setPublishOpen] = useState(false)
   const [authOpen, setAuthOpen] = useState(false)
@@ -180,6 +251,18 @@ export function CommunityHub() {
   const [page, setPage] = useState(1)
   const [loading, setLoading] = useState(false)
   const [hasMore, setHasMore] = useState(true)
+
+  const setActiveTab = useCallback((tab: string) => {
+    setActiveTabState(tab)
+    const params = new URLSearchParams(window.location.search)
+    if (tab === 'Tendencias') {
+      params.delete('tab')
+    } else {
+      params.set('tab', tab)
+    }
+    const newUrl = params.toString() ? `?${params.toString()}` : '/'
+    window.history.pushState({}, '', newUrl)
+  }, [])
 
   const fetchPosts = async (pageNum: number, tab: string) => {
     setLoading(true)
@@ -231,5 +314,5 @@ export function CommunityHub() {
     return searchStr.includes(search.toLowerCase())
   }), [search, posts])
 
-  return <div className="app-shell"><header className="topbar"><button className="mobile-menu-button icon-button" onClick={() => setMobileMenu(!mobileMenu)} aria-label="Abrir menú"><Menu size={20} /></button><div className="brand"><span className="brand-mark">&gt;_</span><span>a<span className="brand-accent">vocado</span></span></div><div className="search-wrap"><Search size={17} /><input value={search} onChange={e => setSearch(e.target.value)} placeholder="Buscar discusiones, tags, personas..." aria-label="Buscar" /><kbd>⌘ K</kbd></div><div className="top-actions"><button className="icon-button notification" aria-label="Notificaciones"><Bell size={18} /><span /></button><button className="publish-button top-publish" onClick={() => window.location.href = '/create'}><Plus size={16} /> Publicar</button><Link href="/profile" className="topbar-profile-link" aria-label="Abrir mi perfil"><Avatar initials="JD" tone="blue" avatar="/avatars/javier-developer.png" /></Link></div></header><div className={`mobile-drawer ${mobileMenu ? 'open' : ''}`}><div className="drawer-head"><strong>Menú</strong><button className="icon-button" onClick={() => setMobileMenu(false)} aria-label="Cerrar menú"><X size={18} /></button></div><LeftSidebar onPublish={() => setPublishOpen(true)} activeTab={activeTab} setActiveTab={setActiveTab} /></div><div className="layout"><LeftSidebar onPublish={() => setPublishOpen(true)} activeTab={activeTab} setActiveTab={setActiveTab} /><main className="feed"><div className="feed-heading"><div><p className="eyebrow">Viernes, 31 de agosto</p><h1>Tu feed <span className="live-dot" /></h1></div><button className="filter-button">Para ti <ChevronDown size={15} /></button></div><div className="feed-tabs" role="tablist">{tabs.map(({ label, icon: Icon }) => <button key={label} role="tab" aria-selected={activeTab === label} className={activeTab === label ? 'active' : ''} onClick={() => setActiveTab(label)}><Icon size={15} />{label}</button>)}</div><div className="post-list">{filteredPosts.map(post => <PostCard key={post.id} post={post} onAuthRequired={() => setAuthOpen(true)} />)}</div>{loading && <div style={{ textAlign: 'center', padding: 20, color: '#8b949e' }}><Sparkles size={16} className="spin" /> Cargando más posts...</div>}{!loading && filteredPosts.length === 0 && <div style={{ textAlign: 'center', padding: 40, color: '#8b949e' }}><PenLine size={32} style={{ marginBottom: 12, opacity: 0.5 }} /><p>{activeTab === 'Vacantes & Freelance' ? 'No hay vacantes todavía' : activeTab === 'Showcase Projects' ? 'No hay proyectos todavía' : 'No hay posts disponibles'}</p></div>}{!hasMore && filteredPosts.length > 0 && <div style={{ textAlign: 'center', padding: 20, color: '#8b949e' }}>No hay más posts</div>}</main><RightSidebar onUnlock={() => setAuthOpen(true)} /></div>{publishOpen && <PublishModal onClose={() => setPublishOpen(false)} />}{authOpen && <AuthModal onClose={() => setAuthOpen(false)} />}</div>
+  return <div className="app-shell"><header className="topbar"><button className="mobile-menu-button icon-button" onClick={() => setMobileMenu(!mobileMenu)} aria-label="Abrir menú"><Menu size={20} /></button><div className="brand"><span className="brand-mark">&gt;_</span><span>a<span className="brand-accent">vocado</span></span></div><div className="search-wrap"><Search size={17} /><input value={search} onChange={e => setSearch(e.target.value)} placeholder="Buscar discusiones, tags, personas..." aria-label="Buscar" /><kbd>⌘ K</kbd></div><div className="top-actions"><button className="icon-button notification" aria-label="Notificaciones"><Bell size={18} /><span /></button><button className="publish-button top-publish" onClick={() => window.location.href = '/create'}><Plus size={16} /> Publicar</button><Link href="/profile" className="topbar-profile-link" aria-label="Abrir mi perfil"><Avatar initials="JD" tone="blue" avatar="/avatars/javier-developer.png" /></Link></div></header><div className={`mobile-drawer ${mobileMenu ? 'open' : ''}`}><div className="drawer-head"><strong>Menú</strong><button className="icon-button" onClick={() => setMobileMenu(false)} aria-label="Cerrar menú"><X size={18} /></button></div><LeftSidebar onPublish={() => setPublishOpen(true)} activeTab={activeTab} setActiveTab={setActiveTab} /></div><div className="layout"><LeftSidebar onPublish={() => setPublishOpen(true)} activeTab={activeTab} setActiveTab={setActiveTab} /><main className="feed"><div className="feed-heading"><div><p className="eyebrow">Viernes, 31 de agosto</p><h1>Tu feed <span className="live-dot" /></h1></div><button className="filter-button">Para ti <ChevronDown size={15} /></button></div><div className="feed-tabs" role="tablist">{tabs.map(({ label, icon: Icon }) => <button key={label} role="tab" aria-selected={activeTab === label} className={activeTab === label ? 'active' : ''} onClick={() => setActiveTab(label)}><Icon size={15} />{label}</button>)}</div><div className="post-list">{filteredPosts.map(post => <PostCard key={post.id} post={post} onAuthRequired={() => setAuthOpen(true)} activeTab={activeTab} />)}</div>{loading && <div style={{ textAlign: 'center', padding: 20, color: '#8b949e' }}><Sparkles size={16} className="spin" /> Cargando más posts...</div>}{!loading && filteredPosts.length === 0 && <div style={{ textAlign: 'center', padding: 40, color: '#8b949e' }}><PenLine size={32} style={{ marginBottom: 12, opacity: 0.5 }} /><p>{activeTab === 'Vacantes & Freelance' ? 'No hay vacantes todavía' : activeTab === 'Showcase Projects' ? 'No hay proyectos todavía' : 'No hay posts disponibles'}</p></div>}{!hasMore && filteredPosts.length > 0 && <div style={{ textAlign: 'center', padding: 20, color: '#8b949e' }}>No hay más posts</div>}</main><RightSidebar onUnlock={() => setAuthOpen(true)} /></div>{publishOpen && <PublishModal onClose={() => setPublishOpen(false)} />}{authOpen && <AuthModal onClose={() => setAuthOpen(false)} />}</div>
 }
