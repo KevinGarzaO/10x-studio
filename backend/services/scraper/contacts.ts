@@ -92,7 +92,8 @@ export function hasContact(post: Post): boolean {
     (post.contacts.emails?.length ?? 0) > 0 ||
     (post.contacts.whatsapp?.length ?? 0) > 0 ||
     (post.contacts.telegramLinks?.length ?? 0) > 0 ||
-    (post.contacts.phones?.length ?? 0) > 0
+    (post.contacts.phones?.length ?? 0) > 0 ||
+    !!post.contacts.applyUrl
   );
 }
 

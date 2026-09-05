@@ -84,7 +84,7 @@ export async function runProduction(
         // Enrich vacancy posts with AI
         let enrichedContent = post.text;
         let enrichedContacts = post.contacts as unknown as Record<string, unknown>;
-        let enrichedTitle = post.text.split("\n")[0]?.substring(0, 150) || "Sin título";
+        let enrichedTitle = post.text.split("\n")[0]?.replace(/^#+ /, "").substring(0, 150) || "Sin título";
 
         if (aiResult?.postType === "vacancy") {
           log(`[Production] Enriching vacancy: ${post.postId}`);
