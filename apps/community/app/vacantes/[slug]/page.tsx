@@ -3,27 +3,42 @@
 import Link from 'next/link'
 import { useParams, useSearchParams } from 'next/navigation'
 import { useState, useEffect } from 'react'
-import { ArrowLeft, ArrowBigUp, Bookmark, MessageCircle, Share2, Send, BriefcaseBusiness, CheckCircle2, Clock3, Users, Flame, ShieldCheck, LockKeyhole } from 'lucide-react'
+import { ArrowLeft, ArrowBigUp, Bookmark, MessageCircle, Share2, Send, CheckCircle2, LockKeyhole, Building, MapPin, Home as HomeIcon } from 'lucide-react'
 import { marked } from 'marked'
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'
 
 marked.setOptions({ breaks: true, gfm: true })
 
-interface PostData {
-  id: string
-  type: string
-  title: string
-  slug?: string
-  content?: string
-  excerpt?: string
-  author: { id: string | null; username: string; display_name: string; photo_url: string | null }
-  tags: string[]
-  votesCount: number
-  commentsCount: number
-  image_url?: string | null
-  created_at: string
-  comments?: Array<{ id: string; content: string; author: { username: string; display_name: string }; created_at: string }>
+function unescapeHtml(html: string): string {
+  return html
+    .replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&amp;/g, '&')
+    .replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/&nbsp;/g, ' ')
+}
+
+function isHtmlContent(content: string): boolean {
+  return /<[a-z][\s\S]*>/i.test(content) && !content.trim().startsWith('##')
+}
+
+function stripTitleFromContent(content: string, title: string): string {
+  const lines = content.split('\n')
+  const titleLine = lines.findIndex(l => l.trim() === title || l.trim() === `## ${title}`)
+  if (titleLine >= 0) {
+    lines.splice(titleLine, 1)
+    return lines.join('\n').trim()
+  }
+  return content
+}
+
+function parseJobMetadata(content: string) {
+  const lines = content.split('\n').map(l => l.trim()).filter(Boolean)
+  const company = lines.find(l => /\*\*Empresa:?\*\*/i.test(l))?.replace(/\*\*Empresa:?\*\*\s*/i, '') || null
+  const role = lines.find(l => /\*\*Rol:?\*\*/i.test(l))?.replace(/\*\*Rol:?\*\*\s*/i, '') || null
+  const location = lines.find(l => /\*\*Ubicaci[oó]n:?\*\*/i.test(l))?.replace(/\*\*Ubicaci[oó]n:?\*\*\s*/i, '') || null
+  const salary = lines.find(l => /\*\*Presupuesto:?\*\*/i.test(l))?.replace(/\*\*Presupuesto:?\*\*\s*/i, '') || null
+  const modality = lines.find(l => /\*\*Modalidad:?\*\*/i.test(l))?.replace(/\*\*Modalidad:?\*\*\s*/i, '') || null
+  const department = lines.find(l => /\*\*Departamento:?\*\*/i.test(l))?.replace(/\*\*Departamento:?\*\*\s*/i, '') || null
+  return { company, role, location, salary, modality, department }
 }
 
 function formatTime(dateStr: string) {
@@ -36,6 +51,7 @@ function formatTime(dateStr: string) {
   const hours = Math.floor(mins / 60)
   if (hours < 24) return `hace ${hours}h`
   const days = Math.floor(hours / 24)
+  if (days === 1) return 'ayer'
   if (days < 7) return `hace ${days}d`
   return d.toLocaleDateString('es-MX', { day: 'numeric', month: 'short' })
 }
@@ -44,19 +60,42 @@ function maskContact(content: string): string {
   const lines = content.split('\n')
   const contactStart = lines.findIndex(l => /###\s*Contacto/i.test(l))
   if (contactStart < 0) return content
-
   const before = lines.slice(0, contactStart).join('\n')
   const masked = [
     '',
     '### Contacto',
     '',
     '<div style="padding:16px;background:#1c2430;border-radius:8px;text-align:center;border:1px dashed #30363d">',
-    '<p style="color:#8b949e;margin:0 0 8px">🔒 Regístrate para ver los datos de contacto</p>',
+    '<p style="color:#8b949e;margin:0 0 8px">Regístrate para ver los datos de contacto</p>',
     '<p style="color:#8b949e;margin:0;font-size:13px">Email, teléfono, WhatsApp y enlace de aplicación</p>',
     '</div>',
   ].join('\n')
-
   return [before, masked].join('\n')
+}
+
+function renderContent(content: string): string {
+  if (isHtmlContent(content)) {
+    return unescapeHtml(content)
+  }
+  return marked.parse(content) as string
+}
+
+interface PostData {
+  id: string
+  type: string
+  title: string
+  slug?: string
+  content?: string
+  original_text?: string
+  author: { id: string | null; username: string; display_name: string; photo_url: string | null }
+  tags: string[]
+  votesCount: number
+  commentsCount: number
+  created_at: string
+  platform?: string | null
+  source_name?: string | null
+  contacts?: Record<string, any> | null
+  comments?: Array<{ id: string; content: string; author: { username: string; display_name: string }; created_at: string }>
 }
 
 export default function VacancyPage() {
@@ -69,7 +108,6 @@ export default function VacancyPage() {
   const [error, setError] = useState<string | null>(null)
   const [votes, setVotes] = useState(0)
   const [saved, setSaved] = useState(false)
-  const [following, setFollowing] = useState(false)
   const [reply, setReply] = useState('')
   const [sent, setSent] = useState(false)
   const [user, setUser] = useState<any>(null)
@@ -79,14 +117,9 @@ export default function VacancyPage() {
   useEffect(() => {
     setLoading(true)
     setError(null)
-
     fetch(`${API_URL}/api/community/posts/${slug}`)
-      .then(res => {
-        if (!res.ok) throw new Error('Post no encontrado')
-        return res.json()
-      })
+      .then(res => { if (!res.ok) throw new Error('Post no encontrado'); return res.json() })
       .then(data => {
-        // If the response has a different slug, redirect (301)
         if (data.slug && data.slug !== slug && !redirecting) {
           setRedirecting(true)
           window.history.replaceState({}, '', `/vacantes/${data.slug}`)
@@ -95,10 +128,7 @@ export default function VacancyPage() {
         setVotes(data.votesCount || 0)
         setLoading(false)
       })
-      .catch(() => {
-        setError('Publicación no encontrada')
-        setLoading(false)
-      })
+      .catch(() => { setError('Publicación no encontrada'); setLoading(false) })
   }, [slug])
 
   useEffect(() => {
@@ -143,26 +173,31 @@ export default function VacancyPage() {
     )
   }
 
-  const authorName = post.author?.display_name || 'Anónimo'
-  const initials = post.author?.display_name?.split(' ').map(n => n[0]).join('').substring(0, 2) || '?'
+  const rawContent = post.content || post.original_text || ''
+  const cleanContent = stripTitleFromContent(rawContent, post.title)
+  const maskedContent = (!user && cleanContent) ? maskContact(cleanContent) : cleanContent
+  const renderedHtml = renderContent(maskedContent)
+  const meta = parseJobMetadata(rawContent)
   const time = formatTime(post.created_at)
-  const displayContent = (!user && post.content) ? maskContact(post.content) : post.content
+  const platformName = post.platform === 'greenhouse' ? 'GitLab' :
+    post.platform === 'workable' ? (post.source_name || 'Platzi') :
+    post.source_name || 'Comunidad'
 
   return (
     <main className="post-detail-page">
       <div className="post-detail-layout">
-          <aside className="detail-rail">
-            <Link href={backHref} className="back-link"><ArrowLeft size={16} /> Volver</Link>
+        <aside className="detail-rail">
+          <Link href={backHref} className="back-link"><ArrowLeft size={16} /> Volver</Link>
           <button className="detail-rail-action" onClick={() => setVotes(votes + 1)} aria-label="Votar"><ArrowBigUp size={20} /><span>{votes}</span></button>
           <a href="#conversation" className="detail-rail-action" aria-label="Ir a conversación"><MessageCircle size={20} /><span>{post.commentsCount || 0}</span></a>
           <button className={`detail-rail-action ${saved ? 'is-active' : ''}`} onClick={() => setSaved(!saved)} aria-label="Guardar"><Bookmark size={20} /></button>
-          <button className="detail-rail-action" onClick={() => navigator.clipboard?.writeText(window.location.href)} aria-label="Compartir"><Share2 size={20} /></button>
+          <button className="detail-rail-action" onClick={() => navigator.clipboard?.writeText(window.location.href)} aria-label="Compartir"><Share2 size={16} /></button>
         </aside>
 
         <div className="post-detail-wrap">
           <article className="post-detail-card detail-job">
             <div className="detail-context">
-              <span className="detail-kicker">VACANTE / PROYECTO</span>
+              <span className="detail-kicker">VACANTE</span>
               <span className="context-divider">/</span>
               <span>Oportunidad verificada</span>
               <span className="context-spacer" />
@@ -170,34 +205,48 @@ export default function VacancyPage() {
 
             <header className="detail-author">
               <div className="avatar avatar-emerald">
-                <div style={{ width: '100%', height: '100%', borderRadius: '50%', background: '#10b981', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: 14, color: '#0d1117' }}>{initials}</div>
+                <div style={{ width: '100%', height: '100%', borderRadius: '50%', background: '#10b981', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: 14, color: '#0d1117' }}>
+                  {platformName.charAt(0).toUpperCase()}
+                </div>
               </div>
               <div className="author-info">
                 <div className="author-line">
-                  <strong>{authorName}</strong>
+                  <strong>{platformName}</strong>
                   <span className="verified-pill"><CheckCircle2 size={12} /> Verificada</span>
                 </div>
                 <div className="detail-meta">
                   <span>{time}</span>
+                  <span>·</span>
+                  <span style={{ textTransform: 'capitalize' }}>{post.platform || 'Comunidad'}</span>
                 </div>
               </div>
             </header>
 
             <h1>{post.title}</h1>
 
-            {displayContent && (
+            {(meta.company || meta.location || meta.modality || meta.salary || meta.department) && (
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px 10px', margin: '12px 0 16px' }}>
+                {meta.company && <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '4px 10px', background: '#1c2430', borderRadius: 5, fontSize: 12, color: '#c9d1d9' }}><Building size={12} /> {meta.company}</span>}
+                {meta.location && <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '4px 10px', background: '#1c2430', borderRadius: 5, fontSize: 12, color: '#c9d1d9' }}><MapPin size={12} /> {meta.location}</span>}
+                {meta.modality && <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '4px 10px', background: '#1c2430', borderRadius: 5, fontSize: 12, color: '#c9d1d9' }}><HomeIcon size={12} /> {meta.modality}</span>}
+                {meta.salary && <span style={{ padding: '4px 10px', background: '#0d3320', color: '#10b981', borderRadius: 5, fontSize: 12, fontWeight: 600 }}>{meta.salary}</span>}
+                {meta.department && <span style={{ padding: '4px 10px', background: '#21262d', borderRadius: 5, fontSize: 12, color: '#8b949e' }}>{meta.department}</span>}
+              </div>
+            )}
+
+            {renderedHtml && (
               <div
                 className="job-content"
-                dangerouslySetInnerHTML={{ __html: marked.parse(displayContent) as string }}
+                dangerouslySetInnerHTML={{ __html: renderedHtml }}
                 style={{ marginTop: 16, lineHeight: 1.7, color: '#c9d1d9' }}
               />
             )}
 
             {!user && (
-              <div style={{ marginTop: 20, padding: '16px 20px', background: '#1c2430', border: '1px solid #30363d', borderRadius: 10, textAlign: 'center' }}>
-                <LockKeyhole size={24} style={{ color: '#8b949e', marginBottom: 8 }} />
+              <div style={{ marginTop: 24, padding: '20px 24px', background: '#1c2430', border: '1px solid #30363d', borderRadius: 10, textAlign: 'center' }}>
+                <LockKeyhole size={24} style={{ color: '#10b981', marginBottom: 10 }} />
                 <h3 style={{ color: '#c9d1d9', margin: '0 0 8px', fontSize: 16 }}>¿Interesado en esta vacante?</h3>
-                <p style={{ color: '#8b949e', margin: '0 0 16px', fontSize: 14 }}>Regístrate para acceder al email, teléfono, WhatsApp y enlace de aplicación.</p>
+                <p style={{ color: '#8b949e', margin: '0 0 16px', fontSize: 14 }}>Regístrate gratis para acceder al email, teléfono, WhatsApp y enlace de aplicación.</p>
                 <button
                   onClick={() => setAuthOpen(true)}
                   style={{ padding: '10px 24px', background: '#10b981', color: '#0d1117', border: 'none', borderRadius: 8, fontWeight: 700, fontSize: 14, cursor: 'pointer' }}
@@ -272,7 +321,7 @@ export default function VacancyPage() {
         <div className="modal-backdrop" role="presentation" onMouseDown={e => e.target === e.currentTarget && setAuthOpen(false)}>
           <section className="auth-modal" role="dialog" aria-modal="true">
             <div style={{ padding: 32, textAlign: 'center' }}>
-              <LockKeyhole size={24} style={{ color: '#8b949e', marginBottom: 12 }} />
+              <LockKeyhole size={24} style={{ color: '#10b981', marginBottom: 12 }} />
               <h2 style={{ color: '#c9d1d9', fontSize: 20, marginBottom: 8 }}>Desbloquea esta oportunidad</h2>
               <p style={{ color: '#8b949e', marginBottom: 20 }}>Regístrate para acceder a los datos de contacto.</p>
               <button onClick={() => setAuthOpen(false)} style={{ padding: '8px 16px', background: '#21262d', color: '#c9d1d9', border: 'none', borderRadius: 6, cursor: 'pointer' }}>Cerrar</button>
