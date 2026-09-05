@@ -115,7 +115,7 @@ function PostCard({ post, onAuthRequired, activeTab }: { post: FeedPost; onAuthR
   const image = post.image_url
   const job = isJob ? parseJobContent(post.content || post.original_text || '') : null
 
-  const openPost = (e?: React.MouseEvent<HTMLElement>) => { if (e?.target instanceof HTMLElement && e.target.closest('button, a, input, textarea, select')) return; const tabParam = activeTab && activeTab !== 'Tendencias' ? `?from=${encodeURIComponent(activeTab)}` : ''; router.push(`/vacantes/${post.slug || post.id}${tabParam}`) }
+  const openPost = (e?: React.MouseEvent<HTMLElement>) => { if (e?.target instanceof HTMLElement && e.target.closest('button, a, input, textarea, select')) return; const slug = post.slug || post.id; const url = slug.startsWith('/vacantes/') ? slug : `/vacantes/${slug}`; const tabParam = activeTab && activeTab !== 'Tendencias' ? `${url.includes('?') ? '&' : '?'}from=${encodeURIComponent(activeTab)}` : ''; router.push(`${url}${tabParam}`) }
 
   if (isJob) {
     const initials = (post.author?.display_name || 'AJ').slice(0, 2).toUpperCase()
@@ -201,7 +201,7 @@ function RightSidebar({ onUnlock }: { onUnlock: () => void }) {
       {featured.length > 0 ? featured.map(post => {
         const job = parseMiniJob(post.content || post.original_text || '')
         return (
-          <Link href={`/vacantes/${post.slug || post.id}`} className="mini-job" key={post.id}>
+          <Link href={post.slug?.startsWith('/vacantes/') ? post.slug : `/vacantes/${post.slug || post.id}`} className="mini-job" key={post.id}>
             <div className="mini-job-top"><span className="verified-pill"><CheckCircle2 size={12} /> Verificada</span></div>
             <strong>{post.title}</strong>
             <p>{job.company || post.source_name || 'Comunidad'}</p>
