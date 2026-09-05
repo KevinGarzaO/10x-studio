@@ -20,14 +20,21 @@ function isHtmlContent(content: string): boolean {
   return /<[a-z][\s\S]*>/i.test(content) && !content.trim().startsWith('##')
 }
 
-function stripTitleFromContent(content: string, title: string): string {
+function stripMetadata(content: string, title: string): string {
   const lines = content.split('\n')
-  const titleLine = lines.findIndex(l => l.trim() === title || l.trim() === `## ${title}`)
-  if (titleLine >= 0) {
-    lines.splice(titleLine, 1)
-    return lines.join('\n').trim()
-  }
-  return content
+  const filtered = lines.filter(l => {
+    const t = l.trim()
+    if (t === title || t === `## ${title}`) return false
+    if (/\*\*Empresa:?\*\*/i.test(t)) return false
+    if (/\*\*Rol:?\*\*/i.test(t)) return false
+    if (/\*\*Ubicaci[oó]n:?\*\*/i.test(t)) return false
+    if (/\*\*Modalidad:?\*\*/i.test(t)) return false
+    if (/\*\*Presupuesto:?\*\*/i.test(t)) return false
+    if (/\*\*Departamento:?\*\*/i.test(t)) return false
+    if (/^###\s*Contacto/i.test(t)) return false
+    return true
+  })
+  return filtered.join('\n').trim()
 }
 
 function parseJobMetadata(content: string) {
@@ -54,23 +61,6 @@ function formatTime(dateStr: string) {
   if (days === 1) return 'ayer'
   if (days < 7) return `hace ${days}d`
   return d.toLocaleDateString('es-MX', { day: 'numeric', month: 'short' })
-}
-
-function maskContact(content: string): string {
-  const lines = content.split('\n')
-  const contactStart = lines.findIndex(l => /###\s*Contacto/i.test(l))
-  if (contactStart < 0) return content
-  const before = lines.slice(0, contactStart).join('\n')
-  const masked = [
-    '',
-    '### Contacto',
-    '',
-    '<div style="padding:16px;background:#1c2430;border-radius:8px;text-align:center;border:1px dashed #30363d">',
-    '<p style="color:#8b949e;margin:0 0 8px">Regístrate para ver los datos de contacto</p>',
-    '<p style="color:#8b949e;margin:0;font-size:13px">Email, teléfono, WhatsApp y enlace de aplicación</p>',
-    '</div>',
-  ].join('\n')
-  return [before, masked].join('\n')
 }
 
 function renderContent(content: string): string {
@@ -174,9 +164,8 @@ export default function VacancyPage() {
   }
 
   const rawContent = post.content || post.original_text || ''
-  const cleanContent = stripTitleFromContent(rawContent, post.title)
-  const maskedContent = (!user && cleanContent) ? maskContact(cleanContent) : cleanContent
-  const renderedHtml = renderContent(maskedContent)
+  const cleanContent = stripMetadata(rawContent, post.title)
+  const renderedHtml = renderContent(cleanContent)
   const meta = parseJobMetadata(rawContent)
   const time = formatTime(post.created_at)
   const platformName = post.platform === 'greenhouse' ? 'GitLab' :
