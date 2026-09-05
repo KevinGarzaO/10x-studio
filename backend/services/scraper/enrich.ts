@@ -21,9 +21,13 @@ export interface EnrichedVacancy {
 
 async function callClaude(prompt: string, maxTokens: number = 1000, temperature: number = 0.2): Promise<string | null> {
   const apiKey = process.env.CLAUDE_API_KEY || process.env.ANTHROPIC_API_KEY;
-  if (!apiKey) return null;
+  if (!apiKey) {
+    console.warn("[Enrich] CLAUDE_API_KEY no configurada.");
+    return null;
+  }
 
   try {
+    console.log("[Enrich] Calling Claude API...");
     const res = await fetch("https://api.anthropic.com/v1/messages", {
       method: "POST",
       headers: {

@@ -6,6 +6,7 @@ async function callClaude(prompt: string, maxTokens: number = 500, temperature: 
   }
 
   try {
+    console.log("[ScraperAI] Calling Claude API with model claude-haiku-4-5-20251001...");
     const res = await fetch("https://api.anthropic.com/v1/messages", {
       method: "POST",
       headers: {
@@ -22,9 +23,10 @@ async function callClaude(prompt: string, maxTokens: number = 500, temperature: 
     });
     const data: any = await res.json();
     if (data.error) {
-      console.error("[Claude] Error:", data.error.message);
+      console.error("[ScraperAI] Claude API error:", data.error.message);
       return null;
     }
+    console.log("[ScraperAI] Claude API response OK");
     return data.content?.[0]?.text ?? null;
   } catch (err) {
     console.error("[Claude] Error llamando API:", (err as Error).message);
