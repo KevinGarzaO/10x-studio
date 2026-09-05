@@ -209,7 +209,11 @@ export default function PostPage() {
             )}
 
             {!isEditorial && post.content && (
-              <p style={{ marginTop: 16, lineHeight: 1.7, color: '#c9d1d9' }}>{post.content}</p>
+              <div
+                className="job-content"
+                dangerouslySetInnerHTML={{ __html: marked.parse(post.content) as string }}
+                style={{ marginTop: 16, lineHeight: 1.7, color: '#c9d1d9' }}
+              />
             )}
 
             {post.tags && post.tags.length > 0 && (
