@@ -42,6 +42,8 @@ interface EditorialPost {
   is_scraper_post?: boolean
 }
 
+type FeedPost = EditorialPost
+
 function formatTime(dateStr: string) {
   if (!dateStr) return ''
   const diff = Date.now() - new Date(dateStr).getTime()
@@ -113,7 +115,7 @@ function PostCard({ post, onAuthRequired }: { post: FeedPost; onAuthRequired?: (
   const image = post.image_url
   const job = isJob ? parseJobContent(post.content || post.original_text || '') : null
 
-  const openPost = (e?: React.MouseEvent<HTMLElement>) => { if (e?.target instanceof HTMLElement && e.target.closest('button, a, input, textarea, select')) return; router.push(`/post/${post.id}`) }
+  const openPost = (e?: React.MouseEvent<HTMLElement>) => { if (e?.target instanceof HTMLElement && e.target.closest('button, a, input, textarea, select')) return; router.push(`/vacantes/${post.slug || post.id}`) }
 
   if (isJob) {
     const initials = (post.author?.display_name || 'AJ').slice(0, 2).toUpperCase()

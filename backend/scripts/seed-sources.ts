@@ -12,6 +12,47 @@ interface ChannelsConfig {
   reddit: string[];
 }
 
+// ATS sources — discovered via Google dorking:
+// site:apply.workable.com, site:boards.greenhouse.io, site:jobs.lever.co
+const ATS_SOURCES = {
+  workable: [
+    "platzi",
+    "crediclub",
+    "kavak",
+    "bitso",
+    "clip",
+    "jokr",
+    "nubank",
+    "mercadolibre",
+    "rappi",
+    "dlocal",
+  ],
+  greenhouse: [
+    "github",
+    "gitlab",
+    "figma",
+    "notion",
+    "canva",
+    "airtable",
+    "lastic",
+    "mural",
+    "loom",
+    "grammarly",
+  ],
+  lever: [
+    "netlify",
+    "postman",
+    "calendly",
+    "upspot",
+    "lattice",
+    "greenhouse",
+    "lever",
+    "ashby",
+    "breezy",
+    "recruitee",
+  ],
+};
+
 async function seed() {
   console.log("[Seed] Leyendo channels.json...");
   const raw = fs.readFileSync(path.join(__dirname, "../channels.json"), "utf-8");
@@ -19,6 +60,7 @@ async function seed() {
 
   let total = 0;
 
+  // Telegram
   for (const channel of config.telegram) {
     const { error } = await supabase.from("scraper_sources").upsert(
       {
@@ -40,6 +82,7 @@ async function seed() {
     }
   }
 
+  // Forobeta
   for (const slug of config.forobeta) {
     const { error } = await supabase.from("scraper_sources").upsert(
       {
@@ -61,6 +104,7 @@ async function seed() {
     }
   }
 
+  // Reddit
   for (const subreddit of config.reddit) {
     const { error } = await supabase.from("scraper_sources").upsert(
       {
@@ -78,6 +122,72 @@ async function seed() {
       console.error(`[Seed] Error insertando reddit/${subreddit}:`, error.message);
     } else {
       console.log(`[Seed] ✅ reddit/${subreddit}`);
+      total++;
+    }
+  }
+
+  // ATS: Workable
+  for (const slug of ATS_SOURCES.workable) {
+    const { error } = await supabase.from("scraper_sources").upsert(
+      {
+        platform: "workable",
+        source_id: slug,
+        display_name: slug,
+        is_active: true,
+        discovered_by: "google_dorking",
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      },
+      { onConflict: "platform,source_id" }
+    );
+    if (error) {
+      console.error(`[Seed] Error insertando workable/${slug}:`, error.message);
+    } else {
+      console.log(`[Seed] ✅ workable/${slug}`);
+      total++;
+    }
+  }
+
+  // ATS: Greenhouse
+  for (const slug of ATS_SOURCES.greenhouse) {
+    const { error } = await supabase.from("scraper_sources").upsert(
+      {
+        platform: "greenhouse",
+        source_id: slug,
+        display_name: slug,
+        is_active: true,
+        discovered_by: "google_dorking",
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      },
+      { onConflict: "platform,source_id" }
+    );
+    if (error) {
+      console.error(`[Seed] Error insertando greenhouse/${slug}:`, error.message);
+    } else {
+      console.log(`[Seed] ✅ greenhouse/${slug}`);
+      total++;
+    }
+  }
+
+  // ATS: Lever
+  for (const slug of ATS_SOURCES.lever) {
+    const { error } = await supabase.from("scraper_sources").upsert(
+      {
+        platform: "lever",
+        source_id: slug,
+        display_name: slug,
+        is_active: true,
+        discovered_by: "google_dorking",
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      },
+      { onConflict: "platform,source_id" }
+    );
+    if (error) {
+      console.error(`[Seed] Error insertando lever/${slug}:`, error.message);
+    } else {
+      console.log(`[Seed] ✅ lever/${slug}`);
       total++;
     }
   }

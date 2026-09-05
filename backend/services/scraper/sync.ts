@@ -1,4 +1,5 @@
 import { supabase } from "../supabase.service";
+import { generateSlug } from "../slug";
 
 const SCRAPER_BOT_ID = "00000000-0000-0000-0000-000000000001";
 
@@ -67,6 +68,13 @@ export async function syncVacancyToCommunity(
     return null;
   }
 
+  // Generate and save slug
+  const slug = generateSlug(title, communityPost.id);
+  await supabase
+    .from("community_posts")
+    .update({ slug })
+    .eq("id", communityPost.id);
+
   // Update scraper_post with community_post_id
   await supabase
     .from("scraper_posts")
@@ -76,7 +84,7 @@ export async function syncVacancyToCommunity(
     })
     .eq("id", scraperPostId);
 
-  log(`[Sync] Vacante sincronizada: community_posts/${communityPost.id}`);
+  log(`[Sync] Vacante sincronizada: /vacantes/${slug}`);
   return communityPost.id;
 }
 

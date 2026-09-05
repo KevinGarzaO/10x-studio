@@ -4,6 +4,9 @@ import { enrichVacancyWithAI, buildEnrichedContent } from "./enrich";
 import { fetchTelegramChannel } from "./sources/telegram";
 import { fetchForobetaForum } from "./sources/forobeta";
 import { fetchRedditListing } from "./sources/reddit";
+import { fetchWorkable } from "./sources/workable";
+import { fetchGreenhouse } from "./sources/greenhouse";
+import { fetchLever } from "./sources/lever";
 import { hasContact, isRecent } from "./contacts";
 import type { Post } from "./types";
 
@@ -45,6 +48,15 @@ export async function runProduction(
           break;
         case "reddit":
           posts = await fetchRedditListing([source.source_id], 1, 2000, false, false, log);
+          break;
+        case "workable":
+          posts = await fetchWorkable(source.source_id, log);
+          break;
+        case "greenhouse":
+          posts = await fetchGreenhouse(source.source_id, log);
+          break;
+        case "lever":
+          posts = await fetchLever(source.source_id, log);
           break;
       }
 

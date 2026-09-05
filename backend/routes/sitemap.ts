@@ -25,18 +25,19 @@ router.get('/sitemap.xml', async (_req: Request, res: Response) => {
   </url>`)
     }
 
-    // Dynamic job posts
+    // Dynamic job posts — use slugs when available
     const { data: posts } = await supabase
       .from('community_posts')
-      .select('id, created_at')
+      .select('id, slug, created_at')
       .eq('type', 'job')
       .order('created_at', { ascending: false })
       .limit(5000)
 
     if (posts) {
       for (const post of posts) {
+        const path = post.slug ? `/vacantes/${post.slug}` : `/post/${post.id}`
         urls.push(`  <url>
-    <loc>${SITE_URL}/post/${post.id}</loc>
+    <loc>${SITE_URL}${path}</loc>
     <lastmod>${new Date(post.created_at).toISOString().split('T')[0]}</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.7</priority>

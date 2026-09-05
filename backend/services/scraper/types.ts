@@ -1,4 +1,4 @@
-export type Platform = "telegram" | "forobeta" | "reddit";
+export type Platform = "telegram" | "forobeta" | "reddit" | "workable" | "greenhouse" | "lever";
 
 export type PostType = "vacancy" | "profile" | "unknown";
 

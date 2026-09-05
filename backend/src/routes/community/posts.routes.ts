@@ -1,6 +1,7 @@
 import { Router, Request, Response } from 'express'
 import { supabase } from '../../../services/supabase.service'
 import { communityAuthMiddleware, AuthRequest } from '../../../middleware/community-auth.middleware'
+import { generateSlug } from '../../../services/slug'
 
 const router = Router()
 
@@ -114,9 +115,10 @@ router.get('/', async (req: Request, res: Response) => {
 
 router.get('/:id', async (req: Request, res: Response) => {
   try {
-    const id = req.params.id as string
+    const idOrSlug = req.params.id as string
 
-    const { data: post, error } = await supabase
+    // Try slug first, then UUID
+    let postQuery = supabase
       .from('community_posts')
       .select(`
         *,
@@ -124,8 +126,17 @@ router.get('/:id', async (req: Request, res: Response) => {
         community_post_tags(tag:community_tags(name)),
         community_comments(*, author:users(id, username, display_name, photo_url))
       `)
-      .eq('id', id)
-      .single()
+
+    // Check if it looks like a UUID or a slug
+    const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(idOrSlug)
+    
+    if (isUuid) {
+      postQuery = postQuery.eq('id', idOrSlug)
+    } else {
+      postQuery = postQuery.eq('slug', idOrSlug)
+    }
+
+    const { data: post, error } = await postQuery.single()
 
     if (!error && post) {
       return res.json({
@@ -137,10 +148,11 @@ router.get('/:id', async (req: Request, res: Response) => {
       })
     }
 
+    // Fallback to editorial content
     const { data: editorialPost, error: editorialError } = await supabase
       .from('content')
       .select('id, title, html_content, markdown_content, excerpt, image_url, slug, published_at, word_count')
-      .eq('id', id)
+      .eq('id', idOrSlug)
       .single()
 
     if (!editorialError && editorialPost) {
@@ -195,6 +207,16 @@ router.post('/', communityAuthMiddleware, async (req: AuthRequest, res: Response
       .single()
 
     if (error) throw error
+
+    // Generate slug for job posts
+    if (post && type === 'job') {
+      const slug = generateSlug(title, post.id)
+      await supabase
+        .from('community_posts')
+        .update({ slug })
+        .eq('id', post.id)
+      post.slug = slug
+    }
 
     if (tags?.length && post) {
       for (const tagName of tags) {
@@ -255,6 +277,68 @@ router.delete('/:id', communityAuthMiddleware, async (req: AuthRequest, res: Res
   } catch (error) {
     console.error('Community Delete post error:', error)
     res.status(500).json({ error: 'Error al eliminar la publicación' })
+  }
+})
+
+router.put('/:id', communityAuthMiddleware, async (req: AuthRequest, res: Response) => {
+  try {
+    const id = req.params.id as string
+    const { title, content, budget, modalidad } = req.body
+
+    const { data: existingPost } = await supabase
+      .from('community_posts')
+      .select('author_id, slug, title')
+      .eq('id', id)
+      .single()
+
+    if (!existingPost) {
+      return res.status(404).json({ error: 'Publicación no encontrada' })
+    }
+
+    if (existingPost.author_id !== req.userId) {
+      return res.status(403).json({ error: 'No tienes permiso para editar esta publicación' })
+    }
+
+    const updates: Record<string, unknown> = {}
+    if (title !== undefined) updates.title = title
+    if (content !== undefined) updates.content = content
+    if (budget !== undefined) updates.budget = budget
+    if (modalidad !== undefined) updates.modalidad = modalidad
+
+    // Regenerate slug if title changed (for job posts)
+    if (title && title !== existingPost.title) {
+      const oldSlug = existingPost.slug
+      const newSlug = generateSlug(title, id)
+      
+      updates.slug = newSlug
+      
+      // Save old slug to history for redirects
+      const { data: post } = await supabase
+        .from('community_posts')
+        .select('slug_history')
+        .eq('id', id)
+        .single()
+      
+      const history = (post?.slug_history as string[]) || []
+      if (oldSlug && !history.includes(oldSlug)) {
+        history.push(oldSlug)
+        updates.slug_history = history
+      }
+    }
+
+    const { data: updatedPost, error } = await supabase
+      .from('community_posts')
+      .update(updates)
+      .eq('id', id)
+      .select()
+      .single()
+
+    if (error) throw error
+
+    res.json({ post: updatedPost })
+  } catch (error) {
+    console.error('Community Update post error:', error)
+    res.status(500).json({ error: 'Error al actualizar la publicación' })
   }
 })
 
