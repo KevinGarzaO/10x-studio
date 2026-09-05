@@ -3,6 +3,7 @@ import { getActiveSources, getAllSources, getScraperStats } from "../services/sc
 import { runDiscovery, runDiscoveryAll } from "../services/scraper/discovery";
 import { runProduction } from "../services/scraper/producer";
 import { syncAllPending } from "../services/scraper/sync";
+import { enrichVacancyWithAI, buildEnrichedContent } from "../services/scraper/enrich";
 import { SEARCH_PROFILES } from "../services/scraper/profiles";
 import { supabase } from "../services/supabase.service";
 
@@ -171,6 +172,82 @@ router.post("/sync", async (_req: Request, res: Response) => {
   } catch (error) {
     console.error("Scraper sync error:", error);
     res.status(500).json({ error: "Error al sincronizar" });
+  }
+});
+
+/**
+ * POST /api/scraper/re-enrich
+ * Re-enriquece posts existentes con IA
+ */
+router.post("/re-enrich", async (req: Request, res: Response) => {
+  try {
+    const limit = parseInt((req.body.limit as string) || "50", 10);
+    const logs: string[] = [];
+
+    const { data: posts, error } = await supabase
+      .from("scraper_posts")
+      .select("id, text, platform, source, contacts, post_type, quality_score")
+      .eq("post_type", "vacancy")
+      .order("created_at", { ascending: false })
+      .limit(limit);
+
+    if (error) throw error;
+    logs.push(`[ReEnrich] ${posts?.length ?? 0} posts para re-enriquecer`);
+
+    let enriched = 0;
+    let failed = 0;
+
+    for (const post of posts ?? []) {
+      try {
+        const aiResult = await enrichVacancyWithAI(
+          post.text,
+          post.platform,
+          post.source,
+          (post.contacts as any) || {}
+        );
+
+        if (aiResult) {
+          const newContent = buildEnrichedContent(aiResult);
+          const newContacts = {
+            emails: aiResult.contacts.emails,
+            whatsapp: aiResult.contacts.whatsapp,
+            telegramLinks: aiResult.contacts.telegramLinks,
+            phones: aiResult.contacts.phones,
+            applyUrl: aiResult.contacts.applyUrl,
+            company: aiResult.company,
+            role: aiResult.role,
+            salary: aiResult.salary,
+          };
+
+          await supabase
+            .from("scraper_posts")
+            .update({
+              text: newContent,
+              quality_score: aiResult.qualityScore,
+              contacts: newContacts,
+              summary: aiResult.summary,
+              work_modality: aiResult.workModality,
+              location: aiResult.location,
+            })
+            .eq("id", post.id);
+
+          enriched++;
+          logs.push(`[ReEnrich] ✅ ${post.id}: quality=${aiResult.qualityScore}, contacts=${JSON.stringify(aiResult.contacts.emails?.length || 0)} emails`);
+        } else {
+          failed++;
+          logs.push(`[ReEnrich] ❌ ${post.id}: IA devolvió null`);
+        }
+      } catch (err) {
+        failed++;
+        logs.push(`[ReEnrich] ❌ ${post.id}: ${(err as Error).message}`);
+      }
+    }
+
+    logs.push(`[ReEnrich] Completado: ${enriched} enriquecidos, ${failed} fallidos`);
+    res.json({ enriched, failed, logs });
+  } catch (error) {
+    console.error("Scraper re-enrich error:", error);
+    res.status(500).json({ error: "Error al re-enriquecer" });
   }
 });
 
