@@ -7,7 +7,7 @@ import {
   Bell, Bookmark, BriefcaseBusiness, ChevronDown, Compass, Flame,
   Hash, Home, Menu, MessageCircle, MoreHorizontal, PenLine, Plus, Search,
   Send, Share2, ShieldCheck, Sparkles, Tag, TrendingUp, Trophy, Users, X,
-  Zap, ArrowBigUp, LockKeyhole, CheckCircle2
+  Zap, ArrowBigUp, LockKeyhole, CheckCircle2, Building, MapPin, Home as HomeIcon, Mail, Clock
 } from 'lucide-react'
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'
@@ -128,17 +128,17 @@ function PostCard({ post, onAuthRequired, activeTab }: { post: FeedPost; onAuthR
       <div className="post-type-label" style={{ color: '#10b981' }}>VACANTE</div>
       <h2 style={{ fontSize: 17, marginBottom: 8 }}>{job?.role || post.title}</h2>
       {job && <div className="job-details" style={{ display: 'flex', flexWrap: 'wrap', gap: '6px 14px', margin: '6px 0 10px', fontSize: 13, color: '#8b949e' }}>
-        {job.company && <span style={{ background: '#1c2430', padding: '3px 8px', borderRadius: 4 }}>🏢 {job.company}</span>}
-        {job.location && <span style={{ background: '#1c2430', padding: '3px 8px', borderRadius: 4 }}>📍 {job.location}</span>}
+        {job.company && <span style={{ background: '#1c2430', padding: '3px 8px', borderRadius: 4, display: 'inline-flex', alignItems: 'center', gap: 4 }}><Building size={12} /> {job.company}</span>}
+        {job.location && <span style={{ background: '#1c2430', padding: '3px 8px', borderRadius: 4, display: 'inline-flex', alignItems: 'center', gap: 4 }}><MapPin size={12} /> {job.location}</span>}
         {job.salary && <span style={{ background: '#0d3320', color: '#10b981', padding: '3px 8px', borderRadius: 4, fontWeight: 600 }}>{job.salary}</span>}
-        {job.modality && <span style={{ background: '#1c2430', padding: '3px 8px', borderRadius: 4 }}>🏠 {job.modality}</span>}
+        {job.modality && <span style={{ background: '#1c2430', padding: '3px 8px', borderRadius: 4, display: 'inline-flex', alignItems: 'center', gap: 4 }}><HomeIcon size={12} /> {job.modality}</span>}
       </div>}
       {job?.description && <p className="post-excerpt" style={{ fontSize: 13, lineHeight: 1.5, color: '#8b949e', margin: '4px 0 10px' }}>{job.description}</p>}
       {job?.requirements && job.requirements.length > 0 && <div style={{ margin: '6px 0', fontSize: 12, color: '#8b949e' }}><strong style={{ color: '#c9d1d9' }}>Requisitos:</strong> {job.requirements.slice(0, 3).join(' · ')}{job.requirements.length > 3 ? ` +${job.requirements.length - 3} más` : ''}</div>}
       {user ? (
         <>
           {job?.applyUrl && <a href={job.applyUrl} target="_blank" rel="noopener noreferrer" className="unlock-button" style={{ display: 'inline-flex', alignItems: 'center', gap: 6, background: '#10b981', color: '#0d1117', padding: '8px 16px', borderRadius: 6, fontWeight: 600, fontSize: 13, textDecoration: 'none', margin: '8px 0' }} onClick={e => e.stopPropagation()}>Postularse ahora →</a>}
-          {!job?.applyUrl && job?.emails && job.emails.length > 0 && <div style={{ fontSize: 12, color: '#8b949e', margin: '6px 0' }}>📧 {job.emails[0]}</div>}
+          {!job?.applyUrl && job?.emails && job.emails.length > 0 && <div style={{ fontSize: 12, color: '#8b949e', margin: '6px 0', display: 'inline-flex', alignItems: 'center', gap: 4 }}><Mail size={12} /> {job.emails[0]}</div>}
         </>
       ) : (
         <button className="unlock-button" style={{ display: 'inline-flex', alignItems: 'center', gap: 6, background: '#1c2430', border: '1px solid #30363d', color: '#c9d1d9', padding: '8px 16px', borderRadius: 6, fontWeight: 600, fontSize: 13, cursor: 'pointer', margin: '8px 0' }} onClick={e => { e.stopPropagation(); onAuthRequired?.() }}>
@@ -154,7 +154,7 @@ function PostCard({ post, onAuthRequired, activeTab }: { post: FeedPost; onAuthR
     <div className="post-type-label">ARTÍCULO</div><h2>{post.title}</h2>
     {image && <div style={{ margin: '10px 0', borderRadius: 8, overflow: 'hidden' }}><img src={image} alt="" style={{ width: '100%', height: 200, objectFit: 'cover', display: 'block' }} /></div>}
     <p className="post-excerpt">{(post.content || '').substring(0, 200)}{(post.content || '').length > 200 ? '...' : ''}</p>
-    {post.word_count && <div style={{ fontSize: 12, color: '#8b949e', marginTop: 4 }}>📖 {Math.max(1, Math.round(post.word_count / 200))} min de lectura</div>}
+    {post.word_count && <div style={{ fontSize: 12, color: '#8b949e', marginTop: 4, display: 'inline-flex', alignItems: 'center', gap: 4 }}><Clock size={12} /> {Math.max(1, Math.round(post.word_count / 200))} min de lectura</div>}
     <div className="post-footer"><button className={`vote-button ${voted ? 'voted' : ''}`} onClick={() => setVoted(!voted)}><ArrowBigUp size={17} fill={voted ? 'currentColor' : 'none'} />{post.votesCount + (voted ? 1 : 0)}</button><button className="engagement"><MessageCircle size={16} />{post.commentsCount} comentarios</button><span className="footer-spacer" /><button className={`icon-button ${saved ? 'saved' : ''}`} onClick={() => setSaved(!saved)} aria-label="Guardar"><Bookmark size={17} fill={saved ? 'currentColor' : 'none'} /></button><button className="icon-button" aria-label="Compartir"><Share2 size={16} /></button></div>
   </article>
 }
