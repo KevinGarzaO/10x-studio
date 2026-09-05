@@ -12,6 +12,7 @@ export interface ContactInfo {
   phones?: string[];
   contactNameGuess?: string | null;
   referTo?: string;
+  applyUrl?: string | null;
 }
 
 export interface ProfileInfo {
