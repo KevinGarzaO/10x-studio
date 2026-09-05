@@ -115,7 +115,7 @@ function PostCard({ post, onAuthRequired, activeTab }: { post: FeedPost; onAuthR
   const image = post.image_url
   const job = isJob ? parseJobContent(post.content || post.original_text || '') : null
 
-  const openPost = (e?: React.MouseEvent<HTMLElement>) => { if (e?.target instanceof HTMLElement && e.target.closest('button, a, input, textarea, select')) return; const slug = post.slug || post.id; const url = slug.startsWith('/vacantes/') ? slug : `/vacantes/${slug}`; const tabParam = activeTab && activeTab !== 'Tendencias' ? `${url.includes('?') ? '&' : '?'}from=${encodeURIComponent(activeTab)}` : ''; router.push(`${url}${tabParam}`) }
+  const openPost = (e?: React.MouseEvent<HTMLElement>) => { if (e?.target instanceof HTMLElement && e.target.closest('button, a, input, textarea, select')) return; const isJob = post.type === 'job'; const slug = post.slug || post.id; const basePath = isJob ? (slug.startsWith('/vacantes/') ? slug : `/vacantes/${slug}`) : `/post/${post.id}`; const tabParam = activeTab && activeTab !== 'Tendencias' ? `${basePath.includes('?') ? '&' : '?'}from=${encodeURIComponent(activeTab)}` : ''; router.push(`${basePath}${tabParam}`) }
 
   if (isJob) {
     const initials = (post.author?.display_name || 'AJ').slice(0, 2).toUpperCase()
