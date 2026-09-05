@@ -21,7 +21,10 @@ function isHtmlContent(content: string): boolean {
 }
 
 function stripMetadata(content: string, title: string): string {
-  const lines = content.split('\n')
+  // Remove everything from ### Contacto onwards (including inline)
+  let result = content.replace(/\n?###\s*Contacto[\s\S]*/gi, '')
+  // Remove metadata lines (Empresa, Departamento, etc.)
+  const lines = result.split('\n')
   const filtered = lines.filter(l => {
     const t = l.trim()
     if (t === title || t === `## ${title}`) return false
@@ -31,7 +34,6 @@ function stripMetadata(content: string, title: string): string {
     if (/\*\*Modalidad:?\*\*/i.test(t)) return false
     if (/\*\*Presupuesto:?\*\*/i.test(t)) return false
     if (/\*\*Departamento:?\*\*/i.test(t)) return false
-    if (/^###\s*Contacto/i.test(t)) return false
     return true
   })
   return filtered.join('\n').trim()
