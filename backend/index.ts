@@ -9,6 +9,7 @@ import crudRoutes from './routes/crud'
 import aiRoutes from './routes/ai'
 import linkedinRoutes from './routes/linkedin'
 import blogRoutes from './routes/blog'
+import sitemapRoutes from './routes/sitemap'
 import { linkedinCallback } from './controllers/linkedin.controller'
 import { initCron } from './services/cron.service'
 import { authMiddleware } from './middleware/auth.middleware'
@@ -92,6 +93,9 @@ app.use('/api/community/saved', communityAuthMiddleware, communitySavedRoutes)
 
 // Scraper routes (internal use, no auth required for now)
 app.use('/api/scraper', scraperRoutes)
+
+// Sitemap (public, no auth)
+app.use(sitemapRoutes)
 
 // Root route
 app.get('/', (req, res) => {

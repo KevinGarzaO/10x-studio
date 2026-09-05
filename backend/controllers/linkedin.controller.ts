@@ -6,6 +6,23 @@ const CLIENT_SECRET = process.env.LINKEDIN_CLIENT_SECRET!
 const REDIRECT_URI  = process.env.LINKEDIN_REDIRECT_URI!
 const SCOPE         = 'openid profile email w_member_social'
 
+const SITE_URL = process.env.SITE_URL || 'https://avotalent.io'
+
+/**
+ * Agrega parámetros UTM a URLs del sitio en el texto del post.
+ */
+function addUtmToUrls(text: string): string {
+  const utmParams = 'utm_source=linkedin&utm_medium=social&utm_campaign=release_1_0_0'
+  // Match URLs that point to our site but don't already have UTM
+  return text.replace(
+    /(https?:\/\/(?:avotalent\.io|avocado(?:-studio)?\.vercel\.app|community\.avotalent\.io)[^\s)]*)(?![\s\S]*utm_source)/gi,
+    (url) => {
+      const separator = url.includes('?') ? '&' : '?'
+      return `${url}${separator}${utmParams}`
+    }
+  )
+}
+
 /** GET /api/linkedin/auth — Redirect to LinkedIn OAuth */
 export const linkedinAuth = (_req: Request, res: Response) => {
   const url = `https://www.linkedin.com/oauth/v2/authorization?response_type=code&client_id=${CLIENT_ID}&redirect_uri=${encodeURIComponent(REDIRECT_URI)}&scope=${encodeURIComponent(SCOPE)}`
@@ -172,7 +189,7 @@ export const linkedinPost = async (req: Request, res: Response) => {
     const postId = await LinkedInService.publish({
       token: authToken,
       urn: authorUrn,
-      text: postText.trim(),
+      text: addUtmToUrls(postText.trim()),
       imageBase64,
       imageUrl
     })

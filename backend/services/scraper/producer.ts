@@ -4,7 +4,7 @@ import { enrichVacancyWithAI, buildEnrichedContent } from "./enrich";
 import { fetchTelegramChannel } from "./sources/telegram";
 import { fetchForobetaForum } from "./sources/forobeta";
 import { fetchRedditListing } from "./sources/reddit";
-import { hasContact } from "./contacts";
+import { hasContact, isRecent } from "./contacts";
 import type { Post } from "./types";
 
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
@@ -53,6 +53,12 @@ export async function runProduction(
       for (const post of posts) {
         const exists = await postExists(post.platform, post.source, post.postId);
         if (exists) continue;
+
+        // Quality filter: must be ≤30 days old
+        if (!isRecent(post, 30)) {
+          log(`[Production] Skipping old post (${post.postDate}): ${post.postId}`);
+          continue;
+        }
 
         const hasCt = hasContact(post);
         if (hasCt) postsWithContact++;

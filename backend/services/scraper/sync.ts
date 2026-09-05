@@ -148,18 +148,79 @@ export async function syncProfileToUser(
 }
 
 /**
+ * Obtiene cuántos posts nativos (no scraper) se publicaron hoy.
+ */
+async function getTodayNativePostCount(): Promise<number> {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const todayISO = today.toISOString();
+
+  const { count, error } = await supabase
+    .from("community_posts")
+    .select("id", { count: "exact", head: true })
+    .eq("is_scraper_post", false)
+    .gte("created_at", todayISO);
+
+  if (error) return 0;
+  return count ?? 0;
+}
+
+/**
+ * Obtiene cuántos posts scraper se publicaron hoy.
+ */
+async function getTodayScraperPostCount(): Promise<number> {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const todayISO = today.toISOString();
+
+  const { count, error } = await supabase
+    .from("community_posts")
+    .select("id", { count: "exact", head: true })
+    .eq("is_scraper_post", true)
+    .gte("created_at", todayISO);
+
+  if (error) return 0;
+  return count ?? 0;
+}
+
+/**
  * Sincroniza todos los posts nuevos (no sincronizados aún).
+ * Respeta la regla de volumen diario: máximo 20 posts/día (nativas + scraper).
  */
 export async function syncAllPending(
   log: (msg: string) => void = () => {}
 ): Promise<{ vacancies: number; profiles: number }> {
-  // Get unsynced vacancy posts that have at least one contact method
+  const DAILY_LIMIT = 20;
+
+  // Check if it's weekend (Saturday=6, Sunday=0) — no scraping on weekends
+  const dayOfWeek = new Date().getDay();
+  if (dayOfWeek === 0 || dayOfWeek === 6) {
+    log("[Sync] Es fin de semana, no se sincronizan posts scraper");
+    return { vacancies: 0, profiles: 0 };
+  }
+
+  const nativeCount = await getTodayNativePostCount();
+  const scraperCount = await getTodayScraperPostCount();
+  const remainingSlots = Math.max(0, DAILY_LIMIT - nativeCount - scraperCount);
+
+  log(`[Sync] Hoy: ${nativeCount} nativas, ${scraperCount} scraper, ${remainingSlots} slots restantes`);
+
+  if (remainingSlots === 0) {
+    log("[Sync] Límite diario alcanzado, no se sincronizan más posts scraper");
+    return { vacancies: 0, profiles: 0 };
+  }
+  // Get unsynced vacancy posts that have at least one contact method and are ≤30 days old
+  const thirtyDaysAgo = new Date();
+  thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+  const thirtyDaysAgoISO = thirtyDaysAgo.toISOString();
+
   const { data: vacancyPosts } = await supabase
     .from("scraper_posts")
-    .select("id, contacts")
+    .select("id, contacts, created_at")
     .eq("post_type", "vacancy")
     .eq("synced_to_community", false)
-    .limit(50);
+    .gte("created_at", thirtyDaysAgoISO)
+    .limit(remainingSlots);
 
   // Filter posts that have at least email or phone
   const postsWithContact = (vacancyPosts ?? []).filter((post) => {

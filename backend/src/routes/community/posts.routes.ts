@@ -75,8 +75,12 @@ router.get('/', async (req: Request, res: Response) => {
     let query = supabase
       .from('community_posts')
       .select('*, author:users(id, username, display_name, photo_url), community_post_tags(tag:community_tags(name))', { count: 'exact' })
-      .order('created_at', { ascending: false })
       .range(from, to)
+
+    // Order: nativas first (is_scraper_post=false), then by votes, then by date
+    query = query.order('is_scraper_post', { ascending: true })
+    query = query.order('votes_count', { ascending: false })
+    query = query.order('created_at', { ascending: false })
 
     if (type) query = query.eq('type', type)
     if (search) {

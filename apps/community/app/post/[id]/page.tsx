@@ -3,7 +3,7 @@
 import Link from 'next/link'
 import { useParams } from 'next/navigation'
 import { useState, useEffect, useMemo } from 'react'
-import { ArrowLeft, ArrowBigUp, Bookmark, MessageCircle, Share2, Send, BriefcaseBusiness, CheckCircle2, Clock3, Users, Flame, ShieldCheck, MoreHorizontal } from 'lucide-react'
+import { ArrowLeft, ArrowBigUp, Bookmark, MessageCircle, Share2, Send, BriefcaseBusiness, CheckCircle2, Clock3, Users, Flame, ShieldCheck, MoreHorizontal, LockKeyhole } from 'lucide-react'
 import { marked } from 'marked'
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'
@@ -39,6 +39,25 @@ function formatTime(dateStr: string) {
   const days = Math.floor(hours / 24)
   if (days < 7) return `hace ${days}d`
   return d.toLocaleDateString('es-MX', { day: 'numeric', month: 'short' })
+}
+
+function maskContact(content: string): string {
+  const lines = content.split('\n')
+  const contactStart = lines.findIndex(l => /###\s*Contacto/i.test(l))
+  if (contactStart < 0) return content
+
+  const before = lines.slice(0, contactStart).join('\n')
+  const masked = [
+    '',
+    '### Contacto',
+    '',
+    '<div style="padding:16px;background:#1c2430;border-radius:8px;text-align:center;border:1px dashed #30363d">',
+    '<p style="color:#8b949e;margin:0 0 8px">🔒 Regístrate para ver los datos de contacto</p>',
+    '<p style="color:#8b949e;margin:0;font-size:13px">Email, teléfono, WhatsApp y enlace de aplicación</p>',
+    '</div>',
+  ].join('\n')
+
+  return [before, masked].join('\n')
 }
 
 function DetailSidebar() {
@@ -80,6 +99,8 @@ export default function PostPage() {
   const [following, setFollowing] = useState(false)
   const [reply, setReply] = useState('')
   const [sent, setSent] = useState(false)
+  const [user, setUser] = useState<any>(null)
+  const [authOpen, setAuthOpen] = useState(false)
 
   useEffect(() => {
     setLoading(true)
@@ -100,6 +121,13 @@ export default function PostPage() {
         setLoading(false)
       })
   }, [id])
+
+  useEffect(() => {
+    fetch(`${API_URL}/api/community/auth/me`, { credentials: 'include' })
+      .then(r => r.ok ? r.json() : null)
+      .then(d => setUser(d?.user || null))
+      .catch(() => {})
+  }, [])
 
   function submitReply() { if (!reply.trim()) return; setSent(true); setReply('') }
 
@@ -143,6 +171,8 @@ export default function PostPage() {
   const initials = isEditorial ? 'AS' : post.author?.display_name?.split(' ').map(n => n[0]).join('').substring(0, 2) || '?'
   const time = formatTime(post.created_at)
   const readingTime = post.word_count ? `${Math.max(1, Math.round(post.word_count / 200))} min de lectura` : '5 min de lectura'
+
+  const displayContent = (isJob && !user && post.content) ? maskContact(post.content) : post.content
 
   return (
     <main className="post-detail-page">
@@ -200,20 +230,34 @@ export default function PostPage() {
 
             {post.excerpt && <p className="detail-lead">{post.excerpt}</p>}
 
-            {isEditorial && post.content && (
+            {isEditorial && displayContent && (
               <div
                 className="editorial-content"
-                dangerouslySetInnerHTML={{ __html: marked.parse(post.content) as string }}
+                dangerouslySetInnerHTML={{ __html: marked.parse(displayContent) as string }}
                 style={{ marginTop: 16, lineHeight: 1.7, color: '#c9d1d9' }}
               />
             )}
 
-            {!isEditorial && post.content && (
+            {!isEditorial && displayContent && (
               <div
                 className="job-content"
-                dangerouslySetInnerHTML={{ __html: marked.parse(post.content) as string }}
+                dangerouslySetInnerHTML={{ __html: marked.parse(displayContent) as string }}
                 style={{ marginTop: 16, lineHeight: 1.7, color: '#c9d1d9' }}
               />
+            )}
+
+            {isJob && !user && (
+              <div style={{ marginTop: 20, padding: '16px 20px', background: '#1c2430', border: '1px solid #30363d', borderRadius: 10, textAlign: 'center' }}>
+                <LockKeyhole size={24} style={{ color: '#8b949e', marginBottom: 8 }} />
+                <h3 style={{ color: '#c9d1d9', margin: '0 0 8px', fontSize: 16 }}>¿Interesado en esta vacante?</h3>
+                <p style={{ color: '#8b949e', margin: '0 0 16px', fontSize: 14 }}>Regístrate para acceder al email, teléfono, WhatsApp y enlace de aplicación.</p>
+                <button
+                  onClick={() => setAuthOpen(true)}
+                  style={{ padding: '10px 24px', background: '#10b981', color: '#0d1117', border: 'none', borderRadius: 8, fontWeight: 700, fontSize: 14, cursor: 'pointer' }}
+                >
+                  Crear cuenta gratis
+                </button>
+              </div>
             )}
 
             {post.tags && post.tags.length > 0 && (
@@ -278,6 +322,19 @@ export default function PostPage() {
 
         <DetailSidebar />
       </div>
+
+      {authOpen && (
+        <div className="modal-backdrop" role="presentation" onMouseDown={e => e.target === e.currentTarget && setAuthOpen(false)}>
+          <section className="auth-modal" role="dialog" aria-modal="true">
+            <div style={{ padding: 32, textAlign: 'center' }}>
+              <LockKeyhole size={24} style={{ color: '#8b949e', marginBottom: 12 }} />
+              <h2 style={{ color: '#c9d1d9', fontSize: 20, marginBottom: 8 }}>Desbloquea esta oportunidad</h2>
+              <p style={{ color: '#8b949e', marginBottom: 20 }}>Regístrate para acceder a los datos de contacto.</p>
+              <button onClick={() => setAuthOpen(false)} style={{ padding: '8px 16px', background: '#21262d', color: '#c9d1d9', border: 'none', borderRadius: 6, cursor: 'pointer' }}>Cerrar</button>
+            </div>
+          </section>
+        </div>
+      )}
     </main>
   )
 }
