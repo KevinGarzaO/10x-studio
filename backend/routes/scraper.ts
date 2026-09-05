@@ -6,6 +6,10 @@ import { syncAllPending } from "../services/scraper/sync";
 import { enrichVacancyWithAI, buildEnrichedContent } from "../services/scraper/enrich";
 import { SEARCH_PROFILES } from "../services/scraper/profiles";
 import { supabase } from "../services/supabase.service";
+import { fetchWorkable } from "../services/scraper/sources/workable";
+import { fetchGreenhouse } from "../services/scraper/sources/greenhouse";
+import { postExists, insertPost } from "../services/scraper/db";
+import { hasContact } from "../services/scraper/contacts";
 
 const router = Router();
 
@@ -248,6 +252,75 @@ router.post("/re-enrich", async (req: Request, res: Response) => {
   } catch (error) {
     console.error("Scraper re-enrich error:", error);
     res.status(500).json({ error: "Error al re-enriquecer" });
+  }
+});
+
+/**
+ * POST /api/scraper/test-ats
+ * Test ATS connectors and sync to community_posts
+ */
+router.post("/test-ats", async (_req: Request, res: Response) => {
+  try {
+    const logs: string[] = [];
+    let totalInserted = 0;
+
+    // Test Workable - Platzi
+    logs.push("[TestATS] Scraping Workable/Platzi...");
+    const workablePosts = await fetchWorkable("platzi", (msg) => logs.push(msg));
+    for (const post of workablePosts.slice(0, 3)) { // Limit to 3 for test
+      const exists = await postExists(post.platform, post.source, post.postId);
+      if (!exists && hasContact(post)) {
+        await insertPost({
+          platform: post.platform,
+          source: post.source,
+          post_id: post.postId,
+          url: post.url,
+          post_date: post.postDate,
+          author: post.author,
+          text: post.text,
+          language: post.language,
+          post_type: "vacancy",
+          location: post.location,
+          work_modality: post.workModality,
+          contacts: post.contacts as any,
+          quality_score: 0.8,
+        });
+        totalInserted++;
+        logs.push(`[TestATS] ✅ Inserted: ${post.text.split("\n")[0]}`);
+      }
+    }
+
+    // Test Greenhouse - GitLab
+    logs.push("[TestATS] Scraping Greenhouse/GitLab...");
+    const ghPosts = await fetchGreenhouse("gitlab", (msg) => logs.push(msg));
+    for (const post of ghPosts.slice(0, 3)) { // Limit to 3 for test
+      const exists = await postExists(post.platform, post.source, post.postId);
+      if (!exists && hasContact(post)) {
+        await insertPost({
+          platform: post.platform,
+          source: post.source,
+          post_id: post.postId,
+          url: post.url,
+          post_date: post.postDate,
+          author: post.author,
+          text: post.text,
+          language: post.language,
+          post_type: "vacancy",
+          location: post.location,
+          work_modality: post.workModality,
+          contacts: post.contacts as any,
+          quality_score: 0.8,
+        });
+        totalInserted++;
+        logs.push(`[TestATS] ✅ Inserted: ${post.text.split("\n")[0]}`);
+      }
+    }
+
+    logs.push(`[TestATS] Total insertados: ${totalInserted}`);
+    res.json({ totalInserted, logs });
+  } catch (error) {
+    console.error("Test ATS error:", error);
+    res.status(500).json({ error: "Error en test ATS" });
   }
 });
 
