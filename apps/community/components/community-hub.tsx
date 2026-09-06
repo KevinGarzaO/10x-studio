@@ -133,12 +133,12 @@ function CompanyAvatar({ company, size = 40 }: { company: string | null; size?: 
   const name = company || 'AV'
   const initials = name.slice(0, 2).toUpperCase()
   const domain = company ? company.toLowerCase().replace(/\s+/g, '').replace(/[^a-z0-9]/g, '') : ''
-  const logoUrl = domain ? `https://www.google.com/s2/favicons?domain=${domain}.com&sz=256` : null
+  const logoUrl = domain ? `${API_URL}/api/community/favicon?domain=${domain}.com` : null
   const showLogo = logoUrl && !logoFailed
   return (
     <div style={{ width: size, height: size, minWidth: size, borderRadius: '50%', background: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', border: '2px solid #30363d', flexShrink: 0, position: 'relative' }}>
-      {showLogo && <img src={logoUrl} alt="" crossOrigin="anonymous" style={{ width: '70%', height: '70%', objectFit: 'contain', position: 'absolute' }} onError={() => setLogoFailed(true)} />}
-      <div style={{ width: '100%', height: '100%', borderRadius: '50%', background: '#10b981', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#0d1117', fontWeight: 800, fontSize: size * 0.35, position: showLogo ? 'relative' : 'relative', zIndex: showLogo ? -1 : 0 }}>{initials}</div>
+      {showLogo && <img src={logoUrl} alt="" style={{ width: '70%', height: '70%', objectFit: 'contain', position: 'absolute' }} onError={() => setLogoFailed(true)} />}
+      <div style={{ width: '100%', height: '100%', borderRadius: '50%', background: '#10b981', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#0d1117', fontWeight: 800, fontSize: size * 0.35, position: 'relative', zIndex: showLogo ? -1 : 0 }}>{initials}</div>
     </div>
   )
 }
