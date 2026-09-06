@@ -68,10 +68,13 @@ function formatTime(dateStr: string) {
 }
 
 function renderContent(content: string): string {
-  if (isHtmlContent(content)) {
-    return unescapeHtml(content)
+  // Always unescape HTML entities first (ATS APIs return &lt;div&gt; etc.)
+  let decoded = unescapeHtml(content)
+  // Now check if it's actual HTML
+  if (isHtmlContent(decoded)) {
+    return decoded
   }
-  return marked.parse(content) as string
+  return marked.parse(decoded) as string
 }
 
 interface PostData {
