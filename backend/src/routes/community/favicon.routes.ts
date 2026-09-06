@@ -8,13 +8,14 @@ function fetchImage(url: string, timeout = 8000): Promise<{ buffer: Buffer; cont
   return new Promise((resolve) => {
     const client = url.startsWith('https') ? https : http
     const req = client.get(url, { timeout, headers: { 'User-Agent': 'Mozilla/5.0' } }, (res) => {
-      if (res.statusCode >= 300 && res.statusCode < 400 && res.headers.location) {
+      const code = res.statusCode ?? 0
+      if (code >= 300 && code < 400 && res.headers.location) {
         const loc = res.headers.location.startsWith('http') ? res.headers.location : new URL(res.headers.location, url).href
         fetchImage(loc, timeout).then(resolve)
         res.resume()
         return
       }
-      if (res.statusCode !== 200) { res.resume(); resolve(null); return }
+      if (code !== 200) { res.resume(); resolve(null); return }
       const ct = res.headers['content-type'] || ''
       if (!ct.includes('image')) { res.resume(); resolve(null); return }
       const chunks: Buffer[] = []
