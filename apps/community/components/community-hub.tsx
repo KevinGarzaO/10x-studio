@@ -77,8 +77,20 @@ function LeftSidebar({ onPublish, activeTab, setActiveTab }: { onPublish: () => 
 }
 
 
+function unescapeHtml(text: string): string {
+  return text
+    .replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&amp;/g, '&')
+    .replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/&#x27;/g, "'")
+    .replace(/&nbsp;/g, ' ')
+}
+
+function stripHtml(html: string): string {
+  return html.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim()
+}
+
 function parseJobContent(text: string) {
-  const lines = text.split('\n').map(l => l.trim()).filter(Boolean)
+  const decoded = unescapeHtml(text)
+  const lines = decoded.split('\n').map(l => l.trim()).filter(Boolean)
   const company = lines.find(l => /\*\*Empresa:?\*\*/i.test(l))?.replace(/\*\*Empresa:?\*\*\s*/i, '') || null
   const role = lines.find(l => /\*\*Rol:?\*\*/i.test(l))?.replace(/\*\*Rol:?\*\*\s*/i, '') || null
   const location = lines.find(l => /\*\*Ubicaci[oó]n:?\*\*/i.test(l))?.replace(/\*\*Ubicaci[oó]n:?\*\*\s*/i, '') || null
@@ -90,12 +102,26 @@ function parseJobContent(text: string) {
   const benStart = lines.findIndex(l => /###\s*Beneficios/i.test(l))
   const contactStart = lines.findIndex(l => /###\s*Contacto/i.test(l))
 
-  const description = descStart >= 0 ? lines.slice(descStart + 1, reqStart > 0 ? reqStart : benStart > 0 ? benStart : contactStart > 0 ? contactStart : undefined).join(' ').replace(/\*\*/g, '') : null
+  let description = descStart >= 0 ? lines.slice(descStart + 1, reqStart > 0 ? reqStart : benStart > 0 ? benStart : contactStart > 0 ? contactStart : undefined).join(' ').replace(/\*\*/g, '') : null
+
+  // Fallback: extract description from HTML content or first meaningful paragraph
+  if (!description) {
+    const htmlContent = lines.find(l => l.includes('<div') || l.includes('<p'))
+    if (htmlContent) {
+      description = stripHtml(htmlContent).substring(0, 250)
+    } else {
+      const contentLines = lines.filter(l => !l.startsWith('#') && !l.startsWith('**') && !l.startsWith('###') && !l.startsWith('🔗') && l.length > 30)
+      if (contentLines.length > 0) {
+        description = stripHtml(contentLines[0]).substring(0, 250)
+      }
+    }
+  }
+
   const requirements = reqStart >= 0 ? lines.slice(reqStart + 1, benStart > 0 ? benStart : contactStart > 0 ? contactStart : undefined).filter(l => l.startsWith('-')).map(l => l.replace(/^-\s*/, '')) : []
   const benefits = benStart >= 0 ? lines.slice(benStart + 1, contactStart > 0 ? contactStart : undefined).filter(l => l.startsWith('-')).map(l => l.replace(/^-\s*/, '')) : []
 
   const contactSection = contactStart >= 0 ? lines.slice(contactStart + 1).join('\n') : ''
-  const applyUrl = contactSection.match(/https?:\/\/[^\s)]+/)?.[0] || null
+  const applyUrl = contactSection.match(/https?:\/\/[^\s)]+/)?.[0] || lines.find(l => /postularse|apply/i.test(l))?.match(/https?:\/\/[^\s)]+/)?.[0] || null
   const emails = contactSection.match(/[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/g) || []
   const whatsapp = contactSection.match(/https?:\/\/(?:wa\.me|api\.whatsapp\.com\/send)\/?\+?\d+/g) || []
 
@@ -184,7 +210,8 @@ function RightSidebar({ onUnlock }: { onUnlock: () => void }) {
   }, [])
 
   const parseMiniJob = (content: string) => {
-    const lines = content.split('\n').map(l => l.trim()).filter(Boolean)
+    const decoded = unescapeHtml(content)
+    const lines = decoded.split('\n').map(l => l.trim()).filter(Boolean)
     const company = lines.find(l => /\*\*Empresa:?\*\*/i.test(l))?.replace(/\*\*Empresa:?\*\*\s*/i, '') || null
     const salary = lines.find(l => /\*\*Presupuesto:?\*\*/i.test(l))?.replace(/\*\*Presupuesto:?\*\*\s*/i, '') || null
     const modality = lines.find(l => /\*\*Modalidad:?\*\*/i.test(l))?.replace(/\*\*Modalidad:?\*\*\s*/i, '') || null
