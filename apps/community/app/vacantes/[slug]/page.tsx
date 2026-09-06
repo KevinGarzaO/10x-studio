@@ -3,7 +3,7 @@
 import Link from 'next/link'
 import { useParams, useSearchParams } from 'next/navigation'
 import { useState, useEffect } from 'react'
-import { ArrowLeft, ArrowBigUp, Bookmark, MessageCircle, Share2, Send, CheckCircle2, LockKeyhole, Building, MapPin, Home as HomeIcon } from 'lucide-react'
+import { ArrowLeft, ArrowBigUp, Bookmark, MessageCircle, Share2, Send, CheckCircle2, LockKeyhole, MapPin, Home as HomeIcon } from 'lucide-react'
 import { marked } from 'marked'
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'
@@ -206,8 +206,9 @@ export default function VacancyPage() {
             </div>
 
             <header className="detail-author">
-              <div className="avatar avatar-emerald" style={{ width: 40, height: 40, minWidth: 40, borderRadius: '50%', background: '#10b981', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: 14, color: '#0d1117', overflow: 'hidden', border: '2px solid #10b981', flexShrink: 0 }}>
-                {logoUrl ? <img src={logoUrl} alt="" style={{ width: 26, height: 26, borderRadius: '50%' }} onError={(e) => { (e.target as HTMLImageElement).style.display = 'none' }} /> : companyName.charAt(0).toUpperCase()}
+              <div style={{ width: 56, height: 56, minWidth: 56, borderRadius: '50%', background: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', border: '2px solid #30363d', flexShrink: 0, position: 'relative' }}>
+                {logoUrl ? <img src={logoUrl} alt="" style={{ width: 36, height: 36, objectFit: 'contain' }} onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; (e.target as HTMLImageElement).nextElementSibling?.setAttribute('style', 'display:flex') }} /> : null}
+                <div style={{ width: 56, height: 56, borderRadius: '50%', background: '#10b981', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: 18, color: '#0d1117', position: logoUrl ? 'absolute' : 'relative' }}>{companyName.charAt(0).toUpperCase()}</div>
               </div>
               <div className="author-info">
                 <div className="author-line">
@@ -222,15 +223,21 @@ export default function VacancyPage() {
 
             <h1>{post.title}</h1>
 
-            {(meta.company || meta.location || meta.modality || meta.salary || meta.department) && (
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px 10px', margin: '12px 0 16px' }}>
-                {meta.company && <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '4px 10px', background: '#1c2430', borderRadius: 5, fontSize: 12, color: '#c9d1d9' }}><Building size={12} /> {meta.company}</span>}
-                {meta.location && <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '4px 10px', background: '#1c2430', borderRadius: 5, fontSize: 12, color: '#c9d1d9' }}><MapPin size={12} /> {meta.location}</span>}
-                {meta.modality && <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '4px 10px', background: '#1c2430', borderRadius: 5, fontSize: 12, color: '#c9d1d9' }}><HomeIcon size={12} /> {meta.modality}</span>}
-                {meta.salary && <span style={{ padding: '4px 10px', background: '#0d3320', color: '#10b981', borderRadius: 5, fontSize: 12, fontWeight: 600 }}>{meta.salary}</span>}
-                {meta.department && <span style={{ padding: '4px 10px', background: '#21262d', borderRadius: 5, fontSize: 12, color: '#8b949e' }}>{meta.department}</span>}
-              </div>
-            )}
+            {(() => {
+              const chips: React.ReactNode[] = []
+              const seen = new Set<string>()
+              const addChip = (key: string, icon: React.ReactNode, text: string) => {
+                const normalized = text.toLowerCase().trim()
+                if (!text || seen.has(normalized)) return
+                seen.add(normalized)
+                chips.push(<span key={key} style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '4px 10px', background: '#1c2430', borderRadius: 5, fontSize: 12, color: '#c9d1d9' }}>{icon} {text}</span>)
+              }
+              if (meta.location) addChip('loc', <MapPin size={12} />, meta.location)
+              if (meta.modality) addChip('mod', <HomeIcon size={12} />, meta.modality)
+              if (meta.department) addChip('dep', null, meta.department)
+              if (meta.salary) chips.push(<span key="sal" style={{ padding: '4px 10px', background: '#0d3320', color: '#10b981', borderRadius: 5, fontSize: 12, fontWeight: 600 }}>{meta.salary}</span>)
+              return chips.length > 0 ? <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px 10px', margin: '12px 0 16px' }}>{chips}</div> : null
+            })()}
 
             {renderedHtml && (
               <div

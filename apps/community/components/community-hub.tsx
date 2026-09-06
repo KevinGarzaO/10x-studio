@@ -151,12 +151,13 @@ function PostCard({ post, onAuthRequired, activeTab }: { post: FeedPost; onAuthR
 
   if (isJob) {
     const initials = (company || 'AV').slice(0, 2).toUpperCase()
-    const logoUrl = company ? `https://www.google.com/s2/favicons?domain=${company.toLowerCase().replace(/\s+/g, '')}.com&sz=64` : null
+    const logoUrl = company ? `https://www.google.com/s2/favicons?domain=${company.toLowerCase().replace(/\s+/g, '')}.com&sz=128` : null
     return <article className={`post-card job-card`} onClick={openPost}>
       <div className="job-line" />
       <div className="post-top"><div className="author-row">
-        <div className="avatar avatar-emerald" style={{ width: 32, height: 32, minWidth: 32, borderRadius: '50%', background: '#10b981', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#0d1117', fontWeight: 800, fontSize: 12, overflow: 'hidden', border: '2px solid #10b981' }}>
-          {logoUrl ? <img src={logoUrl} alt="" style={{ width: 20, height: 20, borderRadius: '50%' }} onError={(e) => { (e.target as HTMLImageElement).style.display = 'none' }} /> : initials}
+        <div style={{ width: 40, height: 40, minWidth: 40, borderRadius: '50%', background: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', border: '2px solid #30363d' }}>
+          {logoUrl ? <img src={logoUrl} alt="" style={{ width: 28, height: 28, objectFit: 'contain' }} onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; (e.target as HTMLImageElement).nextElementSibling?.setAttribute('style', 'display:flex') }} /> : null}
+          <div style={{ width: 40, height: 40, borderRadius: '50%', background: '#10b981', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#0d1117', fontWeight: 800, fontSize: 14, position: logoUrl ? 'absolute' : 'relative' }}>{initials}</div>
         </div>
         <div><div className="author-name">{company || 'AvoTalent'}</div><div className="post-meta">{time}</div></div>
       </div></div>
@@ -349,10 +350,45 @@ export function CommunityHub() {
     return () => window.removeEventListener('scroll', handleScroll)
   }, [page, loading, hasMore, activeTab])
 
-  const filteredPosts = useMemo(() => posts.filter(p => {
-    const searchStr = `${(p as any).title || ''} ${(p as any).content || ''}`.toLowerCase()
-    return searchStr.includes(search.toLowerCase())
-  }), [search, posts])
+  const filteredPosts = useMemo(() => {
+    const searched = posts.filter(p => {
+      const searchStr = `${(p as any).title || ''} ${(p as any).content || ''}`.toLowerCase()
+      return searchStr.includes(search.toLowerCase())
+    })
+
+    // Interleave companies: no 3 consecutive posts from the same company
+    const result: FeedPost[] = []
+    const remaining = [...searched]
+    let consecutiveSame = 0
+    let lastCompany = ''
+
+    while (remaining.length > 0) {
+      const next = remaining.shift()!
+      const c = (next.company || '').toLowerCase()
+
+      if (c && c === lastCompany) {
+        consecutiveSame++
+        if (consecutiveSame >= 3) {
+          // Find a different company further ahead
+          const diffIdx = remaining.findIndex(p => (p.company || '').toLowerCase() !== c)
+          if (diffIdx >= 0) {
+            const swap = remaining.splice(diffIdx, 1)[0]
+            remaining.unshift(next)
+            result.push(swap)
+            consecutiveSame = 1
+            lastCompany = (swap.company || '').toLowerCase()
+            continue
+          }
+        }
+      } else {
+        consecutiveSame = c ? 1 : 0
+      }
+      lastCompany = c
+      result.push(next)
+    }
+
+    return result
+  }, [search, posts])
 
   return <div className="app-shell"><header className="topbar"><button className="mobile-menu-button icon-button" onClick={() => setMobileMenu(!mobileMenu)} aria-label="Abrir menú"><Menu size={20} /></button><div className="brand"><span className="brand-mark">&gt;_</span><span>a<span className="brand-accent">vocado</span></span></div><div className="search-wrap"><Search size={17} /><input value={search} onChange={e => setSearch(e.target.value)} placeholder="Buscar discusiones, tags, personas..." aria-label="Buscar" /><kbd>⌘ K</kbd></div><div className="top-actions"><button className="icon-button notification" aria-label="Notificaciones"><Bell size={18} /><span /></button><button className="publish-button top-publish" onClick={() => window.location.href = '/create'}><Plus size={16} /> Publicar</button><Link href="/profile" className="topbar-profile-link" aria-label="Abrir mi perfil"><Avatar initials="JD" tone="blue" avatar="/avatars/javier-developer.png" /></Link></div></header><div className={`mobile-drawer ${mobileMenu ? 'open' : ''}`}><div className="drawer-head"><strong>Menú</strong><button className="icon-button" onClick={() => setMobileMenu(false)} aria-label="Cerrar menú"><X size={18} /></button></div><LeftSidebar onPublish={() => setPublishOpen(true)} activeTab={activeTab} setActiveTab={setActiveTab} /></div><div className="layout"><LeftSidebar onPublish={() => setPublishOpen(true)} activeTab={activeTab} setActiveTab={setActiveTab} /><main className="feed"><div className="feed-heading"><div><p className="eyebrow">Viernes, 31 de agosto</p><h1>Tu feed <span className="live-dot" /></h1></div><button className="filter-button">Para ti <ChevronDown size={15} /></button></div><div className="feed-tabs" role="tablist">{tabs.map(({ label, icon: Icon }) => <button key={label} role="tab" aria-selected={activeTab === label} className={activeTab === label ? 'active' : ''} onClick={() => setActiveTab(label)}><Icon size={15} />{label}</button>)}</div><div className="post-list">{filteredPosts.map(post => <PostCard key={post.id} post={post} onAuthRequired={() => setAuthOpen(true)} activeTab={activeTab} />)}</div>{loading && <div style={{ textAlign: 'center', padding: 20, color: '#8b949e' }}><Sparkles size={16} className="spin" /> Cargando más posts...</div>}{!loading && filteredPosts.length === 0 && <div style={{ textAlign: 'center', padding: 40, color: '#8b949e' }}><PenLine size={32} style={{ marginBottom: 12, opacity: 0.5 }} /><p>{activeTab === 'Vacantes & Freelance' ? 'No hay vacantes todavía' : activeTab === 'Showcase Projects' ? 'No hay proyectos todavía' : 'No hay posts disponibles'}</p></div>}{!hasMore && filteredPosts.length > 0 && <div style={{ textAlign: 'center', padding: 20, color: '#8b949e' }}>No hay más posts</div>}</main><RightSidebar onUnlock={() => setAuthOpen(true)} /></div>{publishOpen && <PublishModal onClose={() => setPublishOpen(false)} />}{authOpen && <AuthModal onClose={() => setAuthOpen(false)} />}</div>
 }
