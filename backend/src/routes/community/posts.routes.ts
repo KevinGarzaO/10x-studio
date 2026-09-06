@@ -124,14 +124,17 @@ router.get('/', async (req: Request, res: Response) => {
         }
       }
 
-      // Shuffle company order for variety
-      for (let i = companyOrder.length - 1; i > 0; i--) {
-        const j = Math.floor(Math.random() * (i + 1));
-        [companyOrder[i], companyOrder[j]] = [companyOrder[j], companyOrder[i]]
+      // Deterministic shuffle based on day so order is consistent within the day
+      const seed = Math.floor(Date.now() / 86400000)
+      const shuffled = [...companyOrder]
+      for (let i = shuffled.length - 1; i > 0; i--) {
+        const j = ((seed * (i + 1) * 2654435761) >>> 0) % (i + 1);
+        [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]]
       }
 
+      // Pure round-robin: one from each company per round
       const interleaved: typeof mapped = []
-      const queues = companyOrder.map(c => ({ company: c, queue: companyQueues.get(c)! }))
+      const queues = shuffled.map(c => ({ company: c, queue: companyQueues.get(c)! }))
       while (queues.some(q => q.queue.length > 0)) {
         for (const q of queues) {
           if (q.queue.length > 0) {
@@ -140,7 +143,7 @@ router.get('/', async (req: Request, res: Response) => {
         }
       }
 
-      // Merge non-company posts spread evenly
+      // Spread non-company posts evenly
       if (otherPosts.length > 0 && interleaved.length > 0) {
         const chunkSize = Math.max(1, Math.floor(interleaved.length / (otherPosts.length + 1)))
         const result: typeof mapped = []
