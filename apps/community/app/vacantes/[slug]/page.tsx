@@ -102,12 +102,29 @@ interface PostData {
   commentsCount: number
   created_at: string
   platform?: string | null
+  source_url?: string | null
   source_name?: string | null
   contacts?: Record<string, any> | null
   comments?: Array<{ id: string; content: string; author: { username: string; display_name: string }; created_at: string }>
   company?: string | null
   company_logo?: string | null
   is_scraper_post?: boolean
+}
+
+function buildApplyUrl(platform: string | null, sourceUrl: string | null): string | null {
+  if (!platform || !sourceUrl) return null
+  if (platform === 'lever') {
+    return sourceUrl.endsWith('/apply') ? sourceUrl : `${sourceUrl}/apply`
+  }
+  if (platform === 'workable') {
+    if (sourceUrl.includes('/apply')) return sourceUrl
+    const base = sourceUrl.endsWith('/') ? sourceUrl.slice(0, -1) : sourceUrl
+    return `${base}/apply`
+  }
+  if (platform === 'greenhouse') {
+    return `${sourceUrl}#app`
+  }
+  return sourceUrl
 }
 
 export default function VacancyPage() {
@@ -126,6 +143,7 @@ export default function VacancyPage() {
   const [authOpen, setAuthOpen] = useState(false)
   const [redirecting, setRedirecting] = useState(false)
   const [fullContent, setFullContent] = useState<string | null>(null)
+  const [applyOpen, setApplyOpen] = useState(false)
 
   useEffect(() => {
     setLoading(true)
@@ -237,6 +255,7 @@ export default function VacancyPage() {
   const time = formatTime(post.created_at)
   const isScraped = post.is_scraper_post
   const companyName = post.company || meta.company || 'Comunidad'
+  const applyUrl = buildApplyUrl(post.platform ?? null, post.source_url ?? null)
 
   return (
     <main className="post-detail-page">
@@ -299,7 +318,16 @@ export default function VacancyPage() {
               />
             )}
 
-            {!user && (
+            {applyUrl && user && (
+              <button
+                onClick={() => setApplyOpen(true)}
+                style={{ marginTop: 20, padding: '12px 24px', background: '#10b981', color: '#0d1117', border: 'none', borderRadius: 8, fontWeight: 700, fontSize: 15, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 8 }}
+              >
+                Postularse ahora
+              </button>
+            )}
+
+            {applyUrl && !user && (
               <div style={{ marginTop: 24, padding: '20px 24px', background: '#1c2430', border: '1px solid #30363d', borderRadius: 10, textAlign: 'center' }}>
                 <LockKeyhole size={24} style={{ color: '#10b981', marginBottom: 10 }} />
                 <h3 style={{ color: '#c9d1d9', margin: '0 0 8px', fontSize: 16 }}>¿Interesado en esta vacante?</h3>
@@ -385,6 +413,31 @@ export default function VacancyPage() {
               <Link href="/login" style={{ display: 'inline-block', padding: '10px 20px', background: 'transparent', color: '#c9d1d9', border: '1px solid #30363d', borderRadius: 8, fontSize: 14, textDecoration: 'none' }}>Iniciar sesión</Link>
             </div>
           </section>
+        </div>
+      )}
+
+      {applyOpen && applyUrl && (
+        <div
+          style={{ position: 'fixed', inset: 0, zIndex: 1000, background: 'rgba(0,0,0,0.7)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}
+          onMouseDown={e => e.target === e.currentTarget && setApplyOpen(false)}
+        >
+          <div style={{ width: '100%', maxWidth: 700, height: '85vh', background: '#161b22', borderRadius: 12, border: '1px solid #30363d', overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 16px', borderBottom: '1px solid #30363d' }}>
+              <span style={{ color: '#c9d1d9', fontSize: 14, fontWeight: 600 }}>Postularse — {companyName}</span>
+              <button
+                onClick={() => setApplyOpen(false)}
+                style={{ background: 'none', border: 'none', color: '#8b949e', cursor: 'pointer', fontSize: 20, padding: 4 }}
+                aria-label="Cerrar"
+              >
+                ×
+              </button>
+            </div>
+            <iframe
+              src={applyUrl}
+              style={{ flex: 1, width: '100%', border: 'none' }}
+              title="Formulario de aplicación"
+            />
+          </div>
         </div>
       )}
     </main>
