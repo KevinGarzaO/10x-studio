@@ -8,6 +8,20 @@ import { marked } from 'marked'
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'
 
+function DetailAvatar({ company }: { company: string }) {
+  const [logoFailed, setLogoFailed] = useState(false)
+  const initials = company.slice(0, 2).toUpperCase()
+  const domain = company.toLowerCase().replace(/\s+/g, '').replace(/[^a-z0-9]/g, '')
+  const logoUrl = `https://www.google.com/s2/favicons?domain=${domain}.com&sz=256`
+  const showLogo = !logoFailed
+  return (
+    <div style={{ width: 56, height: 56, minWidth: 56, borderRadius: '50%', background: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', border: '2px solid #30363d', flexShrink: 0, position: 'relative' }}>
+      {showLogo && <img src={logoUrl} alt="" crossOrigin="anonymous" style={{ width: '70%', height: '70%', objectFit: 'contain', position: 'absolute' }} onError={() => setLogoFailed(true)} />}
+      <div style={{ width: '100%', height: '100%', borderRadius: '50%', background: '#10b981', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#0d1117', fontWeight: 800, fontSize: 18, zIndex: showLogo ? -1 : 0 }}>{initials}</div>
+    </div>
+  )
+}
+
 marked.setOptions({ breaks: true, gfm: true })
 
 function unescapeHtml(html: string): string {
@@ -181,7 +195,6 @@ export default function VacancyPage() {
   const time = formatTime(post.created_at)
   const isScraped = post.is_scraper_post
   const companyName = post.company || meta.company || 'Comunidad'
-  const logoUrl = companyName && companyName !== 'Comunidad' ? `https://www.google.com/s2/favicons?domain=${companyName.toLowerCase().replace(/\s+/g, '')}.com&sz=64` : null
 
   return (
     <main className="post-detail-page">
@@ -206,10 +219,7 @@ export default function VacancyPage() {
             </div>
 
             <header className="detail-author">
-              <div style={{ width: 56, height: 56, minWidth: 56, borderRadius: '50%', background: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', border: '2px solid #30363d', flexShrink: 0, position: 'relative' }}>
-                {logoUrl ? <img src={logoUrl} alt="" style={{ width: 36, height: 36, objectFit: 'contain' }} onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; (e.target as HTMLImageElement).nextElementSibling?.setAttribute('style', 'display:flex') }} /> : null}
-                <div style={{ width: 56, height: 56, borderRadius: '50%', background: '#10b981', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: 18, color: '#0d1117', position: logoUrl ? 'absolute' : 'relative' }}>{companyName.charAt(0).toUpperCase()}</div>
-              </div>
+              <DetailAvatar company={companyName} />
               <div className="author-info">
                 <div className="author-line">
                   <strong>{companyName}</strong>

@@ -207,11 +207,13 @@ export function AuthPage({ mode }: { mode: 'login' | 'signup' }) {
   const [displayName, setDisplayName] = useState('')
   const [showPassword, setShowPassword] = useState(false)
   const [error, setError] = useState('')
+  const [success, setSuccess] = useState('')
   const [loading, setLoading] = useState(false)
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault()
     setError('')
+    setSuccess('')
     setLoading(true)
 
     try {
@@ -245,10 +247,15 @@ export function AuthPage({ mode }: { mode: 'login' | 'signup' }) {
       if (data.session?.access_token) {
         localStorage.setItem('avocado_token', data.session.access_token)
         localStorage.setItem('avocado_user', JSON.stringify(data.user))
+        router.push('/')
+        router.refresh()
+      } else if (signup) {
+        setSuccess('Cuenta creada. Revisa tu correo para confirmar tu email y luego inicia sesión.')
+        setLoading(false)
+      } else {
+        setError('No se pudo iniciar sesión. Verifica tu email y contraseña.')
+        setLoading(false)
       }
-
-      router.push('/')
-      router.refresh()
     } catch {
       setError('Error de conexión. Intenta de nuevo.')
       setLoading(false)
@@ -281,6 +288,7 @@ export function AuthPage({ mode }: { mode: 'login' | 'signup' }) {
           </div>
 
           {error && <div className="auth-error">{error}</div>}
+          {success && <div className="auth-success">{success}</div>}
 
           <form onSubmit={handleSubmit}>
             <div className="auth-field">
