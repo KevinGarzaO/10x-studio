@@ -9,11 +9,22 @@ interface WorkableJob {
   location: string | null;
   published_on: string;
   url: string;
+  description?: string | null;
 }
 
 interface WorkableResponse {
   name: string;
   jobs: WorkableJob[];
+}
+
+function unescapeHtml(text: string): string {
+  return text
+    .replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&amp;/g, "&")
+    .replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/&nbsp;/g, " ");
+}
+
+function stripHtml(html: string): string {
+  return html.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();
 }
 
 function normalizeLocation(loc: string | null): string | null {
@@ -45,11 +56,15 @@ export async function fetchWorkable(
     for (const job of (data.jobs ?? [])) {
       const applyUrl = `https://apply.workable.com/${shortcode}/j/${job.shortcode}/`;
       const location = normalizeLocation(job.location);
+      const description = job.description ? stripHtml(unescapeHtml(job.description)).substring(0, 1500) : null;
       const text = [
         `## ${job.title}`,
         `**Rol:** ${job.title}`,
         location ? `**Ubicación:** ${location}` : null,
         `**Modalidad:** ${/remote|remoto/i.test(job.location ?? "") ? "Remoto" : "Presencial"}`,
+        "",
+        description ? `### Descripción` : null,
+        description,
         "",
         `### Contacto`,
         `🔗 Postularse: ${applyUrl}`,
