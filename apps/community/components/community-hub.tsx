@@ -166,6 +166,22 @@ function CompanyAvatar({ company, logoUrl, size = 40 }: { company: string | null
   )
 }
 
+function buildApplyUrl(platform: string | null, sourceUrl: string | null): string | null {
+  if (!platform || !sourceUrl) return null
+  if (platform === 'lever') {
+    return sourceUrl.endsWith('/apply') ? sourceUrl : `${sourceUrl}/apply`
+  }
+  if (platform === 'workable') {
+    if (sourceUrl.includes('/apply')) return sourceUrl
+    const base = sourceUrl.endsWith('/') ? sourceUrl.slice(0, -1) : sourceUrl
+    return `${base}/apply`
+  }
+  if (platform === 'greenhouse') {
+    return `${sourceUrl}#app`
+  }
+  return sourceUrl
+}
+
 function PostCard({ post, onAuthRequired, activeTab }: { post: FeedPost; onAuthRequired?: () => void; activeTab?: string }) {
   const router = useRouter(); const [voted, setVoted] = useState(false); const [saved, setSaved] = useState(false)
   const [user, setUser] = useState<any>(null)
@@ -185,7 +201,8 @@ function PostCard({ post, onAuthRequired, activeTab }: { post: FeedPost; onAuthR
   const company = post.company || job?.company || null
   const isScraped = post.is_scraper_post
   // Fallback: use source_url if applyUrl not found in content
-  const applyUrl = job?.applyUrl || post.source_url || null
+  const rawApplyUrl = job?.applyUrl || post.source_url || null
+  const applyUrl = buildApplyUrl(post.platform ?? null, rawApplyUrl)
 
   const openPost = (e?: React.MouseEvent<HTMLElement>) => { if (e?.target instanceof HTMLElement && e.target.closest('button, a, input, textarea, select')) return; const isJob = post.type === 'job'; const slug = post.slug || post.id; const basePath = isJob ? (slug.startsWith('/vacantes/') ? slug : `/vacantes/${slug}`) : `/post/${post.id}`; const tabParam = activeTab && activeTab !== 'Tendencias' ? `${basePath.includes('?') ? '&' : '?'}from=${encodeURIComponent(activeTab)}` : ''; router.push(`${basePath}${tabParam}`) }
 
