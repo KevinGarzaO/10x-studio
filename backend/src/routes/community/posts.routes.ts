@@ -83,6 +83,8 @@ router.get('/', async (req: Request, res: Response) => {
     query = query.order('created_at', { ascending: false })
 
     if (type) query = query.eq('type', type)
+    // Only ATS platforms — exclude Telegram/old sources
+    if (type === 'job') query = query.in('platform', ['lever', 'workable', 'greenhouse'])
     if (search) {
       query = query.or(`title.ilike.%${search}%,content.ilike.%${search}%`)
     }
