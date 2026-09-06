@@ -179,10 +179,8 @@ export default function VacancyPage() {
   const meta = parseJobMetadata(rawContent)
   const time = formatTime(post.created_at)
   const isScraped = post.is_scraper_post
-  const companyName = post.company || meta.company || post.source_name || 'Comunidad'
+  const companyName = post.company || meta.company || 'Comunidad'
   const logoUrl = companyName && companyName !== 'Comunidad' ? `https://logo.clearbit.com/${companyName.toLowerCase().replace(/\s+/g, '')}.com` : null
-  const platformDisplay: Record<string, string> = { greenhouse: 'Greenhouse', workable: 'Workable', telegram: 'Telegram' }
-  const sourceLabel = isScraped ? (platformDisplay[post.platform || ''] || post.platform || '') : (post.source_name || 'Comunidad')
 
   return (
     <main className="post-detail-page">
@@ -207,15 +205,9 @@ export default function VacancyPage() {
             </div>
 
             <header className="detail-author">
-              {logoUrl ? (
-                <img src={logoUrl} alt="" style={{ width: 40, height: 40, borderRadius: '50%', objectFit: 'contain', background: '#fff', padding: 2 }} onError={(e) => { (e.target as HTMLImageElement).style.display = 'none' }} />
-              ) : (
-                <div className="avatar avatar-emerald">
-                  <div style={{ width: '100%', height: '100%', borderRadius: '50%', background: '#10b981', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: 14, color: '#0d1117' }}>
-                    {companyName.charAt(0).toUpperCase()}
-                  </div>
-                </div>
-              )}
+              <div className="avatar avatar-emerald" style={{ width: 40, height: 40, borderRadius: '50%', background: logoUrl ? `url(${logoUrl}) center/contain no-repeat, #10b981` : '#10b981', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: 14, color: '#0d1117', overflow: 'hidden', border: '2px solid #10b981', flexShrink: 0 }}>
+                {companyName.charAt(0).toUpperCase()}
+              </div>
               <div className="author-info">
                 <div className="author-line">
                   <strong>{companyName}</strong>
@@ -223,7 +215,6 @@ export default function VacancyPage() {
                 </div>
                 <div className="detail-meta">
                   <span>{time}</span>
-                  {sourceLabel && <><span>·</span><span>{sourceLabel}</span></>}
                 </div>
               </div>
             </header>

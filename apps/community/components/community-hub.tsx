@@ -120,20 +120,16 @@ function PostCard({ post, onAuthRequired, activeTab }: { post: FeedPost; onAuthR
   const company = post.company || job?.company || null
   const isScraped = post.is_scraper_post
 
-  const platformDisplay: Record<string, string> = { greenhouse: 'Greenhouse', workable: 'Workable', telegram: 'Telegram' }
-  const sourceLabel = isScraped ? (platformDisplay[post.platform || ''] || post.platform || '') : (post.source_name || 'Comunidad')
-
   const openPost = (e?: React.MouseEvent<HTMLElement>) => { if (e?.target instanceof HTMLElement && e.target.closest('button, a, input, textarea, select')) return; const isJob = post.type === 'job'; const slug = post.slug || post.id; const basePath = isJob ? (slug.startsWith('/vacantes/') ? slug : `/vacantes/${slug}`) : `/post/${post.id}`; const tabParam = activeTab && activeTab !== 'Tendencias' ? `${basePath.includes('?') ? '&' : '?'}from=${encodeURIComponent(activeTab)}` : ''; router.push(`${basePath}${tabParam}`) }
 
   if (isJob) {
-    const initials = (company || post.author?.display_name || 'AV').slice(0, 2).toUpperCase()
+    const initials = (company || 'AV').slice(0, 2).toUpperCase()
     const logoUrl = company ? `https://logo.clearbit.com/${company.toLowerCase().replace(/\s+/g, '')}.com` : null
     return <article className={`post-card job-card`} onClick={openPost}>
       <div className="job-line" />
       <div className="post-top"><div className="author-row">
-        {logoUrl ? <img src={logoUrl} alt="" style={{ width: 32, height: 32, borderRadius: '50%', objectFit: 'contain', background: '#fff', padding: 2 }} onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; (e.target as HTMLImageElement).nextElementSibling?.setAttribute('style', 'display:flex') }} /> : null}
-        <div className="avatar avatar-emerald" style={{ width: 32, height: 32, borderRadius: '50%', background: '#10b981', display: logoUrl ? 'none' : 'flex', alignItems: 'center', justifyContent: 'center', color: '#0d1117', fontWeight: 800, fontSize: 12 }}>{initials}</div>
-        <div><div className="author-name">{company || post.author?.display_name || 'AvoTalent'} {!isScraped && <span className="verified-pill" style={{ marginLeft: 6 }}><CheckCircle2 size={12} /> Verificada</span>}</div><div className="post-meta">{time}{sourceLabel ? ` · ${sourceLabel}` : ''}</div></div>
+        <div className="avatar avatar-emerald" style={{ width: 32, height: 32, borderRadius: '50%', background: logoUrl ? `url(${logoUrl}) center/contain no-repeat, #10b981` : '#10b981', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#0d1117', fontWeight: 800, fontSize: 12, overflow: 'hidden', border: '2px solid #10b981' }}>{!logoUrl && initials}</div>
+        <div><div className="author-name">{company || 'AvoTalent'}</div><div className="post-meta">{time}</div></div>
       </div></div>
       <div className="post-type-label" style={{ color: '#10b981' }}>VACANTE</div>
       <h2 style={{ fontSize: 17, marginBottom: 8 }}>{job?.role || post.title}</h2>
