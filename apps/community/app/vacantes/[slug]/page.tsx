@@ -421,8 +421,8 @@ export default function VacancyPage() {
           style={{ position: 'fixed', inset: 0, zIndex: 1000, background: 'rgba(0,0,0,0.7)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}
           onMouseDown={e => e.target === e.currentTarget && setApplyOpen(false)}
         >
-          <div style={{ width: '100%', maxWidth: 700, height: '85vh', background: '#161b22', borderRadius: 12, border: '1px solid #30363d', overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 16px', borderBottom: '1px solid #30363d' }}>
+          <div style={{ width: '100%', maxWidth: 750, height: '90vh', background: '#161b22', borderRadius: 12, border: '1px solid #30363d', overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 16px', borderBottom: '1px solid #30363d', background: '#0d1117' }}>
               <span style={{ color: '#c9d1d9', fontSize: 14, fontWeight: 600 }}>Postularse — {companyName}</span>
               <button
                 onClick={() => setApplyOpen(false)}
@@ -432,9 +432,14 @@ export default function VacancyPage() {
                 ×
               </button>
             </div>
+            {post.platform === 'greenhouse' && (
+              <div style={{ padding: '8px 16px', background: '#1c2430', borderBottom: '1px solid #30363d', fontSize: 12, color: '#8b949e' }}>
+                Haz clic en <strong style={{ color: '#10b981' }}>Apply</strong> dentro del formulario para completar tu postulación
+              </div>
+            )}
             <iframe
               src={applyUrl}
-              style={{ flex: 1, width: '100%', border: 'none' }}
+              style={{ flex: 1, width: '100%', border: 'none', background: '#fff' }}
               title="Formulario de aplicación"
             />
           </div>
