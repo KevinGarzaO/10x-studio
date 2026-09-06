@@ -1,9 +1,4 @@
 import { getActiveSources, insertPost, postExists } from "./db";
-import { classifyPostWithAI } from "./ai";
-import { enrichVacancyWithAI, buildEnrichedContent } from "./enrich";
-import { fetchTelegramChannel } from "./sources/telegram";
-import { fetchForobetaForum } from "./sources/forobeta";
-import { fetchRedditListing } from "./sources/reddit";
 import { fetchWorkable } from "./sources/workable";
 import { fetchGreenhouse } from "./sources/greenhouse";
 import { fetchLever } from "./sources/lever";
@@ -13,8 +8,8 @@ import type { Post } from "./types";
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
 /**
- * Production cron: lee fuentes activas de Supabase, scrapea,
- * clasifica con IA, y guarda posts nuevos.
+ * Production cron: lee fuentes ATS activas de Supabase, scrapea,
+ * y guarda posts nuevos sin IA — todo se inserta como llega.
  */
 export async function runProduction(
   log: (msg: string) => void = () => {}
@@ -25,14 +20,16 @@ export async function runProduction(
   postsInserted: number;
 }> {
   const sources = await getActiveSources();
-  log(`[Production] ${sources.length} fuentes activas encontradas`);
+  // Only ATS platforms
+  const atsSources = sources.filter(s => ["workable", "greenhouse", "lever"].includes(s.platform));
+  log(`[Production] ${atsSources.length} fuentes ATS activas (de ${sources.length} totales)`);
 
   let sourcesTested = 0;
   let postsFound = 0;
   let postsWithContact = 0;
   let postsInserted = 0;
 
-  for (const source of sources) {
+  for (const source of atsSources) {
     log(`[Production] Scraping ${source.platform}/${source.source_id}...`);
     sourcesTested++;
 
@@ -40,15 +37,6 @@ export async function runProduction(
       let posts: Post[] = [];
 
       switch (source.platform) {
-        case "telegram":
-          posts = await fetchTelegramChannel(source.source_id, 2, 2000, false, false, log);
-          break;
-        case "forobeta":
-          posts = await fetchForobetaForum(source.source_id, 2, 2000, false, false, log);
-          break;
-        case "reddit":
-          posts = await fetchRedditListing([source.source_id], 1, 2000, false, false, log);
-          break;
         case "workable":
           posts = await fetchWorkable(source.source_id, log);
           break;
@@ -66,7 +54,6 @@ export async function runProduction(
         const exists = await postExists(post.platform, post.source, post.postId);
         if (exists) continue;
 
-        // Quality filter: must be ≤30 days old
         if (!isRecent(post, 30)) {
           log(`[Production] Skipping old post (${post.postDate}): ${post.postId}`);
           continue;
@@ -75,40 +62,7 @@ export async function runProduction(
         const hasCt = hasContact(post);
         if (hasCt) postsWithContact++;
 
-        // Classify with AI for quality score
-        const aiResult = await classifyPostWithAI(post.text, post.platform, post.source);
-        const qualityScore = aiResult?.qualityScore ?? (hasCt ? 0.5 : 0.2);
-        const summary = aiResult?.summary ?? post.text.substring(0, 200);
-        if (!aiResult) log(`[Production] AI classify returned null for post ${post.postId}`);
-
-        // Enrich vacancy posts with AI
-        let enrichedContent = post.text;
-        let enrichedContacts = post.contacts as unknown as Record<string, unknown>;
-        let enrichedTitle = post.text.split("\n")[0]?.replace(/^#+ /, "").substring(0, 150) || "Sin título";
-
-        if (aiResult?.postType === "vacancy") {
-          log(`[Production] Enriching vacancy: ${post.postId}`);
-          const enriched = await enrichVacancyWithAI(
-            post.text,
-            post.platform,
-            post.source,
-            post.contacts
-          );
-          if (enriched) {
-            enrichedContent = buildEnrichedContent(enriched);
-            enrichedTitle = enriched.title;
-            enrichedContacts = {
-              emails: enriched.contacts.emails,
-              whatsapp: enriched.contacts.whatsapp,
-              telegramLinks: enriched.contacts.telegramLinks,
-              applyUrl: enriched.contacts.applyUrl,
-              company: enriched.company,
-              role: enriched.role,
-              salary: enriched.salary,
-            };
-          }
-        }
-
+        // Insert as-is — no AI classification or enrichment
         await insertPost({
           platform: post.platform,
           source: post.source,
@@ -117,15 +71,15 @@ export async function runProduction(
           post_date: post.postDate,
           author: post.author,
           views: post.views,
-          text: enrichedContent,
+          text: post.text,
           language: post.language,
-          post_type: aiResult?.postType ?? post.postType,
-          location: aiResult?.location ?? post.location,
-          work_modality: aiResult?.workModality ?? post.workModality,
+          post_type: post.postType,
+          location: post.location,
+          work_modality: post.workModality,
           profile: post.profile ? post.profile as unknown as Record<string, unknown> : null,
-          contacts: enrichedContacts,
-          quality_score: qualityScore,
-          summary,
+          contacts: post.contacts as unknown as Record<string, unknown>,
+          quality_score: hasCt ? 0.5 : 0.3,
+          summary: post.text.substring(0, 200),
           is_spam: false,
           search_profile: null,
           forum_hint: post.forumHint ?? null,

@@ -12,6 +12,9 @@ import {
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'
 
+// Module-level cache to preserve feed state across navigations
+const feedCache = new Map<string, { posts: FeedPost[]; page: number; hasMore: boolean }>()
+
 const navItems = [
   { label: 'Inicio', icon: Home }, { label: 'Explorar', icon: Compass },
   { label: 'Empleos', icon: BriefcaseBusiness, count: '12' }, { label: 'Showcase', icon: Trophy },
@@ -296,10 +299,12 @@ export function CommunityHub() {
   const [publishOpen, setPublishOpen] = useState(false)
   const [authOpen, setAuthOpen] = useState(false)
   const [mobileMenu, setMobileMenu] = useState(false)
-  const [posts, setPosts] = useState<FeedPost[]>([])
-  const [page, setPage] = useState(1)
+  const cached = feedCache.get(initialTab)
+  const [posts, setPosts] = useState<FeedPost[]>(cached?.posts || [])
+  const [page, setPage] = useState(cached?.page || 1)
   const [loading, setLoading] = useState(false)
-  const [hasMore, setHasMore] = useState(true)
+  const [hasMore, setHasMore] = useState(cached?.hasMore ?? true)
+  const didInitRef = useState(false)
 
   const setActiveTab = useCallback((tab: string) => {
     setActiveTabState(tab)
@@ -313,7 +318,7 @@ export function CommunityHub() {
     window.history.pushState({}, '', newUrl)
   }, [])
 
-  const fetchPosts = async (pageNum: number, tab: string) => {
+  const fetchPosts = async (pageNum: number, tab: string, append = false) => {
     setLoading(true)
     try {
       let url: string
@@ -328,10 +333,15 @@ export function CommunityHub() {
       const res = await fetch(url)
       const data = await res.json()
       const newPosts: FeedPost[] = data.posts || []
-      if (pageNum === 1) {
-        setPosts(newPosts)
+      if (append) {
+        setPosts(prev => {
+          const merged = [...prev, ...newPosts]
+          feedCache.set(tab, { posts: merged, page: pageNum, hasMore: newPosts.length === 10 })
+          return merged
+        })
       } else {
-        setPosts(prev => [...prev, ...newPosts])
+        setPosts(newPosts)
+        feedCache.set(tab, { posts: newPosts, page: pageNum, hasMore: newPosts.length === 10 })
       }
       setHasMore(newPosts.length === 10)
     } catch {
@@ -341,6 +351,8 @@ export function CommunityHub() {
   }
 
   useEffect(() => {
+    // If we already have cached posts for this tab, don't refetch page 1
+    if (feedCache.has(activeTab)) return
     setPage(1)
     fetchPosts(1, activeTab)
   }, [activeTab])
@@ -351,7 +363,7 @@ export function CommunityHub() {
       if (window.innerHeight + window.scrollY >= document.body.offsetHeight - 800) {
         const nextPage = page + 1
         setPage(nextPage)
-        fetchPosts(nextPage, activeTab)
+        fetchPosts(nextPage, activeTab, true)
       }
     }
     window.addEventListener('scroll', handleScroll)
