@@ -125,6 +125,7 @@ export default function VacancyPage() {
   const [user, setUser] = useState<any>(null)
   const [authOpen, setAuthOpen] = useState(false)
   const [redirecting, setRedirecting] = useState(false)
+  const [fullContent, setFullContent] = useState<string | null>(null)
 
   useEffect(() => {
     setLoading(true)
@@ -139,6 +140,11 @@ export default function VacancyPage() {
         setPost(data)
         setVotes(data.votesCount || 0)
         setLoading(false)
+
+        // Fetch full content from ATS API if source_url is available
+        if (data.source_url) {
+          fetchAtsContent(data.source_url)
+        }
       })
       .catch(() => { setError('Publicación no encontrada'); setLoading(false) })
   }, [slug])
@@ -152,6 +158,44 @@ export default function VacancyPage() {
   }, [])
 
   function submitReply() { if (!reply.trim()) return; setSent(true); setReply('') }
+
+  async function fetchAtsContent(url: string) {
+    try {
+      // Greenhouse: https://job-boards.greenhouse.io/twilio/jobs/12345
+      const ghMatch = url.match(/greenhouse\.io\/([^/]+)\/jobs\/(\d+)/)
+      if (ghMatch) {
+        const [, board, job_id] = ghMatch
+        const res = await fetch(`https://boards-api.greenhouse.io/v1/boards/${board}/jobs/${job_id}`)
+        if (res.ok) {
+          const data = await res.json()
+          if (data.content) {
+            const decoded = unescapeHtml(data.content)
+            setFullContent(decoded)
+          }
+        }
+        return
+      }
+
+      // Lever: https://jobs.lever.co/{company}/{id}
+      const lvMatch = url.match(/lever\.co\/([^/]+)\/([a-f0-9]+)/)
+      if (lvMatch) {
+        const [, company] = lvMatch
+        const postingsRes = await fetch(`https://api.lever.co/v0/postings/${company}?mode=json`)
+        if (postingsRes.ok) {
+          const postings = await postingsRes.json()
+          const posting = postings.find((p: any) => url.includes(p.id) || url.includes(p.hostedUrl?.split('/').pop()))
+          if (posting?.description) {
+            setFullContent(posting.description)
+          }
+        }
+        return
+      }
+
+      // Workable: different structure, skip for now
+    } catch {
+      // Silently fail - we'll show the enriched content
+    }
+  }
 
   if (loading) {
     return (
@@ -186,8 +230,8 @@ export default function VacancyPage() {
     )
   }
 
-  const rawContent = post.content || post.original_text || ''
-  const cleanContent = stripMetadata(rawContent, post.title)
+  const rawContent = fullContent || post.content || post.original_text || ''
+  const cleanContent = fullContent ? unescapeHtml(fullContent) : stripMetadata(rawContent, post.title)
   const renderedHtml = renderContent(cleanContent)
   const meta = parseJobMetadata(rawContent)
   const time = formatTime(post.created_at)
