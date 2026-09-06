@@ -42,6 +42,22 @@ export async function syncVacancyToCommunity(
   };
   const modalidad = modalidadMap[post.work_modality ?? "unknown"] ?? "No especificado";
 
+  // Extract company name
+  const companyName = post.company ?? post.source ?? null;
+
+  // Look up company logo from scraper_sources
+  let companyLogo = post.company_logo ?? null;
+  if (companyName && !companyLogo) {
+    const { data: source } = await supabase
+      .from("scraper_sources")
+      .select("metadata")
+      .ilike("source_id", companyName)
+      .single();
+    if (source?.metadata?.storage_logo_url) {
+      companyLogo = source.metadata.storage_logo_url;
+    }
+  }
+
   // Insert into community_posts
   const { data: communityPost, error: insertError } = await supabase
     .from("community_posts")
@@ -59,8 +75,8 @@ export async function syncVacancyToCommunity(
       contacts: post.contacts,
       scraped_at: post.created_at,
       is_scraper_post: true,
-      company: post.company ?? post.source ?? null,
-      company_logo: post.company_logo ?? null,
+      company: companyName,
+      company_logo: companyLogo,
     })
     .select("id")
     .single();

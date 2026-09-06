@@ -8,15 +8,13 @@ import { marked } from 'marked'
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'
 
-function DetailAvatar({ company }: { company: string }) {
+function DetailAvatar({ company, logoUrl }: { company: string; logoUrl?: string | null }) {
   const [logoFailed, setLogoFailed] = useState(false)
   const initials = company.slice(0, 2).toUpperCase()
-  const domain = company.toLowerCase().replace(/\s+/g, '').replace(/[^a-z0-9]/g, '')
-  const logoUrl = `${API_URL}/api/community/favicon?domain=${domain}.com`
-  const showLogo = !logoFailed
+  const showLogo = logoUrl && !logoFailed
   return (
     <div style={{ width: 56, height: 56, minWidth: 56, borderRadius: '50%', background: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', border: '2px solid #30363d', flexShrink: 0, position: 'relative' }}>
-      {showLogo && <img src={logoUrl} alt="" style={{ width: '70%', height: '70%', objectFit: 'contain', position: 'absolute' }} onError={() => setLogoFailed(true)} />}
+      {showLogo && <img src={logoUrl!} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', position: 'absolute' }} onError={() => setLogoFailed(true)} />}
       <div style={{ width: '100%', height: '100%', borderRadius: '50%', background: '#10b981', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#0d1117', fontWeight: 800, fontSize: 18, zIndex: showLogo ? -1 : 0 }}>{initials}</div>
     </div>
   )
@@ -219,7 +217,7 @@ export default function VacancyPage() {
             </div>
 
             <header className="detail-author">
-              <DetailAvatar company={companyName} />
+              <DetailAvatar company={companyName} logoUrl={post.company_logo} />
               <div className="author-info">
                 <div className="author-line">
                   <strong>{companyName}</strong>
