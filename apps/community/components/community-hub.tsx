@@ -162,6 +162,8 @@ function PostCard({ post, onAuthRequired, activeTab }: { post: FeedPost; onAuthR
   const job = isJob ? parseJobContent(post.content || post.original_text || '') : null
   const company = post.company || job?.company || null
   const isScraped = post.is_scraper_post
+  // Fallback: use source_url if applyUrl not found in content
+  const applyUrl = job?.applyUrl || post.source_url || null
 
   const openPost = (e?: React.MouseEvent<HTMLElement>) => { if (e?.target instanceof HTMLElement && e.target.closest('button, a, input, textarea, select')) return; const isJob = post.type === 'job'; const slug = post.slug || post.id; const basePath = isJob ? (slug.startsWith('/vacantes/') ? slug : `/vacantes/${slug}`) : `/post/${post.id}`; const tabParam = activeTab && activeTab !== 'Tendencias' ? `${basePath.includes('?') ? '&' : '?'}from=${encodeURIComponent(activeTab)}` : ''; router.push(`${basePath}${tabParam}`) }
 
@@ -184,8 +186,8 @@ function PostCard({ post, onAuthRequired, activeTab }: { post: FeedPost; onAuthR
       {job?.requirements && job.requirements.length > 0 && <div style={{ margin: '6px 0', fontSize: 12, color: '#8b949e' }}><strong style={{ color: '#c9d1d9' }}>Requisitos:</strong> {job.requirements.slice(0, 3).join(' · ')}{job.requirements.length > 3 ? ` +${job.requirements.length - 3} más` : ''}</div>}
       {user ? (
         <>
-          {job?.applyUrl && <a href={job.applyUrl} target="_blank" rel="noopener noreferrer" className="unlock-button" style={{ display: 'inline-flex', alignItems: 'center', gap: 6, background: '#10b981', color: '#0d1117', padding: '8px 16px', borderRadius: 6, fontWeight: 600, fontSize: 13, textDecoration: 'none', margin: '8px 0' }} onClick={e => e.stopPropagation()}>Postularse ahora →</a>}
-          {!job?.applyUrl && job?.emails && job.emails.length > 0 && <div style={{ fontSize: 12, color: '#8b949e', margin: '6px 0', display: 'inline-flex', alignItems: 'center', gap: 4 }}><Mail size={12} /> {job.emails[0]}</div>}
+          {applyUrl && <a href={applyUrl} target="_blank" rel="noopener noreferrer" className="unlock-button" style={{ display: 'inline-flex', alignItems: 'center', gap: 6, background: '#10b981', color: '#0d1117', padding: '8px 16px', borderRadius: 6, fontWeight: 600, fontSize: 13, textDecoration: 'none', margin: '8px 0' }} onClick={e => e.stopPropagation()}>Postularse ahora →</a>}
+          {!applyUrl && job?.emails && job.emails.length > 0 && <div style={{ fontSize: 12, color: '#8b949e', margin: '6px 0', display: 'inline-flex', alignItems: 'center', gap: 4 }}><Mail size={12} /> {job.emails[0]}</div>}
         </>
       ) : (
         <button className="unlock-button" style={{ display: 'inline-flex', alignItems: 'center', gap: 6, background: '#1c2430', border: '1px solid #30363d', color: '#c9d1d9', padding: '8px 16px', borderRadius: 6, fontWeight: 600, fontSize: 13, cursor: 'pointer', margin: '8px 0' }} onClick={e => { e.stopPropagation(); onAuthRequired?.() }}>
