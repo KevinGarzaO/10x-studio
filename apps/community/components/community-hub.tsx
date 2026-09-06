@@ -131,14 +131,36 @@ function parseJobContent(text: string) {
   return { company, role, location, salary, modality, description, requirements, benefits, applyUrl, emails, whatsapp }
 }
 
+// Cache for Google Favicon lookups (company → url)
+const faviconCache = new Map<string, string>()
+
 function CompanyAvatar({ company, logoUrl, size = 40 }: { company: string | null; logoUrl?: string | null; size?: number }) {
+  const [resolvedLogo, setResolvedLogo] = useState(logoUrl || faviconCache.get(company || '') || null)
   const [logoFailed, setLogoFailed] = useState(false)
   const name = company || 'AV'
   const initials = name.slice(0, 2).toUpperCase()
-  const showLogo = logoUrl && !logoFailed
+
+  useEffect(() => {
+    if (logoUrl || logoFailed || !company) return
+    const cached = faviconCache.get(company)
+    if (cached) { setResolvedLogo(cached); return }
+
+    // Try Google Favicon API with company.com domain guess
+    const domain = company.toLowerCase().replace(/[^a-z0-9]/g, '') + '.com'
+    const url = `https://www.google.com/s2/favicons?domain=${domain}&sz=128`
+    const img = new Image()
+    img.onload = () => {
+      faviconCache.set(company, url)
+      setResolvedLogo(url)
+    }
+    img.onerror = () => setLogoFailed(true)
+    img.src = url
+  }, [company, logoUrl, logoFailed])
+
+  const showLogo = resolvedLogo && !logoFailed
   return (
     <div style={{ width: size, height: size, minWidth: size, borderRadius: '50%', background: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', border: '2px solid #30363d', flexShrink: 0, position: 'relative' }}>
-      {showLogo && <img src={logoUrl!} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', position: 'absolute' }} onError={() => setLogoFailed(true)} />}
+      {showLogo && <img src={resolvedLogo!} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', position: 'absolute' }} onError={() => setLogoFailed(true)} />}
       <div style={{ width: '100%', height: '100%', borderRadius: '50%', background: '#10b981', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#0d1117', fontWeight: 800, fontSize: size * 0.35, position: 'relative', zIndex: showLogo ? -1 : 0 }}>{initials}</div>
     </div>
   )
