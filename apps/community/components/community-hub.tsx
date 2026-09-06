@@ -364,36 +364,49 @@ export function CommunityHub() {
       return searchStr.includes(search.toLowerCase())
     })
 
-    // Interleave companies: no 3 consecutive posts from the same company
-    const result: FeedPost[] = []
-    const remaining = [...searched]
-    let consecutiveSame = 0
-    let lastCompany = ''
+    // Round-robin interleaving by company
+    const companyQueues = new Map<string, FeedPost[]>()
+    const companyOrder: string[] = []
+    const otherPosts: FeedPost[] = []
 
-    while (remaining.length > 0) {
-      const next = remaining.shift()!
-      const c = (next.company || '').toLowerCase()
-
-      if (c && c === lastCompany) {
-        consecutiveSame++
-        if (consecutiveSame >= 3) {
-          // Find a different company further ahead
-          const diffIdx = remaining.findIndex(p => (p.company || '').toLowerCase() !== c)
-          if (diffIdx >= 0) {
-            const swap = remaining.splice(diffIdx, 1)[0]
-            remaining.unshift(next)
-            result.push(swap)
-            consecutiveSame = 1
-            lastCompany = (swap.company || '').toLowerCase()
-            continue
-          }
+    for (const post of searched) {
+      const c = (post.company || '').trim()
+      if (c) {
+        if (!companyQueues.has(c)) {
+          companyQueues.set(c, [])
+          companyOrder.push(c)
         }
+        companyQueues.get(c)!.push(post)
       } else {
-        consecutiveSame = c ? 1 : 0
+        otherPosts.push(post)
       }
-      lastCompany = c
-      result.push(next)
     }
+
+    // Round-robin: take one from each company in order, repeat until empty
+    const interleaved: FeedPost[] = []
+    const queues = companyOrder.map(c => ({ company: c, queue: companyQueues.get(c)! }))
+    while (queues.some(q => q.queue.length > 0)) {
+      for (const q of queues) {
+        if (q.queue.length > 0) {
+          interleaved.push(q.queue.shift()!)
+        }
+      }
+    }
+
+    // Merge: interleave company posts with "other" posts spread evenly
+    if (otherPosts.length === 0) return interleaved
+    if (interleaved.length === 0) return otherPosts
+
+    const result: FeedPost[] = []
+    const chunkSize = Math.max(1, Math.floor(interleaved.length / (otherPosts.length + 1)))
+    let otherIdx = 0
+    for (let i = 0; i < interleaved.length; i++) {
+      result.push(interleaved[i])
+      if ((i + 1) % chunkSize === 0 && otherIdx < otherPosts.length) {
+        result.push(otherPosts[otherIdx++])
+      }
+    }
+    while (otherIdx < otherPosts.length) result.push(otherPosts[otherIdx++])
 
     return result
   }, [search, posts])
