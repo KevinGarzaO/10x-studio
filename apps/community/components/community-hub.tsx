@@ -225,7 +225,7 @@ function PostCard({ post, onAuthRequired, activeTab }: { post: FeedPost; onAuthR
       {job?.requirements && job.requirements.length > 0 && <div style={{ margin: '6px 0', fontSize: 12, color: '#8b949e' }}><strong style={{ color: '#c9d1d9' }}>Requisitos:</strong> {job.requirements.slice(0, 3).join(' · ')}{job.requirements.length > 3 ? ` +${job.requirements.length - 3} más` : ''}</div>}
       {user ? (
         <>
-          {applyUrl && <a href={applyUrl} target="_blank" rel="noopener noreferrer" className="unlock-button" style={{ display: 'inline-flex', alignItems: 'center', gap: 6, background: '#10b981', color: '#0d1117', padding: '8px 16px', borderRadius: 6, fontWeight: 600, fontSize: 13, textDecoration: 'none', margin: '8px 0' }} onClick={e => e.stopPropagation()}>Postularse ahora →</a>}
+          {applyUrl && <button className="unlock-button" style={{ display: 'inline-flex', alignItems: 'center', gap: 6, background: '#10b981', color: '#0d1117', padding: '8px 16px', borderRadius: 6, fontWeight: 600, fontSize: 13, border: 'none', cursor: 'pointer', margin: '8px 0' }} onClick={e => { e.stopPropagation(); openPost() }}>Postularse ahora →</button>}
           {!applyUrl && job?.emails && job.emails.length > 0 && <div style={{ fontSize: 12, color: '#8b949e', margin: '6px 0', display: 'inline-flex', alignItems: 'center', gap: 4 }}><Mail size={12} /> {job.emails[0]}</div>}
         </>
       ) : (

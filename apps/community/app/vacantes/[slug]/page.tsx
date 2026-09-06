@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { useParams, useSearchParams } from 'next/navigation'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { ArrowLeft, ArrowBigUp, Bookmark, MessageCircle, Share2, Send, CheckCircle2, LockKeyhole, MapPin, Home as HomeIcon } from 'lucide-react'
 import { marked } from 'marked'
 
@@ -144,6 +144,31 @@ export default function VacancyPage() {
   const [redirecting, setRedirecting] = useState(false)
   const [fullContent, setFullContent] = useState<string | null>(null)
   const [applyOpen, setApplyOpen] = useState(false)
+  const [applySuccess, setApplySuccess] = useState(false)
+  const iframeRef = useRef<HTMLIFrameElement>(null)
+
+  // Detect postMessage from ATS iframes (application submitted)
+  useEffect(() => {
+    function handleMessage(e: MessageEvent) {
+      const data = e.data
+      if (typeof data === 'string' && /submit|applied|success|application.?sent/i.test(data)) {
+        setApplySuccess(true)
+        return
+      }
+      if (typeof data === 'object' && data && /submit|applied|success/i.test(String(data.type || data.event || data.action))) {
+        setApplySuccess(true)
+      }
+    }
+    if (applyOpen) {
+      window.addEventListener('message', handleMessage)
+      return () => window.removeEventListener('message', handleMessage)
+    }
+  }, [applyOpen])
+
+  // Reset success state when modal closes
+  useEffect(() => {
+    if (!applyOpen) setApplySuccess(false)
+  }, [applyOpen])
 
   useEffect(() => {
     setLoading(true)
@@ -418,31 +443,41 @@ export default function VacancyPage() {
 
       {applyOpen && applyUrl && (
         <div
-          style={{ position: 'fixed', inset: 0, zIndex: 1000, background: 'rgba(0,0,0,0.7)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}
+          style={{ position: 'fixed', inset: 0, zIndex: 1000, background: 'rgba(0,0,0,0.7)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: window.innerWidth < 640 ? 8 : 20 }}
           onMouseDown={e => e.target === e.currentTarget && setApplyOpen(false)}
         >
-          <div style={{ width: '100%', maxWidth: 750, height: '90vh', background: '#161b22', borderRadius: 12, border: '1px solid #30363d', overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 16px', borderBottom: '1px solid #30363d', background: '#0d1117' }}>
-              <span style={{ color: '#c9d1d9', fontSize: 14, fontWeight: 600 }}>Postularse — {companyName}</span>
-              <button
-                onClick={() => setApplyOpen(false)}
-                style={{ background: 'none', border: 'none', color: '#8b949e', cursor: 'pointer', fontSize: 20, padding: 4 }}
-                aria-label="Cerrar"
-              >
-                ×
-              </button>
+          {applySuccess ? (
+            <div style={{ width: '100%', maxWidth: 400, background: '#161b22', borderRadius: 12, border: '1px solid #30363d', padding: '40px 24px', textAlign: 'center' }}>
+              <div style={{ fontSize: 48, marginBottom: 16 }}>✅</div>
+              <h3 style={{ color: '#c9d1d9', fontSize: 18, marginBottom: 8 }}>¡Aplicación enviada!</h3>
+              <p style={{ color: '#8b949e', fontSize: 14, marginBottom: 20 }}>Tu postulación a <strong style={{ color: '#c9d1d9' }}>{companyName}</strong> fue enviada exitosamente.</p>
+              <button onClick={() => setApplyOpen(false)} style={{ background: '#10b981', color: '#0d1117', border: 'none', padding: '10px 24px', borderRadius: 6, fontWeight: 600, fontSize: 14, cursor: 'pointer' }}>Cerrar</button>
             </div>
-            {post.platform === 'greenhouse' && (
-              <div style={{ padding: '8px 16px', background: '#1c2430', borderBottom: '1px solid #30363d', fontSize: 12, color: '#8b949e' }}>
-                Haz clic en <strong style={{ color: '#10b981' }}>Apply</strong> dentro del formulario para completar tu postulación
+          ) : (
+            <div style={{ width: '100%', maxWidth: 750, height: window.innerWidth < 640 ? '95vh' : '90vh', background: '#161b22', borderRadius: window.innerWidth < 640 ? 8 : 12, border: '1px solid #30363d', overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 14px', borderBottom: '1px solid #30363d', background: '#0d1117' }}>
+                <span style={{ color: '#c9d1d9', fontSize: 13, fontWeight: 600 }}>Postularse — {companyName}</span>
+                <button
+                  onClick={() => setApplyOpen(false)}
+                  style={{ background: 'none', border: 'none', color: '#8b949e', cursor: 'pointer', fontSize: 20, padding: 4 }}
+                  aria-label="Cerrar"
+                >
+                  ×
+                </button>
               </div>
-            )}
-            <iframe
-              src={applyUrl}
-              style={{ flex: 1, width: '100%', border: 'none', background: '#fff' }}
-              title="Formulario de aplicación"
-            />
-          </div>
+              {post.platform === 'greenhouse' && (
+                <div style={{ padding: '6px 14px', background: '#1c2430', borderBottom: '1px solid #30363d', fontSize: 11, color: '#8b949e' }}>
+                  Haz clic en <strong style={{ color: '#10b981' }}>Apply</strong> dentro del formulario para completar tu postulación
+                </div>
+              )}
+              <iframe
+                ref={iframeRef}
+                src={applyUrl}
+                style={{ flex: 1, width: '100%', border: 'none', background: '#fff' }}
+                title="Formulario de aplicación"
+              />
+            </div>
+          )}
         </div>
       )}
     </main>
