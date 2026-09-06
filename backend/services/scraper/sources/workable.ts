@@ -12,6 +12,7 @@ interface WorkableJob {
 }
 
 interface WorkableResponse {
+  name: string;
   jobs: WorkableJob[];
 }
 
@@ -39,13 +40,13 @@ export async function fetchWorkable(
 
     const data: WorkableResponse = await res.json();
     const posts: Post[] = [];
+    const companyName = data.name || shortcode;
 
     for (const job of (data.jobs ?? [])) {
       const applyUrl = `https://apply.workable.com/${shortcode}/j/${job.shortcode}/`;
       const location = normalizeLocation(job.location);
       const text = [
         `## ${job.title}`,
-        job.department ? `**Empresa:** ${shortcode}` : null,
         `**Rol:** ${job.title}`,
         location ? `**Ubicación:** ${location}` : null,
         `**Modalidad:** ${/remote|remoto/i.test(job.location ?? "") ? "Remoto" : "Presencial"}`,
@@ -66,7 +67,7 @@ export async function fetchWorkable(
         url: applyUrl,
         postDate: job.published_on ?? null,
         insertedAt: "",
-        author: shortcode,
+        author: companyName,
         views: null,
         text,
         language: detectLanguage(text),
@@ -74,6 +75,8 @@ export async function fetchWorkable(
         location: location,
         workModality: detectWorkModality(text),
         contacts,
+        company: companyName,
+        companyLogo: null,
       });
     }
 

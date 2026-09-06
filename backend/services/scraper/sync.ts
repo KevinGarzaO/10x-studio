@@ -59,6 +59,8 @@ export async function syncVacancyToCommunity(
       contacts: post.contacts,
       scraped_at: post.created_at,
       is_scraper_post: true,
+      company: post.company ?? post.source ?? null,
+      company_logo: post.company_logo ?? null,
     })
     .select("id")
     .single();

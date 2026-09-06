@@ -5,6 +5,7 @@ import type { Post } from "../types";
 interface GreenhouseJob {
   id: number;
   title: string;
+  company_name: string | null;
   location: { name: string } | null;
   absolute_url: string;
   updated_at: string;
@@ -44,9 +45,9 @@ export async function fetchGreenhouse(
     for (const job of (data.jobs ?? [])) {
       const location = normalizeLocation(job.location?.name ?? null);
       const department = job.departments?.[0]?.name ?? null;
+      const companyName = job.company_name || boardToken;
       const text = [
         `## ${job.title}`,
-        `**Empresa:** ${boardToken}`,
         department ? `**Departamento:** ${department}` : null,
         location ? `**Ubicación:** ${location}` : null,
         job.content ? job.content.substring(0, 1000) : null,
@@ -67,7 +68,7 @@ export async function fetchGreenhouse(
         url: job.absolute_url,
         postDate: job.updated_at ?? null,
         insertedAt: "",
-        author: boardToken,
+        author: companyName,
         views: null,
         text,
         language: detectLanguage(text),
@@ -75,6 +76,8 @@ export async function fetchGreenhouse(
         location: location,
         workModality: detectWorkModality(text),
         contacts,
+        company: companyName,
+        companyLogo: null,
       });
     }
 

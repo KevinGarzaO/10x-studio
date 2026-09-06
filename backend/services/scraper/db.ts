@@ -126,6 +126,8 @@ export async function insertPost(post: {
   is_spam?: boolean;
   search_profile?: string | null;
   forum_hint?: string | null;
+  company?: string | null;
+  company_logo?: string | null;
 }): Promise<void> {
   const { error } = await supabase.from("scraper_posts").insert({
     platform: post.platform,
@@ -147,6 +149,8 @@ export async function insertPost(post: {
     is_spam: post.is_spam ?? false,
     search_profile: post.search_profile ?? null,
     forum_hint: post.forum_hint ?? null,
+    company: post.company ?? null,
+    company_logo: post.company_logo ?? null,
   });
   if (error) throw error;
 }

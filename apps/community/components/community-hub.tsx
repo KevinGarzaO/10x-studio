@@ -40,6 +40,9 @@ interface EditorialPost {
   original_text?: string | null
   contacts?: Record<string, unknown> | null
   is_scraper_post?: boolean
+  company?: string | null
+  company_logo?: string | null
+  location?: string | null
 }
 
 type FeedPost = EditorialPost
@@ -114,25 +117,32 @@ function PostCard({ post, onAuthRequired, activeTab }: { post: FeedPost; onAuthR
   const time = formatTime(post.created_at)
   const image = post.image_url
   const job = isJob ? parseJobContent(post.content || post.original_text || '') : null
+  const company = post.company || job?.company || null
+  const isScraped = post.is_scraper_post
+
+  const platformDisplay: Record<string, string> = { greenhouse: 'Greenhouse', workable: 'Workable', telegram: 'Telegram' }
+  const sourceLabel = isScraped ? (platformDisplay[post.platform || ''] || post.platform || '') : (post.source_name || 'Comunidad')
 
   const openPost = (e?: React.MouseEvent<HTMLElement>) => { if (e?.target instanceof HTMLElement && e.target.closest('button, a, input, textarea, select')) return; const isJob = post.type === 'job'; const slug = post.slug || post.id; const basePath = isJob ? (slug.startsWith('/vacantes/') ? slug : `/vacantes/${slug}`) : `/post/${post.id}`; const tabParam = activeTab && activeTab !== 'Tendencias' ? `${basePath.includes('?') ? '&' : '?'}from=${encodeURIComponent(activeTab)}` : ''; router.push(`${basePath}${tabParam}`) }
 
   if (isJob) {
-    const initials = (post.author?.display_name || 'AJ').slice(0, 2).toUpperCase()
+    const initials = (company || post.author?.display_name || 'AV').slice(0, 2).toUpperCase()
+    const logoUrl = company ? `https://logo.clearbit.com/${company.toLowerCase().replace(/\s+/g, '')}.com` : null
     return <article className={`post-card job-card`} onClick={openPost}>
       <div className="job-line" />
       <div className="post-top"><div className="author-row">
-        <div className="avatar avatar-emerald" style={{ width: 32, height: 32, borderRadius: '50%', background: '#10b981', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#0d1117', fontWeight: 800, fontSize: 12 }}>{initials}</div>
-        <div><div className="author-name">{post.author?.display_name || 'Avocado Jobs Bot'} <span className="verified-pill" style={{ marginLeft: 6 }}><CheckCircle2 size={12} /> Verificada</span></div><div className="post-meta">{time} · {post.source_name || post.platform || 'Comunidad'}</div></div>
+        {logoUrl ? <img src={logoUrl} alt="" style={{ width: 32, height: 32, borderRadius: '50%', objectFit: 'contain', background: '#fff', padding: 2 }} onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; (e.target as HTMLImageElement).nextElementSibling?.setAttribute('style', 'display:flex') }} /> : null}
+        <div className="avatar avatar-emerald" style={{ width: 32, height: 32, borderRadius: '50%', background: '#10b981', display: logoUrl ? 'none' : 'flex', alignItems: 'center', justifyContent: 'center', color: '#0d1117', fontWeight: 800, fontSize: 12 }}>{initials}</div>
+        <div><div className="author-name">{company || post.author?.display_name || 'AvoTalent'} {!isScraped && <span className="verified-pill" style={{ marginLeft: 6 }}><CheckCircle2 size={12} /> Verificada</span>}</div><div className="post-meta">{time}{sourceLabel ? ` · ${sourceLabel}` : ''}</div></div>
       </div></div>
       <div className="post-type-label" style={{ color: '#10b981' }}>VACANTE</div>
       <h2 style={{ fontSize: 17, marginBottom: 8 }}>{job?.role || post.title}</h2>
-      {job && <div className="job-details" style={{ display: 'flex', flexWrap: 'wrap', gap: '6px 14px', margin: '6px 0 10px', fontSize: 13, color: '#8b949e' }}>
-        {job.company && <span style={{ background: '#1c2430', padding: '3px 8px', borderRadius: 4, display: 'inline-flex', alignItems: 'center', gap: 4 }}><Building size={12} /> {job.company}</span>}
-        {job.location && <span style={{ background: '#1c2430', padding: '3px 8px', borderRadius: 4, display: 'inline-flex', alignItems: 'center', gap: 4 }}><MapPin size={12} /> {job.location}</span>}
-        {job.salary && <span style={{ background: '#0d3320', color: '#10b981', padding: '3px 8px', borderRadius: 4, fontWeight: 600 }}>{job.salary}</span>}
-        {job.modality && <span style={{ background: '#1c2430', padding: '3px 8px', borderRadius: 4, display: 'inline-flex', alignItems: 'center', gap: 4 }}><HomeIcon size={12} /> {job.modality}</span>}
-      </div>}
+      <div className="job-details" style={{ display: 'flex', flexWrap: 'wrap', gap: '6px 14px', margin: '6px 0 10px', fontSize: 13, color: '#8b949e' }}>
+        {company && <span style={{ background: '#1c2430', padding: '3px 8px', borderRadius: 4, display: 'inline-flex', alignItems: 'center', gap: 4 }}><Building size={12} /> {company}</span>}
+        {(job?.location || post.location) && <span style={{ background: '#1c2430', padding: '3px 8px', borderRadius: 4, display: 'inline-flex', alignItems: 'center', gap: 4 }}><MapPin size={12} /> {job?.location || post.location}</span>}
+        {job?.salary && <span style={{ background: '#0d3320', color: '#10b981', padding: '3px 8px', borderRadius: 4, fontWeight: 600 }}>{job.salary}</span>}
+        {job?.modality && <span style={{ background: '#1c2430', padding: '3px 8px', borderRadius: 4, display: 'inline-flex', alignItems: 'center', gap: 4 }}><HomeIcon size={12} /> {job.modality}</span>}
+      </div>
       {job?.description && <p className="post-excerpt" style={{ fontSize: 13, lineHeight: 1.5, color: '#8b949e', margin: '4px 0 10px' }}>{job.description}</p>}
       {job?.requirements && job.requirements.length > 0 && <div style={{ margin: '6px 0', fontSize: 12, color: '#8b949e' }}><strong style={{ color: '#c9d1d9' }}>Requisitos:</strong> {job.requirements.slice(0, 3).join(' · ')}{job.requirements.length > 3 ? ` +${job.requirements.length - 3} más` : ''}</div>}
       {user ? (
@@ -200,11 +210,12 @@ function RightSidebar({ onUnlock }: { onUnlock: () => void }) {
       <div className="widget-title"><span>Oportunidades destacadas</span><BriefcaseBusiness size={16} /></div>
       {featured.length > 0 ? featured.map(post => {
         const job = parseMiniJob(post.content || post.original_text || '')
+        const company = post.company || job?.company || null
         return (
           <Link href={post.slug?.startsWith('/vacantes/') ? post.slug : `/vacantes/${post.slug || post.id}`} className="mini-job" key={post.id}>
-            <div className="mini-job-top"><span className="verified-pill"><CheckCircle2 size={12} /> Verificada</span></div>
+            {!post.is_scraper_post && <div className="mini-job-top"><span className="verified-pill"><CheckCircle2 size={12} /> Verificada</span></div>}
             <strong>{post.title}</strong>
-            <p>{job.company || post.source_name || 'Comunidad'}</p>
+            <p>{company || post.source_name || 'Comunidad'}</p>
             <div className="mini-job-bottom">
               {job.salary && <span>{job.salary}</span>}
               <span>{job.modality || 'Remoto'}</span>

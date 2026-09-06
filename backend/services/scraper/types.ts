@@ -41,6 +41,8 @@ export interface Post {
   profile?: ProfileInfo;
   contacts: ContactInfo;
   possibleDuplicateOf?: string | null;
+  company?: string | null;
+  companyLogo?: string | null;
 }
 
 export interface SourceConfig {

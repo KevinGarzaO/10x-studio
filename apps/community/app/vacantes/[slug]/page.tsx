@@ -93,6 +93,9 @@ interface PostData {
   source_name?: string | null
   contacts?: Record<string, any> | null
   comments?: Array<{ id: string; content: string; author: { username: string; display_name: string }; created_at: string }>
+  company?: string | null
+  company_logo?: string | null
+  is_scraper_post?: boolean
 }
 
 export default function VacancyPage() {
@@ -175,9 +178,11 @@ export default function VacancyPage() {
   const renderedHtml = renderContent(cleanContent)
   const meta = parseJobMetadata(rawContent)
   const time = formatTime(post.created_at)
-  const platformName = post.platform === 'greenhouse' ? 'GitLab' :
-    post.platform === 'workable' ? (post.source_name || 'Platzi') :
-    post.source_name || 'Comunidad'
+  const isScraped = post.is_scraper_post
+  const companyName = post.company || meta.company || post.source_name || 'Comunidad'
+  const logoUrl = companyName && companyName !== 'Comunidad' ? `https://logo.clearbit.com/${companyName.toLowerCase().replace(/\s+/g, '')}.com` : null
+  const platformDisplay: Record<string, string> = { greenhouse: 'Greenhouse', workable: 'Workable', telegram: 'Telegram' }
+  const sourceLabel = isScraped ? (platformDisplay[post.platform || ''] || post.platform || '') : (post.source_name || 'Comunidad')
 
   return (
     <main className="post-detail-page">
@@ -194,26 +199,31 @@ export default function VacancyPage() {
           <article className="post-detail-card detail-job">
             <div className="detail-context">
               <span className="detail-kicker">VACANTE</span>
-              <span className="context-divider">/</span>
-              <span>Oportunidad verificada</span>
+              {!isScraped && <>
+                <span className="context-divider">/</span>
+                <span>Oportunidad verificada</span>
+              </>}
               <span className="context-spacer" />
             </div>
 
             <header className="detail-author">
-              <div className="avatar avatar-emerald">
-                <div style={{ width: '100%', height: '100%', borderRadius: '50%', background: '#10b981', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: 14, color: '#0d1117' }}>
-                  {platformName.charAt(0).toUpperCase()}
+              {logoUrl ? (
+                <img src={logoUrl} alt="" style={{ width: 40, height: 40, borderRadius: '50%', objectFit: 'contain', background: '#fff', padding: 2 }} onError={(e) => { (e.target as HTMLImageElement).style.display = 'none' }} />
+              ) : (
+                <div className="avatar avatar-emerald">
+                  <div style={{ width: '100%', height: '100%', borderRadius: '50%', background: '#10b981', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: 14, color: '#0d1117' }}>
+                    {companyName.charAt(0).toUpperCase()}
+                  </div>
                 </div>
-              </div>
+              )}
               <div className="author-info">
                 <div className="author-line">
-                  <strong>{platformName}</strong>
-                  <span className="verified-pill"><CheckCircle2 size={12} /> Verificada</span>
+                  <strong>{companyName}</strong>
+                  {!isScraped && <span className="verified-pill"><CheckCircle2 size={12} /> Verificada</span>}
                 </div>
                 <div className="detail-meta">
                   <span>{time}</span>
-                  <span>·</span>
-                  <span style={{ textTransform: 'capitalize' }}>{post.platform || 'Comunidad'}</span>
+                  {sourceLabel && <><span>·</span><span>{sourceLabel}</span></>}
                 </div>
               </div>
             </header>

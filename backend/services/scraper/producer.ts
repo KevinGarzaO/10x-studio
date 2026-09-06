@@ -129,6 +129,8 @@ export async function runProduction(
           is_spam: false,
           search_profile: null,
           forum_hint: post.forumHint ?? null,
+          company: post.company ?? null,
+          company_logo: post.companyLogo ?? null,
         });
 
         postsInserted++;
