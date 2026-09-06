@@ -180,7 +180,7 @@ export default function VacancyPage() {
   const time = formatTime(post.created_at)
   const isScraped = post.is_scraper_post
   const companyName = post.company || meta.company || 'Comunidad'
-  const logoUrl = companyName && companyName !== 'Comunidad' ? `https://logo.clearbit.com/${companyName.toLowerCase().replace(/\s+/g, '')}.com` : null
+  const logoUrl = companyName && companyName !== 'Comunidad' ? `https://www.google.com/s2/favicons?domain=${companyName.toLowerCase().replace(/\s+/g, '')}.com&sz=64` : null
 
   return (
     <main className="post-detail-page">
@@ -205,8 +205,8 @@ export default function VacancyPage() {
             </div>
 
             <header className="detail-author">
-              <div className="avatar avatar-emerald" style={{ width: 40, height: 40, borderRadius: '50%', background: logoUrl ? `url(${logoUrl}) center/contain no-repeat, #10b981` : '#10b981', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: 14, color: '#0d1117', overflow: 'hidden', border: '2px solid #10b981', flexShrink: 0 }}>
-                {companyName.charAt(0).toUpperCase()}
+              <div className="avatar avatar-emerald" style={{ width: 40, height: 40, minWidth: 40, borderRadius: '50%', background: '#10b981', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: 14, color: '#0d1117', overflow: 'hidden', border: '2px solid #10b981', flexShrink: 0 }}>
+                {logoUrl ? <img src={logoUrl} alt="" style={{ width: 26, height: 26, borderRadius: '50%' }} onError={(e) => { (e.target as HTMLImageElement).style.display = 'none' }} /> : companyName.charAt(0).toUpperCase()}
               </div>
               <div className="author-info">
                 <div className="author-line">

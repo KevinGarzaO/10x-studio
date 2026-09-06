@@ -124,11 +124,13 @@ function PostCard({ post, onAuthRequired, activeTab }: { post: FeedPost; onAuthR
 
   if (isJob) {
     const initials = (company || 'AV').slice(0, 2).toUpperCase()
-    const logoUrl = company ? `https://logo.clearbit.com/${company.toLowerCase().replace(/\s+/g, '')}.com` : null
+    const logoUrl = company ? `https://www.google.com/s2/favicons?domain=${company.toLowerCase().replace(/\s+/g, '')}.com&sz=64` : null
     return <article className={`post-card job-card`} onClick={openPost}>
       <div className="job-line" />
       <div className="post-top"><div className="author-row">
-        <div className="avatar avatar-emerald" style={{ width: 32, height: 32, borderRadius: '50%', background: logoUrl ? `url(${logoUrl}) center/contain no-repeat, #10b981` : '#10b981', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#0d1117', fontWeight: 800, fontSize: 12, overflow: 'hidden', border: '2px solid #10b981' }}>{!logoUrl && initials}</div>
+        <div className="avatar avatar-emerald" style={{ width: 32, height: 32, minWidth: 32, borderRadius: '50%', background: '#10b981', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#0d1117', fontWeight: 800, fontSize: 12, overflow: 'hidden', border: '2px solid #10b981' }}>
+          {logoUrl ? <img src={logoUrl} alt="" style={{ width: 20, height: 20, borderRadius: '50%' }} onError={(e) => { (e.target as HTMLImageElement).style.display = 'none' }} /> : initials}
+        </div>
         <div><div className="author-name">{company || 'AvoTalent'}</div><div className="post-meta">{time}</div></div>
       </div></div>
       <div className="post-type-label" style={{ color: '#10b981' }}>VACANTE</div>
