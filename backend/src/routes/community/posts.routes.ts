@@ -88,18 +88,75 @@ router.get('/', async (req: Request, res: Response) => {
       query = query.or(`title.ilike.%${search}%,content.ilike.%${search}%`)
     }
 
+    // For job posts, fetch extra to interleave by company on the backend
+    const isJobFeed = type === 'job'
+    if (isJobFeed) {
+      query = query.range(from, from + limit * 5 - 1)
+    } else {
+      query = query.range(from, to)
+    }
+
     const { data: posts, count, error } = await query
 
     if (error) throw error
 
-    res.json({
-      posts: (posts || []).map((p: any) => ({
+    let mapped = (posts || []).map((p: any) => ({
         ...p,
         author: p.author,
         tags: p.community_post_tags?.map((pt: any) => pt.tag?.name).filter(Boolean) || [],
         votesCount: p.votes_count || 0,
         commentsCount: p.comments_count || 0,
-      })),
+      }))
+
+    // Round-robin interleave by company for job feed
+    if (isJobFeed && mapped.length > 0) {
+      const companyQueues = new Map<string, typeof mapped>()
+      const companyOrder: string[] = []
+      const otherPosts: typeof mapped = []
+
+      for (const post of mapped) {
+        const c = (post.company || '').trim()
+        if (c) {
+          if (!companyQueues.has(c)) {
+            companyQueues.set(c, [])
+            companyOrder.push(c)
+          }
+          companyQueues.get(c)!.push(post)
+        } else {
+          otherPosts.push(post)
+        }
+      }
+
+      const interleaved: typeof mapped = []
+      const queues = companyOrder.map(c => ({ company: c, queue: companyQueues.get(c)! }))
+      while (queues.some(q => q.queue.length > 0)) {
+        for (const q of queues) {
+          if (q.queue.length > 0) {
+            interleaved.push(q.queue.shift()!)
+          }
+        }
+      }
+
+      // Merge non-company posts spread evenly
+      if (otherPosts.length > 0 && interleaved.length > 0) {
+        const chunkSize = Math.max(1, Math.floor(interleaved.length / (otherPosts.length + 1)))
+        const result: typeof mapped = []
+        let otherIdx = 0
+        for (let i = 0; i < interleaved.length; i++) {
+          result.push(interleaved[i])
+          if ((i + 1) % chunkSize === 0 && otherIdx < otherPosts.length) {
+            result.push(otherPosts[otherIdx++])
+          }
+        }
+        while (otherIdx < otherPosts.length) result.push(otherPosts[otherIdx++])
+        mapped = result.slice(0, limit)
+      } else {
+        mapped = interleaved.slice(0, limit)
+      }
+    }
+
+    res.json({
+      posts: mapped,
       pagination: {
         page,
         limit,

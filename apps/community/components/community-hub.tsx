@@ -364,51 +364,8 @@ export function CommunityHub() {
       return searchStr.includes(search.toLowerCase())
     })
 
-    // Round-robin interleaving by company
-    const companyQueues = new Map<string, FeedPost[]>()
-    const companyOrder: string[] = []
-    const otherPosts: FeedPost[] = []
-
-    for (const post of searched) {
-      const c = (post.company || '').trim()
-      if (c) {
-        if (!companyQueues.has(c)) {
-          companyQueues.set(c, [])
-          companyOrder.push(c)
-        }
-        companyQueues.get(c)!.push(post)
-      } else {
-        otherPosts.push(post)
-      }
-    }
-
-    // Round-robin: take one from each company in order, repeat until empty
-    const interleaved: FeedPost[] = []
-    const queues = companyOrder.map(c => ({ company: c, queue: companyQueues.get(c)! }))
-    while (queues.some(q => q.queue.length > 0)) {
-      for (const q of queues) {
-        if (q.queue.length > 0) {
-          interleaved.push(q.queue.shift()!)
-        }
-      }
-    }
-
-    // Merge: interleave company posts with "other" posts spread evenly
-    if (otherPosts.length === 0) return interleaved
-    if (interleaved.length === 0) return otherPosts
-
-    const result: FeedPost[] = []
-    const chunkSize = Math.max(1, Math.floor(interleaved.length / (otherPosts.length + 1)))
-    let otherIdx = 0
-    for (let i = 0; i < interleaved.length; i++) {
-      result.push(interleaved[i])
-      if ((i + 1) % chunkSize === 0 && otherIdx < otherPosts.length) {
-        result.push(otherPosts[otherIdx++])
-      }
-    }
-    while (otherIdx < otherPosts.length) result.push(otherPosts[otherIdx++])
-
-    return result
+    // Backend already interleaves by company for job feeds
+    return searched
   }, [search, posts])
 
   return <div className="app-shell"><header className="topbar"><button className="mobile-menu-button icon-button" onClick={() => setMobileMenu(!mobileMenu)} aria-label="Abrir menú"><Menu size={20} /></button><div className="brand"><span className="brand-mark">&gt;_</span><span>a<span className="brand-accent">vocado</span></span></div><div className="search-wrap"><Search size={17} /><input value={search} onChange={e => setSearch(e.target.value)} placeholder="Buscar discusiones, tags, personas..." aria-label="Buscar" /><kbd>⌘ K</kbd></div><div className="top-actions"><button className="icon-button notification" aria-label="Notificaciones"><Bell size={18} /><span /></button><button className="publish-button top-publish" onClick={() => window.location.href = '/create'}><Plus size={16} /> Publicar</button><Link href="/login" className="topbar-profile-link" aria-label="Acceder"><Avatar initials="?" tone="blue" /></Link></div></header><div className={`mobile-drawer ${mobileMenu ? 'open' : ''}`}><div className="drawer-head"><strong>Menú</strong><button className="icon-button" onClick={() => setMobileMenu(false)} aria-label="Cerrar menú"><X size={18} /></button></div><LeftSidebar onPublish={() => setPublishOpen(true)} activeTab={activeTab} setActiveTab={setActiveTab} /></div><div className="layout"><LeftSidebar onPublish={() => setPublishOpen(true)} activeTab={activeTab} setActiveTab={setActiveTab} /><main className="feed"><div className="feed-heading"><div><p className="eyebrow">Viernes, 31 de agosto</p><h1>Tu feed <span className="live-dot" /></h1></div><button className="filter-button">Para ti <ChevronDown size={15} /></button></div><div className="feed-tabs" role="tablist">{tabs.map(({ label, icon: Icon }) => <button key={label} role="tab" aria-selected={activeTab === label} className={activeTab === label ? 'active' : ''} onClick={() => setActiveTab(label)}><Icon size={15} />{label}</button>)}</div><div className="post-list">{filteredPosts.map(post => <PostCard key={post.id} post={post} onAuthRequired={() => setAuthOpen(true)} activeTab={activeTab} />)}</div>{loading && <div style={{ textAlign: 'center', padding: 20, color: '#8b949e' }}><Sparkles size={16} className="spin" /> Cargando más posts...</div>}{!loading && filteredPosts.length === 0 && <div style={{ textAlign: 'center', padding: 40, color: '#8b949e' }}><PenLine size={32} style={{ marginBottom: 12, opacity: 0.5 }} /><p>{activeTab === 'Vacantes & Freelance' ? 'No hay vacantes todavía' : activeTab === 'Showcase Projects' ? 'No hay proyectos todavía' : 'No hay posts disponibles'}</p></div>}{!hasMore && filteredPosts.length > 0 && <div style={{ textAlign: 'center', padding: 20, color: '#8b949e' }}>No hay más posts</div>}</main><RightSidebar onUnlock={() => setAuthOpen(true)} /></div>{publishOpen && <PublishModal onClose={() => setPublishOpen(false)} />}{authOpen && <AuthModal onClose={() => setAuthOpen(false)} />}</div>
