@@ -21,19 +21,21 @@ function isHtmlContent(content: string): boolean {
 }
 
 function stripMetadata(content: string, title: string): string {
-  // Remove everything from ### Contacto onwards (including inline)
-  let result = content.replace(/\n?###\s*Contacto[\s\S]*/gi, '')
-  // Remove metadata lines (Empresa, Departamento, etc.)
+  // Step 1: Remove contact section (everything from ### Contacto onwards, including inline)
+  let result = content.replace(/\*{0,3}Contacto[\s\S]*/gi, '')
+  // Step 2: Remove metadata lines (Empresa, Departamento, etc.)
   const lines = result.split('\n')
   const filtered = lines.filter(l => {
     const t = l.trim()
+    if (!t) return true
     if (t === title || t === `## ${title}`) return false
-    if (/\*\*Empresa:?\*\*/i.test(t)) return false
-    if (/\*\*Rol:?\*\*/i.test(t)) return false
-    if (/\*\*Ubicaci[oó]n:?\*\*/i.test(t)) return false
-    if (/\*\*Modalidad:?\*\*/i.test(t)) return false
-    if (/\*\*Presupuesto:?\*\*/i.test(t)) return false
-    if (/\*\*Departamento:?\*\*/i.test(t)) return false
+    if (/^\*\*Empresa/i.test(t)) return false
+    if (/^\*\*Rol/i.test(t)) return false
+    if (/^\*\*Ubicaci/i.test(t)) return false
+    if (/^\*\*Modalidad/i.test(t)) return false
+    if (/^\*\*Presupuesto/i.test(t)) return false
+    if (/^\*\*Departamento/i.test(t)) return false
+    if (/^🔗/i.test(t)) return false
     return true
   })
   return filtered.join('\n').trim()
