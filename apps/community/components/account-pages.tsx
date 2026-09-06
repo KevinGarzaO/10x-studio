@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { useState, FormEvent } from 'react'
+import { useState, FormEvent, useEffect } from 'react'
 import {
   ArrowLeft, Bell, Bookmark, Check, Globe2, LockKeyhole, Mail, Moon,
   Save, Settings, ShieldCheck, UserRound, MapPin, ExternalLink, Pencil,
@@ -10,6 +10,19 @@ import {
 } from 'lucide-react'
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'
+
+interface User {
+  id: string
+  username: string
+  display_name: string
+  email: string
+  bio?: string
+  photo_url?: string
+  website?: string
+  github_url?: string
+  location?: string
+  created_at: string
+}
 
 const styles = `
 .account-page{min-height:100vh;background:#0d1117;color:#e6edf3;padding:28px 24px}
@@ -129,69 +142,146 @@ export function AccountLayout({ children, active }: { children: React.ReactNode;
 }
 
 export function ProfilePage() {
+  const [user, setUser] = useState<User | null>(null)
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    const token = localStorage.getItem('avocado_token')
+    if (!token) { window.location.href = '/login'; return }
+    fetch(`${API_URL}/api/community/auth/me`, { headers: { Authorization: `Bearer ${token}` } })
+      .then(r => { if (!r.ok) throw new Error(); return r.json() })
+      .then(d => { setUser(d.user); setLoading(false) })
+      .catch(() => { window.location.href = '/login' })
+  }, [])
+
+  if (loading) return (
+    <AccountLayout active="profile">
+      <section className="account-card" style={{ textAlign: 'center', padding: '60px 20px' }}>
+        <Loader2 size={24} className="animate-spin" style={{ color: '#00A86B' }} />
+        <p className="muted" style={{ marginTop: 12 }}>Cargando perfil...</p>
+      </section>
+    </AccountLayout>
+  )
+
+  if (!user) return null
+
+  const initials = (user.display_name || user.username || 'U').slice(0, 2).toUpperCase()
+  const joinDate = new Date(user.created_at).toLocaleDateString('es-ES', { year: 'numeric', month: 'long' })
+
   return (
     <AccountLayout active="profile">
       <section className="account-card">
         <div className="profile-hero">
           <div className="profile-identity">
-            <div className="big-avatar">JD</div>
+            <div className="big-avatar">{user.photo_url ? <img src={user.photo_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: 18 }} /> : initials}</div>
             <div>
               <p className="page-kicker">Perfil de comunidad</p>
-              <h1>Javier Developer</h1>
-              <p className="muted">@javierdev · <MapPin size={12} style={{ display: 'inline', verticalAlign: '-2px' }} /> Ciudad de México · Se unió en 2024</p>
+              <h1>{user.display_name || user.username}</h1>
+              <p className="muted">@{user.username} · Se unió en {joinDate}</p>
               <span className="badge"><ShieldCheck size={12} /> Miembro activo</span>
               <div className="profile-links">
-                <span className="profile-link"><Globe2 size={13} /> javierdev.dev</span>
-                <span className="profile-link"><GitBranch size={13} /> github.com/javierdev</span>
+                {user.website && <span className="profile-link"><Globe2 size={13} /> {user.website}</span>}
+                {user.github_url && <span className="profile-link"><GitBranch size={13} /> {user.github_url}</span>}
               </div>
             </div>
           </div>
           <div className="button-row">
             <Link className="primary-btn" href="/settings"><Pencil size={14} /> Editar perfil</Link>
-            <button className="outline-btn"><ExternalLink size={14} /> Compartir</button>
           </div>
         </div>
-        <h2 className="section-title">Sobre mí</h2>
-        <p className="muted">Frontend engineer construyendo interfaces cuidadas con React, TypeScript y Next.js. Comparto lo que aprendo y busco conversaciones que ayuden a la comunidad.</p>
-        <h2 className="section-title">Actividad en Avocado</h2>
-        <div className="stat-row">
-          <div className="stat"><strong>28</strong><span>publicaciones</span></div>
-          <div className="stat"><strong>412</strong><span>reputación</span></div>
-          <div className="stat"><strong>86</strong><span>siguiendo</span></div>
-        </div>
-        <h2 className="section-title">Actividad reciente</h2>
-        <div className="activity-list">
-          <div className="activity"><MessageCircle size={16} className="activity-icon" /><div><strong>Comentó en &quot;Cache Components en producción&quot;</strong><span>Hace 2 horas · 12 reacciones</span></div></div>
-          <div className="activity"><Heart size={16} className="activity-icon" /><div><strong>Guardó una publicación de React</strong><span>Ayer · Frontend</span></div></div>
-          <div className="activity"><Sparkles size={16} className="activity-icon" /><div><strong>Publicó &quot;Patrones para equipos pequeños&quot;</strong><span>Hace 3 días · 24 reacciones</span></div></div>
-        </div>
+        {user.bio && <>
+          <h2 className="section-title">Sobre mí</h2>
+          <p className="muted">{user.bio}</p>
+        </>}
       </section>
     </AccountLayout>
   )
 }
 
 export function SettingsPage() {
+  const router = useRouter()
+  const [user, setUser] = useState<User | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
-  const [dark, setDark] = useState(true)
-  const [weekly, setWeekly] = useState(true)
+  const [error, setError] = useState('')
+  const [displayName, setDisplayName] = useState('')
+  const [bio, setBio] = useState('')
+  const [website, setWebsite] = useState('')
+  const [githubUrl, setGithubUrl] = useState('')
+
+  useEffect(() => {
+    const token = localStorage.getItem('avocado_token')
+    if (!token) { window.location.href = '/login'; return }
+    fetch(`${API_URL}/api/community/auth/me`, { headers: { Authorization: `Bearer ${token}` } })
+      .then(r => { if (!r.ok) throw new Error(); return r.json() })
+      .then(d => {
+        const u = d.user
+        setUser(u)
+        setDisplayName(u.display_name || '')
+        setBio(u.bio || '')
+        setWebsite(u.website || '')
+        setGithubUrl(u.github_url || '')
+        setLoading(false)
+      })
+      .catch(() => { window.location.href = '/login' })
+  }, [])
+
+  async function handleSave() {
+    if (!user) return
+    setSaving(true)
+    setError('')
+    setSaved(false)
+    try {
+      const token = localStorage.getItem('avocado_token')
+      const res = await fetch(`${API_URL}/api/community/users/${user.username}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ displayName, bio, website, githubUrl }),
+      })
+      const data = await res.json()
+      if (!res.ok) { setError(data.error || 'Error al guardar'); setSaving(false); return }
+      setUser(data.user)
+      setSaved(true)
+      setSaving(false)
+      localStorage.setItem('avocado_user', JSON.stringify(data.user))
+      setTimeout(() => setSaved(false), 2000)
+    } catch {
+      setError('Error de conexión')
+      setSaving(false)
+    }
+  }
+
+  if (loading) return (
+    <AccountLayout active="settings">
+      <section className="account-card" style={{ textAlign: 'center', padding: '60px 20px' }}>
+        <Loader2 size={24} className="animate-spin" style={{ color: '#00A86B' }} />
+        <p className="muted" style={{ marginTop: 12 }}>Cargando configuración...</p>
+      </section>
+    </AccountLayout>
+  )
+
+  if (!user) return null
+
   return (
     <AccountLayout active="settings">
       <section className="account-card">
         <p className="page-kicker">Tu espacio</p>
         <h1 className="page-title">Configuración</h1>
-        <p className="muted page-description">Controla tu perfil público, preferencias y la forma en que Avocado se comunica contigo.</p>
+        <p className="muted page-description">Controla tu perfil público y preferencias.</p>
+        {error && <div className="auth-error">{error}</div>}
         <h2 className="section-title">Perfil público</h2>
         <div className="form-grid">
-          <div className="field"><label htmlFor="name">Nombre visible</label><input id="name" defaultValue="Javier Developer" /></div>
-          <div className="field"><label htmlFor="handle">Usuario</label><input id="handle" defaultValue="@javierdev" /></div>
-          <div className="field"><label htmlFor="bio">Biografía</label><textarea id="bio" defaultValue="Frontend engineer construyendo interfaces cuidadas con React, TypeScript y Next.js." /></div>
+          <div className="field"><label>Nombre visible</label><input value={displayName} onChange={e => setDisplayName(e.target.value)} placeholder="Tu nombre" /></div>
+          <div className="field"><label>Usuario</label><input value={`@${user.username}`} disabled style={{ opacity: 0.6 }} /></div>
+          <div className="field"><label>Biografía</label><textarea value={bio} onChange={e => setBio(e.target.value)} placeholder="Cuéntanos sobre ti..." /></div>
+          <div className="field"><label>Sitio web</label><input value={website} onChange={e => setWebsite(e.target.value)} placeholder="https://tusitio.com" /></div>
+          <div className="field"><label>GitHub</label><input value={githubUrl} onChange={e => setGithubUrl(e.target.value)} placeholder="github.com/tuusuario" /></div>
         </div>
-        <div className="button-row"><button className="primary-btn" onClick={() => setSaved(true)}>{saved ? <><Check size={14} /> Cambios guardados</> : <><Save size={14} /> Guardar cambios</>}</button></div>
-        <div className="settings-section">
-          <h2 className="section-title">Preferencias</h2>
-          <div className="setting-row"><div className="setting-info"><Moon size={17} /><div><strong>Tema oscuro</strong><span>Usar la apariencia técnica de Avocado.</span></div></div><button className={`toggle ${dark ? 'on' : ''}`} onClick={() => setDark(!dark)} aria-label="Cambiar tema"><i /></button></div>
-          <div className="setting-row"><div className="setting-info"><Mail size={17} /><div><strong>Resumen semanal</strong><span>Recibe las conversaciones más relevantes.</span></div></div><button className={`toggle ${weekly ? 'on' : ''}`} onClick={() => setWeekly(!weekly)} aria-label="Activar resumen"><i /></button></div>
-          <div className="setting-row"><div className="setting-info"><Bell size={17} /><div><strong>Notificaciones de respuestas</strong><span>Entérate cuando alguien responda tus publicaciones.</span></div></div><button className="toggle on" aria-label="Notificaciones"><i /></button></div>
+        <div className="button-row">
+          <button className="primary-btn" onClick={handleSave} disabled={saving}>
+            {saving ? <><Loader2 size={14} className="animate-spin" /> Guardando...</> : saved ? <><Check size={14} /> Guardado</> : <><Save size={14} /> Guardar cambios</>}
+          </button>
         </div>
       </section>
     </AccountLayout>
