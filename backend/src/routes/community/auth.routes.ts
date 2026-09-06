@@ -80,6 +80,27 @@ router.post('/login', async (req: Request, res: Response) => {
   }
 })
 
+router.post('/refresh', async (req: Request, res: Response) => {
+  try {
+    const { refresh_token } = req.body
+
+    if (!refresh_token) {
+      return res.status(400).json({ error: 'refresh_token es requerido' })
+    }
+
+    const { data, error } = await supabase.auth.refreshSession({ refresh_token })
+
+    if (error || !data.session) {
+      return res.status(401).json({ error: error?.message || 'No se pudo renovar la sesión' })
+    }
+
+    res.json({ session: data.session, user: data.user })
+  } catch (error) {
+    console.error('Community Refresh error:', error)
+    res.status(500).json({ error: 'Error al renovar la sesión' })
+  }
+})
+
 router.post('/logout', communityAuthMiddleware, async (req: AuthRequest, res: Response) => {
   try {
     const { error } = await supabase.auth.admin.signOut(req.userId!)

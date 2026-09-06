@@ -22,6 +22,7 @@ import communityCommentsRoutes from './src/routes/community/comments.routes'
 import communityUsersRoutes from './src/routes/community/users.routes'
 import communitySavedRoutes from './src/routes/community/saved.routes'
 import faviconRoutes from './src/routes/community/favicon.routes'
+import communityStatsRoutes from './src/routes/community/stats.routes'
 
 // Scraper routes
 import scraperRoutes from './routes/scraper'
@@ -92,6 +93,7 @@ app.use('/api/community/posts', communityCommentsRoutes)
 app.use('/api/community/users', communityUsersRoutes)
 app.use('/api/community/saved', communityAuthMiddleware, communitySavedRoutes)
 app.use('/api/community/favicon', faviconRoutes)
+app.use('/api/community/stats', communityStatsRoutes)
 
 // Scraper routes (internal use, no auth required for now)
 app.use('/api/scraper', scraperRoutes)

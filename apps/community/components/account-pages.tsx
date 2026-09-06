@@ -8,6 +8,7 @@ import {
   Save, Settings, ShieldCheck, UserRound, MapPin, ExternalLink, Pencil,
   Eye, EyeOff, MessageCircle, Heart, Sparkles, GitBranch, Loader2
 } from 'lucide-react'
+import { saveSession, getToken, fetchCurrentUser } from '../lib/session'
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'
 
@@ -30,6 +31,7 @@ const styles = `
 .account-nav{display:flex;align-items:center;justify-content:space-between;margin-bottom:34px}
 .account-brand{font-weight:800;letter-spacing:-.04em;font-size:20px}
 .account-brand span{color:#00A86B}
+.account-brand .brand-avo{color:#e6edf3}
 .back-link{color:#8b949e;text-decoration:none;font-size:12px;display:flex;align-items:center;gap:7px}
 .back-link:hover{color:#00A86B}
 .account-grid{display:grid;grid-template-columns:220px minmax(0,1fr);gap:32px}
@@ -85,7 +87,9 @@ const styles = `
 .auth-shell>*{min-width:0;box-sizing:border-box}
 .auth-aside{padding:38px;display:flex;flex-direction:column;justify-content:space-between;min-height:510px;background:#10231e;border-right:1px solid #245848}
 .auth-logo{color:#e6edf3;text-decoration:none;font-size:20px;font-weight:800;letter-spacing:-.04em}
-.auth-logo span{color:#00A86B;margin-right:6px}
+.auth-logo .brand-mark{color:#00A86B;margin-right:6px}
+.auth-logo .brand-avo{color:#e6edf3}
+.auth-logo .brand-accent{color:#00A86B}
 .auth-aside-copy{max-width:360px}
 .auth-aside-copy h1{font-size:38px;line-height:1.06;letter-spacing:-.06em;margin:0 0 16px}
 .auth-aside-copy .muted{color:#a6b7b0}
@@ -123,8 +127,8 @@ export function AccountLayout({ children, active }: { children: React.ReactNode;
       <style>{styles}</style>
       <div className="account-wrap">
         <div className="account-nav">
-          <Link href="/" className="back-link"><ArrowLeft size={15} /> Volver a Avocado</Link>
-          <div className="account-brand"><span>&gt;_</span> avocado</div>
+          <Link href="/" className="back-link"><ArrowLeft size={15} /> Volver a AvoTalent</Link>
+          <div className="account-brand"><span className="brand-mark">&gt;_</span> <span className="brand-avo">Avo</span><span className="brand-accent">Talent</span></div>
         </div>
         <div className="account-grid">
           <nav className="account-menu" aria-label="Cuenta">
@@ -146,11 +150,13 @@ export function ProfilePage() {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    const token = localStorage.getItem('avocado_token')
-    if (!token) { window.location.href = '/login'; return }
-    fetch(`${API_URL}/api/community/auth/me`, { headers: { Authorization: `Bearer ${token}` } })
-      .then(r => { if (!r.ok) throw new Error(); return r.json() })
-      .then(d => { setUser(d.user); setLoading(false) })
+    if (!getToken()) { window.location.href = '/login'; return }
+    fetchCurrentUser()
+      .then(u => {
+        if (!u) { window.location.href = '/login'; return }
+        setUser(u)
+        setLoading(false)
+      })
       .catch(() => { window.location.href = '/login' })
   }, [])
 
@@ -211,12 +217,10 @@ export function SettingsPage() {
   const [githubUrl, setGithubUrl] = useState('')
 
   useEffect(() => {
-    const token = localStorage.getItem('avocado_token')
-    if (!token) { window.location.href = '/login'; return }
-    fetch(`${API_URL}/api/community/auth/me`, { headers: { Authorization: `Bearer ${token}` } })
-      .then(r => { if (!r.ok) throw new Error(); return r.json() })
-      .then(d => {
-        const u = d.user
+    if (!getToken()) { window.location.href = '/login'; return }
+    fetchCurrentUser()
+      .then(u => {
+        if (!u) { window.location.href = '/login'; return }
         setUser(u)
         setDisplayName(u.display_name || '')
         setBio(u.bio || '')
@@ -233,7 +237,7 @@ export function SettingsPage() {
     setError('')
     setSaved(false)
     try {
-      const token = localStorage.getItem('avocado_token')
+      const token = getToken()
       const res = await fetch(`${API_URL}/api/community/users/${user.username}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
@@ -335,8 +339,7 @@ export function AuthPage({ mode }: { mode: 'login' | 'signup' }) {
       }
 
       if (data.session?.access_token) {
-        localStorage.setItem('avocado_token', data.session.access_token)
-        localStorage.setItem('avocado_user', JSON.stringify(data.user))
+        saveSession(data.session, data.user)
         router.push('/')
         router.refresh()
       } else if (signup) {
@@ -357,11 +360,11 @@ export function AuthPage({ mode }: { mode: 'login' | 'signup' }) {
       <style>{styles}</style>
       <div className="auth-shell">
         <aside className="auth-aside">
-          <Link href="/" className="auth-logo"><span>&gt;_</span> avocado</Link>
+          <Link href="/" className="auth-logo"><span className="brand-mark">&gt;_</span> <span className="brand-avo">Avo</span><span className="brand-accent">Talent</span></Link>
           <div className="auth-aside-copy">
             <p className="page-kicker">Comunidad de developers</p>
             <h1>{signup ? 'Construye tu siguiente gran idea.' : 'Las mejores conversaciones empiezan aquí.'}</h1>
-            <p className="muted">{signup ? 'Comparte lo que sabes, encuentra colaboradores y crece junto a la comunidad.' : 'Vuelve a tus conversaciones, proyectos y oportunidades en Avocado.'}</p>
+            <p className="muted">{signup ? 'Comparte lo que sabes, encuentra colaboradores y crece junto a la comunidad.' : 'Vuelve a tus conversaciones, proyectos y oportunidades en AvoTalent.'}</p>
           </div>
           <div className="auth-proof">
             <div className="proof-avatars"><span>JD</span><span>ML</span><span>AS</span><span>+2k</span></div>

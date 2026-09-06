@@ -201,7 +201,18 @@ router.get('/:id', async (req: Request, res: Response) => {
       postQuery = postQuery.eq('slug', idOrSlug)
     }
 
-    const { data: post, error } = await postQuery.single()
+    // Run the community-post lookup and the editorial fallback in parallel
+    // instead of sequentially — a slug/id only ever matches one of the two
+    // tables, so awaiting one before starting the other just doubles the
+    // latency of every detail-page load for no benefit.
+    const [{ data: post, error }, { data: editorialPost, error: editorialError }] = await Promise.all([
+      postQuery.single(),
+      supabase
+        .from('content')
+        .select('id, title, html_content, markdown_content, excerpt, image_url, slug, published_at, word_count')
+        .eq('id', idOrSlug)
+        .single(),
+    ])
 
     if (!error && post) {
       return res.json({
@@ -212,13 +223,6 @@ router.get('/:id', async (req: Request, res: Response) => {
         commentsCount: (post as any).comments_count || 0,
       })
     }
-
-    // Fallback to editorial content
-    const { data: editorialPost, error: editorialError } = await supabase
-      .from('content')
-      .select('id, title, html_content, markdown_content, excerpt, image_url, slug, published_at, word_count')
-      .eq('id', idOrSlug)
-      .single()
 
     if (!editorialError && editorialPost) {
       return res.json({

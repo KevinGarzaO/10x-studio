@@ -1,26 +1,36 @@
 'use client'
 
-import { useMemo, useState, useEffect, useCallback } from 'react'
+import { useMemo, useState, useEffect, useCallback, useRef } from 'react'
 import Link from 'next/link'
 import { useRouter, useSearchParams } from 'next/navigation'
 import {
-  Bell, Bookmark, BriefcaseBusiness, ChevronDown, Compass, Flame,
-  Hash, Home, Menu, MessageCircle, MoreHorizontal, PenLine, Plus, Search,
-  Send, Share2, ShieldCheck, Sparkles, Tag, TrendingUp, Trophy, Users, X,
+  Bell, Bookmark, BriefcaseBusiness, Flame,
+  Hash, Menu, MessageCircle, PenLine, Plus, Search,
+  Send, Settings, Share2, ShieldCheck, Sparkles, Tag, TrendingUp, Users, X,
   Zap, ArrowBigUp, LockKeyhole, CheckCircle2, Building, MapPin, Home as HomeIcon, Mail, Clock
 } from 'lucide-react'
+import { companySlug, formatCompanyName } from '../lib/company'
+import { useShell } from '../lib/shell-context'
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'
 
 // Module-level cache to preserve feed state across navigations
 const feedCache = new Map<string, { posts: FeedPost[]; page: number; hasMore: boolean }>()
 
-const navItems = [
-  { label: 'Inicio', icon: Home }, { label: 'Explorar', icon: Compass },
-  { label: 'Empleos', icon: BriefcaseBusiness, count: '12' }, { label: 'Showcase', icon: Trophy },
+// Single source of truth for the 4 feed destinations — used by both the
+// left sidebar nav and the feed tabs, so they always share the same label
+// and icon instead of drifting apart (Inicio/Home vs Tendencias/Flame etc).
+export const tabs = [
+  { label: 'Tendencias', icon: Flame },
+  { label: 'Últimos Envíos', icon: Zap },
+  { label: 'Vacantes & Freelance', icon: BriefcaseBusiness },
+  { label: 'Showcase Projects', icon: Sparkles },
 ]
-const tags = ['javascript', 'react', 'nextjs', 'python', 'ia', 'empleos']
-const tabs = [{ label: 'Tendencias', icon: Flame }, { label: 'Últimos Envíos', icon: Zap }, { label: 'Vacantes & Freelance', icon: BriefcaseBusiness }, { label: 'Showcase Projects', icon: Sparkles }]
+
+// Short, URL-safe keys for the ?tab=/&from= query params — avoids spaces and
+// "&" in the address bar that come from using the display labels directly.
+export const TAB_KEYS: Record<string, string> = { 'Tendencias': 'trending', 'Últimos Envíos': 'latest', 'Vacantes & Freelance': 'jobs', 'Showcase Projects': 'showcase' }
+export const KEY_TABS: Record<string, string> = Object.fromEntries(Object.entries(TAB_KEYS).map(([label, key]) => [key, label]))
 
 interface EditorialPost {
   id: string
@@ -48,7 +58,12 @@ interface EditorialPost {
   location?: string | null
 }
 
-type FeedPost = EditorialPost
+export type FeedPost = EditorialPost
+
+function formatCount(n: number): string {
+  if (n >= 1000) return `${(n / 1000).toFixed(n >= 10000 ? 0 : 1)}k`
+  return String(n)
+}
 
 function formatTime(dateStr: string) {
   if (!dateStr) return ''
@@ -65,17 +80,67 @@ function Avatar({ initials, tone = 'cyan', avatar }: { initials: string; tone?: 
   return avatar ? <img className="avatar avatar-photo" src={avatar} alt="" aria-hidden="true" /> : <div className={`avatar avatar-${tone}`} aria-hidden="true">{initials}</div>
 }
 
-function LeftSidebar({ onPublish, activeTab, setActiveTab }: { onPublish: () => void; activeTab: string; setActiveTab: (v: string) => void }) {
+export function ProfileMenu({ user }: { user: any }) {
+  const [open, setOpen] = useState(false)
+  const menuRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    if (!open) return
+    function onClickOutside(e: MouseEvent) {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) setOpen(false)
+    }
+    document.addEventListener('mousedown', onClickOutside)
+    return () => document.removeEventListener('mousedown', onClickOutside)
+  }, [open])
+
+  if (!user) {
+    return <Link href="/login" className="topbar-profile-link" aria-label="Acceder"><Avatar initials="?" tone="blue" /></Link>
+  }
+
+  const initials = (user.display_name || user.username || 'U').slice(0, 2).toUpperCase()
+
+  return (
+    <div className="profile-menu" ref={menuRef}>
+      <button className="topbar-profile-link" aria-label="Cuenta" aria-expanded={open} onClick={() => setOpen(o => !o)}>
+        <Avatar initials={initials} tone="emerald" avatar={user.photo_url} />
+      </button>
+      {open && (
+        <div className="profile-menu-dropdown" role="menu">
+          <div className="profile-menu-header">
+            <strong>{user.display_name || user.username}</strong>
+            <span>@{user.username}</span>
+          </div>
+          <Link href="/settings" className="profile-menu-item" role="menuitem" onClick={() => setOpen(false)}>
+            <Settings size={15} /> Configuración
+          </Link>
+        </div>
+      )}
+    </div>
+  )
+}
+
+export function LeftSidebar({ onPublish, activeTab, setActiveTab, activeTag, onTagClick }: { onPublish: () => void; activeTab: string; setActiveTab: (v: string) => void; activeTag: string | null; onTagClick: (tag: string) => void }) {
+  const [tags, setTags] = useState<string[]>([])
+
+  useEffect(() => {
+    fetch(`${API_URL}/api/community/stats/tags?limit=6`)
+      .then(r => r.ok ? r.json() : null)
+      .then(d => setTags((d?.tags || []).map((t: { name: string }) => t.name)))
+      .catch(() => {})
+  }, [])
+
   return <aside className="left-sidebar">
     <div className="sidebar-section">
       <p className="eyebrow">Comunidad</p>
       <nav className="nav-list" aria-label="Navegación principal">
-        {navItems.map(({ label, icon: Icon, count }) => { const target = label === 'Inicio' ? 'Tendencias' : label === 'Explorar' ? 'Últimos Envíos' : label === 'Empleos' ? 'Vacantes & Freelance' : 'Showcase Projects'; return <button key={label} className={`nav-item ${activeTab === target ? 'active' : ''}`} onClick={() => setActiveTab(target)}><Icon size={17} /><span>{label}</span>{count && <span className="nav-count">{count}</span>}</button> })}
+        {tabs.map(({ label, icon: Icon }) => <button key={label} className={`nav-item ${activeTab === label && !activeTag ? 'active' : ''}`} onClick={() => setActiveTab(label)}><Icon size={17} /><span>{label}</span></button>)}
       </nav>
     </div>
-    <div className="sidebar-section tags-section"><div className="section-heading"><p className="eyebrow">Tus temas</p><button className="icon-button" aria-label="Editar temas"><MoreHorizontal size={16} /></button></div>{tags.map(tag => <button key={tag} className={`tag-link tag-${tag}`} onClick={() => setActiveTab(tag === 'empleos' ? 'Vacantes & Freelance' : tag === 'react' || tag === 'nextjs' ? 'Últimos Envíos' : 'Tendencias')}><Hash size={14} />{tag}</button>)}<button className="see-all">Ver todos los temas <ChevronDown size={14} /></button></div>
+    {tags.length > 0 && (
+      <div className="sidebar-section tags-section"><div className="section-heading"><p className="eyebrow">Temas en tendencia</p></div>{tags.map(tag => <button key={tag} className={`tag-link ${activeTag === tag ? 'active' : ''}`} aria-pressed={activeTag === tag} onClick={() => onTagClick(tag)}><Hash size={14} />{tag}</button>)}</div>
+    )}
     <div className="sidebar-cta"><div className="cta-icon"><PenLine size={16} /></div><strong>Comparte lo que sabes</strong><p>Tu experiencia puede desbloquear la de alguien más.</p><button className="text-button" onClick={() => window.location.href = '/create'}>Crear publicación <Send size={14} /></button></div>
-    <div className="sidebar-footer">© 2026 Avocado <span>·</span> Reglas <span>·</span> Privacidad</div>
+    <div className="sidebar-footer">© 2026 AvoTalent <span>·</span> Reglas <span>·</span> Privacidad</div>
   </aside>
 }
 
@@ -134,7 +199,7 @@ function parseJobContent(text: string) {
 // Cache for Google Favicon lookups (company → url)
 const faviconCache = new Map<string, string>()
 
-function CompanyAvatar({ company, logoUrl, size = 40 }: { company: string | null; logoUrl?: string | null; size?: number }) {
+export function CompanyAvatar({ company, logoUrl, size = 40 }: { company: string | null; logoUrl?: string | null; size?: number }) {
   const [resolvedLogo, setResolvedLogo] = useState(logoUrl || faviconCache.get(company || '') || null)
   const [logoFailed, setLogoFailed] = useState(false)
   const name = company || 'AV'
@@ -172,9 +237,10 @@ function buildApplyUrl(platform: string | null, sourceUrl: string | null): strin
     return sourceUrl.endsWith('/apply') ? sourceUrl : `${sourceUrl}/apply`
   }
   if (platform === 'workable') {
-    if (sourceUrl.includes('/apply')) return sourceUrl
-    const base = sourceUrl.endsWith('/') ? sourceUrl.slice(0, -1) : sourceUrl
-    return `${base}/apply`
+    // Workable's widget router needs a trailing slash on /apply/ — without
+    // it, the SPA silently falls back to the Overview tab instead of 404ing.
+    const base = sourceUrl.replace(/\/(apply\/?)?$/, '')
+    return `${base}/apply/`
   }
   if (platform === 'greenhouse') {
     return `${sourceUrl}#app`
@@ -182,37 +248,31 @@ function buildApplyUrl(platform: string | null, sourceUrl: string | null): strin
   return sourceUrl
 }
 
-function PostCard({ post, onAuthRequired, activeTab }: { post: FeedPost; onAuthRequired?: () => void; activeTab?: string }) {
+export function PostCard({ post, onAuthRequired, activeTab }: { post: FeedPost; onAuthRequired?: () => void; activeTab?: string }) {
   const router = useRouter(); const [voted, setVoted] = useState(false); const [saved, setSaved] = useState(false)
-  const [user, setUser] = useState<any>(null)
-
-  useEffect(() => {
-    const token = typeof window !== 'undefined' ? localStorage.getItem('avocado_token') : null
-    fetch(`${API_URL}/api/community/auth/me`, { headers: token ? { Authorization: `Bearer ${token}` } : {} })
-      .then(r => r.ok ? r.json() : null)
-      .then(d => setUser(d?.user || null))
-      .catch(() => {})
-  }, [])
+  // Session comes from the shared shell context — every card used to fetch
+  // its own copy, which meant one request per card rendered on the page.
+  const { user } = useShell()
 
   const isJob = post.type === 'job'
   const time = formatTime(post.created_at)
   const image = post.image_url
   const job = isJob ? parseJobContent(post.content || post.original_text || '') : null
-  const company = post.company || job?.company || null
+  const company = formatCompanyName(post.company || job?.company) || null
   const isScraped = post.is_scraper_post
   // Fallback: use source_url if applyUrl not found in content
   const rawApplyUrl = job?.applyUrl || post.source_url || null
   const applyUrl = buildApplyUrl(post.platform ?? null, rawApplyUrl)
 
-  const openPost = (e?: React.MouseEvent<HTMLElement>) => { if (e?.target instanceof HTMLElement && e.target.closest('button, a, input, textarea, select')) return; const isJob = post.type === 'job'; const slug = post.slug || post.id; const basePath = isJob ? (slug.startsWith('/vacantes/') ? slug : `/vacantes/${slug}`) : `/post/${post.id}`; const tabParam = activeTab && activeTab !== 'Tendencias' ? `${basePath.includes('?') ? '&' : '?'}from=${encodeURIComponent(activeTab)}` : ''; router.push(`${basePath}${tabParam}`) }
+  const openPost = (e?: React.MouseEvent<HTMLElement>) => { if (e?.target instanceof HTMLElement && e.target.closest('button, a, input, textarea, select')) return; const isJob = post.type === 'job'; const slug = post.slug || post.id; const basePath = isJob ? (slug.startsWith('/vacantes/') ? slug : `/vacantes/${slug}`) : `/post/${post.id}`; const tabParam = activeTab && activeTab !== 'Tendencias' ? `${basePath.includes('?') ? '&' : '?'}from=${TAB_KEYS[activeTab] || 'trending'}` : ''; router.push(`${basePath}${tabParam}`) }
 
   if (isJob) {
     return <article className={`post-card job-card`} onClick={openPost}>
       <div className="job-line" />
-      <div className="post-top"><div className="author-row">
+      <div className="post-top"><Link href={company ? `/empresas/${companySlug(company)}` : '#'} className="author-row author-link" onClick={e => !company && e.preventDefault()}>
         <CompanyAvatar company={company} logoUrl={post.company_logo} size={40} />
         <div><div className="author-name">{company || 'AvoTalent'}</div><div className="post-meta">{time}</div></div>
-      </div></div>
+      </Link></div>
       <div className="post-type-label" style={{ color: '#10b981' }}>VACANTE</div>
       <h2 style={{ fontSize: 17, marginBottom: 8 }}>{job?.role || post.title}</h2>
       <div className="job-details" style={{ display: 'flex', flexWrap: 'wrap', gap: '6px 14px', margin: '6px 0 10px', fontSize: 13, color: '#8b949e' }}>
@@ -237,9 +297,26 @@ function PostCard({ post, onAuthRequired, activeTab }: { post: FeedPost; onAuthR
     </article>
   }
 
+  // A post only has no real author when it fell back to the CMS "content"
+  // table (the backend marks that with author.id === null) — that's genuine
+  // AvoTalent editorial content. Anything with a real author.id (including
+  // type "editorial" posts made through the community, not the CMS) shows
+  // the actual person who posted it.
+  const hasRealAuthor = !!post.author?.id
+  const authorUsername = post.author?.username || null
+  const authorName = hasRealAuthor ? (post.author?.display_name || authorUsername || 'Anónimo') : 'AvoTalent'
+  const authorInitials = authorName.slice(0, 2).toUpperCase()
+  const authorPhoto = hasRealAuthor ? post.author?.photo_url : null
+  const typeLabel = post.type === 'showcase' ? 'MOSTRAR PROYECTO' : post.type === 'discussion' ? 'POST NORMAL' : 'ARTÍCULO'
+
   return <article className="post-card" onClick={openPost}>
-    <div className="post-top"><div className="author-row"><div className="avatar avatar-cyan" style={{ width: 32, height: 32, borderRadius: '50%', background: '#00A86B', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#0d1117', fontWeight: 800, fontSize: 12 }}>A</div><div><div className="author-name">Avocado Studio <ShieldCheck size={13} className="verified" /></div><div className="post-meta">Staff Avocado <span>·</span> {time}</div></div></div></div>
-    <div className="post-type-label">ARTÍCULO</div><h2>{post.title}</h2>
+    <div className="post-top">
+      <Link href={authorUsername ? `/users/${authorUsername}` : '#'} className="author-row author-link" onClick={e => (!hasRealAuthor || !authorUsername) && e.preventDefault()}>
+        <Avatar initials={authorInitials} tone="cyan" avatar={authorPhoto || undefined} />
+        <div><div className="author-name">{authorName} {!hasRealAuthor && <ShieldCheck size={13} className="verified" />}</div><div className="post-meta">{!hasRealAuthor ? <>Staff AvoTalent <span>·</span> </> : null}{time}</div></div>
+      </Link>
+    </div>
+    <div className="post-type-label">{typeLabel}</div><h2>{post.title}</h2>
     {image && <div style={{ margin: '10px 0', borderRadius: 8, overflow: 'hidden' }}><img src={image} alt="" style={{ width: '100%', height: 200, objectFit: 'cover', display: 'block' }} /></div>}
     <p className="post-excerpt">{(post.content || '').substring(0, 200)}{(post.content || '').length > 200 ? '...' : ''}</p>
     {post.word_count && <div style={{ fontSize: 12, color: '#8b949e', marginTop: 4, display: 'inline-flex', alignItems: 'center', gap: 4 }}><Clock size={12} /> {Math.max(1, Math.round(post.word_count / 200))} min de lectura</div>}
@@ -247,21 +324,37 @@ function PostCard({ post, onAuthRequired, activeTab }: { post: FeedPost; onAuthR
   </article>
 }
 
-function RightSidebar({ onUnlock }: { onUnlock: () => void }) {
+export function RightSidebar({ onUnlock, activeTab }: { onUnlock: () => void; activeTab: string }) {
   const [trending, setTrending] = useState<FeedPost[]>([])
   const [featured, setFeatured] = useState<FeedPost[]>([])
+  const [stats, setStats] = useState<{ members: number; posts: number } | null>(null)
+
+  useEffect(() => {
+    fetch(`${API_URL}/api/community/stats`)
+      .then(r => r.ok ? r.json() : null)
+      .then(setStats)
+      .catch(() => {})
+  }, [])
+
+  // The sidebar widgets stay constant across tabs — the only tab-driven
+  // change is hiding "Oportunidades destacadas" while already on the Jobs
+  // tab, to avoid showing the same jobs twice.
+  const showFeatured = activeTab !== 'Vacantes & Freelance'
 
   useEffect(() => {
     fetch(`${API_URL}/api/community/posts/editorial?page=1&limit=3`)
       .then(r => r.ok ? r.json() : null)
       .then(d => setTrending(d?.posts || []))
       .catch(() => {})
+  }, [])
 
+  useEffect(() => {
+    if (!showFeatured) return
     fetch(`${API_URL}/api/community/posts?page=1&limit=3&type=job`)
       .then(r => r.ok ? r.json() : null)
       .then(d => setFeatured(d?.posts || []))
       .catch(() => {})
-  }, [])
+  }, [showFeatured])
 
   const parseMiniJob = (content: string) => {
     const decoded = unescapeHtml(content)
@@ -285,79 +378,90 @@ function RightSidebar({ onUnlock }: { onUnlock: () => void }) {
       )}
     </section>
 
-    <section className="widget opportunities">
-      <div className="widget-title"><span>Oportunidades destacadas</span><BriefcaseBusiness size={16} /></div>
-      {featured.length > 0 ? featured.map(post => {
-        const job = parseMiniJob(post.content || post.original_text || '')
-        const company = post.company || job?.company || null
-        return (
-          <Link href={post.slug?.startsWith('/vacantes/') ? post.slug : `/vacantes/${post.slug || post.id}`} className="mini-job" key={post.id}>
-            {!post.is_scraper_post && <div className="mini-job-top"><span className="verified-pill"><CheckCircle2 size={12} /> Verificada</span></div>}
-            <strong>{post.title}</strong>
-            <p>{company || post.source_name || 'Comunidad'}</p>
-            <div className="mini-job-bottom">
-              {job.salary && <span>{job.salary}</span>}
-              <span>{job.modality || 'Remoto'}</span>
-            </div>
-          </Link>
-        )
-      }) : (
-        <p style={{ color: '#8b949e', fontSize: 13, padding: '8px 0' }}>Próximamente verás aquí las mejores oportunidades</p>
-      )}
-    </section>
+    {showFeatured && (
+      <section className="widget opportunities">
+        <div className="widget-title"><span>Oportunidades destacadas</span><BriefcaseBusiness size={16} /></div>
+        {featured.length > 0 ? featured.map(post => {
+          const job = parseMiniJob(post.content || post.original_text || '')
+          const company = formatCompanyName(post.company || job?.company) || null
+          return (
+            <Link href={post.slug?.startsWith('/vacantes/') ? post.slug : `/vacantes/${post.slug || post.id}`} className="mini-job" key={post.id}>
+              <div className="mini-job-row">
+                <CompanyAvatar company={company} logoUrl={post.company_logo} size={34} />
+                <div className="mini-job-info">
+                  {!post.is_scraper_post && <span className="verified-pill"><CheckCircle2 size={11} /> Verificada</span>}
+                  <strong>{post.title}</strong>
+                  <div className="mini-job-meta">
+                    <span className="mini-job-company">{company || post.source_name || 'Comunidad'}</span>
+                    <span className="mini-job-dot">·</span>
+                    <span>{job.modality || 'Remoto'}</span>
+                    {job.salary && <span className="mini-job-salary">{job.salary}</span>}
+                  </div>
+                </div>
+              </div>
+            </Link>
+          )
+        }) : (
+          <p style={{ color: '#8b949e', fontSize: 13, padding: '8px 0' }}>Próximamente verás aquí las mejores oportunidades</p>
+        )}
+      </section>
+    )}
 
     <section className="widget community-widget">
       <div className="widget-title"><span>La comunidad</span><Users size={16} /></div>
       <div className="community-stats">
-        <div><strong>18.4k</strong><small>miembros</small></div>
-        <div><strong>2.1k</strong><small>publicaciones</small></div>
-        <div><strong>94%</strong><small>responden</small></div>
+        <div><strong>{stats ? formatCount(stats.members) : '—'}</strong><small>miembros</small></div>
+        <div><strong>{stats ? formatCount(stats.posts) : '—'}</strong><small>publicaciones</small></div>
       </div>
-      <div className="online-line"><span className="online-dot" /> 342 developers online</div>
     </section>
   </aside>
 }
 
-function PublishModal({ onClose }: { onClose: () => void }) {
+export function PublishModal({ onClose }: { onClose: () => void }) {
   const [mode, setMode] = useState('Post Normal'); const [preview, setPreview] = useState(false)
   return <div className="modal-backdrop" role="presentation" onMouseDown={e => e.target === e.currentTarget && onClose()}><section className="publish-modal" role="dialog" aria-modal="true" aria-labelledby="publish-title"><div className="modal-header"><div><p className="eyebrow">Nueva publicación</p><h2 id="publish-title">¿Qué quieres compartir?</h2></div><button className="icon-button" onClick={onClose} aria-label="Cerrar"><X size={20} /></button></div><div className="publish-tabs">{['Post Normal', 'Publicar Vacante / Proyecto', 'Mostrar Proyecto'].map(item => <button key={item} className={mode === item ? 'selected' : ''} onClick={() => setMode(item)}>{item}</button>)}</div><div className="editor-toolbar"><span className="mono-label">MARKDOWN</span><button className={preview ? 'tool-active' : ''} onClick={() => setPreview(!preview)}>{preview ? 'Editar' : 'Vista previa'}</button></div>{preview ? <div className="preview-pane"><p className="eyebrow">Vista previa</p><h3>Comparte algo que valga la pena leer</h3><p>Tu publicación aparecerá aquí con formato Markdown.</p></div> : <textarea className="editor" placeholder={mode === 'Publicar Vacante / Proyecto' ? 'Describe el proyecto, stack, presupuesto y modalidad...' : 'Escribe algo que la comunidad quiera conversar...'} aria-label="Contenido de la publicación" /> }<div className="modal-bottom"><div className="stack-picker"><Tag size={15} /><span>Añadir tags</span><span className="stack-badge">React</span><span className="stack-badge">+</span></div><button className="publish-button" onClick={onClose}>Publicar <Send size={15} /></button></div></section></div>
 }
 
-function AuthModal({ onClose }: { onClose: () => void }) {
+export function AuthModal({ onClose }: { onClose: () => void }) {
   const router = useRouter()
   return <div className="modal-backdrop" role="presentation" onMouseDown={e => e.target === e.currentTarget && onClose()}><section className="auth-modal" role="dialog" aria-modal="true" aria-labelledby="auth-title"><button className="modal-close icon-button" onClick={onClose} aria-label="Cerrar"><X size={19} /></button><div className="lock-orb"><LockKeyhole size={20} /></div><p className="eyebrow">Contacto directo</p><h2 id="auth-title">Desbloquea esta oportunidad</h2><p>Regístrate para acceder a los datos de contacto y unirte a la conversación.</p><button className="oauth-button" style={{ width: '100%', marginBottom: 10, background: '#10b981', color: '#0d1117', border: 'none', padding: '12px 16px', borderRadius: 8, fontWeight: 700, fontSize: 14, cursor: 'pointer' }} onClick={() => { onClose(); router.push('/signup') }}>Crear cuenta gratis</button><button className="oauth-button" style={{ width: '100%', background: 'transparent', color: '#c9d1d9', border: '1px solid #30363d', padding: '12px 16px', borderRadius: 8, fontSize: 14, cursor: 'pointer' }} onClick={() => { onClose(); router.push('/login') }}>Iniciar sesión</button><small style={{ display: 'block', textAlign: 'center', marginTop: 12, color: '#8b949e', fontSize: 11 }}>Al continuar aceptas nuestras reglas de comunidad.</small></section></div>
 }
 
-export function CommunityHub() {
+// The feed's content column — rendered as {children} inside the shared
+// CommunityShell (topbar + sidebars) so navigating to/from a post, vacancy,
+// or profile only swaps this column instead of remounting the whole page.
+export function Feed() {
   const router = useRouter()
   const searchParams = useSearchParams()
-  const tabFromUrl = searchParams.get('tab')
-  const validTabs = ['Tendencias', 'Últimos Envíos', 'Vacantes & Freelance', 'Showcase Projects']
-  const initialTab = validTabs.includes(tabFromUrl || '') ? tabFromUrl! : 'Tendencias'
+  const tabKeyFromUrl = searchParams.get('tab')
+  const initialTab = (tabKeyFromUrl && KEY_TABS[tabKeyFromUrl]) || 'Tendencias'
+  const { search, activeTag, setActiveTag, requestAuth } = useShell()
 
   const [activeTab, setActiveTabState] = useState(initialTab)
-  const [search, setSearch] = useState('')
-  const [publishOpen, setPublishOpen] = useState(false)
-  const [authOpen, setAuthOpen] = useState(false)
-  const [mobileMenu, setMobileMenu] = useState(false)
+  const todayLabel = useMemo(() => {
+    const label = new Date().toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long' })
+    return label.charAt(0).toUpperCase() + label.slice(1)
+  }, [])
   const cached = feedCache.get(initialTab)
   const [posts, setPosts] = useState<FeedPost[]>(cached?.posts || [])
   const [page, setPage] = useState(cached?.page || 1)
   const [loading, setLoading] = useState(false)
   const [hasMore, setHasMore] = useState(cached?.hasMore ?? true)
-  const didInitRef = useState(false)
+
+  // Keep activeTab in sync with the URL through Next's router (not raw
+  // history.pushState) so the browser's back/forward buttons work and the
+  // encoding matches the rest of the app (encodeURIComponent, not
+  // URLSearchParams' "+"-for-space form-encoding).
+  useEffect(() => {
+    const next = (tabKeyFromUrl && KEY_TABS[tabKeyFromUrl]) || 'Tendencias'
+    setActiveTabState(prev => (prev === next ? prev : next))
+  }, [tabKeyFromUrl])
 
   const setActiveTab = useCallback((tab: string) => {
-    setActiveTabState(tab)
-    const params = new URLSearchParams(window.location.search)
-    if (tab === 'Tendencias') {
-      params.delete('tab')
-    } else {
-      params.set('tab', tab)
-    }
-    const newUrl = params.toString() ? `?${params.toString()}` : '/'
-    window.history.pushState({}, '', newUrl)
-  }, [])
+    const key = TAB_KEYS[tab]
+    const query = !key || tab === 'Tendencias' ? '' : `?tab=${key}`
+    router.push(`/${query}`, { scroll: false })
+  }, [router])
 
   const fetchPosts = async (pageNum: number, tab: string, append = false) => {
     setLoading(true)
@@ -392,8 +496,18 @@ export function CommunityHub() {
   }
 
   useEffect(() => {
-    // If we already have cached posts for this tab, don't refetch page 1
-    if (feedCache.has(activeTab)) return
+    // Switching tabs must always update what's on screen — either from
+    // cache, or by fetching. Previously this bailed out on a cache hit
+    // without ever calling setPosts, so the feed kept showing whatever the
+    // last-rendered tab had.
+    const tabCache = feedCache.get(activeTab)
+    if (tabCache) {
+      setPosts(tabCache.posts)
+      setPage(tabCache.page)
+      setHasMore(tabCache.hasMore)
+      return
+    }
+    setPosts([])
     setPage(1)
     fetchPosts(1, activeTab)
   }, [activeTab])
@@ -412,14 +526,26 @@ export function CommunityHub() {
   }, [page, loading, hasMore, activeTab])
 
   const filteredPosts = useMemo(() => {
-    const searched = posts.filter(p => {
-      const searchStr = `${(p as any).title || ''} ${(p as any).content || ''}`.toLowerCase()
-      return searchStr.includes(search.toLowerCase())
+    return posts.filter(p => {
+      const haystack = `${(p as any).title || ''} ${(p as any).content || ''} ${(p.tags || []).join(' ')}`.toLowerCase()
+      if (!haystack.includes(search.toLowerCase())) return false
+      if (activeTag && !haystack.includes(activeTag.toLowerCase())) return false
+      return true
     })
+  }, [search, posts, activeTag])
 
-    // Backend already interleaves by company for job feeds
-    return searched
-  }, [search, posts])
-
-  return <div className="app-shell"><header className="topbar"><button className="mobile-menu-button icon-button" onClick={() => setMobileMenu(!mobileMenu)} aria-label="Abrir menú"><Menu size={20} /></button><div className="brand"><span className="brand-mark">&gt;_</span><span>a<span className="brand-accent">vocado</span></span></div><div className="search-wrap"><Search size={17} /><input value={search} onChange={e => setSearch(e.target.value)} placeholder="Buscar discusiones, tags, personas..." aria-label="Buscar" /><kbd>⌘ K</kbd></div><div className="top-actions"><button className="icon-button notification" aria-label="Notificaciones"><Bell size={18} /><span /></button><button className="publish-button top-publish" onClick={() => window.location.href = '/create'}><Plus size={16} /> Publicar</button><Link href="/login" className="topbar-profile-link" aria-label="Acceder"><Avatar initials="?" tone="blue" /></Link></div></header><div className={`mobile-drawer ${mobileMenu ? 'open' : ''}`}><div className="drawer-head"><strong>Menú</strong><button className="icon-button" onClick={() => setMobileMenu(false)} aria-label="Cerrar menú"><X size={18} /></button></div><LeftSidebar onPublish={() => setPublishOpen(true)} activeTab={activeTab} setActiveTab={setActiveTab} /></div><div className="layout"><LeftSidebar onPublish={() => setPublishOpen(true)} activeTab={activeTab} setActiveTab={setActiveTab} /><main className="feed"><div className="feed-heading"><div><p className="eyebrow">Viernes, 31 de agosto</p><h1>Tu feed <span className="live-dot" /></h1></div><button className="filter-button">Para ti <ChevronDown size={15} /></button></div><div className="feed-tabs" role="tablist">{tabs.map(({ label, icon: Icon }) => <button key={label} role="tab" aria-selected={activeTab === label} className={activeTab === label ? 'active' : ''} onClick={() => setActiveTab(label)}><Icon size={15} />{label}</button>)}</div><div className="post-list">{filteredPosts.map(post => <PostCard key={post.id} post={post} onAuthRequired={() => setAuthOpen(true)} activeTab={activeTab} />)}</div>{loading && <div style={{ textAlign: 'center', padding: 20, color: '#8b949e' }}><Sparkles size={16} className="spin" /> Cargando más posts...</div>}{!loading && filteredPosts.length === 0 && <div style={{ textAlign: 'center', padding: 40, color: '#8b949e' }}><PenLine size={32} style={{ marginBottom: 12, opacity: 0.5 }} /><p>{activeTab === 'Vacantes & Freelance' ? 'No hay vacantes todavía' : activeTab === 'Showcase Projects' ? 'No hay proyectos todavía' : 'No hay posts disponibles'}</p></div>}{!hasMore && filteredPosts.length > 0 && <div style={{ textAlign: 'center', padding: 20, color: '#8b949e' }}>No hay más posts</div>}</main><RightSidebar onUnlock={() => setAuthOpen(true)} /></div>{publishOpen && <PublishModal onClose={() => setPublishOpen(false)} />}{authOpen && <AuthModal onClose={() => setAuthOpen(false)} />}</div>
+  return <main className="feed">
+    <div className="feed-heading">
+      <div>
+        <p className="eyebrow">{todayLabel}</p>
+        <h1>Tu feed <span className="live-dot" /></h1>
+        {activeTag && <span className="active-filter-chip"><Hash size={12} />{activeTag}<button onClick={() => setActiveTag(null)} aria-label="Quitar filtro de tema"><X size={12} /></button></span>}
+      </div>
+    </div>
+    <div className="feed-tabs" role="tablist">{tabs.map(({ label, icon: Icon }) => <button key={label} role="tab" aria-selected={activeTab === label} className={activeTab === label ? 'active' : ''} onClick={() => setActiveTab(label)}><Icon size={15} />{label}</button>)}</div>
+    <div className="post-list">{filteredPosts.map(post => <PostCard key={post.id} post={post} onAuthRequired={requestAuth} activeTab={activeTab} />)}</div>
+    {loading && <div style={{ textAlign: 'center', padding: 20, color: '#8b949e' }}><Sparkles size={16} className="spin" /> Cargando más posts...</div>}
+    {!loading && filteredPosts.length === 0 && <div style={{ textAlign: 'center', padding: 40, color: '#8b949e' }}><PenLine size={32} style={{ marginBottom: 12, opacity: 0.5 }} /><p>{activeTab === 'Vacantes & Freelance' ? 'No hay vacantes todavía' : activeTab === 'Showcase Projects' ? 'No hay proyectos todavía' : 'No hay posts disponibles'}</p></div>}
+    {!hasMore && filteredPosts.length > 0 && <div style={{ textAlign: 'center', padding: 20, color: '#8b949e' }}>No hay más posts</div>}
+  </main>
 }

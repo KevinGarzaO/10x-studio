@@ -1,12 +1,20 @@
 'use client'
 
 import Link from 'next/link'
-import { useParams, useSearchParams } from 'next/navigation'
+import { useParams, useRouter } from 'next/navigation'
 import { useState, useEffect, useRef } from 'react'
 import { ArrowLeft, ArrowBigUp, Bookmark, MessageCircle, Share2, Send, CheckCircle2, LockKeyhole, MapPin, Home as HomeIcon } from 'lucide-react'
 import { marked } from 'marked'
+import { useShell } from '../../../../lib/shell-context'
+import { companySlug, formatCompanyName } from '../../../../lib/company'
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'
+
+// Only these ATS providers are known to allow being embedded in an iframe.
+// Everything else (e.g. Platzi) sends X-Frame-Options/CSP headers that block
+// embedding silently — the iframe just spins forever with no error, so for
+// those we open the apply link in a new tab instead.
+const IFRAME_EMBEDDABLE_PLATFORMS = new Set(['greenhouse', 'lever', 'workable'])
 
 function DetailAvatar({ company, logoUrl }: { company: string; logoUrl?: string | null }) {
   const [logoFailed, setLogoFailed] = useState(false)
@@ -117,9 +125,10 @@ function buildApplyUrl(platform: string | null, sourceUrl: string | null): strin
     return sourceUrl.endsWith('/apply') ? sourceUrl : `${sourceUrl}/apply`
   }
   if (platform === 'workable') {
-    if (sourceUrl.includes('/apply')) return sourceUrl
-    const base = sourceUrl.endsWith('/') ? sourceUrl.slice(0, -1) : sourceUrl
-    return `${base}/apply`
+    // Workable's widget router needs a trailing slash on /apply/ — without
+    // it, the SPA silently falls back to the Overview tab instead of 404ing.
+    const base = sourceUrl.replace(/\/(apply\/?)?$/, '')
+    return `${base}/apply/`
   }
   if (platform === 'greenhouse') {
     return `${sourceUrl}#app`
@@ -129,9 +138,11 @@ function buildApplyUrl(platform: string | null, sourceUrl: string | null): strin
 
 export default function VacancyPage() {
   const { slug } = useParams<{ slug: string }>()
-  const searchParams = useSearchParams()
-  const backTab = searchParams.get('from') || ''
-  const backHref = backTab ? `/?tab=${encodeURIComponent(backTab)}` : '/'
+  const router = useRouter()
+  const { user, requestAuth } = useShell()
+  // router.back() returns to whatever page the user actually came from
+  // (feed, another post, a search) instead of a fixed guess at the tab.
+  const goBack = () => router.back()
   const [post, setPost] = useState<PostData | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -139,8 +150,6 @@ export default function VacancyPage() {
   const [saved, setSaved] = useState(false)
   const [reply, setReply] = useState('')
   const [sent, setSent] = useState(false)
-  const [user, setUser] = useState<any>(null)
-  const [authOpen, setAuthOpen] = useState(false)
   const [redirecting, setRedirecting] = useState(false)
   const [fullContent, setFullContent] = useState<string | null>(null)
   const [applyOpen, setApplyOpen] = useState(false)
@@ -192,14 +201,6 @@ export default function VacancyPage() {
       .catch(() => { setError('Publicación no encontrada'); setLoading(false) })
   }, [slug])
 
-  useEffect(() => {
-    const token = localStorage.getItem('avocado_token')
-    fetch(`${API_URL}/api/community/auth/me`, { headers: token ? { Authorization: `Bearer ${token}` } : {} })
-      .then(r => r.ok ? r.json() : null)
-      .then(d => setUser(d?.user || null))
-      .catch(() => {})
-  }, [])
-
   function submitReply() { if (!reply.trim()) return; setSent(true); setReply('') }
 
   async function fetchAtsContent(url: string) {
@@ -242,34 +243,23 @@ export default function VacancyPage() {
 
   if (loading) {
     return (
-      <main className="post-detail-page">
-        <div className="post-detail-layout">
-          <aside className="detail-rail">
-            <Link href={backHref} className="back-link"><ArrowLeft size={16} /> Volver</Link>
-          </aside>
-          <div className="post-detail-wrap" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '60vh' }}>
-            <p style={{ color: '#8b949e' }}>Cargando vacante...</p>
-          </div>
+      <div className="post-detail-wrap">
+        <button onClick={goBack} className="back-link"><ArrowLeft size={16} /> Volver</button>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '50vh' }}>
+          <p style={{ color: '#8b949e' }}>Cargando vacante...</p>
         </div>
-      </main>
+      </div>
     )
   }
 
   if (error || !post) {
     return (
-      <main className="post-detail-page">
-        <div className="post-detail-layout">
-          <aside className="detail-rail">
-            <Link href={backHref} className="back-link"><ArrowLeft size={16} /> Volver</Link>
-          </aside>
-          <div className="post-detail-wrap" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '60vh' }}>
-            <div style={{ textAlign: 'center' }}>
-              <p style={{ color: '#8b949e', marginBottom: 12 }}>Vacante no encontrada</p>
-              <Link href={backHref} style={{ color: '#3b82f6' }}>Volver al feed</Link>
-            </div>
-          </div>
+      <div className="post-detail-wrap">
+        <button onClick={goBack} className="back-link"><ArrowLeft size={16} /> Volver</button>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '50vh' }}>
+          <p style={{ color: '#8b949e' }}>Vacante no encontrada</p>
         </div>
-      </main>
+      </div>
     )
   }
 
@@ -279,22 +269,32 @@ export default function VacancyPage() {
   const meta = parseJobMetadata(rawContent)
   const time = formatTime(post.created_at)
   const isScraped = post.is_scraper_post
-  const companyName = post.company || meta.company || 'Comunidad'
+  const companyName = formatCompanyName(post.company || meta.company) || 'Comunidad'
   const applyUrl = buildApplyUrl(post.platform ?? null, post.source_url ?? null)
+  const canEmbedApply = !!post.platform && IFRAME_EMBEDDABLE_PLATFORMS.has(post.platform)
+
+  function handleApplyClick() {
+    if (!applyUrl) return
+    if (canEmbedApply) {
+      setApplyOpen(true)
+    } else {
+      window.open(applyUrl, '_blank', 'noopener,noreferrer')
+    }
+  }
 
   return (
-    <main className="post-detail-page">
-      <div className="post-detail-layout">
-        <aside className="detail-rail">
-          <Link href={backHref} className="back-link"><ArrowLeft size={16} /> Volver</Link>
-          <button className="detail-rail-action" onClick={() => setVotes(votes + 1)} aria-label="Votar"><ArrowBigUp size={20} /><span>{votes}</span></button>
-          <a href="#conversation" className="detail-rail-action" aria-label="Ir a conversación"><MessageCircle size={20} /><span>{post.commentsCount || 0}</span></a>
-          <button className={`detail-rail-action ${saved ? 'is-active' : ''}`} onClick={() => setSaved(!saved)} aria-label="Guardar"><Bookmark size={20} /></button>
-          <button className="detail-rail-action" onClick={() => navigator.clipboard?.writeText(window.location.href)} aria-label="Compartir"><Share2 size={16} /></button>
-        </aside>
-
-        <div className="post-detail-wrap">
-          <article className="post-detail-card detail-job">
+    <>
+      <div className="post-detail-wrap">
+        <div className="detail-toolbar">
+          <button onClick={goBack} className="back-link"><ArrowLeft size={16} /> Volver</button>
+          <div className="detail-toolbar-actions">
+            <button className="detail-rail-action" onClick={() => setVotes(votes + 1)} aria-label="Votar"><ArrowBigUp size={18} /><span>{votes}</span></button>
+            <a href="#conversation" className="detail-rail-action" aria-label="Ir a conversación"><MessageCircle size={18} /><span>{post.commentsCount || 0}</span></a>
+            <button className={`detail-rail-action ${saved ? 'is-active' : ''}`} onClick={() => setSaved(!saved)} aria-label="Guardar"><Bookmark size={18} /></button>
+            <button className="detail-rail-action" onClick={() => navigator.clipboard?.writeText(window.location.href)} aria-label="Compartir"><Share2 size={18} /></button>
+          </div>
+        </div>
+        <article className="post-detail-card detail-job">
             <div className="detail-context">
               <span className="detail-kicker">VACANTE</span>
               {!isScraped && <>
@@ -305,16 +305,18 @@ export default function VacancyPage() {
             </div>
 
             <header className="detail-author">
-              <DetailAvatar company={companyName} logoUrl={post.company_logo} />
-              <div className="author-info">
-                <div className="author-line">
-                  <strong>{companyName}</strong>
-                  {!isScraped && <span className="verified-pill"><CheckCircle2 size={12} /> Verificada</span>}
+              <Link href={`/empresas/${companySlug(companyName)}`} style={{ display: 'flex', alignItems: 'center', gap: 12, textDecoration: 'none', color: 'inherit' }}>
+                <DetailAvatar company={companyName} logoUrl={post.company_logo} />
+                <div className="author-info">
+                  <div className="author-line">
+                    <strong>{companyName}</strong>
+                    {!isScraped && <span className="verified-pill"><CheckCircle2 size={12} /> Verificada</span>}
+                  </div>
+                  <div className="detail-meta">
+                    <span>{time}</span>
+                  </div>
                 </div>
-                <div className="detail-meta">
-                  <span>{time}</span>
-                </div>
-              </div>
+              </Link>
             </header>
 
             <h1>{post.title}</h1>
@@ -345,7 +347,7 @@ export default function VacancyPage() {
 
             {applyUrl && user && (
               <button
-                onClick={() => setApplyOpen(true)}
+                onClick={handleApplyClick}
                 style={{ marginTop: 20, padding: '12px 24px', background: '#10b981', color: '#0d1117', border: 'none', borderRadius: 8, fontWeight: 700, fontSize: 15, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 8 }}
               >
                 Postularse ahora
@@ -358,7 +360,7 @@ export default function VacancyPage() {
                 <h3 style={{ color: '#c9d1d9', margin: '0 0 8px', fontSize: 16 }}>¿Interesado en esta vacante?</h3>
                 <p style={{ color: '#8b949e', margin: '0 0 16px', fontSize: 14 }}>Regístrate gratis para acceder al email, teléfono, WhatsApp y enlace de aplicación.</p>
                 <button
-                  onClick={() => setAuthOpen(true)}
+                  onClick={requestAuth}
                   style={{ padding: '10px 24px', background: '#10b981', color: '#0d1117', border: 'none', borderRadius: 8, fontWeight: 700, fontSize: 14, cursor: 'pointer' }}
                 >
                   Crear cuenta gratis
@@ -424,22 +426,7 @@ export default function VacancyPage() {
               <p style={{ color: '#8b949e', fontSize: 14, textAlign: 'center', padding: '24px 0' }}>Sé el primero en comentar</p>
             )}
           </section>
-        </div>
       </div>
-
-      {authOpen && (
-        <div className="modal-backdrop" role="presentation" onMouseDown={e => e.target === e.currentTarget && setAuthOpen(false)}>
-          <section className="auth-modal" role="dialog" aria-modal="true">
-            <div style={{ padding: 32, textAlign: 'center' }}>
-              <LockKeyhole size={24} style={{ color: '#10b981', marginBottom: 12 }} />
-              <h2 style={{ color: '#c9d1d9', fontSize: 20, marginBottom: 8 }}>Desbloquea esta oportunidad</h2>
-              <p style={{ color: '#8b949e', marginBottom: 20 }}>Regístrate para acceder a los datos de contacto.</p>
-              <Link href="/signup" style={{ display: 'inline-block', padding: '10px 20px', background: '#10b981', color: '#0d1117', borderRadius: 8, fontWeight: 700, fontSize: 14, textDecoration: 'none', marginRight: 10 }}>Crear cuenta</Link>
-              <Link href="/login" style={{ display: 'inline-block', padding: '10px 20px', background: 'transparent', color: '#c9d1d9', border: '1px solid #30363d', borderRadius: 8, fontSize: 14, textDecoration: 'none' }}>Iniciar sesión</Link>
-            </div>
-          </section>
-        </div>
-      )}
 
       {applyOpen && applyUrl && (
         <div
@@ -480,6 +467,6 @@ export default function VacancyPage() {
           )}
         </div>
       )}
-    </main>
+    </>
   )
 }
