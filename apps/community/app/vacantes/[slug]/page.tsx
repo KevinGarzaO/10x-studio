@@ -132,7 +132,8 @@ export default function VacancyPage() {
   }, [slug])
 
   useEffect(() => {
-    fetch(`${API_URL}/api/community/auth/me`, { credentials: 'include' })
+    const token = localStorage.getItem('avocado_token')
+    fetch(`${API_URL}/api/community/auth/me`, { headers: token ? { Authorization: `Bearer ${token}` } : {} })
       .then(r => r.ok ? r.json() : null)
       .then(d => setUser(d?.user || null))
       .catch(() => {})
@@ -321,7 +322,8 @@ export default function VacancyPage() {
               <LockKeyhole size={24} style={{ color: '#10b981', marginBottom: 12 }} />
               <h2 style={{ color: '#c9d1d9', fontSize: 20, marginBottom: 8 }}>Desbloquea esta oportunidad</h2>
               <p style={{ color: '#8b949e', marginBottom: 20 }}>Regístrate para acceder a los datos de contacto.</p>
-              <button onClick={() => setAuthOpen(false)} style={{ padding: '8px 16px', background: '#21262d', color: '#c9d1d9', border: 'none', borderRadius: 6, cursor: 'pointer' }}>Cerrar</button>
+              <Link href="/signup" style={{ display: 'inline-block', padding: '10px 20px', background: '#10b981', color: '#0d1117', borderRadius: 8, fontWeight: 700, fontSize: 14, textDecoration: 'none', marginRight: 10 }}>Crear cuenta</Link>
+              <Link href="/login" style={{ display: 'inline-block', padding: '10px 20px', background: 'transparent', color: '#c9d1d9', border: '1px solid #30363d', borderRadius: 8, fontSize: 14, textDecoration: 'none' }}>Iniciar sesión</Link>
             </div>
           </section>
         </div>
