@@ -76,7 +76,6 @@ router.get('/', async (req: Request, res: Response) => {
     let query = supabase
       .from('community_posts')
       .select('*, author:users(id, username, display_name, photo_url), community_post_tags(tag:community_tags(name))', { count: 'exact' })
-      .range(from, to)
 
     // Order: nativas first (is_scraper_post=false), then by votes, then by date
     query = query.order('is_scraper_post', { ascending: true })
@@ -88,11 +87,9 @@ router.get('/', async (req: Request, res: Response) => {
       query = query.or(`title.ilike.%${search}%,content.ilike.%${search}%`)
     }
 
-    // For job posts, fetch extra to interleave by company on the backend
+    // For job posts, fetch ALL to interleave by company
     const isJobFeed = type === 'job'
-    if (isJobFeed) {
-      query = query.range(from, from + limit * 5 - 1)
-    } else {
+    if (!isJobFeed) {
       query = query.range(from, to)
     }
 
@@ -127,6 +124,12 @@ router.get('/', async (req: Request, res: Response) => {
         }
       }
 
+      // Shuffle company order for variety
+      for (let i = companyOrder.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [companyOrder[i], companyOrder[j]] = [companyOrder[j], companyOrder[i]]
+      }
+
       const interleaved: typeof mapped = []
       const queues = companyOrder.map(c => ({ company: c, queue: companyQueues.get(c)! }))
       while (queues.some(q => q.queue.length > 0)) {
@@ -149,9 +152,9 @@ router.get('/', async (req: Request, res: Response) => {
           }
         }
         while (otherIdx < otherPosts.length) result.push(otherPosts[otherIdx++])
-        mapped = result.slice(0, limit)
+        mapped = result.slice(from, from + limit)
       } else {
-        mapped = interleaved.slice(0, limit)
+        mapped = interleaved.slice(from, from + limit)
       }
     }
 
