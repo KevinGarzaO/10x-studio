@@ -1,6 +1,7 @@
 {
   "name": "avocado-studio",
   "private": true,
+  "packageManager": "pnpm@9.3.0",
   "scripts": {
     "dev": "concurrently \"pnpm --filter avocado dev\" \"pnpm --filter community dev\" \"pnpm --filter backend dev\"",
     "dev:avocado": "pnpm --filter avocado dev",
