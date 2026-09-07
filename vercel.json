@@ -1,6 +1,6 @@
 {
-  "buildCommand": "pnpm --filter community build",
+  "buildCommand": "npx pnpm@9.3.0 --filter community build",
   "outputDirectory": "apps/community/.next",
   "framework": "nextjs",
-  "installCommand": "pnpm install"
+  "installCommand": "npx pnpm@9.3.0 install"
 }
