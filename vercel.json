@@ -2,6 +2,5 @@
   "buildCommand": "pnpm --filter community build",
   "outputDirectory": "apps/community/.next",
   "framework": "nextjs",
-  "installCommand": "pnpm install",
-  "rootDirectory": "apps/community"
+  "installCommand": "pnpm install"
 }
