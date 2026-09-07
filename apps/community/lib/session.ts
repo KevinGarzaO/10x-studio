@@ -11,6 +11,28 @@ export function saveSession(session: Session, user: unknown) {
   localStorage.setItem('avocado_user', JSON.stringify(user))
 }
 
+// Supabase's own confirmation link redirects the browser to
+// `emailRedirectTo` (here, `/onboarding`) with the fresh session appended as
+// a URL hash fragment (`#access_token=...&refresh_token=...&type=signup`) —
+// that's server-side redirect logic we don't control, so the page it lands
+// on has to pick the tokens up itself. Returns true if a session was found
+// and saved, and strips the fragment from the address bar either way.
+export function captureSessionFromUrl(): boolean {
+  if (typeof window === 'undefined') return false
+  const hash = window.location.hash.startsWith('#') ? window.location.hash.slice(1) : ''
+  if (!hash) return false
+
+  const params = new URLSearchParams(hash)
+  const access_token = params.get('access_token')
+  const refresh_token = params.get('refresh_token')
+
+  window.history.replaceState(null, '', window.location.pathname + window.location.search)
+
+  if (!access_token || !refresh_token) return false
+  saveSession({ access_token, refresh_token }, null)
+  return true
+}
+
 export function clearSession() {
   localStorage.removeItem('avocado_token')
   localStorage.removeItem('avocado_refresh_token')

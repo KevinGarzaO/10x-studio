@@ -4,11 +4,13 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useState, FormEvent, useEffect } from 'react'
 import {
-  ArrowLeft, Bell, Bookmark, Check, Globe2, LockKeyhole, Mail, Moon,
-  Save, Settings, ShieldCheck, UserRound, MapPin, ExternalLink, Pencil,
-  Eye, EyeOff, MessageCircle, Heart, Sparkles, GitBranch, Loader2
+  ArrowLeft, Bell, Bookmark, Check, LockKeyhole, Mail, Moon,
+  Save, Settings, UserRound, MapPin, ExternalLink,
+  Eye, EyeOff, MessageCircle, Heart, Loader2, Tag
 } from 'lucide-react'
 import { saveSession, getToken, fetchCurrentUser } from '../lib/session'
+import { SENIORITY_OPTIONS, MODALITY_OPTIONS, ROLE_CATEGORY_OPTIONS } from '../lib/profile-options'
+import { PhotoPicker, SegmentedControl, SkillsInput, RoleCategorySelect } from './profile-form-fields'
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'
 
@@ -22,6 +24,11 @@ interface User {
   website?: string
   github_url?: string
   location?: string
+  title?: string | null
+  role_category?: string | null
+  seniority?: string | null
+  skills?: string[] | null
+  work_modality?: string | null
   created_at: string
 }
 
@@ -145,65 +152,6 @@ export function AccountLayout({ children, active }: { children: React.ReactNode;
   )
 }
 
-export function ProfilePage() {
-  const [user, setUser] = useState<User | null>(null)
-  const [loading, setLoading] = useState(true)
-
-  useEffect(() => {
-    if (!getToken()) { window.location.href = '/login'; return }
-    fetchCurrentUser()
-      .then(u => {
-        if (!u) { window.location.href = '/login'; return }
-        setUser(u)
-        setLoading(false)
-      })
-      .catch(() => { window.location.href = '/login' })
-  }, [])
-
-  if (loading) return (
-    <AccountLayout active="profile">
-      <section className="account-card" style={{ textAlign: 'center', padding: '60px 20px' }}>
-        <Loader2 size={24} className="animate-spin" style={{ color: '#00A86B' }} />
-        <p className="muted" style={{ marginTop: 12 }}>Cargando perfil...</p>
-      </section>
-    </AccountLayout>
-  )
-
-  if (!user) return null
-
-  const initials = (user.display_name || user.username || 'U').slice(0, 2).toUpperCase()
-  const joinDate = new Date(user.created_at).toLocaleDateString('es-ES', { year: 'numeric', month: 'long' })
-
-  return (
-    <AccountLayout active="profile">
-      <section className="account-card">
-        <div className="profile-hero">
-          <div className="profile-identity">
-            <div className="big-avatar">{user.photo_url ? <img src={user.photo_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: 18 }} /> : initials}</div>
-            <div>
-              <p className="page-kicker">Perfil de comunidad</p>
-              <h1>{user.display_name || user.username}</h1>
-              <p className="muted">@{user.username} · Se unió en {joinDate}</p>
-              <span className="badge"><ShieldCheck size={12} /> Miembro activo</span>
-              <div className="profile-links">
-                {user.website && <span className="profile-link"><Globe2 size={13} /> {user.website}</span>}
-                {user.github_url && <span className="profile-link"><GitBranch size={13} /> {user.github_url}</span>}
-              </div>
-            </div>
-          </div>
-          <div className="button-row">
-            <Link className="primary-btn" href="/settings"><Pencil size={14} /> Editar perfil</Link>
-          </div>
-        </div>
-        {user.bio && <>
-          <h2 className="section-title">Sobre mí</h2>
-          <p className="muted">{user.bio}</p>
-        </>}
-      </section>
-    </AccountLayout>
-  )
-}
-
 export function SettingsPage() {
   const router = useRouter()
   const [user, setUser] = useState<User | null>(null)
@@ -215,6 +163,15 @@ export function SettingsPage() {
   const [bio, setBio] = useState('')
   const [website, setWebsite] = useState('')
   const [githubUrl, setGithubUrl] = useState('')
+  const [photoUrl, setPhotoUrl] = useState<string | null>(null)
+  const [photoBase64, setPhotoBase64] = useState<string | null>(null)
+  const [title, setTitle] = useState('')
+  const [roleCategory, setRoleCategory] = useState<string | null>(null)
+  const [seniority, setSeniority] = useState<string | null>(null)
+  const [skills, setSkills] = useState<string[]>([])
+  const [skillInput, setSkillInput] = useState('')
+  const [location, setLocation] = useState('')
+  const [workModality, setWorkModality] = useState<string | null>(null)
 
   useEffect(() => {
     if (!getToken()) { window.location.href = '/login'; return }
@@ -226,6 +183,13 @@ export function SettingsPage() {
         setBio(u.bio || '')
         setWebsite(u.website || '')
         setGithubUrl(u.github_url || '')
+        setPhotoUrl(u.photo_url || null)
+        setTitle(u.title || '')
+        setRoleCategory(u.role_category || null)
+        setSeniority(u.seniority || null)
+        setSkills(u.skills || [])
+        setLocation(u.location || '')
+        setWorkModality(u.work_modality || null)
         setLoading(false)
       })
       .catch(() => { window.location.href = '/login' })
@@ -241,11 +205,17 @@ export function SettingsPage() {
       const res = await fetch(`${API_URL}/api/community/users/${user.username}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ displayName, bio, website, githubUrl }),
+        body: JSON.stringify({
+          displayName, bio, website, githubUrl,
+          title, roleCategory, seniority, skills, location, workModality,
+          ...(photoBase64 ? { photoBase64 } : {}),
+        }),
       })
       const data = await res.json()
       if (!res.ok) { setError(data.error || 'Error al guardar'); setSaving(false); return }
       setUser(data.user)
+      setPhotoUrl(data.user.photo_url || null)
+      setPhotoBase64(null)
       setSaved(true)
       setSaving(false)
       localStorage.setItem('avocado_user', JSON.stringify(data.user))
@@ -276,8 +246,15 @@ export function SettingsPage() {
         {error && <div className="auth-error">{error}</div>}
         <h2 className="section-title">Perfil público</h2>
         <div className="form-grid">
+          <div className="field"><label>Foto de perfil</label><PhotoPicker photoUrl={photoBase64 || photoUrl} onPick={setPhotoBase64} onError={setError} /></div>
           <div className="field"><label>Nombre visible</label><input value={displayName} onChange={e => setDisplayName(e.target.value)} placeholder="Tu nombre" /></div>
           <div className="field"><label>Usuario</label><input value={`@${user.username}`} disabled style={{ opacity: 0.6 }} /></div>
+          <div className="field"><label>Título profesional</label><input value={title} onChange={e => setTitle(e.target.value)} placeholder="Ej. Backend Developer" /></div>
+          <div className="field"><label>Categoría de rol</label><RoleCategorySelect options={ROLE_CATEGORY_OPTIONS} value={roleCategory} onChange={setRoleCategory} /></div>
+          <div className="field"><label>Nivel</label><SegmentedControl options={SENIORITY_OPTIONS} value={seniority} onChange={setSeniority} /></div>
+          <div className="field"><label><Tag size={12} style={{ verticalAlign: -1, marginRight: 4 }} />Skills</label><SkillsInput skills={skills} onChange={setSkills} inputValue={skillInput} onInputChange={setSkillInput} /></div>
+          <div className="field"><label><MapPin size={12} style={{ verticalAlign: -1, marginRight: 4 }} />Ubicación</label><input value={location} onChange={e => setLocation(e.target.value)} placeholder="Ciudad, país" /></div>
+          <div className="field"><label>Modalidad deseada</label><SegmentedControl options={MODALITY_OPTIONS} value={workModality} onChange={setWorkModality} /></div>
           <div className="field"><label>Biografía</label><textarea value={bio} onChange={e => setBio(e.target.value)} placeholder="Cuéntanos sobre ti..." /></div>
           <div className="field"><label>Sitio web</label><input value={website} onChange={e => setWebsite(e.target.value)} placeholder="https://tusitio.com" /></div>
           <div className="field"><label>GitHub</label><input value={githubUrl} onChange={e => setGithubUrl(e.target.value)} placeholder="github.com/tuusuario" /></div>
@@ -340,7 +317,7 @@ export function AuthPage({ mode }: { mode: 'login' | 'signup' }) {
 
       if (data.session?.access_token) {
         saveSession(data.session, data.user)
-        router.push('/')
+        router.push(signup ? '/onboarding' : '/')
         router.refresh()
       } else if (signup) {
         setSuccess('Cuenta creada. Revisa tu correo para confirmar tu email y luego inicia sesión.')

@@ -55,4 +55,49 @@ router.get('/tags', async (req: Request, res: Response) => {
   }
 })
 
+const SCRAPER_BOT_ID = '00000000-0000-0000-0000-000000000001'
+
+// Companies with at least one active job post right now, for the hero
+// banner's trust strip — real logos of companies actually hiring today,
+// not a fixed hand-picked list, so it never shows a stale/false claim.
+router.get('/companies', async (req: Request, res: Response) => {
+  try {
+    const limit = parseInt((req.query.limit as string) || '6', 10)
+
+    const { data, error } = await supabase
+      .from('community_posts')
+      .select('author:users(id, username, display_name, name, photo_url)')
+      .eq('type', 'job')
+
+    if (error) throw error
+
+    const counts = new Map<string, { username: string; name: string; logo_url: string | null; count: number }>()
+    for (const row of data || []) {
+      const author = (row as any).author
+      if (!author || !author.id || author.id === SCRAPER_BOT_ID) continue
+      const existing = counts.get(author.username)
+      if (existing) {
+        existing.count++
+      } else {
+        counts.set(author.username, {
+          username: author.username,
+          name: author.display_name || author.name || author.username,
+          logo_url: author.photo_url,
+          count: 1,
+        })
+      }
+    }
+
+    const companies = [...counts.values()]
+      .sort((a, b) => b.count - a.count)
+      .slice(0, limit)
+      .map(({ username, name, logo_url }) => ({ username, name, logo_url }))
+
+    res.json({ companies })
+  } catch (error) {
+    console.error('Community Get hiring companies error:', error)
+    res.status(500).json({ error: 'Error al obtener las empresas' })
+  }
+})
+
 export default router

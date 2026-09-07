@@ -16,6 +16,46 @@ const supabase = createClient(supabaseUrl, supabaseKey);
 
 const SCRAPER_BOT_ID = "00000000-0000-0000-0000-000000000001";
 
+function companySlug(name: string): string {
+  return name
+    .toLowerCase()
+    .normalize("NFD").replace(/[̀-ͯ]/g, "")
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+}
+
+function formatCompanyName(name: string): string {
+  const isAllLower = name === name.toLowerCase() && name !== name.toUpperCase();
+  if (!isAllLower) return name;
+  return name.replace(/\b\w/g, (c) => c.toUpperCase());
+}
+
+async function getOrCreateCompanyUser(rawName: string | null, logo: string | null): Promise<string | null> {
+  if (!rawName) return null;
+  const slug = companySlug(rawName);
+  if (!slug) return null;
+
+  const { data: existing } = await supabase.from("users").select("id, photo_url").eq("username", slug).maybeSingle();
+  if (existing) {
+    if (logo && !existing.photo_url) {
+      await supabase.from("users").update({ photo_url: logo }).eq("id", existing.id);
+    }
+    return existing.id;
+  }
+
+  const { data: created, error } = await supabase
+    .from("users")
+    .insert({ username: slug, display_name: formatCompanyName(rawName), photo_url: logo || null, is_scraper_profile: true, scraper_source: "company" })
+    .select("id")
+    .single();
+
+  if (error || !created) {
+    console.error(`  Error creando cuenta de empresa "${rawName}": ${error?.message}`);
+    return null;
+  }
+  return created.id;
+}
+
 async function syncVacancy(post: any): Promise<string | null> {
   const title = post.text.split("\n")[0]?.substring(0, 150) || "Vacante sin título";
   const budgetMatch = post.text.match(/[$€]\s?\d[\d,.]*(?:\s?-\s?[$€]?\s?\d[\d,.]*)?/);
@@ -28,6 +68,7 @@ async function syncVacancy(post: any): Promise<string | null> {
     unknown: "No especificado",
   };
   const modalidad = modalidadMap[post.work_modality ?? "unknown"] ?? "No especificado";
+  const companyUserId = (await getOrCreateCompanyUser(post.company ?? null, post.company_logo ?? null)) || SCRAPER_BOT_ID;
 
   const { data: communityPost, error } = await supabase
     .from("community_posts")
@@ -37,7 +78,7 @@ async function syncVacancy(post: any): Promise<string | null> {
       type: "job",
       budget,
       modalidad,
-      author_id: SCRAPER_BOT_ID,
+      author_id: companyUserId,
       source_url: post.url,
       platform: post.platform,
       source_name: post.source,
@@ -45,6 +86,8 @@ async function syncVacancy(post: any): Promise<string | null> {
       contacts: post.contacts,
       scraped_at: post.created_at || new Date().toISOString(),
       is_scraper_post: true,
+      company: post.company ?? null,
+      company_logo: post.company_logo ?? null,
     })
     .select("id")
     .single();

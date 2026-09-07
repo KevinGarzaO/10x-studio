@@ -1,7 +1,63 @@
 import { supabase } from "../supabase.service";
 import { generateSlug } from "../slug";
+import { companySlug, formatCompanyName } from "../company";
 
 const SCRAPER_BOT_ID = "00000000-0000-0000-0000-000000000001";
+
+// Per-process cache so a scraper run doesn't re-look-up the same company for
+// every one of its job posts.
+const companyUserCache = new Map<string, string>();
+
+/**
+ * Companies aren't just a free-text field on the job post anymore — each one
+ * gets a real row in `users` (username = its /empresas/:slug), so a vacancy's
+ * author_id can point at the company that posted it instead of the generic
+ * scraper bot. Looks the company up by slug first; creates it if missing.
+ */
+export async function getOrCreateCompanyUser(
+  rawName: string | null | undefined,
+  logo: string | null | undefined
+): Promise<string | null> {
+  if (!rawName) return null;
+  const slug = companySlug(rawName);
+  if (!slug) return null;
+
+  if (companyUserCache.has(slug)) return companyUserCache.get(slug)!;
+
+  const { data: existing } = await supabase
+    .from("users")
+    .select("id, photo_url")
+    .eq("username", slug)
+    .maybeSingle();
+
+  if (existing) {
+    if (logo && !existing.photo_url) {
+      await supabase.from("users").update({ photo_url: logo }).eq("id", existing.id);
+    }
+    companyUserCache.set(slug, existing.id);
+    return existing.id;
+  }
+
+  const { data: created, error } = await supabase
+    .from("users")
+    .insert({
+      username: slug,
+      display_name: formatCompanyName(rawName),
+      photo_url: logo || null,
+      is_scraper_profile: true,
+      scraper_source: "company",
+    })
+    .select("id")
+    .single();
+
+  if (error || !created) {
+    console.error(`[Sync] Error creando cuenta de empresa "${rawName}":`, error?.message);
+    return null;
+  }
+
+  companyUserCache.set(slug, created.id);
+  return created.id;
+}
 
 /**
  * Sincroniza un post scrapingado como vacancy en community_posts.
@@ -58,6 +114,8 @@ export async function syncVacancyToCommunity(
     }
   }
 
+  const companyUserId = (await getOrCreateCompanyUser(companyName, companyLogo)) || SCRAPER_BOT_ID;
+
   // Insert into community_posts
   const { data: communityPost, error: insertError } = await supabase
     .from("community_posts")
@@ -67,7 +125,7 @@ export async function syncVacancyToCommunity(
       type: "job",
       budget,
       modalidad,
-      author_id: SCRAPER_BOT_ID,
+      author_id: companyUserId,
       source_url: post.url,
       platform: post.platform,
       source_name: post.source,
@@ -77,6 +135,9 @@ export async function syncVacancyToCommunity(
       is_scraper_post: true,
       company: companyName,
       company_logo: companyLogo,
+      role_category: post.role_category ?? null,
+      seniority_level: post.seniority_level ?? null,
+      skills: post.skills ?? [],
     })
     .select("id")
     .single();
@@ -93,13 +154,12 @@ export async function syncVacancyToCommunity(
     .update({ slug })
     .eq("id", communityPost.id);
 
-  // Update scraper_post with community_post_id
+  // community_posts now holds the sole permanent copy of this vacancy, so
+  // the staging row is removed outright instead of just being flagged
+  // synced — scraper_posts sheds a row the moment it's promoted.
   await supabase
     .from("scraper_posts")
-    .update({
-      synced_to_community: true,
-      community_post_id: communityPost.id,
-    })
+    .delete()
     .eq("id", scraperPostId);
 
   log(`[Sync] Vacante sincronizada: /vacantes/${slug}`);
@@ -217,13 +277,7 @@ export async function syncAllPending(
   log: (msg: string) => void = () => {}
 ): Promise<{ vacancies: number; profiles: number }> {
   const DAILY_LIMIT = 20;
-
-  // Check if it's weekend (Saturday=6, Sunday=0) — no scraping on weekends
-  const dayOfWeek = new Date().getDay();
-  if (dayOfWeek === 0 || dayOfWeek === 6) {
-    log("[Sync] Es fin de semana, no se sincronizan posts scraper");
-    return { vacancies: 0, profiles: 0 };
-  }
+  const PER_COMBO_CAP = 2;
 
   const nativeCount = await getTodayNativePostCount();
   const scraperCount = await getTodayScraperPostCount();
@@ -235,18 +289,29 @@ export async function syncAllPending(
     log("[Sync] Límite diario alcanzado, no se sincronizan más posts scraper");
     return { vacancies: 0, profiles: 0 };
   }
-  // Get unsynced vacancy posts that have at least one contact method and are ≤30 days old
+  // Get unsynced vacancy posts that have at least one contact method and are
+  // ≤30 days old — checked against post_date (when the job was actually
+  // posted), not created_at (when we happened to scrape it); a job posted
+  // 40 days ago that we only just scraped yesterday is still stale.
+  // Ordered oldest-created-first (not fetched previously — an unordered
+  // query left Postgres free to return whichever rows it felt like, which
+  // in practice meant a handful of high-volume companies crowded out
+  // everyone else, day after day) and pulled from a wide candidate pool
+  // (not capped at remainingSlots) so the diversity cap below has enough
+  // rows to actually pick from.
   const thirtyDaysAgo = new Date();
   thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
   const thirtyDaysAgoISO = thirtyDaysAgo.toISOString();
 
   const { data: vacancyPosts } = await supabase
     .from("scraper_posts")
-    .select("id, contacts, created_at")
+    .select("id, contacts, created_at, company, role_category, seniority_level")
     .eq("post_type", "vacancy")
     .eq("synced_to_community", false)
-    .gte("created_at", thirtyDaysAgoISO)
-    .limit(remainingSlots);
+    .eq("is_spam", false)
+    .gte("post_date", thirtyDaysAgoISO)
+    .order("created_at", { ascending: true })
+    .limit(500);
 
   // Filter posts that have at least email or phone
   const postsWithContact = (vacancyPosts ?? []).filter((post) => {
@@ -258,7 +323,22 @@ export async function syncAllPending(
     return hasEmail || hasWhatsapp || hasTelegram || hasApplyUrl;
   });
 
-  log(`[Sync] ${postsWithContact.length} vacantes con contacto de ${vacancyPosts?.length ?? 0} totales`);
+  // Diversity cap: at most PER_COMBO_CAP per (role_category, seniority_level)
+  // combo per day, so a high-volume company (SpaceX, Databricks, ...) can't
+  // eat the whole day's quota with jobs from a single category and starve
+  // every other role/level combination.
+  const perComboCount = new Map<string, number>();
+  const selected: typeof postsWithContact = [];
+  for (const post of postsWithContact) {
+    if (selected.length >= remainingSlots) break;
+    const key = `${post.role_category ?? "sin-categoria"}:${post.seniority_level ?? "sin-nivel"}`;
+    const count = perComboCount.get(key) || 0;
+    if (count >= PER_COMBO_CAP) continue;
+    perComboCount.set(key, count + 1);
+    selected.push(post);
+  }
+
+  log(`[Sync] ${selected.length} vacantes seleccionadas de ${postsWithContact.length} con contacto (${vacancyPosts?.length ?? 0} candidatas, máx ${PER_COMBO_CAP}/combinación rol+nivel)`);
 
   // Get unsynced profile posts
   const { data: profilePosts } = await supabase
@@ -271,7 +351,7 @@ export async function syncAllPending(
   let vacancies = 0;
   let profiles = 0;
 
-  for (const post of postsWithContact) {
+  for (const post of selected) {
     const result = await syncVacancyToCommunity(post.id, log);
     if (result) vacancies++;
   }

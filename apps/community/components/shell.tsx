@@ -37,8 +37,17 @@ export function CommunityShell({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     setUser(getCachedUser())
-    fetchCurrentUser().then(setUser).catch(() => {})
-  }, [])
+    fetchCurrentUser().then(u => {
+      setUser(u)
+      // Real candidate signups without the essential profile fields get sent
+      // to complete them before using the rest of the app. Company/scraped
+      // `users` rows never hold an authenticated session, so this can't fire
+      // for them.
+      if (u && (!u.title || !u.role_category || !u.seniority || !u.skills?.length || !u.location || !u.work_modality)) {
+        router.replace('/onboarding')
+      }
+    }).catch(() => {})
+  }, [router])
 
   const activeTab = deriveActiveTab(pathname, searchParams)
 

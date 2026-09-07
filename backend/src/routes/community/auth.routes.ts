@@ -22,10 +22,14 @@ router.post('/signup', async (req: Request, res: Response) => {
       return res.status(409).json({ error: 'El email o username ya está en uso' })
     }
 
+    const communityAppUrl = process.env.COMMUNITY_APP_URL || 'http://localhost:3002'
     const { data: authData, error: authError } = await supabase.auth.signUp({
       email,
       password,
-      options: { data: { username, displayName } },
+      options: {
+        data: { username, displayName },
+        emailRedirectTo: `${communityAppUrl}/onboarding`,
+      },
     })
 
     if (authError) {

@@ -60,7 +60,7 @@ export const initCron = () => {
     console.log('[DailyOrchestrator] Iniciando flujo diario...');
     if (new Date() < GLOBAL_START_DATE) return;
 
-    const { data: users } = await supabase.from('users').select('id').limit(1).single();
+    const { data: users } = await supabase.from('users').select('id').not('substack_user_id', 'is', null).limit(1).single();
     if (users) await AutoPublisherService.publishDailyContent(users.id)
   })
 
@@ -70,7 +70,7 @@ export const initCron = () => {
     console.log('[English4PM] Iniciando publicación de contenido en inglés...');
     if (new Date() < GLOBAL_START_DATE) return;
 
-    const { data: users } = await supabase.from('users').select('id').limit(1).single();
+    const { data: users } = await supabase.from('users').select('id').not('substack_user_id', 'is', null).limit(1).single();
     if (users) await AutoPublisherService.publishScheduledEnglishContent(users.id)
   })
 

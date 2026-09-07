@@ -129,7 +129,19 @@ export async function insertPost(post: {
   company?: string | null;
   company_logo?: string | null;
 }): Promise<void> {
-  const { error } = await supabase.from("scraper_posts").insert({
+  // Upsert on the (platform, source, post_id) unique constraint instead of a
+  // plain insert — the earlier "check postExists, then insert" pattern had a
+  // race: two overlapping scraper runs (or a source that lists the same job
+  // twice) could both pass the check before either insert landed, producing
+  // duplicate rows for the same job. On conflict this overwrites the content
+  // columns instead of ignoring the write — every 30-minute run re-fetches
+  // each company's full listing, so a job whose description was incomplete
+  // on first scrape (rather than never re-checked) self-heals on the next
+  // pass. supabase-js's upsert can't express "only write if changed" (that
+  // needs a raw WHERE ... IS DISTINCT FROM, not available through this
+  // client), so this always rewrites on conflict — an extra UPDATE per
+  // already-seen job every 30 minutes is a non-issue at this volume.
+  const { error } = await supabase.from("scraper_posts").upsert({
     platform: post.platform,
     source: post.source,
     post_id: post.post_id ?? null,
@@ -151,7 +163,7 @@ export async function insertPost(post: {
     forum_hint: post.forum_hint ?? null,
     company: post.company ?? null,
     company_logo: post.company_logo ?? null,
-  });
+  }, { onConflict: "platform,source,post_id" });
   if (error) throw error;
 }
 

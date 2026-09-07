@@ -5,6 +5,47 @@ import { generateSlug } from '../../../services/slug'
 
 const router = Router()
 
+// Community-specific username/display_name/photo_url can be unset for users
+// who only ever signed up through the Studio (Substack connect) — fall back
+// to their Studio name/handle so they still show up as themselves everywhere.
+function normalizeAuthor(a: any) {
+  if (!a) return a
+  return {
+    id: a.id,
+    username: a.username || a.handle,
+    display_name: a.display_name || a.name,
+    photo_url: a.photo_url,
+    ...(a.bio !== undefined ? { bio: a.bio } : {}),
+  }
+}
+
+// The post list/detail endpoints are public (no login required to browse),
+// but the "Guardar" bookmark state still needs to reflect a logged-in
+// viewer's own history — so auth here is optional, not required.
+async function getOptionalUserId(req: Request): Promise<string | null> {
+  const authHeader = req.headers.authorization
+  if (!authHeader?.startsWith('Bearer ')) return null
+  const token = authHeader.split(' ')[1]
+  const { data, error } = await supabase.auth.getUser(token)
+  if (error || !data.user) return null
+  return data.user.id
+}
+
+// Maps community_posts.id -> the user_vacancy_history row id, so the
+// frontend has what it needs to call DELETE /api/community/history/:id to
+// un-save a post (not just whether it's currently saved).
+async function getSavedMap(userId: string | null, postIds: string[]): Promise<Map<string, string>> {
+  if (!userId || postIds.length === 0) return new Map()
+  const { data } = await supabase
+    .from('user_vacancy_history')
+    .select('id, source_id')
+    .eq('user_id', userId)
+    .eq('source_type', 'community')
+    .eq('is_saved', true)
+    .in('source_id', postIds)
+  return new Map((data || []).map((r: any) => [r.source_id, r.id]))
+}
+
 router.get('/editorial', async (req: Request, res: Response) => {
   try {
     const page = parseInt((req.query.page as string) || '1', 10)
@@ -15,7 +56,7 @@ router.get('/editorial', async (req: Request, res: Response) => {
 
     let query = supabase
       .from('content')
-      .select('id, title, html_content, markdown_content, excerpt, image_url, slug, published_at, word_count', { count: 'exact' })
+      .select('id, title, html_content, markdown_content, excerpt, image_url, slug, published_at, word_count, user_id', { count: 'exact' })
       .eq('content_type', 'blog_post')
       .eq('status', 'published')
       .order('published_at', { ascending: false })
@@ -29,25 +70,35 @@ router.get('/editorial', async (req: Request, res: Response) => {
 
     if (error) throw error
 
-    const editorialPosts = (blogPosts || []).map((post: any) => ({
-      id: post.id,
-      title: post.title,
-      content: post.excerpt || post.markdown_content?.substring(0, 500) || '',
-      type: 'editorial',
-      author: {
-        id: null,
-        username: 'avocado',
-        display_name: 'Avocado Studio',
-        avatar_url: null,
-      },
-      tags: [],
-      votesCount: 0,
-      commentsCount: 0,
-      image_url: post.image_url,
-      slug: post.slug,
-      word_count: post.word_count,
-      created_at: post.published_at,
-    }))
+    const authorIds = [...new Set((blogPosts || []).map((p: any) => p.user_id).filter(Boolean))]
+    let authorsById = new Map<string, any>()
+    if (authorIds.length > 0) {
+      const { data: authors } = await supabase
+        .from('users')
+        .select('id, username, display_name, name, handle, photo_url')
+        .in('id', authorIds)
+      authorsById = new Map((authors || []).map((u: any) => [u.id, u]))
+    }
+
+    const editorialPosts = (blogPosts || []).map((post: any) => {
+      const author = post.user_id ? authorsById.get(post.user_id) : null
+      return {
+        id: post.id,
+        title: post.title,
+        content: post.excerpt || post.markdown_content?.substring(0, 500) || '',
+        type: 'editorial',
+        author: author
+          ? normalizeAuthor(author)
+          : { id: null, username: 'avocado', display_name: 'Avocado Studio', photo_url: null },
+        tags: [],
+        votesCount: 0,
+        commentsCount: 0,
+        image_url: post.image_url,
+        slug: post.slug,
+        word_count: post.word_count,
+        created_at: post.published_at,
+      }
+    })
 
     res.json({
       posts: editorialPosts,
@@ -75,7 +126,7 @@ router.get('/', async (req: Request, res: Response) => {
 
     let query = supabase
       .from('community_posts')
-      .select('*, author:users(id, username, display_name, photo_url), community_post_tags(tag:community_tags(name))', { count: 'exact' })
+      .select('*, author:users(id, username, display_name, name, handle, photo_url), community_post_tags(tag:community_tags(name))', { count: 'exact' })
 
     // Order: nativas first (is_scraper_post=false), then by votes, then by date
     query = query.order('is_scraper_post', { ascending: true })
@@ -101,7 +152,7 @@ router.get('/', async (req: Request, res: Response) => {
 
     let mapped = (posts || []).map((p: any) => ({
         ...p,
-        author: p.author,
+        author: normalizeAuthor(p.author),
         tags: p.community_post_tags?.map((pt: any) => pt.tag?.name).filter(Boolean) || [],
         votesCount: p.votes_count || 0,
         commentsCount: p.comments_count || 0,
@@ -163,6 +214,10 @@ router.get('/', async (req: Request, res: Response) => {
       }
     }
 
+    const viewerId = await getOptionalUserId(req)
+    const savedMap = await getSavedMap(viewerId, mapped.map((p: any) => p.id))
+    mapped = mapped.map((p: any) => ({ ...p, isSaved: savedMap.has(p.id), historyId: savedMap.get(p.id) ?? null }))
+
     res.json({
       posts: mapped,
       pagination: {
@@ -187,9 +242,9 @@ router.get('/:id', async (req: Request, res: Response) => {
       .from('community_posts')
       .select(`
         *,
-        author:users(id, username, display_name, photo_url, bio),
+        author:users(id, username, display_name, name, handle, photo_url, bio),
         community_post_tags(tag:community_tags(name)),
-        community_comments(*, author:users(id, username, display_name, photo_url))
+        community_comments(*, author:users(id, username, display_name, name, handle, photo_url))
       `)
 
     // Check if it looks like a UUID or a slug
@@ -209,33 +264,47 @@ router.get('/:id', async (req: Request, res: Response) => {
       postQuery.single(),
       supabase
         .from('content')
-        .select('id, title, html_content, markdown_content, excerpt, image_url, slug, published_at, word_count')
+        .select('id, title, html_content, markdown_content, excerpt, image_url, slug, published_at, word_count, user_id')
         .eq('id', idOrSlug)
         .single(),
     ])
 
     if (!error && post) {
+      const viewerId = await getOptionalUserId(req)
+      const savedMap = await getSavedMap(viewerId, [(post as any).id])
       return res.json({
         ...post,
-        author: post.author,
+        author: normalizeAuthor(post.author),
+        community_comments: ((post as any).community_comments || []).map((c: any) => ({ ...c, author: normalizeAuthor(c.author) })),
         tags: (post as any).community_post_tags?.map((pt: any) => pt.tag?.name).filter(Boolean) || [],
         votesCount: (post as any).votes_count || 0,
         commentsCount: (post as any).comments_count || 0,
+        isSaved: savedMap.has((post as any).id),
+        historyId: savedMap.get((post as any).id) ?? null,
       })
     }
 
     if (!editorialError && editorialPost) {
+      let editorialAuthor: any = null
+      if ((editorialPost as any).user_id) {
+        const { data: u } = await supabase
+          .from('users')
+          .select('id, username, display_name, name, handle, photo_url')
+          .eq('id', (editorialPost as any).user_id)
+          .single()
+        editorialAuthor = u ? normalizeAuthor(u) : null
+      }
       return res.json({
         id: editorialPost.id,
         title: editorialPost.title,
         content: editorialPost.html_content || editorialPost.markdown_content || '',
         excerpt: editorialPost.excerpt || '',
         type: 'editorial',
-        author: {
+        author: editorialAuthor || {
           id: null,
           username: 'avocado',
           display_name: 'Avocado Studio',
-          avatar_url: null,
+          photo_url: null,
         },
         tags: [],
         votesCount: 0,

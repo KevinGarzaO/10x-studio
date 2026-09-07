@@ -6,11 +6,13 @@ import { useRouter, useSearchParams } from 'next/navigation'
 import {
   Bell, Bookmark, BriefcaseBusiness, Flame,
   Hash, Menu, MessageCircle, PenLine, Plus, Search,
-  Send, Settings, Share2, ShieldCheck, Sparkles, Tag, TrendingUp, Users, X,
+  Send, Settings, Share2, ShieldCheck, Sparkles, Tag, Target, TrendingUp, Users, X,
   Zap, ArrowBigUp, LockKeyhole, CheckCircle2, Building, MapPin, Home as HomeIcon, Mail, Clock
 } from 'lucide-react'
 import { companySlug, formatCompanyName } from '../lib/company'
 import { useShell } from '../lib/shell-context'
+import { HeroBanner } from './hero-banner'
+import { getToken } from '../lib/session'
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'
 
@@ -56,6 +58,8 @@ interface EditorialPost {
   company?: string | null
   company_logo?: string | null
   location?: string | null
+  isSaved?: boolean
+  historyId?: string | null
 }
 
 export type FeedPost = EditorialPost
@@ -121,6 +125,7 @@ export function ProfileMenu({ user }: { user: any }) {
 
 export function LeftSidebar({ onPublish, activeTab, setActiveTab, activeTag, onTagClick }: { onPublish: () => void; activeTab: string; setActiveTab: (v: string) => void; activeTag: string | null; onTagClick: (tag: string) => void }) {
   const [tags, setTags] = useState<string[]>([])
+  const { user } = useShell()
 
   useEffect(() => {
     fetch(`${API_URL}/api/community/stats/tags?limit=6`)
@@ -133,6 +138,9 @@ export function LeftSidebar({ onPublish, activeTab, setActiveTab, activeTag, onT
     <div className="sidebar-section">
       <p className="eyebrow">Comunidad</p>
       <nav className="nav-list" aria-label="Navegación principal">
+        {user && (
+          <Link href="/para-ti" className="nav-item nav-item-highlight"><Target size={17} /><span>Para ti</span></Link>
+        )}
         {tabs.map(({ label, icon: Icon }) => <button key={label} className={`nav-item ${activeTab === label && !activeTag ? 'active' : ''}`} onClick={() => setActiveTab(label)}><Icon size={17} /><span>{label}</span></button>)}
       </nav>
     </div>
@@ -249,10 +257,42 @@ function buildApplyUrl(platform: string | null, sourceUrl: string | null): strin
 }
 
 export function PostCard({ post, onAuthRequired, activeTab }: { post: FeedPost; onAuthRequired?: () => void; activeTab?: string }) {
-  const router = useRouter(); const [voted, setVoted] = useState(false); const [saved, setSaved] = useState(false)
+  const router = useRouter(); const [voted, setVoted] = useState(false); const [saved, setSaved] = useState(!!post.isSaved)
+  const [historyId, setHistoryId] = useState<string | null>(post.historyId ?? null)
   // Session comes from the shared shell context — every card used to fetch
   // its own copy, which meant one request per card rendered on the page.
   const { user } = useShell()
+
+  const handleSaveClick = async (e: React.MouseEvent) => {
+    e.stopPropagation()
+    if (!user) { onAuthRequired?.(); return }
+    if (post.type !== 'job') { setSaved(!saved); return }
+    const token = getToken()
+
+    if (saved) {
+      if (!historyId) return
+      const res = await fetch(`${API_URL}/api/community/history/${historyId}`, {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${token}` },
+      })
+      if (res.ok) { setSaved(false); setHistoryId(null) }
+      return
+    }
+
+    const res = await fetch(`${API_URL}/api/community/history/save`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      body: JSON.stringify({
+        sourceType: 'community', sourceId: post.id, title: post.title, company: post.company,
+        companyLogo: post.company_logo, url: `/vacantes/${post.slug || post.id}`,
+      }),
+    })
+    if (res.ok) {
+      const data = await res.json()
+      setSaved(true)
+      setHistoryId(data.item?.id ?? null)
+    }
+  }
 
   const isJob = post.type === 'job'
   const time = formatTime(post.created_at)
@@ -293,7 +333,7 @@ export function PostCard({ post, onAuthRequired, activeTab }: { post: FeedPost; 
           <LockKeyhole size={14} /> Desbloquear contacto
         </button>
       )}
-      <div className="post-footer"><button className={`vote-button ${voted ? 'voted' : ''}`} onClick={() => setVoted(!voted)}><ArrowBigUp size={17} fill={voted ? 'currentColor' : 'none'} />{post.votesCount + (voted ? 1 : 0)}</button><button className="engagement"><MessageCircle size={16} />{post.commentsCount}</button><span className="footer-spacer" /><button className={`icon-button ${saved ? 'saved' : ''}`} onClick={() => setSaved(!saved)} aria-label="Guardar"><Bookmark size={17} fill={saved ? 'currentColor' : 'none'} /></button><button className="icon-button" aria-label="Compartir"><Share2 size={16} /></button></div>
+      <div className="post-footer"><button className={`vote-button ${voted ? 'voted' : ''}`} onClick={() => setVoted(!voted)}><ArrowBigUp size={17} fill={voted ? 'currentColor' : 'none'} />{post.votesCount + (voted ? 1 : 0)}</button><button className="engagement"><MessageCircle size={16} />{post.commentsCount}</button><span className="footer-spacer" /><button className={`icon-button ${saved ? 'saved' : ''}`} onClick={handleSaveClick} aria-label="Guardar"><Bookmark size={17} fill={saved ? 'currentColor' : 'none'} /></button><button className="icon-button" aria-label="Compartir"><Share2 size={16} /></button></div>
     </article>
   }
 
@@ -435,7 +475,7 @@ export function Feed() {
   const searchParams = useSearchParams()
   const tabKeyFromUrl = searchParams.get('tab')
   const initialTab = (tabKeyFromUrl && KEY_TABS[tabKeyFromUrl]) || 'Tendencias'
-  const { search, activeTag, setActiveTag, requestAuth } = useShell()
+  const { search, activeTag, setActiveTag, requestAuth, user } = useShell()
 
   const [activeTab, setActiveTabState] = useState(initialTab)
   const todayLabel = useMemo(() => {
@@ -535,6 +575,7 @@ export function Feed() {
   }, [search, posts, activeTag])
 
   return <main className="feed">
+    {!user && <HeroBanner onViewJobs={() => setActiveTab('Vacantes & Freelance')} />}
     <div className="feed-heading">
       <div>
         <p className="eyebrow">{todayLabel}</p>
