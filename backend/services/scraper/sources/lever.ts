@@ -11,6 +11,7 @@ interface LeverPosting {
   hostedUrl: string;
   createdAt: number;
   descriptionPlain: string | null;
+  description: string | null;
   id: string;
 }
 
@@ -18,6 +19,27 @@ function normalizeLocation(loc: string | null): string | null {
   if (!loc) return null;
   if (/remote|remoto/i.test(loc)) return "Remoto";
   return loc;
+}
+
+function unescapeHtml(text: string): string {
+  return text
+    .replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&amp;/g, "&")
+    .replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/&nbsp;/g, " ");
+}
+
+function stripHtml(html: string): string {
+  return html.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();
+}
+
+// Lever's API is inconsistent about which description field it actually
+// populates — some postings (seen on real Spotify/LogRocket jobs) ship an
+// empty descriptionPlain while the HTML description field is fully
+// populated. Falling back to that (stripped) avoids silently storing a job
+// with no description at all.
+function extractDescription(posting: LeverPosting): string | null {
+  if (posting.descriptionPlain?.trim()) return posting.descriptionPlain.substring(0, 1500);
+  if (posting.description?.trim()) return stripHtml(unescapeHtml(posting.description)).substring(0, 1500);
+  return null;
 }
 
 export async function fetchLever(
@@ -45,14 +67,15 @@ export async function fetchLever(
       const postDate = posting.createdAt
         ? new Date(posting.createdAt).toISOString()
         : null;
+      const description = extractDescription(posting);
       const text = [
         `## ${posting.text}`,
         `**Empresa:** ${company}`,
         team ? `**Equipo:** ${team}` : null,
         location ? `**Ubicación:** ${location}` : null,
-        posting.descriptionPlain
-          ? posting.descriptionPlain.substring(0, 1000)
-          : null,
+        "",
+        description ? `### Descripción` : null,
+        description,
         "",
         `### Contacto`,
         `🔗 Postularse: ${posting.hostedUrl}`,
