@@ -507,12 +507,18 @@ export function Feed() {
     setLoading(true)
     try {
       let url: string
+      // Jobs get a bigger page than other tabs — the feed interleaves one
+      // post per company per "round" for diversity, and with 10+ distinct
+      // companies now posting, a 10-item page can't fit a full round,
+      // silently pushing some companies' newest listings to page 2 no
+      // matter how recent they are.
+      const pageSize = tab === 'Vacantes & Freelance' ? 20 : 10
       if (tab === 'Vacantes & Freelance') {
-        url = `${API_URL}/api/community/posts?page=${pageNum}&limit=10&type=job`
+        url = `${API_URL}/api/community/posts?page=${pageNum}&limit=${pageSize}&type=job`
       } else if (tab === 'Showcase Projects') {
-        url = `${API_URL}/api/community/posts?page=${pageNum}&limit=10&type=showcase`
+        url = `${API_URL}/api/community/posts?page=${pageNum}&limit=${pageSize}&type=showcase`
       } else {
-        url = `${API_URL}/api/community/posts/editorial?page=${pageNum}&limit=10`
+        url = `${API_URL}/api/community/posts/editorial?page=${pageNum}&limit=${pageSize}`
         if (tab === 'Últimos Envíos') url += '&days=7'
       }
       const res = await fetch(url)
@@ -521,12 +527,12 @@ export function Feed() {
       if (append) {
         setPosts(prev => {
           const merged = [...prev, ...newPosts]
-          feedCache.set(tab, { posts: merged, page: pageNum, hasMore: newPosts.length === 10 })
+          feedCache.set(tab, { posts: merged, page: pageNum, hasMore: newPosts.length === pageSize })
           return merged
         })
       } else {
         setPosts(newPosts)
-        feedCache.set(tab, { posts: newPosts, page: pageNum, hasMore: newPosts.length === 10 })
+        feedCache.set(tab, { posts: newPosts, page: pageNum, hasMore: newPosts.length === pageSize })
       }
       setHasMore(newPosts.length === 10)
     } catch {

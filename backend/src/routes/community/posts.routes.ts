@@ -2,6 +2,7 @@ import { Router, Request, Response } from 'express'
 import { supabase } from '../../../services/supabase.service'
 import { communityAuthMiddleware, AuthRequest } from '../../../middleware/community-auth.middleware'
 import { generateSlug } from '../../../services/slug'
+import { companySlug } from '../../../services/company'
 
 const router = Router()
 
@@ -165,7 +166,13 @@ router.get('/', async (req: Request, res: Response) => {
       const otherPosts: typeof mapped = []
 
       for (const post of mapped) {
-        const c = (post.company || '').trim()
+        // Group by normalized slug, not the raw string — "Twilio" and
+        // "twilio" are the same company (same /empresas/:slug and the same
+        // company account elsewhere in the app) and were fragmenting into
+        // two separate round-robin queues, which both waters down fairness
+        // and eats an extra page-1 slot that could've gone to a company
+        // that's actually distinct.
+        const c = companySlug((post.company || '').trim())
         if (c) {
           if (!companyQueues.has(c)) {
             companyQueues.set(c, [])
