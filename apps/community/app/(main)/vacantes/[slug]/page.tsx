@@ -156,6 +156,14 @@ export default function VacancyPage() {
   const [applySuccess, setApplySuccess] = useState(false)
   const iframeRef = useRef<HTMLIFrameElement>(null)
 
+  // Opening a vacancy shouldn't inherit whatever scroll depth the feed was
+  // at — it should always start at the top. router.back() to return to the
+  // feed still uses the browser's own scroll restoration, so that side is
+  // untouched.
+  useEffect(() => {
+    window.scrollTo(0, 0)
+  }, [slug])
+
   // Detect postMessage from ATS iframes (application submitted)
   useEffect(() => {
     function handleMessage(e: MessageEvent) {

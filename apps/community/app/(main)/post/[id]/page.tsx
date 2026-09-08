@@ -77,6 +77,14 @@ export default function PostPage() {
   const [reply, setReply] = useState('')
   const [sent, setSent] = useState(false)
 
+  // Opening a post shouldn't inherit whatever scroll depth the feed was at —
+  // it should always start at the top. router.back() to return to the feed
+  // still uses the browser's own scroll restoration, so that side is
+  // untouched.
+  useEffect(() => {
+    window.scrollTo(0, 0)
+  }, [id])
+
   useEffect(() => {
     setLoading(true)
     setError(null)
