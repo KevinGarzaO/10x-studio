@@ -10,6 +10,7 @@ import { fetchWorkable } from "../services/scraper/sources/workable";
 import { fetchGreenhouse } from "../services/scraper/sources/greenhouse";
 import { postExists, insertPost } from "../services/scraper/db";
 import { hasContact } from "../services/scraper/contacts";
+import { adminAuthMiddleware } from "../middleware/admin-auth.middleware";
 
 const router = Router();
 
@@ -119,7 +120,7 @@ router.get("/profiles", (_req: Request, res: Response) => {
  * POST /api/scraper/scrape
  * Ejecuta un scrape manual de todas las fuentes activas
  */
-router.post("/scrape", async (_req: Request, res: Response) => {
+router.post("/scrape", adminAuthMiddleware, async (_req: Request, res: Response) => {
   try {
     const logs: string[] = [];
     const result = await runProduction((msg) => {
@@ -137,7 +138,7 @@ router.post("/scrape", async (_req: Request, res: Response) => {
  * POST /api/scraper/discovery
  * Ejecuta discovery manual
  */
-router.post("/discovery", async (req: Request, res: Response) => {
+router.post("/discovery", adminAuthMiddleware, async (req: Request, res: Response) => {
   try {
     const profile = req.body.profile as string | undefined;
     const logs: string[] = [];
@@ -165,7 +166,7 @@ router.post("/discovery", async (req: Request, res: Response) => {
  * POST /api/scraper/sync
  * Sincroniza posts nuevos a community_posts/users
  */
-router.post("/sync", async (_req: Request, res: Response) => {
+router.post("/sync", adminAuthMiddleware, async (_req: Request, res: Response) => {
   try {
     const logs: string[] = [];
     const result = await syncAllPending((msg) => {
@@ -183,7 +184,7 @@ router.post("/sync", async (_req: Request, res: Response) => {
  * POST /api/scraper/re-enrich
  * Re-enriquece posts existentes con IA
  */
-router.post("/re-enrich", async (req: Request, res: Response) => {
+router.post("/re-enrich", adminAuthMiddleware, async (req: Request, res: Response) => {
   try {
     const limit = parseInt((req.body.limit as string) || "50", 10);
     const logs: string[] = [];
@@ -259,7 +260,7 @@ router.post("/re-enrich", async (req: Request, res: Response) => {
  * POST /api/scraper/test-ats
  * Test ATS connectors and sync to community_posts
  */
-router.post("/test-ats", async (_req: Request, res: Response) => {
+router.post("/test-ats", adminAuthMiddleware, async (_req: Request, res: Response) => {
   try {
     const logs: string[] = [];
     let totalInserted = 0;

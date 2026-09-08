@@ -143,6 +143,28 @@ export async function syncVacancyToCommunity(
     .single();
 
   if (insertError) {
+    // 23505 on source_url means this exact job is already a community_posts
+    // row (promoted from a different scraper_posts row — Lever/Greenhouse
+    // sometimes reassign a posting a new id on edit). Without this, the
+    // insert keeps failing and the row keeps being picked up as still
+    // pending every single sync run, forever.
+    if (insertError.code === "23505") {
+      const { data: existing } = await supabase
+        .from("community_posts")
+        .select("id, slug")
+        .eq("source_url", post.url)
+        .maybeSingle();
+
+      await supabase.from("scraper_posts").delete().eq("id", scraperPostId);
+
+      if (existing) {
+        log(`[Sync] Ya existía (source_url duplicado), descartando scraper_post: /vacantes/${existing.slug}`);
+        return existing.id;
+      }
+      log(`[Sync] Duplicado detectado pero no se encontró el community_post existente para ${post.url}`);
+      return null;
+    }
+
     log(`[Sync] Error insertando en community_posts: ${insertError.message}`);
     return null;
   }
