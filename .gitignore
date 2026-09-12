@@ -32,3 +32,7 @@ babelink-ia-firebase-adminsdk-fme0i-75c11a351d.json
 
 # Logs
 backend.log
+
+# Claude Code local settings (personal, per-machine — may hold local
+# permission allowlists; .claude/skills and other shared config stay tracked)
+.claude/settings.local.json
