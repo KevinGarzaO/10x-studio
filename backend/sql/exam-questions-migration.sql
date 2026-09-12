@@ -105,3 +105,39 @@ AFTER INSERT ON exam_questions
 DEFERRABLE INITIALLY DEFERRED
 FOR EACH ROW
 EXECUTE FUNCTION validate_correct_answer_index();
+
+-- 5. Atomic insert of a question + its options.
+--    supabase-js's REST client has no multi-statement transaction API, so a
+--    plain "insert question, then insert options" from the backend would be
+--    two separate transactions — the deferred trigger above would then
+--    validate at the end of the FIRST transaction, before any option exists,
+--    and always fail. Wrapping both inserts in one PL/pgSQL function makes
+--    the whole thing one transaction (and one supabase.rpc() call), so the
+--    deferred trigger validates against the real final option count, and any
+--    failure (invalid FK, trigger exception) rolls back both tables.
+CREATE OR REPLACE FUNCTION insert_exam_question_with_options(
+  p_question TEXT,
+  p_skill_name TEXT,
+  p_options TEXT[],
+  p_correct_answer_index SMALLINT,
+  p_difficulty_level TEXT,
+  p_created_by UUID
+) RETURNS UUID AS $$
+DECLARE
+  v_question_id UUID;
+  v_option TEXT;
+  v_index SMALLINT := 0;
+BEGIN
+  INSERT INTO exam_questions (question, skill_name, correct_answer_index, difficulty_level, created_by)
+  VALUES (p_question, p_skill_name, p_correct_answer_index, p_difficulty_level, p_created_by)
+  RETURNING id INTO v_question_id;
+
+  FOREACH v_option IN ARRAY p_options LOOP
+    INSERT INTO question_options (exam_question_id, text, order_index)
+    VALUES (v_question_id, v_option, v_index);
+    v_index := v_index + 1;
+  END LOOP;
+
+  RETURN v_question_id;
+END;
+$$ LANGUAGE plpgsql;
