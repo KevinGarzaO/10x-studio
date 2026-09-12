@@ -1,9 +1,12 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest'
 import type { Response } from 'express'
 import type { AuthRequest } from '../../middleware/community-auth.middleware'
+import { requireRole } from '../../src/middleware/require-role.middleware'
 
 const maybeSingle = vi.fn()
 
+// vi.mock calls are hoisted above imports by vitest's transform, so
+// require-role picks up this mocked client regardless of import order above.
 vi.mock('../../services/supabase.service', () => ({
   supabase: {
     from: () => ({
@@ -15,9 +18,6 @@ vi.mock('../../services/supabase.service', () => ({
     }),
   },
 }))
-
-// Imported after the mock so require-role picks up the mocked client
-const { requireRole } = await import('../../src/middleware/require-role.middleware')
 
 function mockRes() {
   const res = {} as Response

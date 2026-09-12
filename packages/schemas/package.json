@@ -2,9 +2,10 @@
   "name": "@avocado/schemas",
   "version": "0.1.0",
   "private": true,
-  "main": "src/examQuestion.ts",
-  "types": "src/examQuestion.ts",
+  "main": "dist/examQuestion.js",
+  "types": "dist/examQuestion.d.ts",
   "scripts": {
+    "build": "tsc -p tsconfig.json",
     "test": "vitest run"
   },
   "dependencies": {
