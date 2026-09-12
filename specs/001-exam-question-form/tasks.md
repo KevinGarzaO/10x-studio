@@ -29,10 +29,10 @@ US3 son ambas P1 (MVP); US2 es P2.
 
 **Purpose**: Preparar el paquete de schemas compartido y el tooling de test que hoy no existe en el monorepo (ver `research.md` R1, R3).
 
-- [ ] T001 Crear el paquete de workspace `packages/schemas/`: `packages/schemas/package.json` (nombre `@avocado/schemas`, `main`/`types` apuntando a `examQuestion.ts`), `packages/schemas/tsconfig.json`, y añadir `packages/*` al patrón de `pnpm-workspace.yaml` (hoy solo incluye `apps/*` + `backend`)
-- [ ] T002 [P] Añadir `vitest` y `@vitest/ui` como devDependency en `backend/package.json`, `apps/community/package.json` y `packages/schemas/package.json`; añadir `@testing-library/react` y `@testing-library/jest-dom` como devDependency en `apps/community/package.json`
-- [ ] T003 [P] Añadir `@playwright/test` como devDependency en el `package.json` raíz, crear `playwright.config.ts` en la raíz apuntando a `e2e/`, y crear el directorio `e2e/`
-- [ ] T004 [P] Crear `vitest.config.ts` en `backend/`, `apps/community/` y `packages/schemas/` (config mínima, sin transformadores adicionales — ver `research.md` R3)
+- [X] T001 Crear el paquete de workspace `packages/schemas/`: `packages/schemas/package.json` (nombre `@avocado/schemas`, `main`/`types` apuntando a `examQuestion.ts`), `packages/schemas/tsconfig.json`, y añadir `packages/*` al patrón de `pnpm-workspace.yaml` (hoy solo incluye `apps/*` + `backend`)
+- [X] T002 [P] Añadir `vitest` y `@vitest/ui` como devDependency en `backend/package.json`, `apps/community/package.json` y `packages/schemas/package.json`; añadir `@testing-library/react` y `@testing-library/jest-dom` como devDependency en `apps/community/package.json`
+- [X] T003 [P] Añadir `@playwright/test` como devDependency en el `package.json` raíz, crear `playwright.config.ts` en la raíz apuntando a `e2e/`, y crear el directorio `e2e/`
+- [X] T004 [P] Crear `vitest.config.ts` en `backend/`, `apps/community/` y `packages/schemas/` (config mínima, sin transformadores adicionales — ver `research.md` R3)
 
 **Checkpoint**: `pnpm install` corre limpio con el nuevo workspace; `pnpm --filter @avocado/schemas exec vitest --run` no falla por falta de config (aunque todavía no haya tests).
 
@@ -44,20 +44,20 @@ US3 son ambas P1 (MVP); US2 es P2.
 
 **🔴 CRITICAL**: Ninguna historia de usuario puede empezar hasta que esta fase esté completa.
 
-- [ ] T005 Escribir `backend/sql/exam-questions-migration.sql`, idempotente (`CREATE TABLE IF NOT EXISTS`, `ON CONFLICT DO NOTHING`), con exactamente estas tres piezas (ver `data-model.md`):
+- [X] T005 Escribir `backend/sql/exam-questions-migration.sql`, idempotente (`CREATE TABLE IF NOT EXISTS`, `ON CONFLICT DO NOTHING`), con exactamente estas tres piezas (ver `data-model.md`):
   1. `skills(id uuid pk default gen_random_uuid(), name text unique not null, label text not null, created_at timestamptz default now())` + backfill de un `INSERT ... ON CONFLICT (name) DO NOTHING` con los 36 pares `{value→name, label→label}` de `apps/community/lib/profile-options.ts:49-87` (`CANONICAL_SKILLS`)
   2. `exam_questions(id uuid pk default gen_random_uuid(), question varchar(500) not null, skill_name varchar(50) not null references skills(name), correct_answer_index smallint not null check (correct_answer_index >= 0), difficulty_level varchar(12) not null check (difficulty_level in ('basico','intermedio','avanzado')), created_by uuid not null references users(id), created_at timestamptz default now())`
   3. `question_options(id uuid pk default gen_random_uuid(), exam_question_id uuid not null references exam_questions(id) on delete cascade, text varchar(200) not null, order_index smallint not null)`
   4. La función `validate_correct_answer_index()` y el `CONSTRAINT TRIGGER validate_correct_answer_index_trigger AFTER INSERT ON exam_questions DEFERRABLE INITIALLY DEFERRED FOR EACH ROW` definidos textualmente en `data-model.md` (nota sobre `correct_answer_index`) — cierra en DB el límite superior (`correct_answer_index < count(question_options)`) que un `CHECK` de una sola tabla no puede expresar; mismo patrón de trigger que `classify_scraper_post()` en `backend/sql/scraper-classification-migration.sql`
 - [ ] T006 Aplicar `backend/sql/exam-questions-migration.sql` manualmente en el editor SQL de Supabase (no hay migration runner en este repo — ver `CLAUDE.md`) y verificar `SELECT count(*) FROM skills` = 36, y que el trigger `validate_correct_answer_index_trigger` quedó creado sobre `exam_questions` (Nivel 1 de `quickstart.md`, prerequisito para todo lo demás)
-- [ ] T007 [P] Crear `packages/schemas/examQuestion.ts` exportando `examQuestionSchema` (Zod) y el tipo inferido `ExamQuestionInput`, con estas reglas exactas (citadas de `data-model.md`/el ticket, sin margen de interpretación):
+- [X] T007 [P] Crear `packages/schemas/examQuestion.ts` exportando `examQuestionSchema` (Zod) y el tipo inferido `ExamQuestionInput`, con estas reglas exactas (citadas de `data-model.md`/el ticket, sin margen de interpretación):
   - `question`: `z.string().trim().min(10).max(500)`
   - `skillName`: `z.string()` + `.refine()` contra la lista de nombres válidos (inyectada como parámetro de la función que construye el schema, para no acoplar el paquete a una consulta de DB — ver nota de implementación en el propio archivo)
   - `options`: `z.array(z.string().trim().min(1).max(200)).min(2).max(6).refine(opts => new Set(opts.map(o => o.toLowerCase())).size === opts.length, 'Las opciones no pueden repetirse')`
   - `correctAnswerIndex`: `z.number().int().min(0)` + `.refine()` a nivel de objeto completo verificando `correctAnswerIndex < options.length`
   - `difficultyLevel`: `z.enum(['basico','intermedio','avanzado'])`
-- [ ] T008 [P] Crear `backend/src/middleware/require-role.middleware.ts` exportando `requireRole(role: string)`, una factory de middleware Express: `401` (`{error:"unauthorized"}`) si no hay usuario autenticado en `req`, `403` (`{error:"forbidden", message:"No tienes permisos para esta acción"}`) si `req.user.roles` no incluye `role`, `next()` en otro caso
-- [ ] T009 Añadir `"@avocado/schemas": "workspace:*"` como dependencia en `backend/package.json` y `apps/community/package.json`, correr `pnpm install` desde la raíz y confirmar que ambos paquetes pueden importar `examQuestionSchema`
+- [X] T008 [P] Crear `backend/src/middleware/require-role.middleware.ts` exportando `requireRole(role: string)`, una factory de middleware Express: `401` (`{error:"unauthorized"}`) si no hay usuario autenticado en `req`, `403` (`{error:"forbidden", message:"No tienes permisos para esta acción"}`) si `req.user.roles` no incluye `role`, `next()` en otro caso
+- [X] T009 Añadir `"@avocado/schemas": "workspace:*"` como dependencia en `backend/package.json` y `apps/community/package.json`, correr `pnpm install` desde la raíz y confirmar que ambos paquetes pueden importar `examQuestionSchema`
 
 **Checkpoint**: Fundación lista — `skills` tiene 36 filas, el schema compartido existe e importa desde ambos lados, el middleware de rol existe (aún sin ruta que lo use).
 
@@ -73,17 +73,17 @@ US3 son ambas P1 (MVP); US2 es P2.
 
 > **NOTA: escribir estos tests primero y confirmar que fallan antes de implementar**
 
-- [ ] T010 [P] [US1] Unit test de caso feliz en `backend/tests/unit/examQuestion.schema.test.ts`: un payload completo y válido (los 5 campos) pasa `examQuestionSchema.safeParse()` sin errores
+- [X] T010 [P] [US1] Unit test de caso feliz en `backend/tests/unit/examQuestion.schema.test.ts`: un payload completo y válido (los 5 campos) pasa `examQuestionSchema.safeParse()` sin errores
 - [ ] T011 [P] [US1] Integration test en `backend/tests/integration/exam-questions.routes.test.ts`: POST completo válido (con sesión admin real de la BD de test) → `201`, y una lectura directa a `exam_questions` + `question_options` confirma que lo guardado coincide exacto con el payload enviado (round-trip, ver `contracts/exam-questions.md`)
-- [ ] T012 [P] [US1] Component test en `apps/community/tests/ExamQuestionForm.test.tsx`: mock de `fetch` a `/api/admin/exam-questions` respondiendo `201` → verificar que se llamó con el payload exacto esperado y que el formulario se limpió después
+- [X] T012 [P] [US1] Component test en `apps/community/tests/ExamQuestionForm.test.tsx`: mock de `fetch` a `/api/admin/exam-questions` respondiendo `201` → verificar que se llamó con el payload exacto esperado y que el formulario se limpió después
 - [ ] T013 [P] [US1] E2E happy path en `e2e/exam-question-form.spec.ts`: login como admin → llenar formulario válido → submit → ver confirmación → confirmar contra Supabase que la pregunta quedó guardada con los datos exactos capturados
 
 ### Implementation for User Story 1
 
-- [ ] T014 [US1] Implementar el handler de `POST /api/admin/exam-questions` en `backend/src/routes/admin/exam-questions.routes.ts`: parsea el body con `examQuestionSchema` (usando la lista de `skills.name` vigente para el `.refine()` de `skillName`), inserta `exam_questions` + sus `question_options` dentro de una misma transacción (si la inserción de opciones falla, la pregunta también se revierte — ver `contracts/exam-questions.md`, "Idempotency / Side effects"), responde `201` con el payload documentado en el contrato, `400` con `{error, field, message}` si Zod rechaza, `500` genérico en cualquier otro fallo
-- [ ] T015 [US1] Montar la ruta en `backend/index.ts` bajo `/api/admin/exam-questions`, encadenando: middleware de sesión existente → `requireRole('admin')` (T008) → el handler de T014
-- [ ] T016 [P] [US1] Crear `apps/community/components/admin/ExamQuestionForm.tsx`: textarea de pregunta (`maxLength=500`), `<select>` de skill poblado directamente desde `CANONICAL_SKILLS` (`apps/community/lib/profile-options.ts` — sin llamada de red nueva, ya que `skills` en DB es un backfill exacto de esa misma lista), inputs dinámicos de opción (agregar/quitar, `maxLength=200` cada uno), un radio button por opción para marcar la correcta, `<select>` cerrado de dificultad; el submit construye el payload y llama a `examQuestionSchema.safeParse()` antes de hacer `POST`
-- [ ] T017 [US1] Crear `apps/community/app/(main)/admin/exam-questions/new/page.tsx`: renderiza `ExamQuestionForm`, hace el `POST` vía el fetch wrapper existente del proyecto, muestra confirmación y limpia el formulario en éxito (AC5)
+- [X] T014 [US1] Implementar el handler de `POST /api/admin/exam-questions` en `backend/src/routes/admin/exam-questions.routes.ts`: parsea el body con `examQuestionSchema` (usando la lista de `skills.name` vigente para el `.refine()` de `skillName`), inserta `exam_questions` + sus `question_options` dentro de una misma transacción (si la inserción de opciones falla, la pregunta también se revierte — ver `contracts/exam-questions.md`, "Idempotency / Side effects"), responde `201` con el payload documentado en el contrato, `400` con `{error, field, message}` si Zod rechaza, `500` genérico en cualquier otro fallo
+- [X] T015 [US1] Montar la ruta en `backend/index.ts` bajo `/api/admin/exam-questions`, encadenando: middleware de sesión existente → `requireRole('admin')` (T008) → el handler de T014
+- [X] T016 [P] [US1] Crear `apps/community/components/admin/ExamQuestionForm.tsx`: textarea de pregunta (`maxLength=500`), `<select>` de skill poblado directamente desde `CANONICAL_SKILLS` (`apps/community/lib/profile-options.ts` — sin llamada de red nueva, ya que `skills` en DB es un backfill exacto de esa misma lista), inputs dinámicos de opción (agregar/quitar, `maxLength=200` cada uno), un radio button por opción para marcar la correcta, `<select>` cerrado de dificultad; el submit construye el payload y llama a `examQuestionSchema.safeParse()` antes de hacer `POST`
+- [X] T017 [US1] Crear `apps/community/app/(main)/admin/exam-questions/new/page.tsx`: renderiza `ExamQuestionForm`, hace el `POST` vía el fetch wrapper existente del proyecto, muestra confirmación y limpia el formulario en éxito (AC5)
 
 **Checkpoint**: El flujo feliz completo (US1) funciona de punta a punta para un admin — probarlo de forma independiente antes de continuar.
 
@@ -103,8 +103,8 @@ US3 son ambas P1 (MVP); US2 es P2.
 
 ### Implementation for User Story 3
 
-- [ ] T021 [US3] En `apps/community/app/(main)/admin/exam-questions/new/page.tsx` (de T017), añadir una verificación del lado cliente vía `useShell()`: si `user` es `null` o `user.roles` no incluye `'admin'`, redirigir fuera de la página sin renderizar el formulario (esta es una conveniencia de UX — el backend, no esta verificación, es la autoridad final per AC6)
-- [ ] T022 [US3] Confirmar en `backend/src/routes/admin/exam-questions.routes.ts` que `requireRole('admin')` (T015) se evalúa **antes** de parsear/validar el body con `examQuestionSchema` — un usuario no-admin debe recibir `403` sin que su body inválido llegue siquiera a Zod, tal como valida T019
+- [X] T021 [US3] En `apps/community/app/(main)/admin/exam-questions/new/page.tsx` (de T017), añadir una verificación del lado cliente vía `useShell()`: si `user` es `null` o `user.roles` no incluye `'admin'`, redirigir fuera de la página sin renderizar el formulario (esta es una conveniencia de UX — el backend, no esta verificación, es la autoridad final per AC6)
+- [X] T022 [US3] Confirmar en `backend/src/routes/admin/exam-questions.routes.ts` que `requireRole('admin')` (T015) se evalúa **antes** de parsear/validar el body con `examQuestionSchema` — un usuario no-admin debe recibir `403` sin que su body inválido llegue siquiera a Zod, tal como valida T019
 
 **Checkpoint**: US1 + US3 completas = MVP seguro (alta feliz + restricción de acceso). Este es el punto natural para un primer deploy/demo.
 
@@ -118,18 +118,18 @@ US3 son ambas P1 (MVP); US2 es P2.
 
 ### Tests for User Story 2
 
-- [ ] T023 [P] [US2] Extender `backend/tests/unit/examQuestion.schema.test.ts` (de T010) con un caso que falla y uno que pasa por regla: `question` de 5 caracteres (falla) vs. 15 (pasa); `options` con 1 elemento (falla) vs. 2 (pasa); `options: ["Sí","sí"]` (falla, duplicado case-insensitive) vs. sin duplicados (pasa); `correctAnswerIndex: 5` con 3 `options` (falla) vs. `0` (pasa); `difficultyLevel: "experto"` (falla) vs. `"basico"` (pasa)
+- [X] T023 [P] [US2] Extender `backend/tests/unit/examQuestion.schema.test.ts` (de T010) con un caso que falla y uno que pasa por regla: `question` de 5 caracteres (falla) vs. 15 (pasa); `options` con 1 elemento (falla) vs. 2 (pasa); `options: ["Sí","sí"]` (falla, duplicado case-insensitive) vs. sin duplicados (pasa); `correctAnswerIndex: 5` con 3 `options` (falla) vs. `0` (pasa); `difficultyLevel: "experto"` (falla) vs. `"basico"` (pasa)
 - [ ] T024 [P] [US2] Extender `backend/tests/integration/exam-questions.routes.test.ts` (de T011) con un `POST` por cada AC1-AC4 confirmando `400` y que el campo devuelto en `field` coincide con el campo realmente inválido
-- [ ] T025 [P] [US2] Extender `apps/community/tests/ExamQuestionForm.test.tsx` (de T012): blur en "pregunta" vacía → ver "La pregunta es obligatoria" sin llamada de red (AC1); 1 sola opción capturada → botón submit `disabled` y ver "Se requieren al menos 2 opciones" (AC2); 2+ opciones sin ninguna marcada como correcta → submit muestra "Selecciona la respuesta correcta" y no llama a `fetch` (AC3); dos opciones con el mismo texto (distinta capitalización) → submit muestra "Las opciones no pueden repetirse" y no llama a `fetch` (AC4)
+- [X] T025 [P] [US2] Extender `apps/community/tests/ExamQuestionForm.test.tsx` (de T012): blur en "pregunta" vacía → ver "La pregunta es obligatoria" sin llamada de red (AC1); 1 sola opción capturada → botón submit `disabled` y ver "Se requieren al menos 2 opciones" (AC2); 2+ opciones sin ninguna marcada como correcta → submit muestra "Selecciona la respuesta correcta" y no llama a `fetch` (AC3); dos opciones con el mismo texto (distinta capitalización) → submit muestra "Las opciones no pueden repetirse" y no llama a `fetch` (AC4)
 - [ ] T026 [P] [US2] Extender `e2e/exam-question-form.spec.ts` (de T013/T020) con el flujo negativo completo AC1→AC4 antes del submit exitoso: cada error se corrige uno a la vez hasta llegar al envío válido
 
 ### Implementation for User Story 2
 
-- [ ] T027 [US2] En `ExamQuestionForm.tsx`, añadir trim automático en blur + primera letra en mayúscula para el campo `question`, y el mensaje inline "La pregunta es obligatoria" cuando queda vacío tras el trim (AC1)
-- [ ] T028 [US2] En `ExamQuestionForm.tsx`, deshabilitar el botón de submit y mostrar "Se requieren al menos 2 opciones" mientras `options.length < 2` (AC2)
-- [ ] T029 [US2] En `ExamQuestionForm.tsx`, bloquear el submit y mostrar "Selecciona la respuesta correcta" mientras ninguna opción tenga el radio marcado (AC3)
-- [ ] T030 [US2] En `ExamQuestionForm.tsx`, detectar duplicados case-insensitive entre las opciones capturadas (mismo `.refine()` que `examQuestionSchema`, reutilizado del paquete compartido en vez de reimplementarlo) y bloquear el submit con "Las opciones no pueden repetirse" (AC4)
-- [ ] T031 [US2] Mapear las respuestas `400` de T014 (`{field, message}`) al input correspondiente en `ExamQuestionForm.tsx`, y para `500`/timeout mostrar un mensaje genérico **sin** limpiar los datos ya capturados (FR-011) — a diferencia del flujo `201` de T017, que sí limpia
+- [X] T027 [US2] En `ExamQuestionForm.tsx`, añadir trim automático en blur + primera letra en mayúscula para el campo `question`, y el mensaje inline "La pregunta es obligatoria" cuando queda vacío tras el trim (AC1)
+- [X] T028 [US2] En `ExamQuestionForm.tsx`, deshabilitar el botón de submit y mostrar "Se requieren al menos 2 opciones" mientras `options.length < 2` (AC2)
+- [X] T029 [US2] En `ExamQuestionForm.tsx`, bloquear el submit y mostrar "Selecciona la respuesta correcta" mientras ninguna opción tenga el radio marcado (AC3)
+- [X] T030 [US2] En `ExamQuestionForm.tsx`, detectar duplicados case-insensitive entre las opciones capturadas (mismo `.refine()` que `examQuestionSchema`, reutilizado del paquete compartido en vez de reimplementarlo) y bloquear el submit con "Las opciones no pueden repetirse" (AC4)
+- [X] T031 [US2] Mapear las respuestas `400` de T014 (`{field, message}`) al input correspondiente en `ExamQuestionForm.tsx`, y para `500`/timeout mostrar un mensaje genérico **sin** limpiar los datos ya capturados (FR-011) — a diferencia del flujo `201` de T017, que sí limpia
 
 **Checkpoint**: Los 6 Acceptance Criteria de `spec.md` están cubiertos de punta a punta.
 
@@ -140,8 +140,8 @@ US3 son ambas P1 (MVP); US2 es P2.
 **Purpose**: Verificación final contra el Definition of Done del ticket original.
 
 - [ ] T032 [P] Ejecutar manualmente el Nivel 1 de `quickstart.md` (DB aislado) contra Supabase: `INSERT` con `correct_answer_index` fuera de rango, `skill_name` inexistente, y `difficulty_level` fuera del enum — confirmar que los tres son rechazados por los constraints de T005
-- [ ] T033 [P] Actualizar la sección "Commands"/testing de `CLAUDE.md` para reflejar que `backend`, `apps/community` y `packages/schemas` ahora tienen Vitest configurado, y que existe una suite de Playwright en `e2e/` (el texto actual dice explícitamente que no hay test runner configurado — ya no es cierto tras esta feature)
-- [ ] T034 Correr `npx tsc --noEmit` limpio en `backend`, `apps/community` y `packages/schemas`
+- [X] T033 [P] Actualizar la sección "Commands"/testing de `CLAUDE.md` para reflejar que `backend`, `apps/community` y `packages/schemas` ahora tienen Vitest configurado, y que existe una suite de Playwright en `e2e/` (el texto actual dice explícitamente que no hay test runner configurado — ya no es cierto tras esta feature)
+- [X] T034 Correr `npx tsc --noEmit` limpio en `backend`, `apps/community` y `packages/schemas`
 - [ ] T035 Verificar manualmente en un navegador real los 6 Acceptance Criteria de `spec.md` (no solo vía Playwright), tal como pide el Definition of Done del ticket
 - [ ] T036 Revisar el diff completo contra el Definition of Done original del ticket antes de solicitar code review
 
