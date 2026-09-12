@@ -1,0 +1,17 @@
+{
+  "name": "@avocado/schemas",
+  "version": "0.1.0",
+  "private": true,
+  "main": "src/examQuestion.ts",
+  "types": "src/examQuestion.ts",
+  "scripts": {
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "zod": "^3.23.8"
+  },
+  "devDependencies": {
+    "typescript": "^5.4.5",
+    "vitest": "^1.6.0"
+  }
+}

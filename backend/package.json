@@ -7,10 +7,13 @@
     "start": "node dist/index.js",
     "dev": "ts-node index.ts",
     "lint": "eslint . --ext .ts",
+    "test": "vitest run tests/unit",
+    "test:integration": "vitest run tests/integration",
     "migrate-history": "tsx scripts/migrate-history.ts",
     "sync-to-community": "tsx scripts/sync-to-community.ts"
   },
   "dependencies": {
+    "@avocado/schemas": "workspace:*",
     "@google/genai": "^1.48.0",
     "@supabase/supabase-js": "2.49.4",
     "cheerio": "^1.1.0",
@@ -35,6 +38,7 @@
     "@types/swagger-ui-express": "^4.1.6",
     "ts-node": "^10.9.2",
     "tsx": "^4.7.1",
-    "typescript": "^5.3.3"
+    "typescript": "^5.3.3",
+    "vitest": "^1.6.0"
   }
 }
