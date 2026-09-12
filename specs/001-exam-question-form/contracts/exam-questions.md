@@ -87,9 +87,12 @@ flujo 201, donde sí se limpia.
 ## Idempotency / Side effects
 
 - Cada request exitosa crea exactamente una fila en `exam_questions` y N filas
-  en `question_options` (N = `options.length`), dentro de una misma
-  transacción — si la inserción de opciones falla después de insertar la
-  pregunta, la pregunta también se revierte (sin filas huérfanas).
+  en `question_options` (N = `options.length`), vía una única llamada
+  `supabase.rpc('insert_exam_question_with_options', ...)` — no dos `INSERT`
+  REST separados, porque eso serían dos transacciones distintas y rompería el
+  trigger diferido de `correct_answer_index` (ver `data-model.md`, "Nota de
+  atomicidad"). Si algo falla dentro de la función, ambas tablas se revierten
+  (sin filas huérfanas).
 - No hay endpoint de lectura/listado en el alcance de esta feature (fuera de
   alcance según Assumptions de `spec.md`) — este contrato cubre únicamente la
   operación de alta.

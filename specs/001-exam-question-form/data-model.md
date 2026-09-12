@@ -64,6 +64,17 @@ excepciones para este campo: DB (CHECK ≥0 + trigger diferido <n_options) +
 Backend (Zod `.refine()`) + Frontend (radio buttons, no permite un índice
 fuera de rango por construcción de la UI).
 
+**Nota de atomicidad**: `supabase-js` no tiene una API de transacciones
+multi-statement — dos `INSERT` REST separados (pregunta, luego opciones)
+serían dos transacciones distintas, y el trigger diferido validaría al final
+de la *primera* (antes de que exista ninguna opción), fallando siempre. Por
+eso la inserción real vive en una función `insert_exam_question_with_options()`
+(PL/pgSQL, definida en la misma migración) que inserta la pregunta y sus
+opciones dentro de una sola llamada — una sola transacción — invocada desde
+el backend vía `supabase.rpc(...)`. El handler de la ruta (`POST
+/api/admin/exam-questions`) no hace `INSERT` directo a ninguna de las dos
+tablas.
+
 **Validación por capa** (tal como especifica el ticket):
 - DB: `NOT NULL`, `CHECK` de rango completo para `correct_answer_index` (`>=0` + trigger diferido `<n_options`) y de enum para `difficulty_level`, FK a `skills`.
 - Backend (Zod, `packages/schemas/examQuestion.ts`): `z.string().trim().min(10).max(500)` para `question`; `z.enum(['basico','intermedio','avanzado'])` para `difficulty_level`; `z.number().int().min(0)` + `.refine()` cruzado contra `options.length` para `correct_answer_index`.
