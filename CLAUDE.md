@@ -15,7 +15,7 @@ Both frontends talk to the single `backend` Express API, never to Supabase/Postg
 
 ## Commands
 
-Run from the repo root with pnpm (workspace defined in `pnpm-workspace.yaml`: `apps/*` + `backend`).
+Run from the repo root with pnpm (workspace defined in `pnpm-workspace.yaml`: `apps/*` + `backend` + `packages/*`).
 
 ```bash
 pnpm install                 # install all workspace deps
@@ -33,11 +33,13 @@ pnpm build:backend           # tsc for backend
 
 Per-package commands (run inside the package or via `pnpm --filter <name> <script>`):
 
-- `backend`: `npm run lint` (eslint), `npm run start` (runs compiled `dist/index.js`), `npm run migrate-history` / `npm run sync-to-community` (one-off `tsx` scripts in `backend/scripts/`).
-- `apps/avocado`: `npm run lint` (`next lint`).
-- `apps/community`: no lint script defined.
+- `backend`: `npm run lint` (eslint), `npm run start` (runs compiled `dist/index.js`), `npm run test` (Vitest, `tests/unit/`), `npm run test:integration` (Vitest, `tests/integration/`), `npm run migrate-history` / `npm run sync-to-community` (one-off `tsx` scripts in `backend/scripts/`).
+- `apps/avocado`: `npm run lint` (`next lint`). No test runner configured here yet.
+- `apps/community`: `npm run test` (Vitest + Testing Library, `tests/`). No lint script defined.
+- `packages/schemas`: shared Zod schemas (workspace package `@avocado/schemas`), consumed by `backend` and `apps/community`. `npm run build` (tsc, emits to `dist/`) runs automatically via the repo root's `postinstall` after every `pnpm install`. `npm run test` (Vitest).
+- Root: `pnpm test:e2e` (Playwright, `e2e/`) exercises real flows against a running `backend` + `apps/community`.
 
-There is no configured test runner in any package — do not assume `npm test`/`vitest`/`jest` exist. One-off diagnostic scripts under `backend/scripts/` (e.g. `test-ats.ts`, `test-ats-db.ts`, `sync-ats-test.ts`) are run manually with `tsx scripts/<file>.ts`, not via a test framework.
+Vitest (`backend`, `apps/community`, `packages/schemas`) and Playwright (`e2e/`) were introduced by the exam-question-form feature — before that, no test runner existed in any package. One-off diagnostic scripts under `backend/scripts/` (e.g. `test-ats.ts`, `test-ats-db.ts`, `sync-ats-test.ts`) predate this and are still run manually with `tsx scripts/<file>.ts`, not via a test framework.
 
 ## Architecture
 
