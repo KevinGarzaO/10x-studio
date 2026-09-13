@@ -12,5 +12,9 @@
     "resolveJsonModule": true
   },
   "include": ["**/*.ts"],
-  "exclude": ["node_modules"]
+  // tests/ y vitest.config.ts son infraestructura de prueba: no deben entrar
+  // al bundle de produccion. Ademas vitest.config.ts importa "vitest/config",
+  // que es ESM puro y rompe el build (TS1479) bajo module: NodeNext en modo
+  // CommonJS.
+  "exclude": ["node_modules", "dist", "tests", "vitest.config.ts"]
 }
