@@ -33,7 +33,7 @@ US4 son P2.
 **Purpose**: Esta feature **no necesita tooling nuevo** — Vitest, Playwright y
 `packages/schemas` ya los introdujo la feature 001. El único prerequisito real es de datos.
 
-- [ ] T001 Capturar al menos **20 preguntas de un mismo skill** (p. ej. `react`) usando el formulario admin existente en `/admin/exam-questions/new`, porque `exam_questions` está vacía hoy y FR-003 exige un mínimo de 20 para habilitar un examen. Sin esto ninguna tarea posterior se puede probar de punta a punta.
+- [X] T001 Capturar al menos **20 preguntas de un mismo skill** (p. ej. `react`) usando el formulario admin existente en `/admin/exam-questions/new`, porque `exam_questions` está vacía hoy y FR-003 exige un mínimo de 20 para habilitar un examen. Sin esto ninguna tarea posterior se puede probar de punta a punta.
 
 **Checkpoint**: `SELECT count(*) FROM exam_questions WHERE skill_name = '<skill>'` devuelve 20 o más.
 
