@@ -45,11 +45,11 @@ US3 son ambas P1 (MVP); US2 es P2.
 **🔴 CRITICAL**: Ninguna historia de usuario puede empezar hasta que esta fase esté completa.
 
 - [X] T005 Escribir `backend/sql/exam-questions-migration.sql`, idempotente (`CREATE TABLE IF NOT EXISTS`, `ON CONFLICT DO NOTHING`), con exactamente estas tres piezas (ver `data-model.md`):
-  1. `skills(id uuid pk default gen_random_uuid(), name text unique not null, label text not null, created_at timestamptz default now())` + backfill de un `INSERT ... ON CONFLICT (name) DO NOTHING` con los 36 pares `{value→name, label→label}` de `apps/community/lib/profile-options.ts:49-87` (`CANONICAL_SKILLS`)
+  1. `skills(id uuid pk default gen_random_uuid(), name text unique not null, label text not null, created_at timestamptz default now())` + backfill de un `INSERT ... ON CONFLICT (name) DO NOTHING` con los 37 pares `{value→name, label→label}` de `apps/community/lib/profile-options.ts:49-87` (`CANONICAL_SKILLS`)
   2. `exam_questions(id uuid pk default gen_random_uuid(), question varchar(500) not null, skill_name varchar(50) not null references skills(name), correct_answer_index smallint not null check (correct_answer_index >= 0), difficulty_level varchar(12) not null check (difficulty_level in ('basico','intermedio','avanzado')), created_by uuid not null references users(id), created_at timestamptz default now())`
   3. `question_options(id uuid pk default gen_random_uuid(), exam_question_id uuid not null references exam_questions(id) on delete cascade, text varchar(200) not null, order_index smallint not null)`
   4. La función `validate_correct_answer_index()` y el `CONSTRAINT TRIGGER validate_correct_answer_index_trigger AFTER INSERT ON exam_questions DEFERRABLE INITIALLY DEFERRED FOR EACH ROW` definidos textualmente en `data-model.md` (nota sobre `correct_answer_index`) — cierra en DB el límite superior (`correct_answer_index < count(question_options)`) que un `CHECK` de una sola tabla no puede expresar; mismo patrón de trigger que `classify_scraper_post()` en `backend/sql/scraper-classification-migration.sql`
-- [ ] T006 Aplicar `backend/sql/exam-questions-migration.sql` manualmente en el editor SQL de Supabase (no hay migration runner en este repo — ver `CLAUDE.md`) y verificar `SELECT count(*) FROM skills` = 36, y que el trigger `validate_correct_answer_index_trigger` quedó creado sobre `exam_questions` (Nivel 1 de `quickstart.md`, prerequisito para todo lo demás)
+- [X] T006 Aplicar `backend/sql/exam-questions-migration.sql` manualmente en el editor SQL de Supabase (no hay migration runner en este repo — ver `CLAUDE.md`) y verificar `SELECT count(*) FROM skills` = 37, y que el trigger `validate_correct_answer_index_trigger` quedó creado sobre `exam_questions` (Nivel 1 de `quickstart.md`, prerequisito para todo lo demás)
 - [X] T007 [P] Crear `packages/schemas/examQuestion.ts` exportando `examQuestionSchema` (Zod) y el tipo inferido `ExamQuestionInput`, con estas reglas exactas (citadas de `data-model.md`/el ticket, sin margen de interpretación):
   - `question`: `z.string().trim().min(10).max(500)`
   - `skillName`: `z.string()` + `.refine()` contra la lista de nombres válidos (inyectada como parámetro de la función que construye el schema, para no acoplar el paquete a una consulta de DB — ver nota de implementación en el propio archivo)
@@ -59,7 +59,7 @@ US3 son ambas P1 (MVP); US2 es P2.
 - [X] T008 [P] Crear `backend/src/middleware/require-role.middleware.ts` exportando `requireRole(role: string)`, una factory de middleware Express: `401` (`{error:"unauthorized"}`) si no hay usuario autenticado en `req`, `403` (`{error:"forbidden", message:"No tienes permisos para esta acción"}`) si `req.user.roles` no incluye `role`, `next()` en otro caso
 - [X] T009 Añadir `"@avocado/schemas": "workspace:*"` como dependencia en `backend/package.json` y `apps/community/package.json`, correr `pnpm install` desde la raíz y confirmar que ambos paquetes pueden importar `examQuestionSchema`
 
-**Checkpoint**: Fundación lista — `skills` tiene 36 filas, el schema compartido existe e importa desde ambos lados, el middleware de rol existe (aún sin ruta que lo use).
+**Checkpoint**: Fundación lista — `skills` tiene 37 filas, el schema compartido existe e importa desde ambos lados, el middleware de rol existe (aún sin ruta que lo use).
 
 ---
 

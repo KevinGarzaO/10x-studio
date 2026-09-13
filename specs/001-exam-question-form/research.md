@@ -92,7 +92,7 @@ directamente contra `information_schema` en Supabase (incluyendo `ILIKE
 búsqueda exhaustiva del repo confirmó además que el catálogo de skills **hoy
 es puramente frontend**: `apps/community/lib/profile-options.ts:49-87` exporta
 `CANONICAL_SKILLS: { value: string; label: string }[]`, un array TypeScript
-hardcodeado de 36 pares `{value, label}` (`react`, `typescript`, `python`,
+hardcodeado de 37 pares `{value, label}` (`react`, `typescript`, `python`,
 `aws`, `figma`, `seo`, `salesforce`, etc.). El comentario en ese archivo
 (líneas 44-48) confirma que existe justamente para que el `skills TEXT[]` del
 candidato (`users.skills`, sin FK) coincida con los mismos ~40 keywords que el
@@ -116,7 +116,7 @@ CREATE TABLE IF NOT EXISTS skills (
 );
 ```
 
-Backfill de una sola vez con los 36 valores de `CANONICAL_SKILLS` (mismo
+Backfill de una sola vez con los 37 valores de `CANONICAL_SKILLS` (mismo
 `value`→`name`, `label`→`label`), vía `INSERT ... ON CONFLICT (name) DO
 NOTHING` para que la migración sea re-ejecutable. `exam_questions.skill_name`
 pasa a ser `REFERENCES skills(name)` contra esta tabla nueva.

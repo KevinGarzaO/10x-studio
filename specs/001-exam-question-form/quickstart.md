@@ -9,9 +9,9 @@ prueba definidos en el ticket. No repite código de implementación — referenc
 - `pnpm install` en la raíz (incluye el nuevo paquete `packages/schemas`).
 - Migración `backend/sql/exam-questions-migration.sql` aplicada manualmente en
   Supabase (no hay migration runner en este repo — ver `CLAUDE.md`). Incluye
-  la creación de `skills` (nueva) + backfill de los 36 valores de
+  la creación de `skills` (nueva) + backfill de los 37 valores de
   `CANONICAL_SKILLS` — confirmar tras aplicarla que `SELECT count(*) FROM
-  skills` da 36.
+  skills` da 37.
 - Un usuario de prueba con `roles` conteniendo `'admin'` y otro sin ese rol,
   ambos ya existentes en `users` (para Nivel 3, 5 y 6).
 - Backend corriendo: `pnpm dev:backend` (puerto 3001).

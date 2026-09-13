@@ -14,7 +14,7 @@ CREATE TABLE IF NOT EXISTS skills (
   created_at TIMESTAMPTZ DEFAULT now()
 );
 
--- One-time backfill of the 36 values from CANONICAL_SKILLS. Re-runnable.
+-- One-time backfill of the 37 values from CANONICAL_SKILLS. Re-runnable.
 INSERT INTO skills (name, label) VALUES
   ('react', 'React'),
   ('typescript', 'TypeScript'),

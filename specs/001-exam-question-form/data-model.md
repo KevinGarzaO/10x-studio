@@ -116,7 +116,7 @@ siguiendo el mismo patrón que `community_tags`:
 | `label` | `text` | `NOT NULL` — mismo valor que `CANONICAL_SKILLS[].label` (ej. `'React'`) |
 | `created_at` | `timestamptz` | `DEFAULT now()` |
 
-Backfill de una sola vez con los 36 pares de `CANONICAL_SKILLS`, vía
+Backfill de una sola vez con los 37 pares de `CANONICAL_SKILLS`, vía
 `INSERT ... ON CONFLICT (name) DO NOTHING` en la misma migración
 (`exam-questions-migration.sql`). `exam_questions.skill_name` referencia
 `skills(name)`.
