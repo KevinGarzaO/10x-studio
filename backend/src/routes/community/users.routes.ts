@@ -72,6 +72,23 @@ router.get('/:username', async (req: Request, res: Response) => {
     user.community_posts = [...forumPosts, ...editorialPosts]
       .sort((a: any, b: any) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
 
+    // Niveles validados por examen (feature 002). Publicos por diseño: son la
+    // señal que las empresas vienen a ver.
+    //
+    // Se filtran contra users.skills a proposito: si el candidato retira un
+    // skill de su perfil el nivel deja de mostrarse (la fila se conserva, y el
+    // nivel reaparece si vuelve a declararlo). Filtrar aqui lo hace explicito
+    // en vez de depender de como itere el frontend.
+    const declared: string[] = user.skills || []
+    const { data: levels } = await supabase
+      .from('user_skill_levels')
+      .select('skill_name, level, achieved_at')
+      .eq('user_id', user.id)
+
+    user.skillLevels = (levels || [])
+      .filter((l: any) => declared.includes(l.skill_name))
+      .map((l: any) => ({ skillName: l.skill_name, level: l.level, achievedAt: l.achieved_at }))
+
     res.json({ user })
   } catch (error) {
     console.error('Community Get user error:', error)

@@ -296,3 +296,8 @@ button { cursor: pointer; }
 .sxe-result-note.is-good { background: #123a32; border-color: #245848; color: #6ee7b7; }
 .sxe-result-retry { margin: 0; color: #8b949e; font-size: 11px; }
 .sxe-result-actions { display: flex; gap: 16px; justify-content: center; margin-top: 8px; }
+
+/* Skill validado en el perfil publico (US2) */
+.profile-fact.is-validated { display: inline-flex; align-items: center; gap: 5px; background: #10231e; border-color: #245848; color: #6ee7b7; }
+.profile-fact.is-validated svg { color: #00A86B; }
+.profile-fact .skill-level { margin-left: 4px; padding: 1px 6px; border-radius: 99px; background: #00A86B22; color: #6ee7b7; font: 700 9px var(--font-mono); text-transform: uppercase; letter-spacing: .04em; }

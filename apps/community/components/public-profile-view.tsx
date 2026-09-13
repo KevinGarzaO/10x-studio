@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { ArrowLeft, BriefcaseBusiness, CalendarDays, GitBranch, Globe2, Home, MapPin, Pencil, ShieldCheck, Share2, Sparkles, Users } from 'lucide-react'
+import { ArrowLeft, BadgeCheck, BriefcaseBusiness, CalendarDays, GitBranch, Globe2, Home, MapPin, Pencil, ShieldCheck, Share2, Sparkles, Users } from 'lucide-react'
 import { PostCard, type FeedPost } from './community-hub'
 import { SENIORITY_LABELS } from '../lib/profile-options'
 
@@ -20,7 +20,15 @@ export interface PublicProfile {
   skills?: string[] | null
   location?: string | null
   work_modality?: string | null
+  /** Niveles validados por examen (feature 002). Solo skills validados. */
+  skillLevels?: { skillName: string; level: string; achievedAt: string }[] | null
   community_posts?: (FeedPost & { votes_count: number; comments_count: number })[]
+}
+
+const SKILL_LEVEL_LABEL: Record<string, string> = {
+  basico: 'Básico',
+  intermedio: 'Intermedio',
+  avanzado: 'Avanzado',
 }
 
 // Shared by /users/[username] (viewing someone else) and /profile (viewing
@@ -66,7 +74,20 @@ export function PublicProfileView({ profile, isOwnProfile, onAuthRequired }: { p
         {(seniorityLabel || (profile.skills && profile.skills.length > 0)) && (
           <div className="profile-facts">
             {seniorityLabel && <span className="profile-fact"><BriefcaseBusiness size={12} /> {seniorityLabel}</span>}
-            {profile.skills?.map(skill => <span className="profile-fact" key={skill}>{skill}</span>)}
+            {/* El bucle parte de profile.skills (los declarados) y cruza contra
+                skillLevels, no al reves: un nivel de un skill que el candidato
+                ya retiro de su perfil no debe pintarse. */}
+            {profile.skills?.map(skill => {
+              const validated = profile.skillLevels?.find(l => l.skillName === skill)
+              return validated ? (
+                <span className="profile-fact is-validated" key={skill} title={`Nivel validado por examen: ${SKILL_LEVEL_LABEL[validated.level] ?? validated.level}`}>
+                  <BadgeCheck size={12} /> {skill}
+                  <span className="skill-level">{SKILL_LEVEL_LABEL[validated.level] ?? validated.level}</span>
+                </span>
+              ) : (
+                <span className="profile-fact" key={skill}>{skill}</span>
+              )
+            })}
           </div>
         )}
 
