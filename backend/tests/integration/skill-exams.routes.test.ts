@@ -246,6 +246,43 @@ describe('skill exams (integration)', () => {
     expect(retry.body.retryAvailableAt).toBeTruthy()
   })
 
+  // Regresión: un intento vencido seguía siendo 'in_progress' para la base, así
+  // que ocupaba el índice único parcial de FR-017 para siempre. Pasado el
+  // periodo de espera el candidato quedaba encerrado sin poder examinarse nunca
+  // más. El periodo de espera lo enmascaraba 30 días, por eso ningún otro test
+  // lo veía.
+  it('lets the candidate start again once an expired attempt is past its cooldown', async () => {
+    const start = await request(app)
+      .post('/api/community/skill-exams')
+      .set('x-test-user-id', ADMIN_USER_ID)
+      .send({ skillName: SKILL })
+    expect(start.status).toBe(201)
+
+    // Venció hace 40 días: expirado Y fuera de la ventana de espera.
+    const longAgo = new Date(Date.now() - 40 * 24 * 60 * 60 * 1000).toISOString()
+    await supabase
+      .from('skill_exam_attempts')
+      .update({ started_at: longAgo, expires_at: longAgo })
+      .eq('id', start.body.attemptId)
+
+    const retry = await request(app)
+      .post('/api/community/skill-exams')
+      .set('x-test-user-id', ADMIN_USER_ID)
+      .send({ skillName: SKILL })
+
+    expect(retry.status).toBe(201)
+    expect(retry.body.attemptId).not.toBe(start.body.attemptId)
+
+    // El intento viejo se conserva para auditoría (FR-012), marcado como
+    // vencido para liberar el índice.
+    const { data: old } = await supabase
+      .from('skill_exam_attempts')
+      .select('status')
+      .eq('id', start.body.attemptId)
+      .single()
+    expect(old!.status).toBe('expired')
+  })
+
   // ---------------- T027: periodo de espera tras completar ----------------
 
   it('blocks a retry inside the waiting period and creates nothing (T027)', async () => {

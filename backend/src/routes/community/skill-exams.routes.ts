@@ -235,6 +235,16 @@ router.post('/', communityAuthMiddleware, async (req: AuthRequest, res: Response
     if (open && !isExpired(open)) {
       return res.status(409).json({ error: 'exam_in_progress', attemptId: open.id })
     }
+    if (open) {
+      // Vencido. Hay que marcarlo antes de insertar: el índice único parcial
+      // mira `status`, no `expires_at`, así que si se quedara 'in_progress'
+      // bloquearía este INSERT y el candidato no podría examinarse nunca más.
+      const { error: expireError } = await supabase
+        .from('skill_exam_attempts')
+        .update({ status: 'expired' })
+        .eq('id', open.id)
+      if (expireError) throw expireError
+    }
 
     // FR-011: periodo de espera desde el último intento (completado o vencido).
     const last = await lastAttemptFor(userId, skillName)
@@ -288,6 +298,16 @@ router.post('/', communityAuthMiddleware, async (req: AuthRequest, res: Response
       })
       .select('id, expires_at, question_count')
       .single()
+
+    // La verificación de arriba no puede evitar la carrera: dos peticiones
+    // simultáneas (StrictMode en desarrollo, un doble clic, un refresco rápido)
+    // pasan ambas antes de que cualquiera inserte. Para eso está el índice
+    // único parcial — y su violación significa exactamente "ya hay un examen
+    // abierto", no un error interno.
+    if (attemptError?.code === '23505') {
+      const existing = await openAttempt(userId)
+      return res.status(409).json({ error: 'exam_in_progress', attemptId: existing?.id ?? null })
+    }
     if (attemptError) throw attemptError
 
     const { error: questionsError } = await supabase.from('skill_exam_attempt_questions').insert(

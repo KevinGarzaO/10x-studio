@@ -72,6 +72,21 @@ export default function SkillExamPage() {
       const data = await started.json()
 
       if (!started.ok) {
+        // Dos peticiones de inicio pueden cruzarse: React StrictMode ejecuta
+        // este efecto dos veces en desarrollo, y un doble clic o un refresco
+        // rápido producen lo mismo. La segunda choca contra el índice único de
+        // FR-017. No es un error que mostrarle al candidato: el examen SÍ se
+        // creó, así que se retoma en vez de romper.
+        if (started.status === 409 && data.error === 'exam_in_progress') {
+          const resumed = await fetch(`${API_URL}/api/community/skill-exams/current`, { headers: authHeaders() })
+          if (resumed.ok) {
+            const r = await resumed.json()
+            if (r.skillName === skillName && r.question) {
+              if (!cancelled) setExam({ attemptId: r.attemptId, total: r.total, answered: r.answered, question: r.question })
+              return
+            }
+          }
+        }
         if (!cancelled) setBlocked(blockedMessage(started.status, data))
         return
       }

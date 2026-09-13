@@ -20,5 +20,11 @@ export default defineConfig({
     // 5s por defecto de Vitest no alcanzan. Los unitarios son puros y no se ven
     // afectados por este límite más alto.
     testTimeout: 60000,
+    // Los tests de integración comparten una sola base real y el mismo usuario
+    // de prueba: en paralelo, la limpieza de un archivo borra los intentos que
+    // otro acaba de crear y aparecen fallos que no existen al correrlos por
+    // separado. Serializar los archivos es la forma robusta de evitarlo; los
+    // unitarios son puros y no pagan nada por esto.
+    fileParallelism: false,
   },
 })

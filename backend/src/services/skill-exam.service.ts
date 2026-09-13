@@ -68,17 +68,23 @@ function shuffleRandom(ids: string[]): string[] {
 }
 
 export interface AttemptTiming {
-  status: 'in_progress' | 'completed'
+  status: 'in_progress' | 'completed' | 'expired'
   expires_at: string
   finished_at?: string | null
 }
 
 /**
- * FR-019: "vencido" es un estado derivado, nunca almacenado. Así no hace falta
- * un cron que barra intentos vencidos, ni existe la ventana "ya venció pero
- * nadie lo marcó". Ver research.md R2.
+ * FR-019. El vencimiento se deriva en las lecturas, así que no hace falta un
+ * cron que barra intentos y no hay ventana "ya venció pero nadie lo marcó".
+ *
+ * El estado `expired` sí se almacena, pero solo de forma perezosa y por una
+ * razón concreta: el índice único parcial de FR-017 mira `status`, no
+ * `expires_at`, así que un intento vencido que siguiera siendo 'in_progress'
+ * ocuparía el índice para siempre y dejaría al candidato sin poder examinarse
+ * nunca más. Ver el bloque 4 de skill-exams-migration.sql.
  */
 export function isExpired(attempt: AttemptTiming, now: Date = new Date()): boolean {
+  if (attempt.status === 'expired') return true
   return attempt.status === 'in_progress' && new Date(attempt.expires_at) < now
 }
 
@@ -92,6 +98,8 @@ export function retryAvailableAt(attempt: AttemptTiming, now: Date = new Date())
   if (attempt.status === 'completed' && attempt.finished_at) {
     from = new Date(attempt.finished_at)
   } else if (isExpired(attempt, now)) {
+    // También cubre el intento ya marcado como 'expired': la espera se cuenta
+    // desde que venció, no desde que alguien lo marcó.
     from = new Date(attempt.expires_at)
   } else {
     return null

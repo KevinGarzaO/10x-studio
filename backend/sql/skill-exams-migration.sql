@@ -72,3 +72,25 @@ CREATE TABLE IF NOT EXISTS user_skill_levels (
   updated_at TIMESTAMPTZ DEFAULT now(),
   PRIMARY KEY (user_id, skill_name)
 );
+
+-- ============================================
+-- 4. CORRECCION (descubierta al probar de punta a punta)
+--
+-- El diseño original dejaba el vencimiento como estado puramente derivado
+-- (status='in_progress' AND expires_at < now()) para no necesitar un cron.
+-- Pero eso choca de frente con el indice unico parcial de arriba: un intento
+-- vencido SIGUE siendo 'in_progress' para la base, asi que sigue ocupando el
+-- indice. Consecuencia real: pasados los 30 dias de espera, el candidato no
+-- puede iniciar otro examen — queda encerrado para siempre. Reproducido con
+-- un intento vencido hace 40 dias: el INSERT nuevo falla con 23505.
+--
+-- No se puede resolver en el indice (now() no es IMMUTABLE, no se admite en el
+-- predicado). Se resuelve con un tercer valor de status que el backend escribe
+-- de forma perezosa, solo cuando se topa con un intento vencido al iniciar otro.
+-- No hace falta cron y no hay ventana de inconsistencia en las lecturas, que
+-- siguen derivando el vencimiento con isExpired().
+-- ============================================
+ALTER TABLE skill_exam_attempts DROP CONSTRAINT IF EXISTS skill_exam_attempts_status_check;
+ALTER TABLE skill_exam_attempts
+  ADD CONSTRAINT skill_exam_attempts_status_check
+  CHECK (status IN ('in_progress', 'completed', 'expired'));
