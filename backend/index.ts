@@ -25,6 +25,7 @@ import faviconRoutes from './src/routes/community/favicon.routes'
 import communityStatsRoutes from './src/routes/community/stats.routes'
 import communityFeedRoutes from './src/routes/community/feed.routes'
 import communityHistoryRoutes from './src/routes/community/history.routes'
+import communitySkillExamsRoutes from './src/routes/community/skill-exams.routes'
 
 // Admin routes
 import adminExamQuestionsRoutes from './src/routes/admin/exam-questions.routes'
@@ -101,6 +102,7 @@ app.use('/api/community/favicon', faviconRoutes)
 app.use('/api/community/stats', communityStatsRoutes)
 app.use('/api/community/feed', communityFeedRoutes)
 app.use('/api/community/history', communityHistoryRoutes)
+app.use('/api/community/skill-exams', communitySkillExamsRoutes)
 app.use('/api/admin/exam-questions', adminExamQuestionsRoutes)
 
 // Scraper routes (internal use, no auth required for now)

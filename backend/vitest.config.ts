@@ -11,5 +11,10 @@ export default defineConfig({
     // from the default `npm test` / `npm run test:integration` scripts,
     // which target tests/unit and tests/integration specifically.
     include: ['**/*.{test,spec}.?(c|m)[jt]s?(x)', 'scripts/test-exam-questions-bypass.ts'],
+    // Los tests de integración hablan con Supabase remoto: un examen completo
+    // son ~10 respuestas encadenadas, cada una con varios viajes de red. Los
+    // 5s por defecto de Vitest no alcanzan. Los unitarios son puros y no se ven
+    // afectados por este límite más alto.
+    testTimeout: 60000,
   },
 })
