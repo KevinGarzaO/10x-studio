@@ -80,7 +80,7 @@ coherente y que quedó registrado en `skill_exam_attempts`.
 - [X] T011 [P] [US1] Integration test de **expiración** en el mismo archivo (FR-019, US3 escenario 6): con un intento cuyo `expires_at` esté en el pasado, `GET /current` devuelve `410 exam_expired` con `retryAvailableAt`, y un `POST /api/community/skill-exams` posterior del mismo skill devuelve `409 waiting_period` — es decir, el intento vencido **se consumió** y arrancó el periodo de espera
 - [X] T012 [P] [US1] Component test en `apps/community/tests/SkillExamRunner.test.tsx`: muestra una pregunta a la vez; tras responder no existe forma de volver a la anterior (FR-006); al recibir `completed: true` muestra el resultado
 - [X] T013 [P] [US1] Component test en `apps/community/tests/SkillExamResult.test.tsx`: muestra el nivel obtenido y el conteo de aciertos
-- [ ] T014 [P] [US1] E2E happy path en `e2e/skill-level-exam.spec.ts`: sesión inyectada (mismo patrón que 001), ir al examen, responder las 10, ver el nivel. Limpiar las filas creadas en `afterAll`
+- [X] T014 [P] [US1] E2E happy path en `e2e/skill-level-exam.spec.ts`: sesión inyectada (mismo patrón que 001), ir al examen, responder las 10, ver el nivel. Limpiar las filas creadas en `afterAll`
 
 ### Implementation for User Story 1
 
@@ -109,7 +109,7 @@ distingue de los no validados.
 
 - [X] T022 [P] [US2] Integration test en `backend/tests/integration/users.routes.test.ts`: `GET /api/community/users/:username` incluye `skillLevels` con solo los skills validados, y sigue siendo accesible sin autenticación. **Incluir el caso del skill retirado del perfil** (edge case de `spec.md`): con una fila en `user_skill_levels` de un skill que ya **no** está en `users.skills`, la respuesta **no** debe incluirlo en `skillLevels`, aunque la fila se conserve en la tabla
 - [X] T023 [P] [US2] Component test en `apps/community/tests/public-profile-view.test.tsx`: un skill con nivel se renderiza distinto de uno sin nivel; y un `skillLevels` que trajera un skill ausente de `profile.skills` no debe pintar nada (el render parte de `profile.skills`, no de `skillLevels`)
-- [ ] T024 [P] [US2] E2E en `e2e/skill-level-exam.spec.ts`: visitar el perfil público sin sesión y confirmar que el nivel validado es visible
+- [X] T024 [P] [US2] E2E en `e2e/skill-level-exam.spec.ts`: visitar el perfil público sin sesión y confirmar que el nivel validado es visible
 
 ### Implementation for User Story 2
 
@@ -133,7 +133,7 @@ la ventana, reintentar y confirmar que un resultado peor no degrada el perfil.
 
 - [X] T027 [P] [US3] Integration test en `backend/tests/integration/skill-exams.routes.test.ts`: reintento dentro de la ventana → `409 { error: "waiting_period", retryAvailableAt }` y no se crea intento nuevo
 - [X] T028 [P] [US3] Integration test en el mismo archivo: con `user_skill_levels` en `intermedio`, completar un intento que dé `basico` → el intento nuevo guarda `level='basico'`, pero `user_skill_levels` conserva `intermedio` con su `achieved_at` original y la respuesta trae `improved: false` y `profileLevel: "intermedio"` (FR-021)
-- [ ] T029 [P] [US3] E2E en `e2e/skill-level-exam.spec.ts`: tras terminar un examen, intentar iniciarlo de nuevo y ver el bloqueo con la fecha de reintento
+- [X] T029 [P] [US3] E2E en `e2e/skill-level-exam.spec.ts`: tras terminar un examen, intentar iniciarlo de nuevo y ver el bloqueo con la fecha de reintento
 
 ### Implementation for User Story 3
 
@@ -175,7 +175,7 @@ declarado sin banco suficiente, confirmando que ambos se bloquean con motivos di
 - [X] T040 [P] Crear `backend/scripts/test-skill-exams-bypass.ts` (Nivel 6, mismo patrón que `test-exam-questions-bypass.ts` de 001): responder el intento de otro usuario → `403`; `selectedOptionIndex: 99` → `400`; reenviar una posición ya contestada → `409` sin alterar la original; terminar y reenviar → `409` sin recalcular `level`. **Incluir un caso de campos forjados (FR-007, FR-013)**: enviar una respuesta con `"level": "avanzado"` y `"is_correct": true` en el body y confirmar que el resultado final los ignora — hoy dependemos de que Zod descarte claves desconocidas, que es comportamiento implícito de la librería y no una garantía verificada
 - [X] T041 Correr `npx tsc --noEmit` limpio en `backend`, `apps/community` y `packages/schemas`
 - [ ] T042 Verificar manualmente en un navegador real las 4 historias de usuario, tal como pide el Success check de `quickstart.md`
-- [ ] T043 Revisar el diff completo contra `spec.md` y el Constitution Check de `plan.md` antes de solicitar code review
+- [X] T043 Revisar el diff completo contra `spec.md` y el Constitution Check de `plan.md` antes de solicitar code review
 
 ---
 
