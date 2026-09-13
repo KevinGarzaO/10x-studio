@@ -55,6 +55,11 @@ export function OnboardingPage() {
         router.replace('/login')
         return
       }
+      // A user who already has a profile photo (e.g. one who onboarded
+      // before a newer required field like role_category existed, and got
+      // sent back here) shouldn't have to re-upload it just to satisfy
+      // isComplete's photo requirement below.
+      if (user.photo_url) setPhotoPreview(user.photo_url)
       setCheckingSession(false)
     })
   }, [router])
@@ -85,7 +90,11 @@ export function OnboardingPage() {
           skills,
           location: location.trim(),
           workModality,
-          photoBase64: photoPreview,
+          // photoPreview may now hold either a freshly picked image (a
+          // data: URL) or the user's pre-existing photo_url (preloaded
+          // above) — only the former is something the backend can upload;
+          // sending the existing URL back as "photoBase64" would corrupt it.
+          photoBase64: photoPreview?.startsWith('data:') ? photoPreview : undefined,
         }),
       })
       const data = await res.json()
