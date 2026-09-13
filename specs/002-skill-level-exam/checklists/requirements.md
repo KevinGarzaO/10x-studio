@@ -45,3 +45,10 @@
 - Queda registrado en Assumptions un **trade-off aceptado a sabiendas**: la ventana de 24h
   permite interrumpir el examen para investigar las preguntas pendientes. Fue una decisión
   deliberada, no un descuido.
+- **Refinamiento posterior a `/speckit-analyze`** (hallazgo A1): FR-014 decía "el mismo
+  conjunto de preguntas en un reintento" sin precisar respecto a cuál intento previo, lo
+  que admitía dos lecturas incompatibles (solo el anterior vs. todo el historial). Se
+  alineó con la decisión ya tomada en `research.md` R3 — solo el intento inmediatamente
+  anterior — y se explicitó que un tercer intento puede coincidir con el primero sin
+  incumplir. El escenario de aceptación 3 de US3 ya era preciso; era el requisito el que
+  iba por detrás.

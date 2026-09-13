@@ -181,8 +181,10 @@ suficientes, confirmando que ambos casos se bloquean con un mensaje que explica 
 - **FR-013**: El sistema MUST NOT permitir que el candidato altere su propio resultado
   (nivel, puntaje o fecha de validación).
 - **FR-014**: El sistema MUST NOT presentarle al candidato exactamente el mismo conjunto
-  de preguntas en un reintento del mismo skill, en la medida en que el tamaño del banco lo
-  permita.
+  de preguntas que en su **intento inmediatamente anterior** del mismo skill, en la medida
+  en que el tamaño del banco lo permita. No se exige memoria más allá de ese intento: un
+  tercer intento **MAY** volver a coincidir con el primero, y eso no incumple este
+  requisito.
 - **FR-015**: El sistema MUST NOT permitir reenviar ni continuar un examen ya terminado.
 - **FR-016**: El sistema MUST mantener sin cambios los niveles ya validados cuando el
   banco de preguntas se edite o se reduzca posteriormente.
