@@ -74,9 +74,9 @@ US3 son ambas P1 (MVP); US2 es P2.
 > **NOTA: escribir estos tests primero y confirmar que fallan antes de implementar**
 
 - [X] T010 [P] [US1] Unit test de caso feliz en `backend/tests/unit/examQuestion.schema.test.ts`: un payload completo y válido (los 5 campos) pasa `examQuestionSchema.safeParse()` sin errores
-- [ ] T011 [P] [US1] Integration test en `backend/tests/integration/exam-questions.routes.test.ts`: POST completo válido (con sesión admin real de la BD de test) → `201`, y una lectura directa a `exam_questions` + `question_options` confirma que lo guardado coincide exacto con el payload enviado (round-trip, ver `contracts/exam-questions.md`)
+- [X] T011 [P] [US1] Integration test en `backend/tests/integration/exam-questions.routes.test.ts`: POST completo válido (con sesión admin real de la BD de test) → `201`, y una lectura directa a `exam_questions` + `question_options` confirma que lo guardado coincide exacto con el payload enviado (round-trip, ver `contracts/exam-questions.md`)
 - [X] T012 [P] [US1] Component test en `apps/community/tests/ExamQuestionForm.test.tsx`: mock de `fetch` a `/api/admin/exam-questions` respondiendo `201` → verificar que se llamó con el payload exacto esperado y que el formulario se limpió después
-- [ ] T013 [P] [US1] E2E happy path en `e2e/exam-question-form.spec.ts`: login como admin → llenar formulario válido → submit → ver confirmación → confirmar contra Supabase que la pregunta quedó guardada con los datos exactos capturados
+- [X] T013 [P] [US1] E2E happy path en `e2e/exam-question-form.spec.ts`: login como admin → llenar formulario válido → submit → ver confirmación → confirmar contra Supabase que la pregunta quedó guardada con los datos exactos capturados
 
 ### Implementation for User Story 1
 
@@ -97,9 +97,9 @@ US3 son ambas P1 (MVP); US2 es P2.
 
 ### Tests for User Story 3
 
-- [ ] T018 [P] [US3] Integration test en `backend/tests/integration/exam-questions.routes.test.ts` (extiende el archivo de T011): POST con sesión de un usuario sin rol admin → `403`, y una lectura a `exam_questions` antes/después confirma el mismo conteo de filas (nada se guardó)
-- [ ] T019 [P] [US3] Script de bypass manual (Nivel 6) en `backend/scripts/test-exam-questions-bypass.ts` (mismo patrón que los scripts uno-off existentes en `backend/scripts/`): hace `POST` directo al endpoint con datos que el frontend nunca dejaría enviar, una vez con sesión no-admin y otra con sesión admin pero payload inválido en todos los campos a la vez — confirma `403`/`400` respectivamente y verifica el conteo de filas de `exam_questions` sin cambios en ambos casos (ver `quickstart.md`, Nivel 6)
-- [ ] T020 [P] [US3] E2E en `e2e/exam-question-form.spec.ts` (extiende el archivo de T013): login como usuario sin rol admin → navegar a la URL del formulario → confirmar que no se muestra el formulario (bloqueo o redirect)
+- [X] T018 [P] [US3] Integration test en `backend/tests/integration/exam-questions.routes.test.ts` (extiende el archivo de T011): POST con sesión de un usuario sin rol admin → `403`, y una lectura a `exam_questions` antes/después confirma el mismo conteo de filas (nada se guardó)
+- [X] T019 [P] [US3] Script de bypass manual (Nivel 6) en `backend/scripts/test-exam-questions-bypass.ts` (mismo patrón que los scripts uno-off existentes en `backend/scripts/`): hace `POST` directo al endpoint con datos que el frontend nunca dejaría enviar, una vez con sesión no-admin y otra con sesión admin pero payload inválido en todos los campos a la vez — confirma `403`/`400` respectivamente y verifica el conteo de filas de `exam_questions` sin cambios en ambos casos (ver `quickstart.md`, Nivel 6)
+- [X] T020 [P] [US3] E2E en `e2e/exam-question-form.spec.ts` (extiende el archivo de T013): login como usuario sin rol admin → navegar a la URL del formulario → confirmar que no se muestra el formulario (bloqueo o redirect)
 
 ### Implementation for User Story 3
 
@@ -119,9 +119,9 @@ US3 son ambas P1 (MVP); US2 es P2.
 ### Tests for User Story 2
 
 - [X] T023 [P] [US2] Extender `backend/tests/unit/examQuestion.schema.test.ts` (de T010) con un caso que falla y uno que pasa por regla: `question` de 5 caracteres (falla) vs. 15 (pasa); `options` con 1 elemento (falla) vs. 2 (pasa); `options: ["Sí","sí"]` (falla, duplicado case-insensitive) vs. sin duplicados (pasa); `correctAnswerIndex: 5` con 3 `options` (falla) vs. `0` (pasa); `difficultyLevel: "experto"` (falla) vs. `"basico"` (pasa)
-- [ ] T024 [P] [US2] Extender `backend/tests/integration/exam-questions.routes.test.ts` (de T011) con un `POST` por cada AC1-AC4 confirmando `400` y que el campo devuelto en `field` coincide con el campo realmente inválido
+- [X] T024 [P] [US2] Extender `backend/tests/integration/exam-questions.routes.test.ts` (de T011) con un `POST` por cada AC1-AC4 confirmando `400` y que el campo devuelto en `field` coincide con el campo realmente inválido
 - [X] T025 [P] [US2] Extender `apps/community/tests/ExamQuestionForm.test.tsx` (de T012): blur en "pregunta" vacía → ver "La pregunta es obligatoria" sin llamada de red (AC1); 1 sola opción capturada → botón submit `disabled` y ver "Se requieren al menos 2 opciones" (AC2); 2+ opciones sin ninguna marcada como correcta → submit muestra "Selecciona la respuesta correcta" y no llama a `fetch` (AC3); dos opciones con el mismo texto (distinta capitalización) → submit muestra "Las opciones no pueden repetirse" y no llama a `fetch` (AC4)
-- [ ] T026 [P] [US2] Extender `e2e/exam-question-form.spec.ts` (de T013/T020) con el flujo negativo completo AC1→AC4 antes del submit exitoso: cada error se corrige uno a la vez hasta llegar al envío válido
+- [X] T026 [P] [US2] Extender `e2e/exam-question-form.spec.ts` (de T013/T020) con el flujo negativo completo AC1→AC4 antes del submit exitoso: cada error se corrige uno a la vez hasta llegar al envío válido
 
 ### Implementation for User Story 2
 
@@ -139,11 +139,11 @@ US3 son ambas P1 (MVP); US2 es P2.
 
 **Purpose**: Verificación final contra el Definition of Done del ticket original.
 
-- [ ] T032 [P] Ejecutar manualmente el Nivel 1 de `quickstart.md` (DB aislado) contra Supabase: `INSERT` con `correct_answer_index` fuera de rango, `skill_name` inexistente, y `difficulty_level` fuera del enum — confirmar que los tres son rechazados por los constraints de T005
+- [X] T032 [P] Ejecutar manualmente el Nivel 1 de `quickstart.md` (DB aislado) contra Supabase: `INSERT` con `correct_answer_index` fuera de rango, `skill_name` inexistente, y `difficulty_level` fuera del enum — confirmar que los tres son rechazados por los constraints de T005
 - [X] T033 [P] Actualizar la sección "Commands"/testing de `CLAUDE.md` para reflejar que `backend`, `apps/community` y `packages/schemas` ahora tienen Vitest configurado, y que existe una suite de Playwright en `e2e/` (el texto actual dice explícitamente que no hay test runner configurado — ya no es cierto tras esta feature)
 - [X] T034 Correr `npx tsc --noEmit` limpio en `backend`, `apps/community` y `packages/schemas`
 - [ ] T035 Verificar manualmente en un navegador real los 6 Acceptance Criteria de `spec.md` (no solo vía Playwright), tal como pide el Definition of Done del ticket
-- [ ] T036 Revisar el diff completo contra el Definition of Done original del ticket antes de solicitar code review
+- [X] T036 Revisar el diff completo contra el Definition of Done original del ticket antes de solicitar code review
 
 ---
 
