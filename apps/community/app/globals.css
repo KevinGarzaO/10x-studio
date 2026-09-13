@@ -297,6 +297,25 @@ button { cursor: pointer; }
 .sxe-result-retry { margin: 0; color: #8b949e; font-size: 11px; }
 .sxe-result-actions { display: flex; gap: 16px; justify-content: center; margin-top: 8px; }
 
+.sxe-subtitle { margin: -12px 0 20px; color: #8b949e; font-size: 13px; line-height: 1.6; }
+.sxe-empty { margin: 0; color: #8b949e; font-size: 13px; line-height: 1.6; }
+.sxe-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 10px; }
+.sxe-list-item {
+  display: flex; align-items: center; justify-content: space-between; gap: 14px;
+  padding: 14px 16px; background: #0d1117; border: 1px solid #30363d; border-radius: 8px;
+}
+.sxe-list-main { display: flex; align-items: center; gap: 10px; min-width: 0; }
+.sxe-list-skill { display: inline-flex; align-items: center; gap: 6px; color: #e6edf3; font-size: 13px; font-weight: 600; }
+.sxe-validated-icon { color: #00A86B; }
+.sxe-list-level { padding: 2px 8px; border-radius: 99px; background: #123a32; border: 1px solid #245848; color: #6ee7b7; font: 700 9px var(--font-mono); text-transform: uppercase; letter-spacing: .04em; }
+.sxe-list-pending { color: #6e7781; font-size: 11px; }
+.sxe-list-status { display: inline-flex; align-items: center; gap: 6px; color: #8b949e; font-size: 11px; white-space: nowrap; }
+.sxe-start {
+  padding: 8px 13px; border-radius: 7px; background: #00A86B; color: #07131d;
+  font-size: 12px; font-weight: 700; text-decoration: none; white-space: nowrap;
+}
+.sxe-start:hover { background: #34C98B; }
+
 /* Skill validado en el perfil publico (US2) */
 .profile-fact.is-validated { display: inline-flex; align-items: center; gap: 5px; background: #10231e; border-color: #245848; color: #6ee7b7; }
 .profile-fact.is-validated svg { color: #00A86B; }

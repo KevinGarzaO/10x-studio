@@ -245,4 +245,204 @@ describe('skill exams (integration)', () => {
     expect(retry.body.error).toBe('waiting_period')
     expect(retry.body.retryAvailableAt).toBeTruthy()
   })
+
+  // ---------------- T027: periodo de espera tras completar ----------------
+
+  it('blocks a retry inside the waiting period and creates nothing (T027)', async () => {
+    const start = await request(app)
+      .post('/api/community/skill-exams')
+      .set('x-test-user-id', ADMIN_USER_ID)
+      .send({ skillName: SKILL })
+    await answerAll(app, ADMIN_USER_ID, start.body.attemptId, 1)
+
+    const { count: before } = await supabase
+      .from('skill_exam_attempts')
+      .select('*', { count: 'exact', head: true })
+      .eq('user_id', ADMIN_USER_ID)
+
+    const retry = await request(app)
+      .post('/api/community/skill-exams')
+      .set('x-test-user-id', ADMIN_USER_ID)
+      .send({ skillName: SKILL })
+
+    expect(retry.status).toBe(409)
+    expect(retry.body.error).toBe('waiting_period')
+    expect(new Date(retry.body.retryAvailableAt).getTime()).toBeGreaterThan(Date.now())
+
+    const { count: after } = await supabase
+      .from('skill_exam_attempts')
+      .select('*', { count: 'exact', head: true })
+      .eq('user_id', ADMIN_USER_ID)
+    expect(after).toBe(before)
+  })
+
+  // ---------------- T028: un reintento peor no baja el nivel ----------------
+
+  it('keeps the better historical level when a retry scores lower (T028)', async () => {
+    // Primer intento: 10/10 -> avanzado.
+    const first = await request(app)
+      .post('/api/community/skill-exams')
+      .set('x-test-user-id', ADMIN_USER_ID)
+      .send({ skillName: SKILL })
+    await answerAll(app, ADMIN_USER_ID, first.body.attemptId, 1)
+
+    const { data: afterFirst } = await supabase
+      .from('user_skill_levels')
+      .select('level, achieved_at')
+      .eq('user_id', ADMIN_USER_ID)
+      .eq('skill_name', SKILL)
+      .single()
+    expect(afterFirst!.level).toBe('avanzado')
+
+    // Empujar el fin del intento fuera de la ventana de 30 días.
+    const longAgo = new Date(Date.now() - 31 * 24 * 60 * 60 * 1000).toISOString()
+    await supabase
+      .from('skill_exam_attempts')
+      .update({ finished_at: longAgo })
+      .eq('id', first.body.attemptId)
+
+    // Segundo intento: 0/10 -> basico.
+    const second = await request(app)
+      .post('/api/community/skill-exams')
+      .set('x-test-user-id', ADMIN_USER_ID)
+      .send({ skillName: SKILL })
+    expect(second.status).toBe(201)
+
+    const final = await answerAll(app, ADMIN_USER_ID, second.body.attemptId, 0)
+
+    expect(final.body.level).toBe('basico')
+    expect(final.body.improved).toBe(false)
+    expect(final.body.profileLevel).toBe('avanzado')
+
+    // El intento nuevo guarda su resultado real...
+    const { data: secondAttempt } = await supabase
+      .from('skill_exam_attempts')
+      .select('level')
+      .eq('id', second.body.attemptId)
+      .single()
+    expect(secondAttempt!.level).toBe('basico')
+
+    // ...pero el perfil conserva el mejor, con su fecha original (FR-021).
+    const { data: afterSecond } = await supabase
+      .from('user_skill_levels')
+      .select('level, achieved_at')
+      .eq('user_id', ADMIN_USER_ID)
+      .eq('skill_name', SKILL)
+      .single()
+    expect(afterSecond!.level).toBe('avanzado')
+    expect(afterSecond!.achieved_at).toBe(afterFirst!.achieved_at)
+  })
+
+  // ---------------- T033: guards de elegibilidad ----------------
+
+  it('rejects a skill the candidate has not declared (T033)', async () => {
+    const res = await request(app)
+      .post('/api/community/skill-exams')
+      .set('x-test-user-id', ADMIN_USER_ID)
+      .send({ skillName: 'kubernetes' })
+
+    expect(res.status).toBe(403)
+    expect(res.body.error).toBe('skill_not_declared')
+
+    const { count } = await supabase
+      .from('skill_exam_attempts')
+      .select('*', { count: 'exact', head: true })
+      .eq('user_id', ADMIN_USER_ID)
+    expect(count).toBe(0)
+  })
+
+  it('rejects a declared skill whose bank is too small (T033)', async () => {
+    const { data: before } = await supabase.from('users').select('skills').eq('id', ADMIN_USER_ID).single()
+    const original = before!.skills as string[]
+
+    // 'python' está en el catálogo pero sin preguntas capturadas.
+    await supabase.from('users').update({ skills: [...original, 'python'] }).eq('id', ADMIN_USER_ID)
+
+    try {
+      const res = await request(app)
+        .post('/api/community/skill-exams')
+        .set('x-test-user-id', ADMIN_USER_ID)
+        .send({ skillName: 'python' })
+
+      expect(res.status).toBe(422)
+      expect(res.body.error).toBe('insufficient_bank')
+
+      const { count } = await supabase
+        .from('skill_exam_attempts')
+        .select('*', { count: 'exact', head: true })
+        .eq('user_id', ADMIN_USER_ID)
+      expect(count).toBe(0)
+    } finally {
+      await supabase.from('users').update({ skills: original }).eq('id', ADMIN_USER_ID)
+    }
+  })
+
+  it('rejects starting a second exam while one is open (T033)', async () => {
+    await request(app)
+      .post('/api/community/skill-exams')
+      .set('x-test-user-id', ADMIN_USER_ID)
+      .send({ skillName: SKILL })
+
+    const second = await request(app)
+      .post('/api/community/skill-exams')
+      .set('x-test-user-id', ADMIN_USER_ID)
+      .send({ skillName: SKILL })
+
+    expect(second.status).toBe(409)
+    expect(second.body.error).toBe('exam_in_progress')
+  })
+
+  it('refuses to answer an attempt that belongs to someone else (T033)', async () => {
+    const start = await request(app)
+      .post('/api/community/skill-exams')
+      .set('x-test-user-id', ADMIN_USER_ID)
+      .send({ skillName: SKILL })
+
+    const res = await request(app)
+      .post(`/api/community/skill-exams/${start.body.attemptId}/answers`)
+      .set('x-test-user-id', '00000000-0000-0000-0000-000000000001')
+      .send({ position: 0, selectedOptionIndex: 0 })
+
+    expect(res.status).toBe(403)
+  })
+
+  // ---------------- T035: el índice único parcial (FR-017) ----------------
+
+  it('lets the database refuse a second in-progress attempt (T035)', async () => {
+    // Se verifica el constraint en sí, no una carrera real: dos peticiones HTTP
+    // concurrentes no son deterministas y darían falsos verdes.
+    await request(app)
+      .post('/api/community/skill-exams')
+      .set('x-test-user-id', ADMIN_USER_ID)
+      .send({ skillName: SKILL })
+
+    const now = new Date()
+    const { error } = await supabase.from('skill_exam_attempts').insert({
+      user_id: ADMIN_USER_ID,
+      skill_name: SKILL,
+      status: 'in_progress',
+      started_at: now.toISOString(),
+      expires_at: new Date(now.getTime() + 3600_000).toISOString(),
+      question_count: 10,
+    })
+
+    expect(error).not.toBeNull()
+    expect(error!.message.toLowerCase()).toContain('duplicate')
+  })
+
+  // ---------------- Elegibilidad (US4) ----------------
+
+  it('reports per-skill eligibility with a reason when blocked', async () => {
+    const res = await request(app)
+      .get('/api/community/skill-exams/eligibility')
+      .set('x-test-user-id', ADMIN_USER_ID)
+
+    expect(res.status).toBe(200)
+    const react = res.body.skills.find((s: { skillName: string }) => s.skillName === SKILL)
+    expect(react).toBeDefined()
+    expect(react.canStart).toBe(true)
+    expect(react.reason).toBeNull()
+    expect(react.validatedLevel).toBeNull()
+    expect(res.body.inProgress).toBeNull()
+  })
 })
