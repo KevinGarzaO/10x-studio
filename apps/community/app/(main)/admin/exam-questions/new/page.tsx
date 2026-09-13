@@ -60,9 +60,11 @@ export default function NewExamQuestionPage() {
   if (!isAdmin) return null
 
   return (
-    <div>
-      <h1>Nueva pregunta de examen</h1>
-      <ExamQuestionForm onSubmit={handleSubmit} />
+    <div className="eqf-page">
+      <h1 className="eqf-title">Nueva pregunta de examen</h1>
+      <div className="eqf-card">
+        <ExamQuestionForm onSubmit={handleSubmit} />
+      </div>
     </div>
   )
 }

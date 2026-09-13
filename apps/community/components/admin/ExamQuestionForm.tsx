@@ -146,26 +146,27 @@ export function ExamQuestionForm({ onSubmit }: ExamQuestionFormProps) {
   }
 
   return (
-    <form onSubmit={handleSubmit} noValidate>
+    <form onSubmit={handleSubmit} noValidate className="eqf-form">
       {confirmation && (
-        <p role="status">Pregunta guardada correctamente.</p>
+        <p role="status" className="eqf-success">Pregunta guardada correctamente.</p>
       )}
 
-      <div>
+      <div className="eqf-field">
         <label htmlFor="exam-question">Pregunta</label>
         <textarea
           id="exam-question"
+          className="eqf-textarea"
           maxLength={500}
           value={question}
           onChange={(e) => setQuestion(e.target.value)}
           onBlur={handleQuestionBlur}
         />
-        {questionError && <p role="alert">{questionError}</p>}
+        {questionError && <p role="alert" className="eqf-error">{questionError}</p>}
       </div>
 
-      <div>
+      <div className="eqf-field">
         <label htmlFor="exam-skill">Skill</label>
-        <select id="exam-skill" value={skillName} onChange={(e) => setSkillName(e.target.value)}>
+        <select id="exam-skill" className="eqf-select" value={skillName} onChange={(e) => setSkillName(e.target.value)}>
           {CANONICAL_SKILLS.map((skill) => (
             <option key={skill.value} value={skill.value}>
               {skill.label}
@@ -174,42 +175,54 @@ export function ExamQuestionForm({ onSubmit }: ExamQuestionFormProps) {
         </select>
       </div>
 
-      <div>
-        {options.map((option, index) => (
-          <div key={index}>
-            <input
-              aria-label={`Opción ${index + 1}`}
-              maxLength={200}
-              value={option}
-              onChange={(e) => updateOption(index, e.target.value)}
-              onBlur={() => blurOption(index)}
-            />
-            <input
-              type="radio"
-              name="correct-answer"
-              aria-label={`Marcar opción ${index + 1} como correcta`}
-              checked={correctAnswerIndex === index}
-              onChange={() => setCorrectAnswerIndex(index)}
-            />
-            {options.length > MIN_OPTIONS && (
-              <button type="button" onClick={() => removeOption(index)} aria-label={`Quitar opción ${index + 1}`}>
-                Quitar
-              </button>
-            )}
-          </div>
-        ))}
+      <div className="eqf-field">
+        <label>Opciones de respuesta</label>
+        <div className="eqf-options">
+          {options.map((option, index) => (
+            <div key={index} className="eqf-option-row">
+              <input
+                type="radio"
+                name="correct-answer"
+                aria-label={`Marcar opción ${index + 1} como correcta`}
+                className="eqf-radio"
+                checked={correctAnswerIndex === index}
+                onChange={() => setCorrectAnswerIndex(index)}
+              />
+              <input
+                aria-label={`Opción ${index + 1}`}
+                className="eqf-option-input"
+                placeholder={`Opción ${index + 1}`}
+                maxLength={200}
+                value={option}
+                onChange={(e) => updateOption(index, e.target.value)}
+                onBlur={() => blurOption(index)}
+              />
+              {options.length > MIN_OPTIONS && (
+                <button
+                  type="button"
+                  className="eqf-remove-option"
+                  onClick={() => removeOption(index)}
+                  aria-label={`Quitar opción ${index + 1}`}
+                >
+                  Quitar
+                </button>
+              )}
+            </div>
+          ))}
+        </div>
         {options.length < MAX_OPTIONS && (
-          <button type="button" onClick={addOption}>
-            Agregar opción
+          <button type="button" className="eqf-add-option" onClick={addOption}>
+            + Agregar opción
           </button>
         )}
-        {tooFewOptions && <p role="alert">Se requieren al menos 2 opciones</p>}
+        {tooFewOptions && <p role="alert" className="eqf-error">Se requieren al menos 2 opciones</p>}
       </div>
 
-      <div>
+      <div className="eqf-field">
         <label htmlFor="exam-difficulty">Dificultad</label>
         <select
           id="exam-difficulty"
+          className="eqf-select"
           value={difficultyLevel}
           onChange={(e) => setDifficultyLevel(e.target.value as DifficultyLevel)}
         >
@@ -221,7 +234,7 @@ export function ExamQuestionForm({ onSubmit }: ExamQuestionFormProps) {
         </select>
       </div>
 
-      {formError && <p role="alert">{formError}</p>}
+      {formError && <p role="alert" className="eqf-error">{formError}</p>}
 
       <Button type="submit" disabled={!canSubmit || submitting}>
         Guardar pregunta
