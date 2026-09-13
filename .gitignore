@@ -36,3 +36,9 @@ backend.log
 # Claude Code local settings (personal, per-machine — may hold local
 # permission allowlists; .claude/skills and other shared config stay tracked)
 .claude/settings.local.json
+
+# Playwright
+test-results/
+playwright-report/
+blob-report/
+playwright/.cache/

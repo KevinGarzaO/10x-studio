@@ -11,9 +11,15 @@ importers:
       '@playwright/test':
         specifier: ^1.45.0
         version: 1.63.0
+      '@supabase/supabase-js':
+        specifier: 2.49.4
+        version: 2.49.4
       concurrently:
         specifier: ^9.0.0
         version: 9.2.4
+      dotenv:
+        specifier: ^16.4.5
+        version: 16.6.1
 
   apps/avocado:
     dependencies:
