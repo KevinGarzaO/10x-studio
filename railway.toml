@@ -5,8 +5,14 @@ builder = "nixpacks"
 NODE_VERSION = "20"
 
 [deploy]
+# backend depends on @avocado/schemas via "workspace:*", which npm cannot
+# resolve ("Unsupported URL Type workspace:") and which only exists inside
+# the pnpm workspace — so install and build must run with pnpm from the repo
+# root, not with npm from inside backend/. Same approach vercel.json already
+# uses. The root postinstall compiles @avocado/schemas to dist/, which
+# backend/dist/index.js requires at runtime through the workspace symlink.
 startCommand = "cd backend && npm start"
-installCommand = "cd backend && npm install"
-buildCommand = "cd backend && npm run build"
+installCommand = "npx pnpm@9.3.0 install"
+buildCommand = "npx pnpm@9.3.0 --filter backend build"
 healthcheckPath = "/"
 healthcheckTimeout = 100

@@ -234,3 +234,30 @@ button { cursor: pointer; }
 .detail-toolbar { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 18px; }
 .detail-toolbar-actions { display: flex; align-items: center; gap: 8px; }
 .detail-toolbar .detail-rail-action { width: 36px; height: 36px; }
+
+/* Admin: exam question creation form (specs/001-exam-question-form) */
+.eqf-page { max-width: 640px; }
+.eqf-title { font-size: 25px; letter-spacing: -.04em; margin: 0 0 20px; }
+.eqf-card { background: #161b22; border: 1px solid #30363d; border-radius: 10px; padding: 28px; }
+.eqf-form { display: flex; flex-direction: column; gap: 20px; }
+.eqf-field { display: flex; flex-direction: column; gap: 8px; }
+.eqf-field > label { font-size: 12px; font-weight: 700; color: #8b949e; }
+.eqf-textarea, .eqf-select, .eqf-option-input {
+  width: 100%; box-sizing: border-box; background: #0d1117; border: 1px solid #30363d;
+  border-radius: 7px; padding: 11px 13px; color: #e6edf3; font-size: 13px; font-family: inherit; outline: none;
+}
+.eqf-textarea { min-height: 88px; resize: vertical; }
+.eqf-select { appearance: none; }
+.eqf-textarea:focus, .eqf-select:focus, .eqf-option-input:focus { border-color: #00A86B; }
+.eqf-options { display: flex; flex-direction: column; gap: 10px; }
+.eqf-option-row { display: flex; align-items: center; gap: 10px; }
+.eqf-option-input { flex: 1; }
+.eqf-radio { width: 16px; height: 16px; flex: none; accent-color: #00A86B; }
+.eqf-remove-option, .eqf-add-option {
+  border: 1px solid #30363d; background: #0d1117; color: #8b949e; border-radius: 6px;
+  padding: 8px 12px; font-size: 11px; cursor: pointer; white-space: nowrap;
+}
+.eqf-remove-option:hover, .eqf-add-option:hover { border-color: #00A86B; color: #00A86B; }
+.eqf-add-option { align-self: flex-start; }
+.eqf-error { margin: 0; color: #f87171; font-size: 12px; }
+.eqf-success { margin: 0 0 4px; padding: 12px 14px; background: #123a32; border: 1px solid #245848; border-radius: 7px; color: #6ee7b7; font-size: 13px; }
