@@ -44,8 +44,26 @@ aún no corrió": cualquier lectura ve la verdad calculada del mismo dato.
 - Un cron que marque intentos vencidos (rechazado — un proceso más que mantener, una
   ventana de inconsistencia, y fricción real de arranque en este backend en particular).
 - Guardar un `status = 'expired'` escrito la primera vez que alguien observa el intento
-  vencido (rechazado — obliga a escribir en un camino de lectura y no aporta nada que el
-  cálculo perezoso no dé; el historial auditable se conserva igual con `expires_at`).
+  vencido (rechazado inicialmente — ver la corrección de abajo).
+
+### Corrección (descubierta durante la implementación, al probar de punta a punta)
+
+**Esta decisión, tal como estaba, tenía un bug serio.** Chocaba de frente con R7: el índice
+único parcial mira `status`, no `expires_at`, así que un intento vencido que siguiera siendo
+`'in_progress'` seguía ocupando el índice. Consecuencia real, reproducida con un intento
+vencido hace 40 días y el periodo de espera ya cumplido: iniciar otro examen falla con
+`23505` y **el candidato queda encerrado sin poder examinarse nunca más**.
+
+Los 12 tests de integración estaban en verde: el `409 waiting_period` se evalúa antes del
+`INSERT`, así que enmascara el problema durante 30 días. Solo apareció al ejercitar la UI
+real.
+
+No se puede resolver en el índice (`now()` no es `IMMUTABLE` y Postgres no lo admite en el
+predicado). **Decisión corregida**: `status` acepta un tercer valor `'expired'`, que el
+backend escribe **de forma perezosa**, únicamente cuando el handler de inicio se topa con un
+intento vencido. El fundamento original de R2 se mantiene: sigue sin haber cron, y las
+lecturas siguen derivando el vencimiento con `isExpired()`. Lo que cambia es que el único
+momento en que ese estado *importa* para la integridad —liberar el índice— sí lo persiste.
 
 ## R3 — Selección de las 10 preguntas y no repetir en un reintento (FR-014)
 

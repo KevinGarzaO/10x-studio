@@ -28,10 +28,17 @@ Un intento de examen: quién, de qué skill, cuándo, y cómo terminó.
 un candidato no puede tener dos exámenes abiertos a la vez, ni siquiera con dos peticiones
 simultáneas (ver `research.md` R7).
 
-**Nota sobre el estado "expirado"**: es un estado **derivado, no almacenado** —
-`status = 'in_progress' AND expires_at < now()`. Deliberadamente no hay un valor `'expired'`
-en el `CHECK`: si existiera, habría que escribirlo desde algún lado (un cron o un camino de
-lectura) y aparecería la ventana "ya venció pero nadie lo ha marcado". Ver `research.md` R2.
+**Nota sobre el estado "expirado"** *(corregida durante la implementación)*: el vencimiento
+se **deriva** en las lecturas (`status = 'in_progress' AND expires_at < now()`, vía
+`isExpired()`), así que sigue sin hacer falta ningún cron. Pero el `CHECK` **sí** admite un
+tercer valor `'expired'`, que el backend escribe de forma perezosa al toparse con un intento
+vencido en el handler de inicio.
+
+La razón es concreta: el índice único parcial de FR-017 mira `status`, no `expires_at`. Un
+intento vencido que siguiera siendo `'in_progress'` seguiría ocupando el índice, y pasado el
+periodo de espera el candidato **no podría volver a examinarse nunca** (`23505` al
+insertar). No se puede arreglar en el índice porque `now()` no es `IMMUTABLE`. Ver la
+corrección en `research.md` R2 y el bloque 4 de `skill-exams-migration.sql`.
 
 **Cuándo puede reintentar (FR-011)**: también derivado, no almacenado —
 30 días después de `finished_at` (si se completó) o de `expires_at` (si expiró).

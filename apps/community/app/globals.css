@@ -261,3 +261,62 @@ button { cursor: pointer; }
 .eqf-add-option { align-self: flex-start; }
 .eqf-error { margin: 0; color: #f87171; font-size: 12px; }
 .eqf-success { margin: 0 0 4px; padding: 12px 14px; background: #123a32; border: 1px solid #245848; border-radius: 7px; color: #6ee7b7; font-size: 13px; }
+
+/* Skill level exam (specs/002-skill-level-exam) */
+.sxe-page { max-width: 640px; }
+.sxe-title { font-size: 25px; letter-spacing: -.04em; margin: 0 0 20px; }
+.sxe-card { background: #161b22; border: 1px solid #30363d; border-radius: 10px; padding: 28px; }
+.sxe-runner { display: flex; flex-direction: column; gap: 18px; }
+.sxe-progress { display: flex; align-items: center; justify-content: space-between; }
+.sxe-skill { color: #6ee7b7; font: 700 11px var(--font-mono); letter-spacing: .08em; text-transform: uppercase; }
+.sxe-count { color: #8b949e; font-size: 12px; }
+.sxe-bar { height: 4px; background: #0d1117; border-radius: 99px; overflow: hidden; }
+.sxe-bar-fill { height: 100%; background: #00A86B; transition: width .25s ease; }
+.sxe-question { margin: 4px 0 0; font-size: 18px; line-height: 1.45; letter-spacing: -.02em; }
+.sxe-options { display: flex; flex-direction: column; gap: 9px; }
+.sxe-option {
+  display: flex; align-items: center; gap: 11px; padding: 13px 15px; cursor: pointer;
+  background: #0d1117; border: 1px solid #30363d; border-radius: 8px;
+  color: #e6edf3; font-size: 13px; transition: border-color .18s, background .18s;
+}
+.sxe-option:hover { border-color: #52606c; }
+.sxe-option.is-selected { border-color: #00A86B; background: #10231e; }
+.sxe-option input { accent-color: #00A86B; width: 16px; height: 16px; flex: none; }
+.sxe-error { margin: 0; color: #f87171; font-size: 12px; }
+.sxe-hint { margin: 0; color: #6e7781; font-size: 11px; }
+.sxe-blocked { margin: 0 0 14px; color: #c9d1d9; font-size: 13px; line-height: 1.6; }
+.sxe-link { color: #6ee7b7; font-size: 12px; text-decoration: none; }
+.sxe-link:hover { color: #00A86B; }
+
+.sxe-result { display: flex; flex-direction: column; gap: 10px; text-align: center; }
+.sxe-result-kicker { margin: 0; color: #8b949e; font: 11px var(--font-mono); text-transform: uppercase; letter-spacing: .08em; }
+.sxe-result-level { margin: 0; font-size: 34px; letter-spacing: -.04em; color: #6ee7b7; }
+.sxe-result-score { margin: 0; color: #c9d1d9; font-size: 14px; }
+.sxe-result-note { margin: 10px 0 0; padding: 12px 14px; border-radius: 7px; font-size: 12px; line-height: 1.6; background: #161b22; border: 1px solid #30363d; color: #c9d1d9; }
+.sxe-result-note.is-good { background: #123a32; border-color: #245848; color: #6ee7b7; }
+.sxe-result-retry { margin: 0; color: #8b949e; font-size: 11px; }
+.sxe-result-actions { display: flex; gap: 16px; justify-content: center; margin-top: 8px; }
+
+.sxe-subtitle { margin: -12px 0 20px; color: #8b949e; font-size: 13px; line-height: 1.6; }
+.sxe-empty { margin: 0; color: #8b949e; font-size: 13px; line-height: 1.6; }
+.sxe-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 10px; }
+.sxe-list-item {
+  display: flex; align-items: center; justify-content: space-between; gap: 14px;
+  padding: 14px 16px; background: #0d1117; border: 1px solid #30363d; border-radius: 8px;
+}
+.sxe-list-main { display: flex; align-items: center; gap: 10px; min-width: 0; }
+.sxe-list-skill { display: inline-flex; align-items: center; gap: 6px; color: #e6edf3; font-size: 13px; font-weight: 600; }
+.sxe-validated-icon { color: #00A86B; }
+.sxe-list-level { padding: 2px 8px; border-radius: 99px; background: #123a32; border: 1px solid #245848; color: #6ee7b7; font: 700 9px var(--font-mono); text-transform: uppercase; letter-spacing: .04em; }
+.sxe-list-pending { color: #6e7781; font-size: 11px; }
+.sxe-list-status { display: inline-flex; align-items: center; gap: 6px; color: #8b949e; font-size: 11px; white-space: nowrap; }
+.sxe-start {
+  padding: 8px 13px; border-radius: 7px; background: #00A86B; color: #07131d;
+  font-size: 12px; font-weight: 700; text-decoration: none; white-space: nowrap;
+}
+.sxe-start:hover { background: #34C98B; }
+
+/* Skill validado en el perfil publico (US2) */
+.profile-fact.is-validated { display: inline-flex; align-items: center; gap: 5px; background: #10231e; border-color: #245848; color: #6ee7b7; }
+.profile-fact.is-validated svg { color: #00A86B; }
+.profile-fact .skill-level { margin-left: 4px; padding: 1px 6px; border-radius: 99px; background: #00A86B22; color: #6ee7b7; font: 700 9px var(--font-mono); text-transform: uppercase; letter-spacing: .04em; }
