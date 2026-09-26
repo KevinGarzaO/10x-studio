@@ -127,20 +127,20 @@ aplica una persona a mano (T010) y su orden interno importa: backfills primero, 
 
 ### Middlewares, catálogo y verificación de la base de datos
 
-- [ ] T011 [P] Tests unitarios de los middlewares en
+- [X] T011 [P] Tests unitarios de los middlewares en
   `backend/tests/unit/require-superadmin.middleware.test.ts` y
   `backend/tests/unit/require-account-type.middleware.test.ts`: sin `req.userId` → 401; sin el
   permiso o con el tipo equivocado → 403 con el cuerpo del contrato; caso correcto → llama a
   `next()`.
-- [ ] T012 [P] Crear `backend/src/middleware/require-superadmin.middleware.ts` (lee
+- [X] T012 [P] Crear `backend/src/middleware/require-superadmin.middleware.ts` (lee
   `users.is_superadmin` por `req.userId`; 401 sin sesión, `403 { error: 'forbidden', message: 'No
   tienes permisos para esta acción' }`) y borrar `backend/src/middleware/require-role.middleware.ts`
   junto con `backend/tests/unit/require-role.middleware.test.ts`.
-- [ ] T013 [P] Crear `backend/src/middleware/require-account-type.middleware.ts`:
+- [X] T013 [P] Crear `backend/src/middleware/require-account-type.middleware.ts`:
   `requireAccountType(type)` lee `users.account_type` por `req.userId` y responde
   `403 { error: 'candidates_only', message: 'Los exámenes son solo para candidatos' }` cuando no
   coincide.
-- [ ] T014 Cambiar `backend/src/routes/admin/exam-questions.routes.ts` para usar
+- [X] T014 Cambiar `backend/src/routes/admin/exam-questions.routes.ts` para usar
   `requireSuperadmin`, y actualizar lo que dependía del rol: el fixture de
   `e2e/exam-question-form.spec.ts` (`roles: ['admin']` → `is_superadmin: true`), los comentarios
   de `backend/scripts/test-exam-questions-bypass.ts` y las aserciones de

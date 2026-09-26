@@ -27,7 +27,7 @@ async function loginAsAdmin(page: Page) {
     ({ at, rt }) => {
       localStorage.setItem('avocado_token', at)
       localStorage.setItem('avocado_refresh_token', rt)
-      localStorage.setItem('avocado_user', JSON.stringify({ roles: ['admin'] }))
+      localStorage.setItem('avocado_user', JSON.stringify({ is_superadmin: true }))
     },
     { at: process.env.E2E_ADMIN_ACCESS_TOKEN!, rt: process.env.E2E_ADMIN_REFRESH_TOKEN! },
   )

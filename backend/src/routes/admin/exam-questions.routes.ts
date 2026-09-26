@@ -2,11 +2,11 @@ import { Router, Response } from 'express'
 import { buildExamQuestionSchema } from '@avocado/schemas'
 import { supabase } from '../../../services/supabase.service'
 import { communityAuthMiddleware, AuthRequest } from '../../../middleware/community-auth.middleware'
-import { requireRole } from '../../middleware/require-role.middleware'
+import { requireSuperadmin } from '../../middleware/require-superadmin.middleware'
 
 const router = Router()
 
-router.post('/', communityAuthMiddleware, requireRole('admin'), async (req: AuthRequest, res: Response) => {
+router.post('/', communityAuthMiddleware, requireSuperadmin, async (req: AuthRequest, res: Response) => {
   try {
     const { data: skillRows, error: skillsError } = await supabase.from('skills').select('name')
     if (skillsError) throw skillsError

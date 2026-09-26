@@ -4,7 +4,7 @@
  * confirming the backend rejects them independently of the UI (FR-008).
  *
  * Uses the same real Supabase instance as production (not a mock DB): real
- * requireRole DB roles lookup, real Zod validation, real
+ * requireSuperadmin DB lookup, real Zod validation, real
  * insert_exam_question_with_options() RPC.
  *
  * communityAuthMiddleware verifies a real Supabase Auth session token, and
@@ -32,7 +32,7 @@ vi.mock('../middleware/community-auth.middleware', () => ({
 }))
 
 const ADMIN_USER_ID = 'e7c86261-578a-42cb-9eb8-c26f19917079'
-const NON_ADMIN_USER_ID = '00000000-0000-0000-0000-000000000001'
+const NON_SUPERADMIN_USER_ID = '00000000-0000-0000-0000-000000000001'
 
 async function countExamQuestions() {
   const { count } = await supabase.from('exam_questions').select('*', { count: 'exact', head: true })
@@ -46,10 +46,10 @@ it('rejects bypass attempts the frontend would never send', async () => {
 
   const before = await countExamQuestions()
 
-  console.log('--- Case 1: non-admin, payload the frontend would never send ---')
+  console.log('--- Case 1: non-superadmin, payload the frontend would never send ---')
   const case1 = await request(app)
     .post('/api/admin/exam-questions')
-    .set('x-test-user-id', NON_ADMIN_USER_ID)
+    .set('x-test-user-id', NON_SUPERADMIN_USER_ID)
     .send({ question: '', skillName: 'react', options: ['a', 'a'], correctAnswerIndex: 9, difficultyLevel: 'experto' })
   console.log('status:', case1.status, 'body:', case1.body)
   expect(case1.status).toBe(403)

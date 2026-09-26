@@ -31,12 +31,12 @@ const E2E_QUESTION_MARKER = '[E2E exam-question-form]'
 const ADMIN_SESSION = {
   access_token: process.env.E2E_ADMIN_ACCESS_TOKEN ?? '',
   refresh_token: process.env.E2E_ADMIN_REFRESH_TOKEN ?? '',
-  user: { roles: ['admin'] },
+  user: { is_superadmin: true },
 }
 const NON_ADMIN_SESSION = {
   access_token: process.env.E2E_NON_ADMIN_ACCESS_TOKEN ?? '',
   refresh_token: process.env.E2E_NON_ADMIN_REFRESH_TOKEN ?? '',
-  user: { roles: [] },
+  user: { is_superadmin: false },
 }
 
 const FORM_URL = '/admin/exam-questions/new'
