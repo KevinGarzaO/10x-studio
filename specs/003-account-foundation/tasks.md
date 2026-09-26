@@ -280,26 +280,26 @@ elegibilidad de examen y recibir 403.
 
 ### Tests de la historia 3
 
-- [ ] T036 [P] [US3] Ampliar `backend/scripts/test-account-foundation-bypass.ts` con las
+- [X] T036 [P] [US3] Ampliar `backend/scripts/test-account-foundation-bypass.ts` con las
   garantías de esta historia: `UPDATE users SET account_type = …` directo falla;
   `change_account_type` sin motivo, o con un motivo que solo trae espacios, falla; con motivo
   válido funciona, lo guarda sin espacios sobrantes y escribe en `account_type_changes` (FR-023);
   quitar el permiso al último superadmin falla; una cuenta de empresa con `is_superadmin = true`
   falla por el `CHECK`; e insertar una cuenta como lo hace el scraper con `is_superadmin = true`
   también falla (FR-030).
-- [ ] T037 [P] [US3] Ampliar `backend/tests/integration/skill-exams.routes.test.ts`: los 4
+- [X] T037 [P] [US3] Ampliar `backend/tests/integration/skill-exams.routes.test.ts`: los 4
   endpoints responden `403 candidates_only` a una cuenta de tipo empresa, y siguen funcionando
   para un candidato. Agregar además el caso de FR-022: un skill aprobado sin banco suficiente
   aparece en la elegibilidad con `reason: 'insufficient_bank'`, nunca como iniciable.
-- [ ] T038 [P] [US3] Crear `backend/tests/integration/privileged-functions.test.ts`: ninguna
+- [X] T038 [P] [US3] Crear `backend/tests/integration/privileged-functions.test.ts`: ninguna
   fuente bajo `backend/src` ni `backend/services` menciona `change_account_type` ni
   `set_superadmin`, es decir, ninguna ruta puede cambiar el tipo o el permiso (FR-004, FR-005).
 
 ### Implementación de la historia 3
 
-- [ ] T039 [US3] Aplicar `requireAccountType('candidate')` a los 4 endpoints de
+- [X] T039 [US3] Aplicar `requireAccountType('candidate')` a los 4 endpoints de
   `backend/src/routes/community/skill-exams.routes.ts` (FR-008).
-- [ ] T040 [P] [US3] Confirmar que el registro público no puede crear otro tipo de cuenta ni un
+- [X] T040 [P] [US3] Confirmar que el registro público no puede crear otro tipo de cuenta ni un
   superadmin: revisar `backend/src/routes/community/auth.routes.ts` y dejar explícito en un
   comentario que el tipo sale del `DEFAULT` de la columna, con un caso en
   `backend/tests/integration/privileged-functions.test.ts` que cree una cuenta y verifique que

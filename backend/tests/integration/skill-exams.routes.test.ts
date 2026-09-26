@@ -483,3 +483,106 @@ describe('skill exams (integration)', () => {
     expect(res.body.inProgress).toBeNull()
   })
 })
+
+// ============================================================
+// Feature 003: los exámenes quedan solo para candidatos (FR-008),
+// y un skill aprobado sin banco no se puede iniciar (FR-022).
+// ============================================================
+
+describe('skill exams are candidate-only (T037)', () => {
+  const companyUsername = `t037-empresa-${Date.now().toString(36)}`
+  let companyId: string
+
+  beforeAll(async () => {
+    const { data, error } = await supabase
+      .from('users')
+      .insert({
+        username: companyUsername,
+        display_name: 'Empresa T037',
+        account_type: 'company',
+        company_slug: companyUsername,
+        is_scraper_profile: true,
+        scraper_source: 'company',
+        skills: ['react'],
+      })
+      .select('id')
+      .single()
+
+    if (error) throw new Error(`no se pudo crear la empresa de prueba: ${error.message}`)
+    companyId = data!.id
+  })
+
+  afterAll(async () => {
+    await supabase.from('users').delete().eq('id', companyId)
+  })
+
+  it('rejects a company account on all four endpoints', async () => {
+    const app = buildApp()
+
+    const calls = [
+      request(app).get('/api/community/skill-exams/eligibility'),
+      request(app).get('/api/community/skill-exams/current'),
+      request(app).post('/api/community/skill-exams').send({ skillName: SKILL }),
+      request(app)
+        .post('/api/community/skill-exams/00000000-0000-0000-0000-000000000000/answers')
+        .send({ position: 0, selectedOptionIndex: 0 }),
+    ]
+
+    for (const call of calls) {
+      const res = await call.set('x-test-user-id', companyId)
+      expect(res.status).toBe(403)
+      expect(res.body.error).toBe('candidates_only')
+    }
+  })
+
+  it('still lets a candidate through', async () => {
+    const res = await request(buildApp())
+      .get('/api/community/skill-exams/eligibility')
+      .set('x-test-user-id', ADMIN_USER_ID)
+
+    expect(res.status).toBe(200)
+  })
+})
+
+describe('a freshly approved skill has no exam yet (T037, FR-022)', () => {
+  const skillName = `t037-skill-${Date.now().toString(36)}`
+  let originalSkills: string[] = []
+
+  beforeAll(async () => {
+    const { error } = await supabase.from('skills').insert({ name: skillName, label: 'T037 Nuevo' })
+    if (error) throw new Error(`no se pudo crear el skill de prueba: ${error.message}`)
+
+    const { data } = await supabase.from('users').select('skills').eq('id', ADMIN_USER_ID).single()
+    originalSkills = (data!.skills as string[]) || []
+    await supabase
+      .from('users')
+      .update({ skills: [...originalSkills, skillName] })
+      .eq('id', ADMIN_USER_ID)
+  })
+
+  afterAll(async () => {
+    await supabase.from('users').update({ skills: originalSkills }).eq('id', ADMIN_USER_ID)
+    await supabase.from('skills').delete().eq('name', skillName)
+  })
+
+  it('reports insufficient_bank instead of offering the exam', async () => {
+    const res = await request(buildApp())
+      .get('/api/community/skill-exams/eligibility')
+      .set('x-test-user-id', ADMIN_USER_ID)
+
+    expect(res.status).toBe(200)
+    const entry = res.body.skills.find((s: { skillName: string }) => s.skillName === skillName)
+    expect(entry).toBeTruthy()
+    expect(entry.canStart).toBe(false)
+    expect(entry.reason).toBe('insufficient_bank')
+  })
+
+  it('refuses to start it', async () => {
+    const res = await request(buildApp())
+      .post('/api/community/skill-exams')
+      .set('x-test-user-id', ADMIN_USER_ID)
+      .send({ skillName })
+
+    expect(res.status).toBe(422)
+  })
+})

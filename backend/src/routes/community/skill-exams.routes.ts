@@ -2,6 +2,7 @@ import { Router, Response } from 'express'
 import { buildStartSkillExamSchema, submitAnswerSchema } from '@avocado/schemas'
 import { supabase } from '../../../services/supabase.service'
 import { communityAuthMiddleware, AuthRequest } from '../../../middleware/community-auth.middleware'
+import { requireAccountType } from '../../middleware/require-account-type.middleware'
 import {
   levelFor,
   isBetterLevel,
@@ -108,7 +109,7 @@ async function nextUnanswered(attemptId: string) {
 // ---------------------------------------------------------------------------
 // GET /eligibility — de qué skills puede examinarse y por qué no (US4)
 // ---------------------------------------------------------------------------
-router.get('/eligibility', communityAuthMiddleware, async (req: AuthRequest, res: Response) => {
+router.get('/eligibility', communityAuthMiddleware, requireAccountType('candidate'), async (req: AuthRequest, res: Response) => {
   try {
     const userId = req.userId!
     const skills = await declaredSkills(userId)
@@ -173,7 +174,7 @@ router.get('/eligibility', communityAuthMiddleware, async (req: AuthRequest, res
 // ---------------------------------------------------------------------------
 // GET /current — retomar el examen interrumpido (FR-018, FR-019)
 // ---------------------------------------------------------------------------
-router.get('/current', communityAuthMiddleware, async (req: AuthRequest, res: Response) => {
+router.get('/current', communityAuthMiddleware, requireAccountType('candidate'), async (req: AuthRequest, res: Response) => {
   try {
     const attempt = await openAttempt(req.userId!)
     if (!attempt) {
@@ -206,7 +207,7 @@ router.get('/current', communityAuthMiddleware, async (req: AuthRequest, res: Re
 // ---------------------------------------------------------------------------
 // POST / — iniciar un intento
 // ---------------------------------------------------------------------------
-router.post('/', communityAuthMiddleware, async (req: AuthRequest, res: Response) => {
+router.post('/', communityAuthMiddleware, requireAccountType('candidate'), async (req: AuthRequest, res: Response) => {
   try {
     const userId = req.userId!
 
@@ -341,7 +342,7 @@ router.post('/', communityAuthMiddleware, async (req: AuthRequest, res: Response
 // ---------------------------------------------------------------------------
 // POST /:attemptId/answers — responder; la última respuesta cierra y califica
 // ---------------------------------------------------------------------------
-router.post('/:attemptId/answers', communityAuthMiddleware, async (req: AuthRequest, res: Response) => {
+router.post('/:attemptId/answers', communityAuthMiddleware, requireAccountType('candidate'), async (req: AuthRequest, res: Response) => {
   try {
     const userId = req.userId!
     const attemptId = req.params.attemptId

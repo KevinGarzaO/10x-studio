@@ -39,6 +39,18 @@ async function createCandidate(suffix: string, extra: Record<string, unknown> = 
   return data
 }
 
+/** Un superadmin real de la base: quien firma los cambios privilegiados. */
+async function findSuperadmin(): Promise<string> {
+  const { data, error } = await supabase
+    .from('users')
+    .select('id')
+    .eq('is_superadmin', true)
+    .limit(1)
+    .single()
+  if (error || !data) throw new Error('no hay ningún superadmin en la base de datos')
+  return data.id as string
+}
+
 afterAll(async () => {
   for (const id of createdProposalIds) {
     await supabase.from('skill_proposals').delete().eq('id', id)
@@ -103,6 +115,120 @@ it('bloquea otorgarse superadmin con un UPDATE directo (FR-005)', async () => {
 
   expect(error).not.toBeNull()
   expect(error!.message).toContain('privileged_change_blocked')
+})
+
+it('change_account_type exige motivo y deja registro (FR-004, FR-023)', async () => {
+  const user = await createCandidate('type-function')
+  const superadmin = await findSuperadmin()
+
+  // Sin motivo, y con un motivo que solo trae espacios.
+  for (const reason of ['', '   ']) {
+    const { error } = await supabase.rpc('change_account_type', {
+      p_user_id: user.id,
+      p_new_type: 'company',
+      p_reason: reason,
+      p_changed_by: superadmin,
+    })
+    expect(error, `motivo ${JSON.stringify(reason)} debió fallar`).not.toBeNull()
+    expect(error!.message).toContain('reason_required')
+  }
+
+  // Con motivo válido sí aplica, y queda registrado sin espacios sobrantes.
+  const ok = await supabase.rpc('change_account_type', {
+    p_user_id: user.id,
+    p_new_type: 'company',
+    p_reason: '  Reclamó su empresa  ',
+    p_changed_by: superadmin,
+  })
+  expect(ok.error).toBeNull()
+
+  const { data: after } = await supabase
+    .from('users')
+    .select('account_type')
+    .eq('id', user.id)
+    .single()
+  expect(after!.account_type).toBe('company')
+
+  const { data: log } = await supabase
+    .from('account_type_changes')
+    .select('from_type, to_type, reason, changed_by')
+    .eq('user_id', user.id)
+    .single()
+  expect(log).toMatchObject({
+    from_type: 'candidate',
+    to_type: 'company',
+    reason: 'Reclamó su empresa',
+    changed_by: superadmin,
+  })
+})
+
+it('no permite quedarse sin superadmin (FR-007)', async () => {
+  const superadmin = await findSuperadmin()
+  const { data: all } = await supabase.from('users').select('id').eq('is_superadmin', true)
+  const others = (all || []).filter((u) => u.id !== superadmin)
+
+  // Se quita el permiso a todos menos uno; el último debe fallar.
+  const restore: string[] = []
+  try {
+    for (const other of others) {
+      const { error } = await supabase.rpc('set_superadmin', {
+        p_user_id: other.id,
+        p_value: false,
+        p_reason: 'Prueba T036',
+        p_changed_by: superadmin,
+      })
+      expect(error).toBeNull()
+      restore.push(other.id)
+    }
+
+    const { error } = await supabase.rpc('set_superadmin', {
+      p_user_id: superadmin,
+      p_value: false,
+      p_reason: 'Prueba del último superadmin',
+      p_changed_by: superadmin,
+    })
+    expect(error).not.toBeNull()
+    expect(error!.message).toContain('last_superadmin')
+  } finally {
+    for (const id of restore) {
+      await supabase.rpc('set_superadmin', {
+        p_user_id: id,
+        p_value: true,
+        p_reason: 'Restaurar tras la prueba T036',
+        p_changed_by: superadmin,
+      })
+    }
+  }
+})
+
+it('una cuenta de empresa no puede ser superadmin (FR-007)', async () => {
+  const superadmin = await findSuperadmin()
+  const user = await createCandidate('company-superadmin')
+
+  const promoted = await supabase.rpc('set_superadmin', {
+    p_user_id: user.id,
+    p_value: true,
+    p_reason: 'Prueba T036',
+    p_changed_by: superadmin,
+  })
+  expect(promoted.error).toBeNull()
+
+  // Ya es superadmin: convertirla en empresa debe fallar.
+  const converted = await supabase.rpc('change_account_type', {
+    p_user_id: user.id,
+    p_new_type: 'company',
+    p_reason: 'Prueba T036',
+    p_changed_by: superadmin,
+  })
+  expect(converted.error).not.toBeNull()
+  expect(converted.error!.message).toContain('superadmin_cannot_be_company')
+
+  await supabase.rpc('set_superadmin', {
+    p_user_id: user.id,
+    p_value: false,
+    p_reason: 'Limpieza T036',
+    p_changed_by: superadmin,
+  })
 })
 
 it('rechaza un skill que no está en el catálogo (FR-012)', async () => {
