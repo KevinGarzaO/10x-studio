@@ -145,17 +145,17 @@ aplica una persona a mano (T010) y su orden interno importa: backfills primero, 
   `e2e/exam-question-form.spec.ts` (`roles: ['admin']` → `is_superadmin: true`), los comentarios
   de `backend/scripts/test-exam-questions-bypass.ts` y las aserciones de
   `backend/tests/integration/exam-questions.routes.test.ts`.
-- [ ] T015 [P] Test de integración del catálogo en
+- [X] T015 [P] Test de integración del catálogo en
   `backend/tests/integration/skills.routes.test.ts`: `GET /api/community/skills` devuelve solo
   skills aprobados con sus alias, sin propuestas pendientes ni rechazadas, y sin requerir sesión.
-- [ ] T016 Crear `backend/src/routes/community/skills.routes.ts` (`GET /`, público, devuelve
+- [X] T016 Crear `backend/src/routes/community/skills.routes.ts` (`GET /`, público, devuelve
   `{ skills, aliases }` según `contracts/skills-catalog.md`; `500 { error:
   'catalog_unavailable' }` si falla la lectura) y montarlo en `backend/index.ts` como
   `/api/community/skills`.
-- [ ] T017 [P] Crear `apps/community/lib/skill-catalog.ts` con `useSkillCatalog()`: carga el
+- [X] T017 [P] Crear `apps/community/lib/skill-catalog.ts` con `useSkillCatalog()`: carga el
   catálogo una vez, expone `skills`, `aliases`, `loading` y `error`, y **nunca** trata un fallo
   como catálogo vacío.
-- [ ] T018 Crear `backend/scripts/test-account-foundation-bypass.ts` (nivel 1 automatizado) que
+- [X] T018 Crear `backend/scripts/test-account-foundation-bypass.ts` (nivel 1 automatizado) que
   verifique con la llave de servicio: skill inválido en `users.skills` rechazado, borrar un skill
   en uso rechazado, vaciar un campo obligatorio rechazado, `status = 'rejected'` sin motivo
   rechazado, alias duplicado rechazado, y `normalize_skill_key` igual a `normalizeSkillKey` sobre
