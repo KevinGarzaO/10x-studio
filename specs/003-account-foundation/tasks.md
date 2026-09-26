@@ -33,13 +33,13 @@ carpetas heredadas en la raíz), `apps/community/`, y `e2e/` en la raíz.
 **Purpose**: Dejar listo el paquete compartido que backend y frontend van a importar. Sin esto,
 cualquier validación se escribiría dos veces y rompería el principio II.
 
-- [ ] T001 [P] Crear `packages/schemas/src/skills.ts` con: `normalizeSkillKey(text)` (trim →
+- [X] T001 [P] Crear `packages/schemas/src/skills.ts` con: `normalizeSkillKey(text)` (trim →
   minúsculas → quitar acentos NFD → eliminar todo lo que no sea `[a-z0-9+#]`, conservando `+` y
   `#` para `C++`/`C#`), `resolveSkill(text, catalog)` (busca por nombre normalizado, luego por
   etiqueta normalizada, luego por alias; devuelve `null` si no hay coincidencia) y
   `skillProposalSchema` (`text`: string, `trim`, `min(1)`, `max(50)`, y `refine` de que su clave
   normalizada no quede vacía). Ver `research.md` R5.
-- [ ] T002 [P] Crear `packages/schemas/src/candidateProfile.ts` con los enums `SENIORITY`
+- [X] T002 [P] Crear `packages/schemas/src/candidateProfile.ts` con los enums `SENIORITY`
   (`junior`, `semi_senior`, `senior`), `ROLE_CATEGORY` (los 13 valores de
   `apps/community/lib/profile-options.ts`) y `WORK_MODALITY` (`Remoto`, `Híbrido`,
   `Presencial`), más `buildCandidateProfileSchema(approvedSkillNames)`: obligatorios con `trim`
@@ -47,7 +47,7 @@ cualquier validación se escribiría dos veces y rompería el principio II.
   `approvedSkillNames`, `location` 1-100, `workModality`) y opcionales con `trim`
   (`displayName`, `bio` máx 1000, `website`, `githubUrl`), en modo `strip` para que ningún campo
   extra pase.
-- [ ] T003 Exportar ambos módulos en `packages/schemas/src/index.ts` y verificar que
+- [X] T003 Exportar ambos módulos en `packages/schemas/src/index.ts` y verificar que
   `pnpm --filter @avocado/schemas build` compile a `dist/`.
 
 ---
@@ -63,11 +63,11 @@ aplica una persona a mano (T010) y su orden interno importa: backfills primero, 
 
 ### Tests de la fase foundational
 
-- [ ] T004 [P] Tests unitarios de los schemas nuevos en
+- [X] T004 [P] Tests unitarios de los schemas nuevos en
   `backend/tests/unit/skills.schema.test.ts`: `normalizeSkillKey` con `" React.js "`, `"Node.js"`,
   `"C#"`, `"C++"`, acentos y cadena vacía; `resolveSkill` por nombre, etiqueta y alias y sin
   coincidencia; `skillProposalSchema` con texto vacío, de 51 caracteres y solo signos.
-- [ ] T005 [P] Tests unitarios del perfil en
+- [X] T005 [P] Tests unitarios del perfil en
   `backend/tests/unit/candidateProfile.schema.test.ts`: cada campo obligatorio vacío o en blanco
   falla, `skills` vacío falla, skill no aprobado falla, repetidos fallan, enums inválidos fallan,
   se hace `trim`, y los campos extra (`accountType`, `isSuperadmin`, `roles`, `companySlug`) se
