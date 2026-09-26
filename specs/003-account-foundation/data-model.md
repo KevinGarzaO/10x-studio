@@ -1,5 +1,9 @@
 # Phase 1 Data Model: Fundación de cuentas
 
+**Nota de terminología**: la spec habla en español de cuentas de *candidato* y *empresa*; los
+valores almacenados son `'candidate'` y `'company'`. Son los dos únicos valores válidos; no
+existe un tercero ni variantes en español.
+
 Una migración, `backend/sql/account-foundation-migration.sql`, que el usuario aplica a mano en
 el editor SQL de Supabase. Es idempotente (`IF NOT EXISTS`, `CREATE OR REPLACE`, backfills
 re-ejecutables), igual que las migraciones de 001 y 002.

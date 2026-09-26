@@ -122,7 +122,8 @@ aplica una persona a mano (T010) y su orden interno importa: backfills primero, 
 - [ ] T010 **Tarea manual del usuario**: aplicar
   `backend/sql/account-foundation-migration.sql` en el editor SQL de Supabase y confirmar con
   las consultas de verificación de `quickstart.md` (conteo por `account_type`/`is_superadmin`,
-  `roles` sin `'admin'`, alias sembrados).
+  `roles` sin `'admin'`, alias sembrados) más una consulta que liste los skills de perfiles que no
+  existen en el catálogo, que hoy debe devolver 0 filas (SC-001).
 
 ### Middlewares, catálogo y verificación de la base de datos
 
@@ -252,9 +253,11 @@ con `approve_skill_proposal` en SQL; volver a la app y comprobar que ya se puede
   `GET /mine` (ambos con `communityAuthMiddleware` + `requireAccountType('candidate')`, solo
   sobre `req.userId`) según `contracts/skills-catalog.md`, y montarlo en `backend/index.ts`.
 - [ ] T033 [US2] Conectar la acción "Proponer «X»" de `SkillsInput`
-  (`apps/community/components/profile-form-fields.tsx`) al endpoint, distinguiendo en la UI los 6
-  resultados: creada, ya pendiente, resuelta a un skill (se agrega solo), rechazada con motivo,
-  límite alcanzado y error de validación.
+  (`apps/community/components/profile-form-fields.tsx`) al endpoint, **validando antes de enviar
+  con `skillProposalSchema` de `@avocado/schemas`** (capa de frontend del principio I, mismo
+  schema que usa el backend), y distinguiendo en la UI los 6 resultados: creada, ya pendiente,
+  resuelta a un skill (se agrega solo), rechazada con motivo, límite alcanzado y error de
+  validación.
 - [ ] T034 [P] [US2] Crear `apps/community/components/skill-proposals-list.tsx` (estado de mis
   propuestas) y mostrarlo junto a los skills en onboarding y en ajustes.
 - [ ] T035 [US2] Ampliar `e2e/account-foundation.spec.ts`: el candidato propone un skill
@@ -279,12 +282,15 @@ elegibilidad de examen y recibir 403.
 
 - [ ] T036 [P] [US3] Ampliar `backend/scripts/test-account-foundation-bypass.ts` con las
   garantías de esta historia: `UPDATE users SET account_type = …` directo falla;
-  `change_account_type` sin motivo falla; con motivo funciona y escribe en
-  `account_type_changes`; quitar el permiso al último superadmin falla; una cuenta de empresa con
-  `is_superadmin = true` falla por el `CHECK`.
+  `change_account_type` sin motivo, o con un motivo que solo trae espacios, falla; con motivo
+  válido funciona, lo guarda sin espacios sobrantes y escribe en `account_type_changes` (FR-023);
+  quitar el permiso al último superadmin falla; una cuenta de empresa con `is_superadmin = true`
+  falla por el `CHECK`; e insertar una cuenta como lo hace el scraper con `is_superadmin = true`
+  también falla (FR-030).
 - [ ] T037 [P] [US3] Ampliar `backend/tests/integration/skill-exams.routes.test.ts`: los 4
   endpoints responden `403 candidates_only` a una cuenta de tipo empresa, y siguen funcionando
-  para un candidato.
+  para un candidato. Agregar además el caso de FR-022: un skill aprobado sin banco suficiente
+  aparece en la elegibilidad con `reason: 'insufficient_bank'`, nunca como iniciable.
 - [ ] T038 [P] [US3] Crear `backend/tests/integration/privileged-functions.test.ts`: ninguna
   fuente bajo `backend/src` ni `backend/services` menciona `change_account_type` ni
   `set_superadmin`, es decir, ninguna ruta puede cambiar el tipo o el permiso (FR-004, FR-005).
@@ -315,7 +321,8 @@ guardados, notificaciones y crear publicación, y que completar el perfil nunca 
 
 - [ ] T041 [P] [US4] Tests unitarios en `apps/community/tests/profile-gate.test.ts` de
   `profileGateReason`: `missing_photo`, `missing_fields`, `unresolved_skills`, `null` cuando está
-  completo, y una cuenta de empresa a la que solo se le exige foto.
+  completo, una cuenta de empresa a la que solo se le exige foto, y el caso de FR-009: una cuenta
+  que era empresa y ahora es candidato, sin los campos de candidato, devuelve `missing_fields`.
 - [ ] T042 [P] [US4] Test de componente en `apps/community/tests/onboarding.test.tsx`: precarga
   todos los campos del usuario (no solo la foto) y no envía vacíos los que ya tenían valor.
 
@@ -389,8 +396,10 @@ vacante de esa empresa, y comprobar que quedó en una cuenta de tipo empresa dis
   unitarios de ambos, los de integración, el script de bypass y `pnpm test:e2e`. No debe quedar
   nada en rojo.
 - [ ] T055 **Tarea manual del usuario**: recorrer el nivel 6 de `quickstart.md` en el navegador
-  (aprobar una propuesta en SQL y verla aprobada en la app, revisar `/empresas/twilio` y el
-  banner de empresas, y confirmar que el formulario de preguntas incluye el skill nuevo).
+  (aprobar una propuesta en SQL y verla aprobada en la app, comprobar que ese skill nuevo se
+  muestra como "aún no disponible" en `/examenes` mientras no tenga banco suficiente (FR-022),
+  revisar `/empresas/twilio` y el banner de empresas, y confirmar que el formulario de preguntas
+  incluye el skill nuevo).
 - [ ] T056 Actualizar la sección "Estado actual y cómo retomar" de
   `requirements/003-candidate-and-company-accounts.md` con el resultado de la implementación.
 

@@ -216,7 +216,9 @@ candidato.
 
 - **FR-001**: Toda cuenta MUST tener exactamente un tipo: `candidato` o `empresa`.
 - **FR-002**: Al introducir el tipo, las cuentas de persona existentes MUST quedar como
-  candidato y los perfiles de empresa generados por el scraper MUST quedar como empresa.
+  candidato y los perfiles de empresa generados por el scraper MUST quedar como empresa. La
+  cuenta del bot que publica vacantes sin empresa identificada (`avocado-jobs-bot`) MUST quedar
+  como empresa: publica vacantes, no se examina y nunca inicia sesión.
 - **FR-003**: Las cuentas creadas por el registro público actual MUST quedar como candidato.
 - **FR-004**: Ninguna operación de la aplicación MUST permitir cambiar el tipo de una cuenta.
   En esta feature el cambio lo hace el superadmin directamente en la base de datos (la
@@ -235,10 +237,15 @@ candidato.
 
 **Catálogo de skills**
 
-- **FR-010**: Cada skill del catálogo MUST tener un estado: `aprobado`, `pendiente` o
-  `rechazado`. Los 37 skills actuales MUST quedar como aprobados.
+- **FR-010**: El catálogo de skills MUST contener únicamente skills **aprobados**, y los 37
+  actuales MUST quedar como aprobados. Un skill propuesto MUST existir como propuesta con estado
+  `pendiente`, `rechazada`, `unida a otro skill` o `aprobada`, y MUST entrar al catálogo solo al
+  aprobarse. Así, "existe en el catálogo" significa "está aprobado", y nada que apunte a un skill
+  (perfiles, preguntas, intentos, niveles) puede apuntar a uno no aprobado.
 - **FR-011**: Un skill MUST poder tener alias (formas alternativas de escribirlo); la
-  comparación MUST ignorar mayúsculas, espacios sobrantes y signos de puntuación.
+  comparación MUST ignorar mayúsculas, acentos, espacios sobrantes y signos de puntuación,
+  **excepto `+` y `#`**, que MUST conservarse porque forman parte del nombre de algunos
+  lenguajes: sin ellos `C`, `C++` y `C#` serían el mismo skill.
 - **FR-012**: El perfil de un candidato MUST aceptar únicamente skills aprobados; el sistema
   MUST rechazar cualquier otro valor aunque llegue por fuera de la interfaz.
 - **FR-013**: Al agregar un skill escrito como alias, el sistema MUST guardar el skill
@@ -315,8 +322,8 @@ candidato.
 - **SC-002**: El 100% de las cuentas tienen tipo asignado; ninguna cuenta queda sin tipo.
 - **SC-003**: El 0% de los intentos de guardar un skill no aprobado, de cambiar un tipo desde
   la aplicación, de cambiar un tipo sin motivo o de iniciar un examen con una cuenta de empresa tienen éxito.
-- **SC-004**: Un candidato puede proponer un skill en menos de 30 segundos sin salir de la
-  pantalla donde está editando sus skills.
+- **SC-004**: Un candidato puede proponer un skill sin salir de la pantalla donde edita sus
+  skills y sin pasos intermedios: escribir el nombre y confirmar la propuesta.
 - **SC-005**: El 100% de las decisiones del superadmin sobre propuestas (aprobar, unir o
   rechazar) se reflejan al candidato la siguiente vez que consulta sus skills, sin ningún paso
   adicional.
