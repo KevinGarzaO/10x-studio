@@ -27,6 +27,7 @@ import communityFeedRoutes from './src/routes/community/feed.routes'
 import communityHistoryRoutes from './src/routes/community/history.routes'
 import communitySkillExamsRoutes from './src/routes/community/skill-exams.routes'
 import communitySkillsRoutes from './src/routes/community/skills.routes'
+import communitySkillProposalsRoutes from './src/routes/community/skill-proposals.routes'
 
 // Admin routes
 import adminExamQuestionsRoutes from './src/routes/admin/exam-questions.routes'
@@ -105,6 +106,7 @@ app.use('/api/community/feed', communityFeedRoutes)
 app.use('/api/community/history', communityHistoryRoutes)
 app.use('/api/community/skill-exams', communitySkillExamsRoutes)
 app.use('/api/community/skills', communitySkillsRoutes)
+app.use('/api/community/skill-proposals', communitySkillProposalsRoutes)
 app.use('/api/admin/exam-questions', adminExamQuestionsRoutes)
 
 // Scraper routes (internal use, no auth required for now)

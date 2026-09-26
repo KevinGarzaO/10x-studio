@@ -230,12 +230,12 @@ con `approve_skill_proposal` en SQL; volver a la app y comprobar que ya se puede
 
 ### Tests de la historia 2
 
-- [ ] T028 [P] [US2] Tests unitarios en `backend/tests/unit/skill-proposal.service.test.ts` de la
+- [X] T028 [P] [US2] Tests unitarios en `backend/tests/unit/skill-proposal.service.test.ts` de la
   resolución: texto que coincide con skill, con etiqueta o con alias → `resolved`; propuesta
   `pending` existente → `joined`; `rejected` → `skill_rejected`; `approved`/`merged` → `resolved`
   con el skill resultante; 5 pendientes del mismo usuario → `proposal_limit`; texto nuevo →
   `created`.
-- [ ] T029 [P] [US2] Test de integración en
+- [X] T029 [P] [US2] Test de integración en
   `backend/tests/integration/skill-proposals.routes.test.ts` con los casos de
   `quickstart.md` nivel 3: los 6 resultados, `403 candidates_only` para una cuenta de empresa,
   `401` sin sesión, `400` con texto vacío, e idempotencia al sumarse dos veces a la misma
@@ -246,10 +246,10 @@ con `approve_skill_proposal` en SQL; volver a la app y comprobar que ya se puede
 
 ### Implementación de la historia 2
 
-- [ ] T031 [US2] Crear `backend/src/services/skill-proposal.service.ts` con la resolución de
+- [X] T031 [US2] Crear `backend/src/services/skill-proposal.service.ts` con la resolución de
   `research.md` R10, incluido el manejo del `23505` del `UNIQUE (normalized_key)` como `joined`
   (carrera entre dos personas) y el límite de 5 pendientes.
-- [ ] T032 [US2] Crear `backend/src/routes/community/skill-proposals.routes.ts` con `POST /` y
+- [X] T032 [US2] Crear `backend/src/routes/community/skill-proposals.routes.ts` con `POST /` y
   `GET /mine` (ambos con `communityAuthMiddleware` + `requireAccountType('candidate')`, solo
   sobre `req.userId`) según `contracts/skills-catalog.md`, y montarlo en `backend/index.ts`.
 - [ ] T033 [US2] Conectar la acción "Proponer «X»" de `SkillsInput`
