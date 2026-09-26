@@ -75,7 +75,7 @@ aplica una persona a mano (T010) y su orden interno importa: backfills primero, 
 
 ### Migración (un solo archivo, tareas en orden — no paralelizables entre sí)
 
-- [ ] T006 Crear `backend/sql/account-foundation-migration.sql` con el bloque 1: `ALTER TABLE
+- [X] T006 Crear `backend/sql/account-foundation-migration.sql` con el bloque 1: `ALTER TABLE
   users ADD COLUMN IF NOT EXISTS account_type TEXT NOT NULL DEFAULT 'candidate'` con
   `CHECK (account_type IN ('candidate','company'))`, `is_superadmin BOOLEAN NOT NULL DEFAULT
   false` con `CHECK (NOT (is_superadmin AND account_type = 'company'))`, `company_slug TEXT` con
@@ -85,7 +85,7 @@ aplica una persona a mano (T010) y su orden interno importa: backfills primero, 
   `is_superadmin = true` donde `'admin' = ANY(roles)` seguido de `roles =
   array_remove(roles, 'admin')`, y `company_slug = username` para las cuentas de empresa. Todo
   idempotente.
-- [ ] T007 Agregar al mismo archivo el bloque 2: tablas `account_type_changes` y
+- [X] T007 Agregar al mismo archivo el bloque 2: tablas `account_type_changes` y
   `superadmin_changes` (con `reason` `NOT NULL` y `CHECK (btrim(reason) <> '' AND reason =
   btrim(reason))`, `changed_by` con FK a `users`, `changed_at` por omisión `now()`, y en
   `account_type_changes` además `CHECK (from_type <> to_type)`); las funciones
@@ -97,7 +97,7 @@ aplica una persona a mano (T010) y su orden interno importa: backfills primero, 
   ambos salvo bandera activa); el trigger `guard_last_superadmin` (`BEFORE UPDATE OR DELETE`); y
   `REVOKE EXECUTE ... FROM PUBLIC, anon, authenticated` en las dos funciones. Ver `research.md`
   R2.
-- [ ] T008 Agregar el bloque 3: `normalize_skill_key(text)` `IMMUTABLE` (equivalente SQL de
+- [X] T008 Agregar el bloque 3: `normalize_skill_key(text)` `IMMUTABLE` (equivalente SQL de
   `normalizeSkillKey`, con `translate()` en vez de `unaccent`); tabla `skill_aliases`
   (`alias_key TEXT PRIMARY KEY` con `CHECK (alias_key ~ '^[a-z0-9+#]+$')`, `skill_name`
   `REFERENCES skills(name) ON UPDATE CASCADE ON DELETE RESTRICT`); tabla `skill_proposals`
@@ -109,7 +109,7 @@ aplica una persona a mano (T010) y su orden interno importa: backfills primero, 
   `research.md` R5 (`reactjs`, `node`, `next`, `ts`, `postgres`, `k8s`, `go`, `ml`, `net`,
   `gcloud`); las funciones `approve_skill_proposal`, `merge_skill_proposal` y
   `reject_skill_proposal`; y la vista `pending_skill_proposals` con `supporter_count`.
-- [ ] T009 Agregar el bloque 4 (conversión, FR-015): `UPDATE users` que reemplaza cada elemento
+- [X] T009 Agregar el bloque 4 (conversión, FR-015): `UPDATE users` que reemplaza cada elemento
   de `skills` por el skill aprobado cuando su clave normalizada coincide con `skills.name`, con
   la etiqueta o con un alias, quitando repetidos y **dejando intactos** los que no coinciden;
   luego el bloque 5 con los triggers de protección: `validate_candidate_skills` (`BEFORE INSERT
