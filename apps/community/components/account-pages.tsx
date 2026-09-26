@@ -15,6 +15,7 @@ import { useSkillCatalog } from '../lib/skill-catalog'
 import { validateCandidateProfile, messageForField } from '../lib/profile-validation'
 import { useSkillProposals } from '../lib/skill-proposals'
 import { SkillProposalsList } from './skill-proposals-list'
+import { ProfileGate } from './profile-gate'
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'
 
@@ -136,6 +137,9 @@ export function AccountLayout({ children, active }: { children: React.ReactNode;
   return (
     <div className="account-page">
       <style>{styles}</style>
+      {/* Estas pantallas viven fuera del shell del feed, así que hasta ahora
+          nadie verificaba aquí el perfil completo (FR-025). */}
+      <ProfileGate />
       <div className="account-wrap">
         <div className="account-nav">
           <Link href="/" className="back-link"><ArrowLeft size={15} /> Volver a AvoTalent</Link>

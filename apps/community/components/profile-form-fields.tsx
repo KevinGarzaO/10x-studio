@@ -52,7 +52,9 @@ export function SkillsInput({ skills, onChange, inputValue, onInputChange, onPro
 
   const typed = inputValue.trim()
   const resolved = typed ? resolveSkill(typed, catalog) : null
-  const pending = unresolvedSkills(skills, catalog)
+  // Solo se marca lo que está fuera del catálogo cuando el catálogo ya llegó:
+  // mientras carga, todo parecería inválido y el perfil se vería roto un instante.
+  const pending = catalog.skills.length > 0 ? unresolvedSkills(skills, catalog) : []
 
   /** Agrega un skill ya resuelto a su nombre canónico. */
   function addResolved(name: string) {

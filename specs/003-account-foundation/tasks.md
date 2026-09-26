@@ -319,24 +319,24 @@ guardados, notificaciones y crear publicación, y que completar el perfil nunca 
 
 ### Tests de la historia 4
 
-- [ ] T041 [P] [US4] Tests unitarios en `apps/community/tests/profile-gate.test.ts` de
+- [X] T041 [P] [US4] Tests unitarios en `apps/community/tests/profile-gate.test.ts` de
   `profileGateReason`: `missing_photo`, `missing_fields`, `unresolved_skills`, `null` cuando está
   completo, una cuenta de empresa a la que solo se le exige foto, y el caso de FR-009: una cuenta
   que era empresa y ahora es candidato, sin los campos de candidato, devuelve `missing_fields`.
-- [ ] T042 [P] [US4] Test de componente en `apps/community/tests/onboarding.test.tsx`: precarga
+- [X] T042 [P] [US4] Test de componente en `apps/community/tests/onboarding.test.tsx`: precarga
   todos los campos del usuario (no solo la foto) y no envía vacíos los que ya tenían valor.
 
 ### Implementación de la historia 4
 
-- [ ] T043 [P] [US4] Crear `apps/community/lib/profile-gate.ts` con `profileGateReason(user,
+- [X] T043 [P] [US4] Crear `apps/community/lib/profile-gate.ts` con `profileGateReason(user,
   catalog)`: para `candidate` exige foto, los 6 campos y que todos sus skills estén aprobados;
   para `company` solo la foto.
-- [ ] T044 [US4] Crear `apps/community/components/profile-gate.tsx` (`<ProfileGate>`, componente
+- [X] T044 [US4] Crear `apps/community/components/profile-gate.tsx` (`<ProfileGate>`, componente
   cliente que redirige a `/onboarding` según el motivo) y montarlo en
   `apps/community/components/shell.tsx` en lugar de la condición inline, en `AccountLayout` de
   `apps/community/components/account-pages.tsx` (cubre `/settings`, `/saved` y `/notifications`)
   y en `apps/community/app/create/page.tsx`.
-- [ ] T045 [US4] Precargar todos los campos existentes en
+- [X] T045 [US4] Precargar todos los campos existentes en
   `apps/community/components/onboarding.tsx` (FR-026) y pedir solo lo que falta, incluidos los
   skills sin resolver de US1.
 - [ ] T046 [US4] Ampliar `e2e/account-foundation.spec.ts`: un candidato sin foto abre `/settings`

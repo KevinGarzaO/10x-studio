@@ -7,6 +7,7 @@ import { Bell, Menu, Plus, Search, X } from 'lucide-react'
 import { fetchCurrentUser, getCachedUser } from '../lib/session'
 import { ShellContext } from '../lib/shell-context'
 import { LeftSidebar, RightSidebar, ProfileMenu, PublishModal, AuthModal, TAB_KEYS, KEY_TABS } from './community-hub'
+import { ProfileGate } from './profile-gate'
 
 // The left/right sidebars need to know which of the 4 feed tabs is
 // "active" even on pages that aren't the feed itself (a post, a vacancy, a
@@ -39,15 +40,11 @@ export function CommunityShell({ children }: { children: ReactNode }) {
     setUser(getCachedUser())
     fetchCurrentUser().then(u => {
       setUser(u)
-      // Real candidate signups without the essential profile fields get sent
-      // to complete them before using the rest of the app. Company/scraped
-      // `users` rows never hold an authenticated session, so this can't fire
-      // for them.
-      if (u && (!u.title || !u.role_category || !u.seniority || !u.skills?.length || !u.location || !u.work_modality)) {
-        router.replace('/onboarding')
-      }
     }).catch(() => {})
-  }, [router])
+    // Quién debe completar su perfil lo decide <ProfileGate>, que también cubre
+    // la foto y los skills fuera del catálogo, y se monta igual en las pantallas
+    // de cuenta que viven fuera de este layout (FR-024, FR-025).
+  }, [])
 
   const activeTab = deriveActiveTab(pathname, searchParams)
 
@@ -69,6 +66,7 @@ export function CommunityShell({ children }: { children: ReactNode }) {
 
   return (
     <ShellContext.Provider value={contextValue}>
+      <ProfileGate user={user ?? undefined} />
       <div className="app-shell">
         <header className="topbar">
           <button className="mobile-menu-button icon-button" onClick={() => setMobileMenu(!mobileMenu)} aria-label="Abrir menú"><Menu size={20} /></button>
