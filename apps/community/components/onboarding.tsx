@@ -8,6 +8,8 @@ import { SENIORITY_OPTIONS, MODALITY_OPTIONS, ROLE_CATEGORY_OPTIONS } from '../l
 import { PhotoPicker, SegmentedControl, SkillsInput, RoleCategorySelect } from './profile-form-fields'
 import { useSkillCatalog } from '../lib/skill-catalog'
 import { validateCandidateProfile, messageForField } from '../lib/profile-validation'
+import { useSkillProposals } from '../lib/skill-proposals'
+import { SkillProposalsList } from './skill-proposals-list'
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'
 
@@ -47,6 +49,8 @@ export function OnboardingPage() {
   const [error, setError] = useState('')
   const [checkingSession, setCheckingSession] = useState(true)
   const { catalog, failed: catalogFailed } = useSkillCatalog()
+  const addSkill = (name: string) => setSkills(prev => (prev.includes(name) ? prev : [...prev, name]))
+  const { proposals, message: proposalMessage, propose } = useSkillProposals(addSkill)
 
   useEffect(() => {
     // A user arriving here straight from the "confirm your email" link has
@@ -172,7 +176,9 @@ export function OnboardingPage() {
 
         <div className="field">
           <label htmlFor="onboarding-skills"><Tag size={12} style={{ verticalAlign: -1, marginRight: 4 }} />Skills</label>
-          <SkillsInput skills={skills} onChange={setSkills} inputValue={skillInput} onInputChange={setSkillInput} />
+          <SkillsInput skills={skills} onChange={setSkills} inputValue={skillInput} onInputChange={setSkillInput} onPropose={propose} />
+          {proposalMessage && <p className="skill-proposal-message">{proposalMessage}</p>}
+          <SkillProposalsList proposals={proposals} onAddSkill={addSkill} />
         </div>
 
         <div className="field">

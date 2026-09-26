@@ -240,7 +240,7 @@ con `approve_skill_proposal` en SQL; volver a la app y comprobar que ya se puede
   `quickstart.md` nivel 3: los 6 resultados, `403 candidates_only` para una cuenta de empresa,
   `401` sin sesión, `400` con texto vacío, e idempotencia al sumarse dos veces a la misma
   propuesta. Limpieza por id.
-- [ ] T030 [P] [US2] Test de componente en
+- [X] T030 [P] [US2] Test de componente en
   `apps/community/tests/skill-proposals-list.test.tsx`: se listan las propuestas con su estado, el
   rechazo muestra el motivo, y una propuesta aprobada invita a agregar el skill.
 
@@ -252,13 +252,13 @@ con `approve_skill_proposal` en SQL; volver a la app y comprobar que ya se puede
 - [X] T032 [US2] Crear `backend/src/routes/community/skill-proposals.routes.ts` con `POST /` y
   `GET /mine` (ambos con `communityAuthMiddleware` + `requireAccountType('candidate')`, solo
   sobre `req.userId`) según `contracts/skills-catalog.md`, y montarlo en `backend/index.ts`.
-- [ ] T033 [US2] Conectar la acción "Proponer «X»" de `SkillsInput`
+- [X] T033 [US2] Conectar la acción "Proponer «X»" de `SkillsInput`
   (`apps/community/components/profile-form-fields.tsx`) al endpoint, **validando antes de enviar
   con `skillProposalSchema` de `@avocado/schemas`** (capa de frontend del principio I, mismo
   schema que usa el backend), y distinguiendo en la UI los 6 resultados: creada, ya pendiente,
   resuelta a un skill (se agrega solo), rechazada con motivo, límite alcanzado y error de
   validación.
-- [ ] T034 [P] [US2] Crear `apps/community/components/skill-proposals-list.tsx` (estado de mis
+- [X] T034 [P] [US2] Crear `apps/community/components/skill-proposals-list.tsx` (estado de mis
   propuestas) y mostrarlo junto a los skills en onboarding y en ajustes.
 - [ ] T035 [US2] Ampliar `e2e/account-foundation.spec.ts`: el candidato propone un skill
   inexistente, ve el estado "Pendiente", y ese skill no aparece como chip del perfil ni en las

@@ -13,6 +13,8 @@ import { SENIORITY_OPTIONS, MODALITY_OPTIONS, ROLE_CATEGORY_OPTIONS } from '../l
 import { PhotoPicker, SegmentedControl, SkillsInput, RoleCategorySelect } from './profile-form-fields'
 import { useSkillCatalog } from '../lib/skill-catalog'
 import { validateCandidateProfile, messageForField } from '../lib/profile-validation'
+import { useSkillProposals } from '../lib/skill-proposals'
+import { SkillProposalsList } from './skill-proposals-list'
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'
 
@@ -175,6 +177,8 @@ export function SettingsPage() {
   const [location, setLocation] = useState('')
   const [workModality, setWorkModality] = useState<string | null>(null)
   const { catalog, failed: catalogFailed } = useSkillCatalog()
+  const addSkill = (name: string) => setSkills(prev => (prev.includes(name) ? prev : [...prev, name]))
+  const { proposals, message: proposalMessage, propose } = useSkillProposals(addSkill)
 
   useEffect(() => {
     if (!getToken()) { window.location.href = '/login'; return }
@@ -288,7 +292,13 @@ export function SettingsPage() {
           <div className="field"><label>Título profesional</label><input value={title} onChange={e => setTitle(e.target.value)} placeholder="Ej. Backend Developer" /></div>
           <div className="field"><label>Categoría de rol</label><RoleCategorySelect options={ROLE_CATEGORY_OPTIONS} value={roleCategory} onChange={setRoleCategory} /></div>
           <div className="field"><label>Nivel</label><SegmentedControl options={SENIORITY_OPTIONS} value={seniority} onChange={setSeniority} /></div>
-          <div className="field"><label><Tag size={12} style={{ verticalAlign: -1, marginRight: 4 }} />Skills</label><SkillsInput skills={skills} onChange={setSkills} inputValue={skillInput} onInputChange={setSkillInput} /></div>
+          <div className="field">
+            <label><Tag size={12} style={{ verticalAlign: -1, marginRight: 4 }} />Skills</label>
+            <SkillsInput skills={skills} onChange={setSkills} inputValue={skillInput} onInputChange={setSkillInput} onPropose={propose} />
+            {proposalMessage && <p className="skill-proposal-message">{proposalMessage}</p>}
+            <SkillProposalsList proposals={proposals} onAddSkill={addSkill} />
+            <Link href="/examenes" className="skills-validate-link">Validar mis skills con un examen →</Link>
+          </div>
           <div className="field"><label><MapPin size={12} style={{ verticalAlign: -1, marginRight: 4 }} />Ubicación</label><input value={location} onChange={e => setLocation(e.target.value)} placeholder="Ciudad, país" /></div>
           <div className="field"><label>Modalidad deseada</label><SegmentedControl options={MODALITY_OPTIONS} value={workModality} onChange={setWorkModality} /></div>
           <div className="field"><label>Biografía</label><textarea value={bio} onChange={e => setBio(e.target.value)} placeholder="Cuéntanos sobre ti..." /></div>
