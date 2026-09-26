@@ -356,10 +356,10 @@ vacante de esa empresa, y comprobar que quedó en una cuenta de tipo empresa dis
 
 ### Tests de la historia 5
 
-- [ ] T047 [P] [US5] Tests unitarios en `backend/tests/unit/company-username.test.ts` del
+- [X] T047 [P] [US5] Tests unitarios en `backend/tests/unit/company-username.test.ts` del
   desambiguador: `slug` libre → `slug`; ocupado → `slug-empresa`; ambos ocupados →
   `slug-empresa-2`.
-- [ ] T048 [P] [US5] Test de integración en
+- [X] T048 [P] [US5] Test de integración en
   `backend/tests/integration/companies.routes.test.ts`: `getOrCreateCompanyUser` con un candidato
   que ya ocupa el slug crea una cuenta de empresa distinta y una segunda llamada la reutiliza;
   `GET /api/community/companies/:slug` devuelve la empresa, y `404` cuando ese slug solo existe
@@ -367,18 +367,18 @@ vacante de esa empresa, y comprobar que quedó en una cuenta de tipo empresa dis
 
 ### Implementación de la historia 5
 
-- [ ] T049 [US5] Cambiar `getOrCreateCompanyUser` en `backend/services/scraper/sync.ts`: buscar
+- [X] T049 [US5] Cambiar `getOrCreateCompanyUser` en `backend/services/scraper/sync.ts`: buscar
   por `company_slug` **y** `account_type = 'company'`, elegir un `username` libre (`slug`,
   `slug-empresa`, `slug-empresa-2`, …), insertar con `account_type = 'company'` y
   `company_slug = slug`, y resolver el `23505` del índice parcial releyendo por `company_slug`.
-- [ ] T050 [US5] Crear `backend/src/routes/community/companies.routes.ts` con
+- [X] T050 [US5] Crear `backend/src/routes/community/companies.routes.ts` con
   `GET /:slug` (público, solo cuentas de empresa, mismo formato que el perfil) reutilizando la
   carga de perfil de `users.routes.ts`, montarlo en `backend/index.ts`, y apuntar
   `apps/community/app/(main)/empresas/[company]/page.tsx` a ese endpoint.
-- [ ] T051 [P] [US5] Devolver `companySlug` en `GET /api/community/stats/companies`
+- [X] T051 [P] [US5] Devolver `companySlug` en `GET /api/community/stats/companies`
   (`backend/src/routes/community/stats.routes.ts`) y usarlo en
   `apps/community/components/hero-banner.tsx`, que hoy deriva el enlace del `username`.
-- [ ] T052 [P] [US5] Quitar de `backend/scripts/sync-to-community.ts` sus copias de
+- [X] T052 [P] [US5] Quitar de `backend/scripts/sync-to-community.ts` sus copias de
   `companySlug`, `formatCompanyName` y `getOrCreateCompanyUser` (líneas 19-57) e importar la
   función del servicio, para que el script manual no reintroduzca la colisión (decisión aprobada
   el 2026-09-26, ver `plan.md`).

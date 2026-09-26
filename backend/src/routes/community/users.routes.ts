@@ -7,89 +7,105 @@ import { requireAccountType } from '../../middleware/require-account-type.middle
 
 const router = Router()
 
+/**
+ * Carga un perfil público completo: la cuenta, sus publicaciones (de la
+ * comunidad y del studio) y sus niveles validados.
+ *
+ * Vive aquí y se exporta porque el perfil de empresa
+ * (GET /api/community/companies/:slug) necesita exactamente la misma forma: la
+ * única diferencia es cómo se encuentra la fila.
+ */
+export async function loadPublicProfile(
+  find: () => Promise<{ data: any; error: any }>,
+): Promise<any | null> {
+  const { data: user, error } = await find()
+  if (error || !user) return null
+
+  user.username = user.username || user.handle
+  user.display_name = user.display_name || user.name
+
+  const author = { id: user.id, username: user.username, display_name: user.display_name, photo_url: user.photo_url }
+  const forumPosts = (user.community_posts || []).map((p: any) => ({
+    ...p,
+    author,
+    tags: p.community_post_tags?.map((pt: any) => pt.tag?.name).filter(Boolean) || [],
+    votesCount: p.votes_count || 0,
+    commentsCount: p.comments_count || 0,
+  }))
+
+  // Studio-authored articles (the "content" table) aren't community_posts
+  // rows — they only carry a plain user_id — so they have to be fetched
+  // separately and merged in to show up on the author's own profile.
+  const { data: articles } = await supabase
+    .from('content')
+    .select('id, title, excerpt, markdown_content, slug, published_at')
+    .eq('content_type', 'blog_post')
+    .eq('status', 'published')
+    .eq('user_id', user.id)
+    .order('published_at', { ascending: false })
+
+  const editorialPosts = (articles || []).map((a: any) => ({
+    id: a.id,
+    title: a.title,
+    content: a.excerpt || a.markdown_content?.substring(0, 500) || '',
+    type: 'editorial',
+    slug: a.slug,
+    created_at: a.published_at,
+    author,
+    tags: [],
+    votesCount: 0,
+    commentsCount: 0,
+    votes_count: 0,
+    comments_count: 0,
+  }))
+
+  user.community_posts = [...forumPosts, ...editorialPosts]
+    .sort((a: any, b: any) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+
+  // Niveles validados por examen (feature 002). Publicos por diseño: son la
+  // señal que las empresas vienen a ver.
+  //
+  // Se filtran contra users.skills a proposito: si el candidato retira un
+  // skill de su perfil el nivel deja de mostrarse (la fila se conserva, y el
+  // nivel reaparece si vuelve a declararlo).
+  const declared: string[] = user.skills || []
+  const { data: levels } = await supabase
+    .from('user_skill_levels')
+    .select('skill_name, level, achieved_at')
+    .eq('user_id', user.id)
+
+  user.skillLevels = (levels || [])
+    .filter((l: any) => declared.includes(l.skill_name))
+    .map((l: any) => ({ skillName: l.skill_name, level: l.level, achievedAt: l.achieved_at }))
+
+  return user
+}
+
+export const PROFILE_POSTS_SELECT = `id, title, content, type, slug, created_at, votes_count, comments_count, company, company_logo, is_scraper_post, source_url, platform, source_name, original_text, budget, modalidad, community_post_tags(tag:community_tags(name))`
+
 router.get('/:username', async (req: Request, res: Response) => {
   try {
     const username = req.params.username as string
 
-    const postsSelect = `id, title, content, type, slug, created_at, votes_count, comments_count, company, company_logo, is_scraper_post, source_url, platform, source_name, original_text, budget, modalidad, community_post_tags(tag:community_tags(name))`
-
-    let { data: user, error } = await supabase
-      .from('users')
-      .select(`*, community_posts(${postsSelect})`)
-      .eq('username', username)
-      .single()
-
-    if ((error || !user)) {
-      const fallback = await supabase
+    const user = await loadPublicProfile(async () => {
+      const primary = await supabase
         .from('users')
-        .select(`*, community_posts(${postsSelect})`)
+        .select(`*, community_posts(${PROFILE_POSTS_SELECT})`)
+        .eq('username', username)
+        .single()
+
+      if (!primary.error && primary.data) return primary
+
+      return supabase
+        .from('users')
+        .select(`*, community_posts(${PROFILE_POSTS_SELECT})`)
         .eq('handle', username)
         .single()
-      user = fallback.data
-      error = fallback.error
-    }
+    })
 
-    if (error || !user) {
+    if (!user) {
       return res.status(404).json({ error: 'Usuario no encontrado' })
     }
-
-    user.username = user.username || user.handle
-    user.display_name = user.display_name || user.name
-
-    const author = { id: user.id, username: user.username, display_name: user.display_name, photo_url: user.photo_url }
-    const forumPosts = (user.community_posts || []).map((p: any) => ({
-      ...p,
-      author,
-      tags: p.community_post_tags?.map((pt: any) => pt.tag?.name).filter(Boolean) || [],
-      votesCount: p.votes_count || 0,
-      commentsCount: p.comments_count || 0,
-    }))
-
-    // Studio-authored articles (the "content" table) aren't community_posts
-    // rows — they only carry a plain user_id — so they have to be fetched
-    // separately and merged in to show up on the author's own profile.
-    const { data: articles } = await supabase
-      .from('content')
-      .select('id, title, excerpt, markdown_content, slug, published_at')
-      .eq('content_type', 'blog_post')
-      .eq('status', 'published')
-      .eq('user_id', user.id)
-      .order('published_at', { ascending: false })
-
-    const editorialPosts = (articles || []).map((a: any) => ({
-      id: a.id,
-      title: a.title,
-      content: a.excerpt || a.markdown_content?.substring(0, 500) || '',
-      type: 'editorial',
-      slug: a.slug,
-      created_at: a.published_at,
-      author,
-      tags: [],
-      votesCount: 0,
-      commentsCount: 0,
-      votes_count: 0,
-      comments_count: 0,
-    }))
-
-    user.community_posts = [...forumPosts, ...editorialPosts]
-      .sort((a: any, b: any) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
-
-    // Niveles validados por examen (feature 002). Publicos por diseño: son la
-    // señal que las empresas vienen a ver.
-    //
-    // Se filtran contra users.skills a proposito: si el candidato retira un
-    // skill de su perfil el nivel deja de mostrarse (la fila se conserva, y el
-    // nivel reaparece si vuelve a declararlo). Filtrar aqui lo hace explicito
-    // en vez de depender de como itere el frontend.
-    const declared: string[] = user.skills || []
-    const { data: levels } = await supabase
-      .from('user_skill_levels')
-      .select('skill_name, level, achieved_at')
-      .eq('user_id', user.id)
-
-    user.skillLevels = (levels || [])
-      .filter((l: any) => declared.includes(l.skill_name))
-      .map((l: any) => ({ skillName: l.skill_name, level: l.level, achievedAt: l.achieved_at }))
 
     res.json({ user })
   } catch (error) {

@@ -24,10 +24,15 @@ export async function getOrCreateCompanyUser(
 
   if (companyUserCache.has(slug)) return companyUserCache.get(slug)!;
 
+  // Se busca por company_slug Y account_type, nunca por username: antes esta
+  // consulta era `.eq("username", slug)`, así que si una persona se registraba
+  // con el username de una empresa (por ejemplo "stripe"), el scraper le pegaba
+  // las vacantes de esa empresa a su perfil personal (FR-028).
   const { data: existing } = await supabase
     .from("users")
     .select("id, photo_url")
-    .eq("username", slug)
+    .eq("company_slug", slug)
+    .eq("account_type", "company")
     .maybeSingle();
 
   if (existing) {
@@ -38,10 +43,14 @@ export async function getOrCreateCompanyUser(
     return existing.id;
   }
 
+  const username = await findFreeCompanyUsername(slug);
+
   const { data: created, error } = await supabase
     .from("users")
     .insert({
-      username: slug,
+      username,
+      company_slug: slug,
+      account_type: "company",
       display_name: formatCompanyName(rawName),
       photo_url: logo || null,
       is_scraper_profile: true,
@@ -51,12 +60,55 @@ export async function getOrCreateCompanyUser(
     .single();
 
   if (error || !created) {
+    // Carrera entre dos sincronizaciones: el índice único parcial sobre
+    // company_slug decide, y quien pierde relee la cuenta ganadora (FR-029).
+    if (error?.code === "23505") {
+      const { data: winner } = await supabase
+        .from("users")
+        .select("id")
+        .eq("company_slug", slug)
+        .eq("account_type", "company")
+        .maybeSingle();
+
+      if (winner) {
+        companyUserCache.set(slug, winner.id);
+        return winner.id;
+      }
+    }
+
     console.error(`[Sync] Error creando cuenta de empresa "${rawName}":`, error?.message);
     return null;
   }
 
   companyUserCache.set(slug, created.id);
   return created.id;
+}
+
+/**
+ * El primer username libre para una empresa: su slug, y si lo ocupa otra cuenta
+ * (una persona, por ejemplo), `<slug>-empresa`, `<slug>-empresa-2`, etc.
+ *
+ * El username tiene que ser único en toda la tabla `users`, así que una empresa
+ * cuyo slug ya usa una persona necesita otro. Su URL pública sigue siendo el
+ * slug, que vive en company_slug (FR-029).
+ */
+export async function findFreeCompanyUsername(slug: string): Promise<string> {
+  const candidates = [slug, `${slug}-empresa`];
+  for (let i = 2; i <= 20; i++) candidates.push(`${slug}-empresa-${i}`);
+
+  for (const candidate of candidates) {
+    const { data } = await supabase
+      .from("users")
+      .select("id")
+      .eq("username", candidate)
+      .maybeSingle();
+
+    if (!data) return candidate;
+  }
+
+  // Salida de emergencia: 20 colisiones seguidas no deberían pasar nunca, pero
+  // devolver un username inválido rompería la sincronización entera.
+  return `${slug}-empresa-${Date.now().toString(36)}`;
 }
 
 /**

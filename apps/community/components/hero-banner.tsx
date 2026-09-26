@@ -9,6 +9,8 @@ const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'
 
 interface HiringCompany {
   username: string
+  /** Slug público de la empresa; puede diferir del username (FR-029). */
+  companySlug?: string
   name: string
   logo_url: string | null
 }
@@ -50,7 +52,7 @@ export function HeroBanner({ onViewJobs }: { onViewJobs: () => void }) {
           <span className="hero-trust-label">Vacantes activas hoy de:</span>
           <div className="hero-trust-logos">
             {companies.map(c => (
-              <Link key={c.username} href={`/empresas/${companySlug(c.username)}`} title={formatCompanyName(c.name)}>
+              <Link key={c.username} href={`/empresas/${c.companySlug || companySlug(c.username)}`} title={formatCompanyName(c.name)}>
                 {c.logo_url ? <img className="trust-logo" src={c.logo_url} alt={formatCompanyName(c.name)} /> : <span className="trust-logo-fallback">{formatCompanyName(c.name)}</span>}
               </Link>
             ))}

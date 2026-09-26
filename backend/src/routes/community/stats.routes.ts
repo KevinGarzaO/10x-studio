@@ -66,12 +66,15 @@ router.get('/companies', async (req: Request, res: Response) => {
 
     const { data, error } = await supabase
       .from('community_posts')
-      .select('author:users(id, username, display_name, name, photo_url)')
+      .select('author:users(id, username, company_slug, display_name, name, photo_url)')
       .eq('type', 'job')
 
     if (error) throw error
 
-    const counts = new Map<string, { username: string; name: string; logo_url: string | null; count: number }>()
+    const counts = new Map<
+      string,
+      { username: string; companySlug: string; name: string; logo_url: string | null; count: number }
+    >()
     for (const row of data || []) {
       const author = (row as any).author
       if (!author || !author.id || author.id === SCRAPER_BOT_ID) continue
@@ -81,6 +84,9 @@ router.get('/companies', async (req: Request, res: Response) => {
       } else {
         counts.set(author.username, {
           username: author.username,
+          // El enlace público sale de company_slug, no del username: una empresa
+          // cuyo slug ya usaba una persona tiene un username distinto (FR-029).
+          companySlug: author.company_slug || author.username,
           name: author.display_name || author.name || author.username,
           logo_url: author.photo_url,
           count: 1,
@@ -91,7 +97,7 @@ router.get('/companies', async (req: Request, res: Response) => {
     const companies = [...counts.values()]
       .sort((a, b) => b.count - a.count)
       .slice(0, limit)
-      .map(({ username, name, logo_url }) => ({ username, name, logo_url }))
+      .map(({ username, companySlug, name, logo_url }) => ({ username, companySlug, name, logo_url }))
 
     res.json({ companies })
   } catch (error) {
