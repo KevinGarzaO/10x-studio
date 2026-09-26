@@ -2,6 +2,8 @@ import { Router, Request, Response } from 'express'
 import { supabase } from '../../../services/supabase.service'
 import { communityAuthMiddleware, AuthRequest } from '../../../middleware/community-auth.middleware'
 import { uploadAvatar } from '../../../services/avatar'
+import { buildCandidateProfileSchema, firstUnapprovedSkill } from '@avocado/schemas'
+import { requireAccountType } from '../../middleware/require-account-type.middleware'
 
 const router = Router()
 
@@ -96,73 +98,157 @@ router.get('/:username', async (req: Request, res: Response) => {
   }
 })
 
-const VALID_SENIORITY = ['junior', 'semi_senior', 'senior']
-const VALID_ROLE_CATEGORY = [
-  'frontend', 'backend', 'fullstack', 'mobile', 'devops', 'data_engineer',
-  'data_scientist', 'qa', 'ux_ui', 'marketing', 'customer_support', 'product', 'otro',
-]
-
-router.put('/:username', communityAuthMiddleware, async (req: AuthRequest, res: Response) => {
-  try {
-    const username = req.params.username as string
-    const { displayName, bio, avatarUrl, website, githubUrl, title, seniority, skills, location, workModality, roleCategory, photoBase64 } = req.body
-
-    if (seniority && !VALID_SENIORITY.includes(seniority)) {
-      return res.status(400).json({ error: 'Nivel de seniority inválido' })
+/**
+ * Los errores que lanzan los triggers de la feature 003 y el 400 equivalente.
+ * Cubren la carrera real: el catálogo se leyó, y entre eso y el UPDATE el
+ * superadmin borró el skill. El trigger es la autoridad, así que su rechazo se
+ * traduce en lugar de convertirse en un 500 (contracts/profile-and-accounts.md).
+ */
+function translateProfileTriggerError(message: string): { status: number; body: object } | null {
+  const skillNotInCatalog = message.match(/skill_not_in_catalog:\s*(\S+)/)
+  if (skillNotInCatalog) {
+    return {
+      status: 400,
+      body: {
+        error: 'skill_not_in_catalog',
+        field: 'skills',
+        skill: skillNotInCatalog[1],
+        message: `El skill "${skillNotInCatalog[1]}" no está en el catálogo aprobado`,
+      },
     }
-    if (roleCategory && !VALID_ROLE_CATEGORY.includes(roleCategory)) {
-      return res.status(400).json({ error: 'Categoría de rol inválida' })
-    }
-
-    const { data: user } = await supabase
-      .from('users')
-      .select('id')
-      .eq('username', username)
-      .single()
-
-    if (!user) {
-      return res.status(404).json({ error: 'Usuario no encontrado' })
-    }
-
-    if (user.id !== req.userId) {
-      return res.status(403).json({ error: 'No tienes permiso para editar este perfil' })
-    }
-
-    let photoUrl = avatarUrl
-    if (photoBase64) {
-      const uploaded = await uploadAvatar(photoBase64, user.id)
-      if (!uploaded) {
-        return res.status(500).json({ error: 'Error al subir la foto de perfil' })
-      }
-      photoUrl = uploaded
-    }
-
-    const { data: updated, error } = await supabase
-      .from('users')
-      .update({
-        display_name: displayName,
-        bio,
-        photo_url: photoUrl,
-        website,
-        github_url: githubUrl,
-        title,
-        seniority,
-        skills,
-        location,
-        work_modality: workModality,
-        role_category: roleCategory,
-      })
-      .eq('username', username)
-      .select()
-      .single()
-
-    if (error) throw error
-
-    res.json({ user: updated })
-  } catch (error) {
-    console.error('Community Update user error:', error)
-    res.status(500).json({ error: 'Error al actualizar el perfil' })
   }
-})
+
+  const cleared = message.match(/required_field_cleared:\s*(\S+)/)
+  if (cleared) {
+    return {
+      status: 400,
+      body: {
+        error: 'required_field_cleared',
+        field: cleared[1],
+        message: 'No puedes dejar vacío un dato obligatorio de tu perfil',
+      },
+    }
+  }
+
+  if (message.includes('duplicate_skill')) {
+    return {
+      status: 400,
+      body: { error: 'validation_error', field: 'skills', message: 'No repitas un skill' },
+    }
+  }
+
+  return null
+}
+
+router.put(
+  '/:username',
+  communityAuthMiddleware,
+  requireAccountType('candidate'),
+  async (req: AuthRequest, res: Response) => {
+    try {
+      const username = req.params.username as string
+
+      const { data: user } = await supabase
+        .from('users')
+        .select('id, photo_url')
+        .eq('username', username)
+        .single()
+
+      if (!user) {
+        return res.status(404).json({ error: 'Usuario no encontrado' })
+      }
+
+      if (user.id !== req.userId) {
+        return res.status(403).json({ error: 'No tienes permiso para editar este perfil' })
+      }
+
+      // El catálogo se lee en cada petición, igual que en
+      // exam-questions.routes.ts: un skill aprobado hace un momento tiene que
+      // poder guardarse ya.
+      const { data: skillRows, error: skillsError } = await supabase.from('skills').select('name')
+      if (skillsError) throw skillsError
+
+      const schema = buildCandidateProfileSchema((skillRows || []).map((row) => row.name as string))
+      const parsed = schema.safeParse(req.body)
+
+      if (!parsed.success) {
+        const issue = parsed.error.issues[0]
+        const field = issue.path[0] ?? null
+        // Un skill fuera del catálogo tiene su propio código, para que el
+        // formulario pueda señalar el chip culpable.
+        if (field === 'skills' && Array.isArray(req.body?.skills)) {
+          const offending = firstUnapprovedSkill(
+            req.body.skills.filter((s: unknown) => typeof s === 'string'),
+            (skillRows || []).map((row) => row.name as string),
+          )
+          if (offending) {
+            return res.status(400).json({
+              error: 'skill_not_in_catalog',
+              field: 'skills',
+              skill: offending,
+              message: `El skill "${offending}" no está en el catálogo aprobado`,
+            })
+          }
+        }
+        return res.status(400).json({ error: 'validation_error', field, message: issue.message })
+      }
+
+      const data = parsed.data
+      const photoBase64 = typeof req.body?.photoBase64 === 'string' ? req.body.photoBase64 : null
+
+      let photoUrl = user.photo_url as string | null
+      if (photoBase64) {
+        const uploaded = await uploadAvatar(photoBase64, user.id)
+        if (!uploaded) {
+          return res.status(500).json({ error: 'Error al subir la foto de perfil' })
+        }
+        photoUrl = uploaded
+      }
+
+      // La foto es obligatoria para toda cuenta (FR-024). No puede ser NOT NULL
+      // en la DB porque la cuenta existe desde el registro, antes del
+      // onboarding, así que el guardado es donde se exige.
+      if (!photoUrl || photoUrl.trim() === '') {
+        return res.status(400).json({
+          error: 'photo_required',
+          field: 'photo',
+          message: 'Tu foto de perfil es obligatoria',
+        })
+      }
+
+      const { data: updated, error } = await supabase
+        .from('users')
+        .update({
+          display_name: data.displayName,
+          bio: data.bio,
+          photo_url: photoUrl,
+          website: data.website,
+          github_url: data.githubUrl,
+          title: data.title,
+          seniority: data.seniority,
+          skills: data.skills,
+          location: data.location,
+          work_modality: data.workModality,
+          role_category: data.roleCategory,
+        })
+        .eq('username', username)
+        .select()
+        .single()
+
+      if (error) {
+        const translated = translateProfileTriggerError(error.message || '')
+        if (translated) {
+          return res.status(translated.status).json(translated.body)
+        }
+        throw error
+      }
+
+      res.json({ user: updated })
+    } catch (error) {
+      console.error('Community Update user error:', error)
+      res.status(500).json({ error: 'Error al actualizar el perfil' })
+    }
+  },
+)
 
 export default router

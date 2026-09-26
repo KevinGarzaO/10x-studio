@@ -178,7 +178,7 @@ ver que se rechaza.
 
 ### Tests de la historia 1
 
-- [ ] T019 [P] [US1] Ampliar `backend/tests/integration/users.routes.test.ts`: `PUT
+- [X] T019 [P] [US1] Ampliar `backend/tests/integration/users.routes.test.ts`: `PUT
   /api/community/users/:username` con un skill no aprobado → `400 skill_not_in_catalog`; sin
   título o con título en blanco → `400 validation_error` con `field`; sin foto y sin foto previa
   → `400 photo_required`; con `accountType: 'company'` en el body → `200` y el tipo **no** cambia;
@@ -189,7 +189,7 @@ ver que se rechaza.
 
 ### Implementación de la historia 1
 
-- [ ] T021 [US1] Validar en `backend/src/routes/community/users.routes.ts`: leer los skills
+- [X] T021 [US1] Validar en `backend/src/routes/community/users.routes.ts`: leer los skills
   aprobados, armar `buildCandidateProfileSchema`, rechazar con
   `400 { error: 'validation_error', field, message }`, exigir que la cuenta quede con foto
   (`400 photo_required`), aplicar `requireAccountType('candidate')`, y traducir los errores de los
