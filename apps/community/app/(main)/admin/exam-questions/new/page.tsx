@@ -10,7 +10,7 @@ const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'
 export default function NewExamQuestionPage() {
   const router = useRouter()
   const [checkingAccess, setCheckingAccess] = useState(true)
-  const [isAdmin, setIsAdmin] = useState(false)
+  const [isSuperadmin, setIsSuperadmin] = useState(false)
 
   useEffect(() => {
     fetchCurrentUser()
@@ -19,11 +19,13 @@ export default function NewExamQuestionPage() {
           router.replace('/login')
           return
         }
-        if (!user.roles?.includes('admin')) {
+        // El permiso vive en su propia columna, no en users.roles, donde el
+        // scraper también escribe keywords de puesto (FR-005).
+        if (!user.is_superadmin) {
           router.replace('/')
           return
         }
-        setIsAdmin(true)
+        setIsSuperadmin(true)
       })
       .finally(() => setCheckingAccess(false))
   }, [router])
@@ -57,7 +59,7 @@ export default function NewExamQuestionPage() {
   }
 
   if (checkingAccess) return null
-  if (!isAdmin) return null
+  if (!isSuperadmin) return null
 
   return (
     <div className="eqf-page">

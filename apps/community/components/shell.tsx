@@ -66,7 +66,7 @@ export function CommunityShell({ children }: { children: ReactNode }) {
 
   return (
     <ShellContext.Provider value={contextValue}>
-      <ProfileGate user={user ?? undefined} />
+      <ProfileGate />
       <div className="app-shell">
         <header className="topbar">
           <button className="mobile-menu-button icon-button" onClick={() => setMobileMenu(!mobileMenu)} aria-label="Abrir menú"><Menu size={20} /></button>

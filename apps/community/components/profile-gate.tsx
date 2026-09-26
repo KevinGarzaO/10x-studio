@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { fetchCurrentUser, getCachedUser, getToken } from '../lib/session'
+import { fetchCurrentUser, getToken } from '../lib/session'
 import { useSkillCatalog } from '../lib/skill-catalog'
 import { profileGateReason } from '../lib/profile-gate'
 
@@ -17,30 +17,29 @@ import { profileGateReason } from '../lib/profile-gate'
  * No renderiza nada: solo redirige. Así se puede montar dentro de páginas que
  * son server components sin convertirlas.
  */
-export function ProfileGate({ user }: { user?: unknown }) {
+export function ProfileGate() {
   const router = useRouter()
-  const { catalog } = useSkillCatalog()
-  const [resolved, setResolved] = useState<unknown>(user ?? null)
+  const { catalog, loading } = useSkillCatalog()
+  const [user, setUser] = useState<unknown>(null)
 
   useEffect(() => {
-    if (user !== undefined) return
     if (!getToken()) return
 
-    // Se parte del usuario en caché para no esperar la red, y se confirma con
-    // el servidor: es quien tiene la verdad de lo que falta.
-    const cached = getCachedUser()
-    if (cached) setResolved(cached)
+    // La decisión se toma SOLO con lo que responde el servidor. El usuario en
+    // caché (localStorage) puede ser parcial o viejo, y con él se expulsaría a
+    // onboarding a alguien que tiene su perfil completo.
     fetchCurrentUser()
-      .then(fresh => setResolved(fresh))
+      .then(fresh => setUser(fresh))
       .catch(() => {})
-  }, [user])
+  }, [])
 
   useEffect(() => {
-    if (!resolved) return
-    if (profileGateReason(resolved as never, catalog)) {
+    // Se espera el catálogo: sin él no se sabe qué skills son válidos.
+    if (!user || loading) return
+    if (profileGateReason(user as never, catalog)) {
       router.replace('/onboarding')
     }
-  }, [resolved, catalog, router])
+  }, [user, catalog, loading, router])
 
   return null
 }

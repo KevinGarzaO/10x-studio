@@ -213,7 +213,7 @@ ver que se rechaza.
   `CANONICAL_SKILLS`.
 - [X] T026 [P] [US1] Cambiar `apps/community/app/(main)/examenes/[skill]/page.tsx` para tomar la
   etiqueta del skill del catálogo en vez de `CANONICAL_SKILLS`.
-- [ ] T027 [US1] E2E en `e2e/account-foundation.spec.ts`: un candidato completo abre `/settings`,
+- [X] T027 [US1] E2E en `e2e/account-foundation.spec.ts`: un candidato completo abre `/settings`,
   escribe `reactjs`, ve que queda `React`, guarda y el cambio persiste tras recargar.
 
 **Checkpoint**: el perfil ya solo acepta skills del catálogo, en la UI y en el endpoint.
@@ -260,7 +260,7 @@ con `approve_skill_proposal` en SQL; volver a la app y comprobar que ya se puede
   validación.
 - [X] T034 [P] [US2] Crear `apps/community/components/skill-proposals-list.tsx` (estado de mis
   propuestas) y mostrarlo junto a los skills en onboarding y en ajustes.
-- [ ] T035 [US2] Ampliar `e2e/account-foundation.spec.ts`: el candidato propone un skill
+- [X] T035 [US2] Ampliar `e2e/account-foundation.spec.ts`: el candidato propone un skill
   inexistente, ve el estado "Pendiente", y ese skill no aparece como chip del perfil ni en las
   sugerencias.
 
@@ -339,7 +339,7 @@ guardados, notificaciones y crear publicación, y que completar el perfil nunca 
 - [X] T045 [US4] Precargar todos los campos existentes en
   `apps/community/components/onboarding.tsx` (FR-026) y pedir solo lo que falta, incluidos los
   skills sin resolver de US1.
-- [ ] T046 [US4] Ampliar `e2e/account-foundation.spec.ts`: un candidato sin foto abre `/settings`
+- [X] T046 [US4] Ampliar `e2e/account-foundation.spec.ts`: un candidato sin foto abre `/settings`
   directo, acaba en `/onboarding` con sus datos precargados, sube la foto y regresa a la app.
 
 **Checkpoint**: no queda pantalla con sesión sin verificación de perfil completo.
