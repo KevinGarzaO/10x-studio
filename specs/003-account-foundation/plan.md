@@ -106,9 +106,11 @@ Evaluado contra `.specify/memory/constitution.md` v1.0.0, antes y después del d
 7. **`getOrCreateCompanyUser`** (`services/scraper/sync.ts`) busca por `company_slug`.
    `/empresas/[company]` llama a un endpoint nuevo, y `stats.routes.ts` y `hero-banner.tsx`
    usan `companySlug` (R13).
-8. **Pendiente de aprobación, no incluido por defecto**: `backend/scripts/sync-to-community.ts`
-   tiene una **copia** de `getOrCreateCompanyUser` con el mismo error. Se propone que importe la
-   del servicio; se decide en `/speckit-tasks`.
+8. **Aprobado por el usuario el 2026-09-26, incluido**: `backend/scripts/sync-to-community.ts`
+   tiene copias propias de `companySlug`, `formatCompanyName` y `getOrCreateCompanyUser`
+   (líneas 19-57), con el mismo error de colisión. El script importa la función del servicio y
+   las copias se eliminan. Es un script manual (`npm run sync-to-community`), no toca el flujo
+   automático, pero hoy puede asignarle vacantes a una persona igual que el scraper.
 9. **Explícitamente fuera**: el error de elegibilidad de 002 (un fallo al contar el banco se
    reporta como "banco insuficiente"). Se detectó antes, pero no pertenece a esta spec.
 
@@ -158,6 +160,7 @@ backend/
 ├── src/services/
 │   └── skill-proposal.service.ts          # NUEVO: resolver → created/joined/resolved/rejected/limit
 ├── services/scraper/sync.ts               # MODIFICADO: getOrCreateCompanyUser por company_slug
+├── scripts/sync-to-community.ts           # MODIFICADO: usa el servicio, sin copias propias
 ├── index.ts                               # MODIFICADO: monta las 3 rutas nuevas
 ├── scripts/test-account-foundation-bypass.ts  # NUEVO: garantías de la DB
 ├── scripts/test-exam-questions-bypass.ts  # MODIFICADO: requireSuperadmin

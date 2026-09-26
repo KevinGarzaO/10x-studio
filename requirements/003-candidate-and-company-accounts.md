@@ -19,7 +19,7 @@ exámenes"*.
 
 ## Estado actual y cómo retomar
 
-*Actualizado: 2026-09-13.* Actualiza esta sección cada vez que avance o se pause el trabajo.
+*Actualizado: 2026-09-26.* Actualiza esta sección cada vez que avance o se pause el trabajo.
 
 ### Dónde está el trabajo
 
@@ -27,7 +27,7 @@ exámenes"*.
 |---|---|
 | **Rama** | `003-account-foundation`, creada desde `master` en el commit `1751335`, que ya incluye las features 001 y 002. Subida a GitHub (`origin/003-account-foundation`) |
 | **Carpeta de la spec** | `specs/003-account-foundation/`. `.specify/feature.json` apunta a ella, pero ese archivo **no se sube a git** (`.specify/.gitignore`). En otra máquina o en un clon nuevo hay que crearlo (ver "Cómo retomar", paso 2) |
-| **Commits** | Dos commits de documentación: la carpeta `requirements/` y los artefactos de spec y plan de la parte 1. Todavía no hay código |
+| **Commits** | Tres commits de documentación: la carpeta `requirements/`, los artefactos de spec y plan de la parte 1, y la decisión de alcance sobre `sync-to-community.ts`. Todavía no hay código |
 
 ### Avance del flujo spec-kit (parte 1: fundación)
 
@@ -42,12 +42,15 @@ exámenes"*.
 | Migración SQL | Pendiente | `backend/sql/account-foundation-migration.sql` se crea al implementar, y **la aplica una persona a mano** en el editor SQL de Supabase |
 | Verificación manual | Pendiente | Nivel 6 de `quickstart.md` |
 
+### Decisiones tomadas
+
+1. **`backend/scripts/sync-to-community.ts` sí se corrige** (decidido el 2026-09-26). Tenía
+   copias propias de `companySlug`, `formatCompanyName` y `getOrCreateCompanyUser` con el mismo
+   error de colisión; pasará a importar la del servicio.
+
 ### Decisiones que faltan antes o durante `/speckit-tasks`
 
-1. **`backend/scripts/sync-to-community.ts`** tiene una copia de `getOrCreateCompanyUser` con
-   el mismo error de colisión de nombres. Hay que decidir si se corrige (que importe la función
-   del servicio) o se deja fuera. Por defecto **no** está incluido.
-2. **Cambios a código de features ya terminadas.** Están listados en `plan.md`, sección
+1. **Cambios a código de features ya terminadas.** Están listados en `plan.md`, sección
    "Cambios a código existente". Hay que reconocerlos antes de implementar:
    - 001: `requireRole('admin')` pasa a `requireSuperadmin`, y el formulario toma los skills del
      catálogo.
@@ -67,7 +70,7 @@ exámenes"*.
 3. Leer, en este orden: este requerimiento → `specs/003-account-foundation/spec.md` (sección
    *Clarifications*) → `plan.md` (sección *Constitution Check* y la lista de cambios a código
    existente).
-4. Resolver las dos decisiones de arriba.
+4. Reconocer los cambios a código de features ya terminadas (sección de arriba).
 5. Correr `/speckit-tasks`, luego `/speckit-analyze`, y después `/speckit-implement`.
 6. Reglas de trabajo vigentes durante la implementación:
    - un commit por tarea, en formato Conventional Commits y en inglés;
