@@ -11,6 +11,8 @@ import {
 import { saveSession, getToken, fetchCurrentUser } from '../lib/session'
 import { SENIORITY_OPTIONS, MODALITY_OPTIONS, ROLE_CATEGORY_OPTIONS } from '../lib/profile-options'
 import { PhotoPicker, SegmentedControl, SkillsInput, RoleCategorySelect } from './profile-form-fields'
+import { useSkillCatalog } from '../lib/skill-catalog'
+import { validateCandidateProfile, messageForField } from '../lib/profile-validation'
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'
 
@@ -172,6 +174,7 @@ export function SettingsPage() {
   const [skillInput, setSkillInput] = useState('')
   const [location, setLocation] = useState('')
   const [workModality, setWorkModality] = useState<string | null>(null)
+  const { catalog, failed: catalogFailed } = useSkillCatalog()
 
   useEffect(() => {
     if (!getToken()) { window.location.href = '/login'; return }
@@ -197,6 +200,33 @@ export function SettingsPage() {
 
   async function handleSave() {
     if (!user) return
+
+    // Se valida con el MISMO schema del backend antes de enviar, así el error
+    // sale aquí en vez de expulsar a la persona a onboarding después (FR-027).
+    if (!photoBase64 && !photoUrl) {
+      setError('Tu foto de perfil es obligatoria')
+      return
+    }
+    const validationError = validateCandidateProfile(
+      {
+        title: title.trim(),
+        roleCategory,
+        seniority,
+        skills,
+        location: location.trim(),
+        workModality,
+        displayName,
+        bio,
+        website,
+        githubUrl,
+      },
+      catalog,
+    )
+    if (validationError) {
+      setError(messageForField(validationError))
+      return
+    }
+
     setSaving(true)
     setError('')
     setSaved(false)
@@ -207,12 +237,13 @@ export function SettingsPage() {
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
         body: JSON.stringify({
           displayName, bio, website, githubUrl,
-          title, roleCategory, seniority, skills, location, workModality,
+          title: title.trim(), roleCategory, seniority, skills,
+          location: location.trim(), workModality,
           ...(photoBase64 ? { photoBase64 } : {}),
         }),
       })
       const data = await res.json()
-      if (!res.ok) { setError(data.error || 'Error al guardar'); setSaving(false); return }
+      if (!res.ok) { setError(data.message || data.error || 'Error al guardar'); setSaving(false); return }
       setUser(data.user)
       setPhotoUrl(data.user.photo_url || null)
       setPhotoBase64(null)
@@ -244,6 +275,11 @@ export function SettingsPage() {
         <h1 className="page-title">Configuración</h1>
         <p className="muted page-description">Controla tu perfil público y preferencias.</p>
         {error && <div className="auth-error">{error}</div>}
+        {catalogFailed && (
+          <div className="auth-error" role="alert">
+            No pudimos cargar el catálogo de skills. Recarga la página antes de guardar.
+          </div>
+        )}
         <h2 className="section-title">Perfil público</h2>
         <div className="form-grid">
           <div className="field"><label>Foto de perfil</label><PhotoPicker photoUrl={photoBase64 || photoUrl} onPick={setPhotoBase64} onError={setError} /></div>
@@ -260,7 +296,7 @@ export function SettingsPage() {
           <div className="field"><label>GitHub</label><input value={githubUrl} onChange={e => setGithubUrl(e.target.value)} placeholder="github.com/tuusuario" /></div>
         </div>
         <div className="button-row">
-          <button className="primary-btn" onClick={handleSave} disabled={saving}>
+          <button className="primary-btn" onClick={handleSave} disabled={saving || catalogFailed}>
             {saving ? <><Loader2 size={14} className="animate-spin" /> Guardando...</> : saved ? <><Check size={14} /> Guardado</> : <><Save size={14} /> Guardar cambios</>}
           </button>
         </div>

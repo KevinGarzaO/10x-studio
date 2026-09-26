@@ -1,8 +1,8 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { buildExamQuestionSchema, DIFFICULTY_LEVELS, type DifficultyLevel } from '@avocado/schemas'
-import { CANONICAL_SKILLS } from '@/lib/profile-options'
+import { useSkillCatalog } from '@/lib/skill-catalog'
 import { Button } from '@/components/ui/button'
 
 const MIN_OPTIONS = 2
@@ -35,7 +35,16 @@ function hasDuplicateOptions(options: string[]) {
 export function ExamQuestionForm({ onSubmit }: ExamQuestionFormProps) {
   const [question, setQuestion] = useState('')
   const [questionError, setQuestionError] = useState<string | null>(null)
-  const [skillName, setSkillName] = useState(CANONICAL_SKILLS[0]?.value ?? '')
+  // El catálogo viene de la DB, no de una lista fija: sin esto un skill recién
+  // aprobado nunca podría recibir preguntas y jamás habilitaría su examen (FR-022).
+  const { catalog, loading: catalogLoading, failed: catalogFailed } = useSkillCatalog()
+  const catalogSkills = catalog.skills
+  const [skillName, setSkillName] = useState('')
+
+  // Al llegar el catálogo se elige el primero, si la persona no eligió antes.
+  useEffect(() => {
+    if (!skillName && catalogSkills.length > 0) setSkillName(catalogSkills[0].name)
+  }, [catalogSkills, skillName])
   const [options, setOptions] = useState<string[]>(EMPTY_OPTIONS)
   const [correctAnswerIndex, setCorrectAnswerIndex] = useState<number | null>(null)
   const [difficultyLevel, setDifficultyLevel] = useState<DifficultyLevel>('basico')
@@ -83,7 +92,7 @@ export function ExamQuestionForm({ onSubmit }: ExamQuestionFormProps) {
   function resetForm() {
     setQuestion('')
     setQuestionError(null)
-    setSkillName(CANONICAL_SKILLS[0]?.value ?? '')
+    setSkillName(catalogSkills[0]?.name ?? '')
     setOptions(EMPTY_OPTIONS)
     setCorrectAnswerIndex(null)
     setDifficultyLevel('basico')
@@ -114,7 +123,7 @@ export function ExamQuestionForm({ onSubmit }: ExamQuestionFormProps) {
     }
 
     const trimmedOptions = validOptions.map((o) => o.trim())
-    const schema = buildExamQuestionSchema(CANONICAL_SKILLS.map((s) => s.value))
+    const schema = buildExamQuestionSchema(catalogSkills.map((s) => s.name))
     const payload: ExamQuestionSubmitPayload = {
       question: trimmedQuestion,
       skillName,
@@ -166,9 +175,20 @@ export function ExamQuestionForm({ onSubmit }: ExamQuestionFormProps) {
 
       <div className="eqf-field">
         <label htmlFor="exam-skill">Skill</label>
-        <select id="exam-skill" className="eqf-select" value={skillName} onChange={(e) => setSkillName(e.target.value)}>
-          {CANONICAL_SKILLS.map((skill) => (
-            <option key={skill.value} value={skill.value}>
+        {catalogFailed && (
+          <p role="alert" className="eqf-error">
+            No pudimos cargar el catálogo de skills. Recarga la página antes de capturar.
+          </p>
+        )}
+        <select
+          id="exam-skill"
+          className="eqf-select"
+          value={skillName}
+          disabled={catalogLoading || catalogFailed}
+          onChange={(e) => setSkillName(e.target.value)}
+        >
+          {catalogSkills.map((skill) => (
+            <option key={skill.name} value={skill.name}>
               {skill.label}
             </option>
           ))}

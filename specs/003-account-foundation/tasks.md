@@ -183,7 +183,7 @@ ver que se rechaza.
   título o con título en blanco → `400 validation_error` con `field`; sin foto y sin foto previa
   → `400 photo_required`; con `accountType: 'company'` en el body → `200` y el tipo **no** cambia;
   perfil de otro usuario → `403`; caso correcto → `200` con los textos trimeados.
-- [ ] T020 [P] [US1] Test de componente en `apps/community/tests/SkillsInput.test.tsx`: las
+- [X] T020 [P] [US1] Test de componente en `apps/community/tests/SkillsInput.test.tsx`: las
   sugerencias vienen del catálogo cargado; `reactjs` se agrega como `react`; un texto sin
   coincidencia **no** se agrega como chip; con el catálogo en error no se puede agregar nada.
 
@@ -195,23 +195,23 @@ ver que se rechaza.
   (`400 photo_required`), aplicar `requireAccountType('candidate')`, y traducir los errores de los
   triggers (`skill_not_in_catalog`, `required_field_cleared`) a `400` en vez de `500`. Ver
   `contracts/profile-and-accounts.md`.
-- [ ] T022 [US1] Quitar `CANONICAL_SKILLS` de `apps/community/lib/profile-options.ts` y reexportar
+- [X] T022 [US1] Quitar `CANONICAL_SKILLS` de `apps/community/lib/profile-options.ts` y reexportar
   desde ahí los enums de `@avocado/schemas`, para que `SENIORITY_OPTIONS`,
   `ROLE_CATEGORY_OPTIONS` y `MODALITY_OPTIONS` sigan sirviendo a la UI sin duplicar valores.
-- [ ] T023 [US1] Reescribir `SkillsInput` en `apps/community/components/profile-form-fields.tsx`:
+- [X] T023 [US1] Reescribir `SkillsInput` en `apps/community/components/profile-form-fields.tsx`:
   sugerencias desde `useSkillCatalog()`, resolución con `resolveSkill` (alias incluidos), y sin
   agregar texto libre. Los skills del perfil que no estén aprobados se muestran marcados como
   "no está en el catálogo" con las acciones elegir, proponer y quitar (la acción de proponer se
   conecta en US2).
-- [ ] T024 [US1] Usar el schema compartido antes de enviar en
+- [X] T024 [US1] Usar el schema compartido antes de enviar en
   `apps/community/components/onboarding.tsx` y en `SettingsPage` de
   `apps/community/components/account-pages.tsx`, mostrando el error del campo en el propio
   formulario (FR-027) en vez de depender del mensaje del backend.
-- [ ] T025 [P] [US1] Cambiar `apps/community/components/admin/ExamQuestionForm.tsx` para tomar la
+- [X] T025 [P] [US1] Cambiar `apps/community/components/admin/ExamQuestionForm.tsx` para tomar la
   lista de skills de `useSkillCatalog()` (FR-022: un skill recién aprobado debe poder recibir
   preguntas) y actualizar `apps/community/tests/ExamQuestionForm.test.tsx`, que hoy depende de
   `CANONICAL_SKILLS`.
-- [ ] T026 [P] [US1] Cambiar `apps/community/app/(main)/examenes/[skill]/page.tsx` para tomar la
+- [X] T026 [P] [US1] Cambiar `apps/community/app/(main)/examenes/[skill]/page.tsx` para tomar la
   etiqueta del skill del catálogo en vez de `CANONICAL_SKILLS`.
 - [ ] T027 [US1] E2E en `e2e/account-foundation.spec.ts`: un candidato completo abre `/settings`,
   escribe `reactjs`, ve que queda `React`, guarda y el cambio persiste tras recargar.

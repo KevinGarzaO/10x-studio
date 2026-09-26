@@ -7,6 +7,33 @@ const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'
 
 const EMPTY: SkillCatalog = { skills: [], aliases: [] }
 
+// El catálogo es el mismo para toda la pantalla: onboarding, ajustes y el campo
+// de skills lo usan a la vez. Se comparte una sola petición en vuelo, y su
+// resultado, para no pedirlo una vez por componente.
+let cached: Promise<SkillCatalog> | null = null
+
+function fetchCatalog(force = false): Promise<SkillCatalog> {
+  if (!cached || force) {
+    cached = fetch(`${API_URL}/api/community/skills`)
+      .then(res => {
+        if (!res.ok) throw new Error('catalog_unavailable')
+        return res.json()
+      })
+      .then(data => ({ skills: data.skills || [], aliases: data.aliases || [] }))
+      .catch(error => {
+        // Un fallo no se cachea: el siguiente intento vuelve a pedirlo.
+        cached = null
+        throw error
+      })
+  }
+  return cached
+}
+
+/** Solo para tests: olvida el catálogo cacheado. */
+export function resetSkillCatalogCache() {
+  cached = null
+}
+
 export interface UseSkillCatalog {
   catalog: SkillCatalog
   loading: boolean
@@ -34,14 +61,10 @@ export function useSkillCatalog(): UseSkillCatalog {
     setLoading(true)
     setFailed(false)
 
-    fetch(`${API_URL}/api/community/skills`)
-      .then(res => {
-        if (!res.ok) throw new Error('catalog_unavailable')
-        return res.json()
-      })
+    fetchCatalog(attempt > 0)
       .then(data => {
         if (cancelled) return
-        setCatalog({ skills: data.skills || [], aliases: data.aliases || [] })
+        setCatalog(data)
         setLoading(false)
       })
       .catch(() => {

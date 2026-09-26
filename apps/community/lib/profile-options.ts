@@ -1,18 +1,43 @@
 // Shared between onboarding, settings and any profile view so the values
 // stored on `users` (seniority/work_modality) always map to the same labels
 // everywhere they're displayed or edited.
+//
+// Los valores salen de @avocado/schemas, el mismo enum que valida el backend:
+// aquí solo viven sus etiquetas visibles.
 
-export const SENIORITY_OPTIONS: { value: string; label: string }[] = [
-  { value: 'junior', label: 'Junior' },
-  { value: 'semi_senior', label: 'Semi Senior' },
-  { value: 'senior', label: 'Senior' },
-]
+import { SENIORITY, ROLE_CATEGORY, WORK_MODALITY, type Seniority, type RoleCategory } from '@avocado/schemas'
 
-export const MODALITY_OPTIONS: { value: string; label: string }[] = [
-  { value: 'Remoto', label: 'Remoto' },
-  { value: 'Híbrido', label: 'Híbrido' },
-  { value: 'Presencial', label: 'Presencial' },
-]
+const SENIORITY_LABEL: Record<Seniority, string> = {
+  junior: 'Junior',
+  semi_senior: 'Semi Senior',
+  senior: 'Senior',
+}
+
+const ROLE_CATEGORY_LABEL: Record<RoleCategory, string> = {
+  frontend: 'Frontend',
+  backend: 'Backend',
+  fullstack: 'Fullstack',
+  mobile: 'Mobile',
+  devops: 'DevOps',
+  data_engineer: 'Data Engineer',
+  data_scientist: 'Data Scientist / ML',
+  qa: 'QA',
+  ux_ui: 'UX/UI Design',
+  marketing: 'Marketing',
+  customer_support: 'Customer Support',
+  product: 'Product',
+  otro: 'Otro',
+}
+
+export const SENIORITY_OPTIONS: { value: string; label: string }[] = SENIORITY.map(value => ({
+  value,
+  label: SENIORITY_LABEL[value],
+}))
+
+export const MODALITY_OPTIONS: { value: string; label: string }[] = WORK_MODALITY.map(value => ({
+  value,
+  label: value,
+}))
 
 export const SENIORITY_LABELS: Record<string, string> = Object.fromEntries(
   SENIORITY_OPTIONS.map(o => [o.value, o.label])
@@ -21,67 +46,15 @@ export const SENIORITY_LABELS: Record<string, string> = Object.fromEntries(
 // Same enum used by the scraper's keyword-classification trigger
 // (backend/sql/scraper-classification-migration.sql) — kept in sync so a
 // candidate's chosen category always matches what job postings get tagged.
-export const ROLE_CATEGORY_OPTIONS: { value: string; label: string }[] = [
-  { value: 'frontend', label: 'Frontend' },
-  { value: 'backend', label: 'Backend' },
-  { value: 'fullstack', label: 'Fullstack' },
-  { value: 'mobile', label: 'Mobile' },
-  { value: 'devops', label: 'DevOps' },
-  { value: 'data_engineer', label: 'Data Engineer' },
-  { value: 'data_scientist', label: 'Data Scientist / ML' },
-  { value: 'qa', label: 'QA' },
-  { value: 'ux_ui', label: 'UX/UI Design' },
-  { value: 'marketing', label: 'Marketing' },
-  { value: 'customer_support', label: 'Customer Support' },
-  { value: 'product', label: 'Product' },
-  { value: 'otro', label: 'Otro' },
-]
+export const ROLE_CATEGORY_OPTIONS: { value: string; label: string }[] = ROLE_CATEGORY.map(
+  value => ({ value, label: ROLE_CATEGORY_LABEL[value] })
+)
 
 export const ROLE_CATEGORY_LABELS: Record<string, string> = Object.fromEntries(
   ROLE_CATEGORY_OPTIONS.map(o => [o.value, o.label])
 )
 
-// Same tokens the scraper's classification trigger tags job postings with
-// (backend/sql/scraper-classification-migration.sql) — a candidate's saved
-// skill has to match one of these exact strings for the "Para ti" skill-
-// overlap count to ever find anything, so suggestions steer people toward
-// the canonical spelling instead of free text that would never match.
-export const CANONICAL_SKILLS: { value: string; label: string }[] = [
-  { value: 'react', label: 'React' },
-  { value: 'typescript', label: 'TypeScript' },
-  { value: 'nextjs', label: 'Next.js' },
-  { value: 'python', label: 'Python' },
-  { value: 'nodejs', label: 'Node.js' },
-  { value: 'aws', label: 'AWS' },
-  { value: 'docker', label: 'Docker' },
-  { value: 'kubernetes', label: 'Kubernetes' },
-  { value: 'sql', label: 'SQL' },
-  { value: 'golang', label: 'Go' },
-  { value: 'ia', label: 'IA / Machine Learning' },
-  { value: 'figma', label: 'Figma' },
-  { value: 'adobe-suite', label: 'Adobe Suite' },
-  { value: 'sketch', label: 'Sketch' },
-  { value: 'seo', label: 'SEO' },
-  { value: 'google-ads', label: 'Google Ads' },
-  { value: 'google-analytics', label: 'Google Analytics' },
-  { value: 'hubspot', label: 'HubSpot' },
-  { value: 'salesforce', label: 'Salesforce' },
-  { value: 'zendesk', label: 'Zendesk' },
-  { value: 'intercom', label: 'Intercom' },
-  { value: 'excel', label: 'Excel' },
-  { value: 'canva', label: 'Canva' },
-  { value: 'java', label: 'Java' },
-  { value: 'dotnet', label: '.NET' },
-  { value: 'ruby', label: 'Ruby' },
-  { value: 'php', label: 'PHP' },
-  { value: 'swift', label: 'Swift' },
-  { value: 'kotlin', label: 'Kotlin' },
-  { value: 'angular', label: 'Angular' },
-  { value: 'vue', label: 'Vue' },
-  { value: 'graphql', label: 'GraphQL' },
-  { value: 'postgresql', label: 'PostgreSQL' },
-  { value: 'mongodb', label: 'MongoDB' },
-  { value: 'terraform', label: 'Terraform' },
-  { value: 'gcp', label: 'GCP' },
-  { value: 'azure', label: 'Azure' },
-]
+// El catálogo de skills ya no vive aquí: lo sirve el backend desde la tabla
+// `skills` (GET /api/community/skills), porque un skill aprobado por el
+// superadmin tiene que aparecer de inmediato sin volver a desplegar el
+// frontend. Úsalo con useSkillCatalog() de ./skill-catalog.

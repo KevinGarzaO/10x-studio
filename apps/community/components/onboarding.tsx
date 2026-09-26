@@ -6,6 +6,8 @@ import { Loader2, MapPin, Tag } from 'lucide-react'
 import { getToken, fetchCurrentUser, captureSessionFromUrl } from '../lib/session'
 import { SENIORITY_OPTIONS, MODALITY_OPTIONS, ROLE_CATEGORY_OPTIONS } from '../lib/profile-options'
 import { PhotoPicker, SegmentedControl, SkillsInput, RoleCategorySelect } from './profile-form-fields'
+import { useSkillCatalog } from '../lib/skill-catalog'
+import { validateCandidateProfile, messageForField } from '../lib/profile-validation'
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'
 
@@ -44,6 +46,7 @@ export function OnboardingPage() {
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
   const [checkingSession, setCheckingSession] = useState(true)
+  const { catalog, failed: catalogFailed } = useSkillCatalog()
 
   useEffect(() => {
     // A user arriving here straight from the "confirm your email" link has
@@ -55,20 +58,39 @@ export function OnboardingPage() {
         router.replace('/login')
         return
       }
-      // A user who already has a profile photo (e.g. one who onboarded
-      // before a newer required field like role_category existed, and got
-      // sent back here) shouldn't have to re-upload it just to satisfy
-      // isComplete's photo requirement below.
+      // Se precarga TODO lo que la cuenta ya tenga, no solo la foto (FR-026):
+      // a quien vuelve aquí por un campo nuevo no se le vuelve a pedir lo que
+      // ya había capturado.
       if (user.photo_url) setPhotoPreview(user.photo_url)
+      if (user.title) setTitle(user.title)
+      if (user.role_category) setRoleCategory(user.role_category)
+      if (user.seniority) setSeniority(user.seniority)
+      if (Array.isArray(user.skills)) setSkills(user.skills)
+      if (user.location) setLocation(user.location)
+      if (user.work_modality) setWorkModality(user.work_modality)
       setCheckingSession(false)
     })
   }, [router])
 
-  const isComplete = !!photoPreview && !!title.trim() && !!roleCategory && !!seniority && skills.length > 0 && !!location.trim() && !!workModality
+  // La foto es obligatoria para toda cuenta (FR-024); el resto lo valida el
+  // schema compartido, el mismo que usa el backend.
+  const payload = {
+    title: title.trim(),
+    roleCategory,
+    seniority,
+    skills,
+    location: location.trim(),
+    workModality,
+  }
+  const validationError = validateCandidateProfile(payload, catalog)
 
   async function handleSubmit() {
-    if (!isComplete) {
-      setError('Completa todos los campos para continuar')
+    if (!photoPreview) {
+      setError('Tu foto de perfil es obligatoria')
+      return
+    }
+    if (validationError) {
+      setError(messageForField(validationError))
       return
     }
     setSaving(true)
@@ -84,12 +106,7 @@ export function OnboardingPage() {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
         body: JSON.stringify({
-          title: title.trim(),
-          roleCategory,
-          seniority,
-          skills,
-          location: location.trim(),
-          workModality,
+          ...payload,
           // photoPreview may now hold either a freshly picked image (a
           // data: URL) or the user's pre-existing photo_url (preloaded
           // above) — only the former is something the backend can upload;
@@ -99,7 +116,7 @@ export function OnboardingPage() {
       })
       const data = await res.json()
       if (!res.ok) {
-        setError(data.error || 'Error al guardar tu perfil')
+        setError(data.message || data.error || 'Error al guardar tu perfil')
         setSaving(false)
         return
       }
@@ -168,7 +185,13 @@ export function OnboardingPage() {
           <SegmentedControl options={MODALITY_OPTIONS} value={workModality} onChange={setWorkModality} />
         </div>
 
-        <button className="onboarding-submit" onClick={handleSubmit} disabled={saving}>
+        {catalogFailed && (
+          <div className="onboarding-error" role="alert">
+            No pudimos cargar el catálogo de skills. Recarga la página para continuar.
+          </div>
+        )}
+
+        <button className="onboarding-submit" onClick={handleSubmit} disabled={saving || catalogFailed}>
           {saving ? <><Loader2 size={16} style={{ animation: 'spin 1s linear infinite' }} /> Guardando...</> : 'Continuar a AvoTalent'}
         </button>
       </div>
