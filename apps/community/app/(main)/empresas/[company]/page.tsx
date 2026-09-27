@@ -44,7 +44,7 @@ export default function CompanyProfilePage() {
   if (loading) {
     return (
       <div className="post-detail-wrap" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '60vh' }}>
-        <p style={{ color: '#8b949e' }}>Cargando perfil...</p>
+        <p style={{ color: '#b3aba1' }}>Cargando perfil...</p>
       </div>
     )
   }
@@ -53,7 +53,7 @@ export default function CompanyProfilePage() {
     return (
       <div className="post-detail-wrap" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '60vh' }}>
         <div style={{ textAlign: 'center' }}>
-          <p style={{ color: '#8b949e', marginBottom: 12 }}>Empresa no encontrada</p>
+          <p style={{ color: '#b3aba1', marginBottom: 12 }}>Empresa no encontrada</p>
           <button onClick={() => router.back()} style={{ color: '#00A86B', background: 'none', border: 0, cursor: 'pointer' }}>Volver al feed</button>
         </div>
       </div>

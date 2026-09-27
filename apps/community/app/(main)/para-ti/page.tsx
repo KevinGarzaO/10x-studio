@@ -124,7 +124,7 @@ export default function ParaTiPage() {
                   )}
                   {item.matchingSkills > 0 && <span className="verified-pill"><Target size={11} /> {item.matchingSkills} skills en común</span>}
                 </div>
-                <div className="post-type-label" style={{ color: '#10b981' }}>
+                <div className="post-type-label" style={{ color: '#00A86B' }}>
                   {ROLE_CATEGORY_LABELS[item.roleCategory ?? ''] || 'Vacante'} · {SENIORITY_LABELS[item.seniorityLevel ?? ''] || ''}
                 </div>
                 <h2 style={{ fontSize: 17, marginBottom: 8 }}>{item.title}</h2>
@@ -135,11 +135,11 @@ export default function ParaTiPage() {
                 )}
                 <div className="post-footer">
                   {isExternal ? (
-                    <a href={item.url} target="_blank" rel="noopener noreferrer" className="unlock-button" style={{ display: 'inline-flex', alignItems: 'center', gap: 6, background: '#10b981', color: '#0d1117', padding: '8px 16px', borderRadius: 6, fontWeight: 600, fontSize: 13, textDecoration: 'none' }}>
+                    <a href={item.url} target="_blank" rel="noopener noreferrer" className="unlock-button" style={{ display: 'inline-flex', alignItems: 'center', gap: 6, background: '#00A86B', color: '#18161a', padding: '8px 16px', borderRadius: 6, fontWeight: 600, fontSize: 13, textDecoration: 'none' }}>
                       Ver vacante <ExternalLink size={14} />
                     </a>
                   ) : (
-                    <Link href={item.url} className="unlock-button" style={{ display: 'inline-flex', alignItems: 'center', gap: 6, background: '#10b981', color: '#0d1117', padding: '8px 16px', borderRadius: 6, fontWeight: 600, fontSize: 13, textDecoration: 'none' }}>
+                    <Link href={item.url} className="unlock-button" style={{ display: 'inline-flex', alignItems: 'center', gap: 6, background: '#00A86B', color: '#18161a', padding: '8px 16px', borderRadius: 6, fontWeight: 600, fontSize: 13, textDecoration: 'none' }}>
                       Ver vacante
                     </Link>
                   )}
