@@ -14,6 +14,7 @@ export default defineConfig({
       '**/*.{test,spec}.?(c|m)[jt]s?(x)',
       'scripts/test-exam-questions-bypass.ts',
       'scripts/test-skill-exams-bypass.ts',
+      'scripts/test-account-foundation-bypass.ts',
     ],
     // Los tests de integración hablan con Supabase remoto: un examen completo
     // son ~10 respuestas encadenadas, cada una con varios viajes de red. Los

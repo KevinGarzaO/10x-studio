@@ -10,7 +10,7 @@ import {
   type ExamQuestionView,
 } from '../../../../components/exam/SkillExamRunner'
 import { SkillExamResult } from '../../../../components/exam/SkillExamResult'
-import { CANONICAL_SKILLS } from '../../../../lib/profile-options'
+import { useSkillCatalog, skillLabel as labelFor } from '../../../../lib/skill-catalog'
 import { fetchCurrentUser, getToken } from '../../../../lib/session'
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'
@@ -36,7 +36,10 @@ export default function SkillExamPage() {
   const [blocked, setBlocked] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
 
-  const skillLabel = CANONICAL_SKILLS.find((s) => s.value === skillName)?.label ?? skillName
+  // La etiqueta sale del catálogo real: un skill aprobado hace un momento
+  // también tiene que mostrarse con su nombre bonito.
+  const { catalog } = useSkillCatalog()
+  const skillLabel = labelFor(skillName, catalog)
 
   useEffect(() => {
     let cancelled = false

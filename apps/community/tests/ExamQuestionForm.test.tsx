@@ -1,7 +1,38 @@
-import { describe, expect, it, vi } from 'vitest'
+import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest'
 import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { ExamQuestionForm } from '@/components/admin/ExamQuestionForm'
+import { resetSkillCatalogCache } from '@/lib/skill-catalog'
+
+// El selector de skills ya no usa una lista fija del frontend: lo carga del
+// catálogo (GET /api/community/skills), para que un skill recién aprobado pueda
+// recibir preguntas de inmediato (FR-022).
+const CATALOG = {
+  skills: [
+    { name: 'react', label: 'React' },
+    { name: 'python', label: 'Python' },
+  ],
+  aliases: [],
+}
+
+beforeEach(() => {
+  resetSkillCatalogCache()
+  global.fetch = vi.fn().mockResolvedValue({
+    ok: true,
+    json: async () => CATALOG,
+  }) as unknown as typeof fetch
+})
+
+afterEach(() => {
+  vi.restoreAllMocks()
+})
+
+/** Espera a que el catálogo llegue y el selector quede utilizable. */
+async function waitForCatalog() {
+  await waitFor(() => {
+    expect(screen.getByLabelText('Skill')).not.toBeDisabled()
+  })
+}
 
 function fillValidForm(user: ReturnType<typeof userEvent.setup>) {
   return async () => {
@@ -18,6 +49,7 @@ describe('ExamQuestionForm', () => {
     const user = userEvent.setup()
     const onSubmit = vi.fn()
     render(<ExamQuestionForm onSubmit={onSubmit} />)
+    await waitForCatalog()
 
     await user.click(screen.getByLabelText('Pregunta'))
     await user.tab()
@@ -30,6 +62,7 @@ describe('ExamQuestionForm', () => {
     const user = userEvent.setup()
     const onSubmit = vi.fn()
     render(<ExamQuestionForm onSubmit={onSubmit} />)
+    await waitForCatalog()
 
     await user.type(screen.getByLabelText('Pregunta'), 'Pregunta suficientemente larga')
     await user.type(screen.getByLabelText('Opción 1'), 'useEffect')
@@ -43,6 +76,7 @@ describe('ExamQuestionForm', () => {
     const user = userEvent.setup()
     const onSubmit = vi.fn()
     render(<ExamQuestionForm onSubmit={onSubmit} />)
+    await waitForCatalog()
 
     await user.type(screen.getByLabelText('Pregunta'), 'Pregunta suficientemente larga')
     await user.type(screen.getByLabelText('Opción 1'), 'useEffect')
@@ -57,6 +91,7 @@ describe('ExamQuestionForm', () => {
     const user = userEvent.setup()
     const onSubmit = vi.fn()
     render(<ExamQuestionForm onSubmit={onSubmit} />)
+    await waitForCatalog()
 
     await user.type(screen.getByLabelText('Pregunta'), 'Pregunta suficientemente larga')
     await user.type(screen.getByLabelText('Opción 1'), 'Sí')
@@ -72,6 +107,7 @@ describe('ExamQuestionForm', () => {
     const user = userEvent.setup()
     const onSubmit = vi.fn().mockResolvedValue({ ok: true })
     render(<ExamQuestionForm onSubmit={onSubmit} />)
+    await waitForCatalog()
 
     await fillValidForm(user)()
     await user.click(screen.getByRole('button', { name: 'Guardar pregunta' }))
@@ -93,6 +129,7 @@ describe('ExamQuestionForm', () => {
     const user = userEvent.setup()
     const onSubmit = vi.fn().mockResolvedValue({ ok: false, field: null, message: 'Ocurrió un error, intenta de nuevo' })
     render(<ExamQuestionForm onSubmit={onSubmit} />)
+    await waitForCatalog()
 
     await fillValidForm(user)()
     await user.click(screen.getByRole('button', { name: 'Guardar pregunta' }))

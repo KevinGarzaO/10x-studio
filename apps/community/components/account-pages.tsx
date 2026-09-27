@@ -11,6 +11,11 @@ import {
 import { saveSession, getToken, fetchCurrentUser } from '../lib/session'
 import { SENIORITY_OPTIONS, MODALITY_OPTIONS, ROLE_CATEGORY_OPTIONS } from '../lib/profile-options'
 import { PhotoPicker, SegmentedControl, SkillsInput, RoleCategorySelect } from './profile-form-fields'
+import { useSkillCatalog } from '../lib/skill-catalog'
+import { validateCandidateProfile, messageForField } from '../lib/profile-validation'
+import { useSkillProposals } from '../lib/skill-proposals'
+import { SkillProposalsList } from './skill-proposals-list'
+import { ProfileGate } from './profile-gate'
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'
 
@@ -132,6 +137,9 @@ export function AccountLayout({ children, active }: { children: React.ReactNode;
   return (
     <div className="account-page">
       <style>{styles}</style>
+      {/* Estas pantallas viven fuera del shell del feed, así que hasta ahora
+          nadie verificaba aquí el perfil completo (FR-025). */}
+      <ProfileGate />
       <div className="account-wrap">
         <div className="account-nav">
           <Link href="/" className="back-link"><ArrowLeft size={15} /> Volver a AvoTalent</Link>
@@ -172,6 +180,9 @@ export function SettingsPage() {
   const [skillInput, setSkillInput] = useState('')
   const [location, setLocation] = useState('')
   const [workModality, setWorkModality] = useState<string | null>(null)
+  const { catalog, failed: catalogFailed } = useSkillCatalog()
+  const addSkill = (name: string) => setSkills(prev => (prev.includes(name) ? prev : [...prev, name]))
+  const { proposals, message: proposalMessage, propose } = useSkillProposals(addSkill)
 
   useEffect(() => {
     if (!getToken()) { window.location.href = '/login'; return }
@@ -197,6 +208,33 @@ export function SettingsPage() {
 
   async function handleSave() {
     if (!user) return
+
+    // Se valida con el MISMO schema del backend antes de enviar, así el error
+    // sale aquí en vez de expulsar a la persona a onboarding después (FR-027).
+    if (!photoBase64 && !photoUrl) {
+      setError('Tu foto de perfil es obligatoria')
+      return
+    }
+    const validationError = validateCandidateProfile(
+      {
+        title: title.trim(),
+        roleCategory,
+        seniority,
+        skills,
+        location: location.trim(),
+        workModality,
+        displayName,
+        bio,
+        website,
+        githubUrl,
+      },
+      catalog,
+    )
+    if (validationError) {
+      setError(messageForField(validationError))
+      return
+    }
+
     setSaving(true)
     setError('')
     setSaved(false)
@@ -207,12 +245,13 @@ export function SettingsPage() {
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
         body: JSON.stringify({
           displayName, bio, website, githubUrl,
-          title, roleCategory, seniority, skills, location, workModality,
+          title: title.trim(), roleCategory, seniority, skills,
+          location: location.trim(), workModality,
           ...(photoBase64 ? { photoBase64 } : {}),
         }),
       })
       const data = await res.json()
-      if (!res.ok) { setError(data.error || 'Error al guardar'); setSaving(false); return }
+      if (!res.ok) { setError(data.message || data.error || 'Error al guardar'); setSaving(false); return }
       setUser(data.user)
       setPhotoUrl(data.user.photo_url || null)
       setPhotoBase64(null)
@@ -244,6 +283,11 @@ export function SettingsPage() {
         <h1 className="page-title">Configuración</h1>
         <p className="muted page-description">Controla tu perfil público y preferencias.</p>
         {error && <div className="auth-error">{error}</div>}
+        {catalogFailed && (
+          <div className="auth-error" role="alert">
+            No pudimos cargar el catálogo de skills. Recarga la página antes de guardar.
+          </div>
+        )}
         <h2 className="section-title">Perfil público</h2>
         <div className="form-grid">
           <div className="field"><label>Foto de perfil</label><PhotoPicker photoUrl={photoBase64 || photoUrl} onPick={setPhotoBase64} onError={setError} /></div>
@@ -252,7 +296,13 @@ export function SettingsPage() {
           <div className="field"><label>Título profesional</label><input value={title} onChange={e => setTitle(e.target.value)} placeholder="Ej. Backend Developer" /></div>
           <div className="field"><label>Categoría de rol</label><RoleCategorySelect options={ROLE_CATEGORY_OPTIONS} value={roleCategory} onChange={setRoleCategory} /></div>
           <div className="field"><label>Nivel</label><SegmentedControl options={SENIORITY_OPTIONS} value={seniority} onChange={setSeniority} /></div>
-          <div className="field"><label><Tag size={12} style={{ verticalAlign: -1, marginRight: 4 }} />Skills</label><SkillsInput skills={skills} onChange={setSkills} inputValue={skillInput} onInputChange={setSkillInput} /></div>
+          <div className="field">
+            <label><Tag size={12} style={{ verticalAlign: -1, marginRight: 4 }} />Skills</label>
+            <SkillsInput skills={skills} onChange={setSkills} inputValue={skillInput} onInputChange={setSkillInput} onPropose={propose} />
+            {proposalMessage && <p className="skill-proposal-message">{proposalMessage}</p>}
+            <SkillProposalsList proposals={proposals} onAddSkill={addSkill} />
+            <Link href="/examenes" className="skills-validate-link">Validar mis skills con un examen →</Link>
+          </div>
           <div className="field"><label><MapPin size={12} style={{ verticalAlign: -1, marginRight: 4 }} />Ubicación</label><input value={location} onChange={e => setLocation(e.target.value)} placeholder="Ciudad, país" /></div>
           <div className="field"><label>Modalidad deseada</label><SegmentedControl options={MODALITY_OPTIONS} value={workModality} onChange={setWorkModality} /></div>
           <div className="field"><label>Biografía</label><textarea value={bio} onChange={e => setBio(e.target.value)} placeholder="Cuéntanos sobre ti..." /></div>
@@ -260,7 +310,7 @@ export function SettingsPage() {
           <div className="field"><label>GitHub</label><input value={githubUrl} onChange={e => setGithubUrl(e.target.value)} placeholder="github.com/tuusuario" /></div>
         </div>
         <div className="button-row">
-          <button className="primary-btn" onClick={handleSave} disabled={saving}>
+          <button className="primary-btn" onClick={handleSave} disabled={saving || catalogFailed}>
             {saving ? <><Loader2 size={14} className="animate-spin" /> Guardando...</> : saved ? <><Check size={14} /> Guardado</> : <><Save size={14} /> Guardar cambios</>}
           </button>
         </div>

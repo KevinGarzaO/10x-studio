@@ -80,5 +80,7 @@ Plain MV3 extension, no build step: `background.js` (service worker), `content.j
 ## Cross-cutting notes
 
 - Auth is split: Firebase-based `authMiddleware` protects the Studio/content endpoints; a separate `communityAuthMiddleware` protects Community Hub endpoints. Don't assume one covers the other.
+- The skill catalog lives in the database (`skills`, `skill_aliases`, `skill_proposals`) and is served by `GET /api/community/skills`; candidates propose missing ones through `/api/community/skill-proposals`. The frontend consumes it as data — `CANONICAL_SKILLS` no longer exists, so a skill approved in SQL reaches the app without a redeploy.
+- Account type (`users.account_type`) and the superadmin permission (`users.is_superadmin`) are intentionally not changed from the app: `change_account_type()`, `set_superadmin()` and the skill-proposal decisions run in the Supabase SQL editor, and a trigger blocks every other path. Authorization middleware lives in `backend/src/middleware/` (`requireSuperadmin`, `requireAccountType`); `users.roles` now only holds scraper job keywords.
 - `NEXT_PUBLIC_BACKEND_URL` must be set for `apps/avocado` (and analogously for `apps/community`) to reach the Railway-hosted `backend`; local dev typically points it at `http://localhost:3001`.
 - The scraper and content-orchestrator crons run automatically whenever the backend process starts (`initCron()` in `index.ts`) — be aware of this when running `pnpm dev:backend` locally, as it will fire scheduled jobs against real Supabase data and external APIs.

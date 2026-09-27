@@ -150,6 +150,27 @@ button { cursor: pointer; }
 .skills-suggestions { position: absolute; top: calc(100% + 4px); left: 0; right: 0; background: #161b22; border: 1px solid #30363d; border-radius: 8px; box-shadow: 0 12px 32px #00000066; z-index: 20; max-height: 220px; overflow-y: auto; padding: 4px; }
 .skills-suggestion { display: block; width: 100%; text-align: left; background: none; border: 0; color: #c9d1d9; padding: 8px 10px; border-radius: 6px; font-size: 13px; cursor: pointer; }
 .skills-suggestion:hover { background: #1c2430; color: #6ee7b7; }
+
+/* Feature 003: catálogo de skills, propuestas y skills sin resolver */
+.skill-chip.is-unresolved { border-color: #7c5314; background: #2b2110; color: #e3b341; }
+.skill-chip.is-unresolved em { font-style: normal; font-size: 10px; color: #d29922; }
+.skills-catalog-error { background: #3d1214; border: 1px solid #5c2225; border-radius: 8px; padding: 10px 12px; color: #f87171; font-size: 12px; }
+.skills-catalog-error button { background: none; border: 0; color: #6ee7b7; cursor: pointer; text-decoration: underline; font: inherit; padding: 0; }
+.skills-propose-row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-top: 6px; font-size: 12px; color: #8b949e; }
+.skills-propose-button { background: #1c2430; border: 1px solid #30363d; color: #6ee7b7; border-radius: 6px; padding: 5px 10px; font-size: 12px; cursor: pointer; }
+.skills-propose-button:hover { border-color: #00A86B; }
+.skill-proposal-message { margin: 8px 0 0; font-size: 12px; color: #8b949e; }
+.skill-proposals { margin-top: 10px; }
+.skill-proposals-title { margin: 0 0 6px; font-size: 11px; text-transform: uppercase; letter-spacing: .06em; color: #8b949e; }
+.skill-proposals ul { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+.skill-proposal { display: flex; align-items: center; gap: 6px; font-size: 12px; color: #8b949e; }
+.skill-proposal strong { color: #c9d1d9; font-weight: 600; }
+.skill-proposal.is-pending svg { color: #d29922; }
+.skill-proposal.is-approved svg, .skill-proposal.is-merged svg { color: #6ee7b7; }
+.skill-proposal.is-rejected svg { color: #f87171; }
+.skill-proposal button { background: none; border: 0; color: #6ee7b7; cursor: pointer; text-decoration: underline; font: inherit; padding: 0; }
+.skills-validate-link { display: inline-block; margin-top: 8px; font-size: 12px; color: #6ee7b7; text-decoration: none; }
+.skills-validate-link:hover { text-decoration: underline; }
 .photo-picker-row { display: flex; align-items: center; gap: 16px; }
 .photo-picker-avatar { width: 76px; height: 76px; border-radius: 18px; object-fit: cover; background: #123a32; display: grid; place-items: center; color: #6ee7b7; border: 1px solid #245848; flex: none; }
 .photo-picker-btn { display: inline-flex; align-items: center; gap: 7px; background: #1c2430; border: 1px solid #30363d; color: #c9d1d9; padding: 9px 14px; border-radius: 8px; font-size: 12px; cursor: pointer; }

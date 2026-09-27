@@ -5,10 +5,10 @@ import { supabase } from '../../services/supabase.service'
 import examQuestionsRouter from '../../src/routes/admin/exam-questions.routes'
 
 const ADMIN_USER_ID = 'e7c86261-578a-42cb-9eb8-c26f19917079'
-const NON_ADMIN_USER_ID = '2ee098fb-48ac-4c45-9574-262ae1148611'
+const NON_SUPERADMIN_USER_ID = '2ee098fb-48ac-4c45-9574-262ae1148611'
 
 // Real integration test against the actual Supabase instance: real
-// requireRole DB lookup, real Zod validation, real
+// requireSuperadmin DB lookup, real Zod validation, real
 // insert_exam_question_with_options() RPC. The only thing mocked is
 // communityAuthMiddleware's Supabase Auth token verification (we don't have
 // these test users' passwords) — everything downstream of "who is this
@@ -88,12 +88,12 @@ describe('POST /api/admin/exam-questions (integration)', () => {
     expect(options?.map((o) => o.text)).toEqual(validPayload.options)
   })
 
-  it('rejects a non-admin with 403 and saves nothing (T018)', async () => {
+  it('rejects a non-superadmin with 403 and saves nothing (T018)', async () => {
     const before = await countExamQuestions()
 
     const res = await request(app)
       .post('/api/admin/exam-questions')
-      .set('x-test-user-id', NON_ADMIN_USER_ID)
+      .set('x-test-user-id', NON_SUPERADMIN_USER_ID)
       .send(validPayload)
 
     expect(res.status).toBe(403)

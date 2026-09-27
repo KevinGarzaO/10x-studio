@@ -20,6 +20,7 @@ import path from 'path'
 import { test, expect, type Page } from '@playwright/test'
 import { createClient } from '@supabase/supabase-js'
 import dotenv from 'dotenv'
+import { createSessionFor } from './session'
 
 dotenv.config({ path: path.resolve(__dirname, '../backend/.env') })
 
@@ -28,20 +29,24 @@ dotenv.config({ path: path.resolve(__dirname, '../backend/.env') })
 const supabase = createClient(process.env.SUPABASE_URL || '', process.env.SUPABASE_SERVICE_KEY || '')
 const E2E_QUESTION_MARKER = '[E2E exam-question-form]'
 
-const ADMIN_SESSION = {
-  access_token: process.env.E2E_ADMIN_ACCESS_TOKEN ?? '',
-  refresh_token: process.env.E2E_ADMIN_REFRESH_TOKEN ?? '',
-  user: { roles: ['admin'] },
+// Las sesiones se emiten al correr la suite (e2e/session.ts). Antes salían de
+// variables de entorno que nada generaba, así que sin prepararlas a mano estos
+// tests acababan en la pantalla de login.
+const SUPERADMIN_EMAIL = 'exam-questions-e2e-admin@avocado-studio.com'
+const NON_SUPERADMIN_EMAIL = 'kgarzaortiz@gmail.com'
+
+interface E2ELogin {
+  access_token: string
+  refresh_token: string
+  user: { is_superadmin: boolean }
 }
-const NON_ADMIN_SESSION = {
-  access_token: process.env.E2E_NON_ADMIN_ACCESS_TOKEN ?? '',
-  refresh_token: process.env.E2E_NON_ADMIN_REFRESH_TOKEN ?? '',
-  user: { roles: [] },
-}
+
+let ADMIN_SESSION: E2ELogin
+let NON_ADMIN_SESSION: E2ELogin
 
 const FORM_URL = '/admin/exam-questions/new'
 
-async function loginAs(page: Page, session: typeof ADMIN_SESSION) {
+async function loginAs(page: Page, session: E2ELogin) {
   await page.goto('/')
   await page.evaluate((s) => {
     localStorage.setItem('avocado_token', s.access_token)
@@ -51,6 +56,23 @@ async function loginAs(page: Page, session: typeof ADMIN_SESSION) {
 }
 
 test.describe('Exam question form (AC1-AC6)', () => {
+  test.beforeAll(async () => {
+    const [superadmin, plain] = await Promise.all([
+      createSessionFor(SUPERADMIN_EMAIL),
+      createSessionFor(NON_SUPERADMIN_EMAIL),
+    ])
+    ADMIN_SESSION = {
+      access_token: superadmin.accessToken,
+      refresh_token: superadmin.refreshToken,
+      user: { is_superadmin: true },
+    }
+    NON_ADMIN_SESSION = {
+      access_token: plain.accessToken,
+      refresh_token: plain.refreshToken,
+      user: { is_superadmin: false },
+    }
+  })
+
   test.afterAll(async () => {
     await supabase.from('exam_questions').delete().ilike('question', `%${E2E_QUESTION_MARKER}%`)
   })

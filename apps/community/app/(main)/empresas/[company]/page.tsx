@@ -31,10 +31,10 @@ export default function CompanyProfilePage() {
   useEffect(() => {
     setLoading(true)
     setError(false)
-    // Companies are real `users` rows now (username = the /empresas/:slug),
-    // so this reuses the same profile endpoint as candidate profiles — their
-    // job posts come back already linked via author_id.
-    fetch(`${API_URL}/api/community/users/${company}`)
+    // Endpoint propio de empresas: resuelve el slug contra company_slug y solo
+    // devuelve cuentas de tipo empresa, así una persona con ese username jamás
+    // se muestra aquí como si fuera la empresa (FR-028).
+    fetch(`${API_URL}/api/community/companies/${company}`)
       .then(r => { if (!r.ok) throw new Error(); return r.json() })
       .then(d => setProfile(d.user))
       .catch(() => setError(true))

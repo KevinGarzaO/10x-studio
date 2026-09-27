@@ -2,92 +2,110 @@ import { Router, Request, Response } from 'express'
 import { supabase } from '../../../services/supabase.service'
 import { communityAuthMiddleware, AuthRequest } from '../../../middleware/community-auth.middleware'
 import { uploadAvatar } from '../../../services/avatar'
+import { buildCandidateProfileSchema, firstUnapprovedSkill } from '@avocado/schemas'
+import { requireAccountType } from '../../middleware/require-account-type.middleware'
 
 const router = Router()
+
+/**
+ * Carga un perfil público completo: la cuenta, sus publicaciones (de la
+ * comunidad y del studio) y sus niveles validados.
+ *
+ * Vive aquí y se exporta porque el perfil de empresa
+ * (GET /api/community/companies/:slug) necesita exactamente la misma forma: la
+ * única diferencia es cómo se encuentra la fila.
+ */
+export async function loadPublicProfile(
+  find: () => Promise<{ data: any; error: any }>,
+): Promise<any | null> {
+  const { data: user, error } = await find()
+  if (error || !user) return null
+
+  user.username = user.username || user.handle
+  user.display_name = user.display_name || user.name
+
+  const author = { id: user.id, username: user.username, display_name: user.display_name, photo_url: user.photo_url }
+  const forumPosts = (user.community_posts || []).map((p: any) => ({
+    ...p,
+    author,
+    tags: p.community_post_tags?.map((pt: any) => pt.tag?.name).filter(Boolean) || [],
+    votesCount: p.votes_count || 0,
+    commentsCount: p.comments_count || 0,
+  }))
+
+  // Studio-authored articles (the "content" table) aren't community_posts
+  // rows — they only carry a plain user_id — so they have to be fetched
+  // separately and merged in to show up on the author's own profile.
+  const { data: articles } = await supabase
+    .from('content')
+    .select('id, title, excerpt, markdown_content, slug, published_at')
+    .eq('content_type', 'blog_post')
+    .eq('status', 'published')
+    .eq('user_id', user.id)
+    .order('published_at', { ascending: false })
+
+  const editorialPosts = (articles || []).map((a: any) => ({
+    id: a.id,
+    title: a.title,
+    content: a.excerpt || a.markdown_content?.substring(0, 500) || '',
+    type: 'editorial',
+    slug: a.slug,
+    created_at: a.published_at,
+    author,
+    tags: [],
+    votesCount: 0,
+    commentsCount: 0,
+    votes_count: 0,
+    comments_count: 0,
+  }))
+
+  user.community_posts = [...forumPosts, ...editorialPosts]
+    .sort((a: any, b: any) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+
+  // Niveles validados por examen (feature 002). Publicos por diseño: son la
+  // señal que las empresas vienen a ver.
+  //
+  // Se filtran contra users.skills a proposito: si el candidato retira un
+  // skill de su perfil el nivel deja de mostrarse (la fila se conserva, y el
+  // nivel reaparece si vuelve a declararlo).
+  const declared: string[] = user.skills || []
+  const { data: levels } = await supabase
+    .from('user_skill_levels')
+    .select('skill_name, level, achieved_at')
+    .eq('user_id', user.id)
+
+  user.skillLevels = (levels || [])
+    .filter((l: any) => declared.includes(l.skill_name))
+    .map((l: any) => ({ skillName: l.skill_name, level: l.level, achievedAt: l.achieved_at }))
+
+  return user
+}
+
+export const PROFILE_POSTS_SELECT = `id, title, content, type, slug, created_at, votes_count, comments_count, company, company_logo, is_scraper_post, source_url, platform, source_name, original_text, budget, modalidad, community_post_tags(tag:community_tags(name))`
 
 router.get('/:username', async (req: Request, res: Response) => {
   try {
     const username = req.params.username as string
 
-    const postsSelect = `id, title, content, type, slug, created_at, votes_count, comments_count, company, company_logo, is_scraper_post, source_url, platform, source_name, original_text, budget, modalidad, community_post_tags(tag:community_tags(name))`
-
-    let { data: user, error } = await supabase
-      .from('users')
-      .select(`*, community_posts(${postsSelect})`)
-      .eq('username', username)
-      .single()
-
-    if ((error || !user)) {
-      const fallback = await supabase
+    const user = await loadPublicProfile(async () => {
+      const primary = await supabase
         .from('users')
-        .select(`*, community_posts(${postsSelect})`)
+        .select(`*, community_posts(${PROFILE_POSTS_SELECT})`)
+        .eq('username', username)
+        .single()
+
+      if (!primary.error && primary.data) return primary
+
+      return supabase
+        .from('users')
+        .select(`*, community_posts(${PROFILE_POSTS_SELECT})`)
         .eq('handle', username)
         .single()
-      user = fallback.data
-      error = fallback.error
-    }
+    })
 
-    if (error || !user) {
+    if (!user) {
       return res.status(404).json({ error: 'Usuario no encontrado' })
     }
-
-    user.username = user.username || user.handle
-    user.display_name = user.display_name || user.name
-
-    const author = { id: user.id, username: user.username, display_name: user.display_name, photo_url: user.photo_url }
-    const forumPosts = (user.community_posts || []).map((p: any) => ({
-      ...p,
-      author,
-      tags: p.community_post_tags?.map((pt: any) => pt.tag?.name).filter(Boolean) || [],
-      votesCount: p.votes_count || 0,
-      commentsCount: p.comments_count || 0,
-    }))
-
-    // Studio-authored articles (the "content" table) aren't community_posts
-    // rows — they only carry a plain user_id — so they have to be fetched
-    // separately and merged in to show up on the author's own profile.
-    const { data: articles } = await supabase
-      .from('content')
-      .select('id, title, excerpt, markdown_content, slug, published_at')
-      .eq('content_type', 'blog_post')
-      .eq('status', 'published')
-      .eq('user_id', user.id)
-      .order('published_at', { ascending: false })
-
-    const editorialPosts = (articles || []).map((a: any) => ({
-      id: a.id,
-      title: a.title,
-      content: a.excerpt || a.markdown_content?.substring(0, 500) || '',
-      type: 'editorial',
-      slug: a.slug,
-      created_at: a.published_at,
-      author,
-      tags: [],
-      votesCount: 0,
-      commentsCount: 0,
-      votes_count: 0,
-      comments_count: 0,
-    }))
-
-    user.community_posts = [...forumPosts, ...editorialPosts]
-      .sort((a: any, b: any) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
-
-    // Niveles validados por examen (feature 002). Publicos por diseño: son la
-    // señal que las empresas vienen a ver.
-    //
-    // Se filtran contra users.skills a proposito: si el candidato retira un
-    // skill de su perfil el nivel deja de mostrarse (la fila se conserva, y el
-    // nivel reaparece si vuelve a declararlo). Filtrar aqui lo hace explicito
-    // en vez de depender de como itere el frontend.
-    const declared: string[] = user.skills || []
-    const { data: levels } = await supabase
-      .from('user_skill_levels')
-      .select('skill_name, level, achieved_at')
-      .eq('user_id', user.id)
-
-    user.skillLevels = (levels || [])
-      .filter((l: any) => declared.includes(l.skill_name))
-      .map((l: any) => ({ skillName: l.skill_name, level: l.level, achievedAt: l.achieved_at }))
 
     res.json({ user })
   } catch (error) {
@@ -96,73 +114,157 @@ router.get('/:username', async (req: Request, res: Response) => {
   }
 })
 
-const VALID_SENIORITY = ['junior', 'semi_senior', 'senior']
-const VALID_ROLE_CATEGORY = [
-  'frontend', 'backend', 'fullstack', 'mobile', 'devops', 'data_engineer',
-  'data_scientist', 'qa', 'ux_ui', 'marketing', 'customer_support', 'product', 'otro',
-]
-
-router.put('/:username', communityAuthMiddleware, async (req: AuthRequest, res: Response) => {
-  try {
-    const username = req.params.username as string
-    const { displayName, bio, avatarUrl, website, githubUrl, title, seniority, skills, location, workModality, roleCategory, photoBase64 } = req.body
-
-    if (seniority && !VALID_SENIORITY.includes(seniority)) {
-      return res.status(400).json({ error: 'Nivel de seniority inválido' })
+/**
+ * Los errores que lanzan los triggers de la feature 003 y el 400 equivalente.
+ * Cubren la carrera real: el catálogo se leyó, y entre eso y el UPDATE el
+ * superadmin borró el skill. El trigger es la autoridad, así que su rechazo se
+ * traduce en lugar de convertirse en un 500 (contracts/profile-and-accounts.md).
+ */
+function translateProfileTriggerError(message: string): { status: number; body: object } | null {
+  const skillNotInCatalog = message.match(/skill_not_in_catalog:\s*(\S+)/)
+  if (skillNotInCatalog) {
+    return {
+      status: 400,
+      body: {
+        error: 'skill_not_in_catalog',
+        field: 'skills',
+        skill: skillNotInCatalog[1],
+        message: `El skill "${skillNotInCatalog[1]}" no está en el catálogo aprobado`,
+      },
     }
-    if (roleCategory && !VALID_ROLE_CATEGORY.includes(roleCategory)) {
-      return res.status(400).json({ error: 'Categoría de rol inválida' })
-    }
-
-    const { data: user } = await supabase
-      .from('users')
-      .select('id')
-      .eq('username', username)
-      .single()
-
-    if (!user) {
-      return res.status(404).json({ error: 'Usuario no encontrado' })
-    }
-
-    if (user.id !== req.userId) {
-      return res.status(403).json({ error: 'No tienes permiso para editar este perfil' })
-    }
-
-    let photoUrl = avatarUrl
-    if (photoBase64) {
-      const uploaded = await uploadAvatar(photoBase64, user.id)
-      if (!uploaded) {
-        return res.status(500).json({ error: 'Error al subir la foto de perfil' })
-      }
-      photoUrl = uploaded
-    }
-
-    const { data: updated, error } = await supabase
-      .from('users')
-      .update({
-        display_name: displayName,
-        bio,
-        photo_url: photoUrl,
-        website,
-        github_url: githubUrl,
-        title,
-        seniority,
-        skills,
-        location,
-        work_modality: workModality,
-        role_category: roleCategory,
-      })
-      .eq('username', username)
-      .select()
-      .single()
-
-    if (error) throw error
-
-    res.json({ user: updated })
-  } catch (error) {
-    console.error('Community Update user error:', error)
-    res.status(500).json({ error: 'Error al actualizar el perfil' })
   }
-})
+
+  const cleared = message.match(/required_field_cleared:\s*(\S+)/)
+  if (cleared) {
+    return {
+      status: 400,
+      body: {
+        error: 'required_field_cleared',
+        field: cleared[1],
+        message: 'No puedes dejar vacío un dato obligatorio de tu perfil',
+      },
+    }
+  }
+
+  if (message.includes('duplicate_skill')) {
+    return {
+      status: 400,
+      body: { error: 'validation_error', field: 'skills', message: 'No repitas un skill' },
+    }
+  }
+
+  return null
+}
+
+router.put(
+  '/:username',
+  communityAuthMiddleware,
+  requireAccountType('candidate'),
+  async (req: AuthRequest, res: Response) => {
+    try {
+      const username = req.params.username as string
+
+      const { data: user } = await supabase
+        .from('users')
+        .select('id, photo_url')
+        .eq('username', username)
+        .single()
+
+      if (!user) {
+        return res.status(404).json({ error: 'Usuario no encontrado' })
+      }
+
+      if (user.id !== req.userId) {
+        return res.status(403).json({ error: 'No tienes permiso para editar este perfil' })
+      }
+
+      // El catálogo se lee en cada petición, igual que en
+      // exam-questions.routes.ts: un skill aprobado hace un momento tiene que
+      // poder guardarse ya.
+      const { data: skillRows, error: skillsError } = await supabase.from('skills').select('name')
+      if (skillsError) throw skillsError
+
+      const schema = buildCandidateProfileSchema((skillRows || []).map((row) => row.name as string))
+      const parsed = schema.safeParse(req.body)
+
+      if (!parsed.success) {
+        const issue = parsed.error.issues[0]
+        const field = issue.path[0] ?? null
+        // Un skill fuera del catálogo tiene su propio código, para que el
+        // formulario pueda señalar el chip culpable.
+        if (field === 'skills' && Array.isArray(req.body?.skills)) {
+          const offending = firstUnapprovedSkill(
+            req.body.skills.filter((s: unknown) => typeof s === 'string'),
+            (skillRows || []).map((row) => row.name as string),
+          )
+          if (offending) {
+            return res.status(400).json({
+              error: 'skill_not_in_catalog',
+              field: 'skills',
+              skill: offending,
+              message: `El skill "${offending}" no está en el catálogo aprobado`,
+            })
+          }
+        }
+        return res.status(400).json({ error: 'validation_error', field, message: issue.message })
+      }
+
+      const data = parsed.data
+      const photoBase64 = typeof req.body?.photoBase64 === 'string' ? req.body.photoBase64 : null
+
+      let photoUrl = user.photo_url as string | null
+      if (photoBase64) {
+        const uploaded = await uploadAvatar(photoBase64, user.id)
+        if (!uploaded) {
+          return res.status(500).json({ error: 'Error al subir la foto de perfil' })
+        }
+        photoUrl = uploaded
+      }
+
+      // La foto es obligatoria para toda cuenta (FR-024). No puede ser NOT NULL
+      // en la DB porque la cuenta existe desde el registro, antes del
+      // onboarding, así que el guardado es donde se exige.
+      if (!photoUrl || photoUrl.trim() === '') {
+        return res.status(400).json({
+          error: 'photo_required',
+          field: 'photo',
+          message: 'Tu foto de perfil es obligatoria',
+        })
+      }
+
+      const { data: updated, error } = await supabase
+        .from('users')
+        .update({
+          display_name: data.displayName,
+          bio: data.bio,
+          photo_url: photoUrl,
+          website: data.website,
+          github_url: data.githubUrl,
+          title: data.title,
+          seniority: data.seniority,
+          skills: data.skills,
+          location: data.location,
+          work_modality: data.workModality,
+          role_category: data.roleCategory,
+        })
+        .eq('username', username)
+        .select()
+        .single()
+
+      if (error) {
+        const translated = translateProfileTriggerError(error.message || '')
+        if (translated) {
+          return res.status(translated.status).json(translated.body)
+        }
+        throw error
+      }
+
+      res.json({ user: updated })
+    } catch (error) {
+      console.error('Community Update user error:', error)
+      res.status(500).json({ error: 'Error al actualizar el perfil' })
+    }
+  },
+)
 
 export default router

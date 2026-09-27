@@ -13,6 +13,7 @@ import path from 'path'
 import { test, expect, type Page } from '@playwright/test'
 import { createClient } from '@supabase/supabase-js'
 import dotenv from 'dotenv'
+import { createSessionFor } from './session'
 
 dotenv.config({ path: path.resolve(__dirname, '../backend/.env') })
 
@@ -21,15 +22,21 @@ const ADMIN_USER_ID = '8d73ccc4-a0dd-4c8d-ac88-f7418b8f091e'
 const ADMIN_USERNAME = 'exam-questions-e2e-admin'
 const SKILL = 'react'
 
+// La sesión se emite al correr la suite (e2e/session.ts): antes salía de
+// variables de entorno que nada generaba, así que sin prepararlas a mano estos
+// tests acababan en la pantalla de login.
+const ADMIN_EMAIL = 'exam-questions-e2e-admin@avocado-studio.com'
+
 async function loginAsAdmin(page: Page) {
+  const session = await createSessionFor(ADMIN_EMAIL)
   await page.goto('/')
   await page.evaluate(
     ({ at, rt }) => {
       localStorage.setItem('avocado_token', at)
       localStorage.setItem('avocado_refresh_token', rt)
-      localStorage.setItem('avocado_user', JSON.stringify({ roles: ['admin'] }))
+      localStorage.setItem('avocado_user', JSON.stringify({ is_superadmin: true }))
     },
-    { at: process.env.E2E_ADMIN_ACCESS_TOKEN!, rt: process.env.E2E_ADMIN_REFRESH_TOKEN! },
+    { at: session.accessToken, rt: session.refreshToken },
   )
 }
 
