@@ -119,7 +119,7 @@ aplica una persona a mano (T010) y su orden interno importa: backfills primero, 
   `seniority`, `location`, `work_modality` y `skills`) y el guard de `skills` que impide
   `DELETE` o renombrar un skill que algún `users.skills` contenga. **Este orden es obligatorio**:
   los triggers deben quedar después de la conversión.
-- [ ] T010 **Tarea manual del usuario**: aplicar
+- [X] T010 **Tarea manual del usuario**: aplicar
   `backend/sql/account-foundation-migration.sql` en el editor SQL de Supabase y confirmar con
   las consultas de verificación de `quickstart.md` (conteo por `account_type`/`is_superadmin`,
   `roles` sin `'admin'`, alias sembrados) más una consulta que liste los skills de perfiles que no
