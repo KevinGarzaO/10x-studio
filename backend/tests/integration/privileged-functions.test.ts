@@ -52,16 +52,32 @@ describe('privileged changes stay out of the application (T038)', () => {
     },
   )
 
-  it('no backend source writes account_type or is_superadmin', () => {
-    // Se buscan asignaciones (`account_type:`), no lecturas: el middleware de
-    // tipo de cuenta y el de superadmin sí tienen que leerlas.
-    const writePatterns = [/account_type\s*:/, /is_superadmin\s*:/]
-    const offenders = sources.filter((file) => {
-      const content = readFileSync(file, 'utf8')
-      return writePatterns.some((pattern) => pattern.test(content))
-    })
+  // Crear una cuenta con su tipo es legítimo: el registro crea 'candidate' y el
+  // scraper crea 'company'. Lo prohibido es CAMBIARLO después, que es lo que el
+  // trigger de la DB bloquea; aquí se verifica que ninguna fuente lo intente.
+  it('no backend source updates account_type or is_superadmin', () => {
+    const updateWithPrivileged = /\.update\(\s*\{[^}]*(account_type|is_superadmin)/s
+    const offenders = sources.filter((file) =>
+      updateWithPrivileged.test(readFileSync(file, 'utf8')),
+    )
 
     expect(offenders).toEqual([])
+  })
+
+  it('only the scraper creates company accounts, and never a superadmin', () => {
+    const insertsCompany = sources.filter((file) =>
+      /account_type\s*:\s*["']company["']/.test(readFileSync(file, 'utf8')),
+    )
+
+    const relative = insertsCompany.map(
+      (file) => file.replace(/\\/g, '/').split('/backend/')[1],
+    )
+    expect(relative).toEqual(['services/scraper/sync.ts'])
+
+    const grantsSuperadmin = sources.filter((file) =>
+      /is_superadmin\s*:\s*true/.test(readFileSync(file, 'utf8')),
+    )
+    expect(grantsSuperadmin).toEqual([])
   })
 })
 

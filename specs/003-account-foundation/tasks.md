@@ -389,18 +389,19 @@ vacante de esa empresa, y comprobar que quedó en una cuenta de tipo empresa dis
 
 ## Phase 8: Polish & Cross-Cutting Concerns
 
-- [ ] T053 [P] Actualizar `CLAUDE.md`: el catálogo de skills ya no vive en el frontend, los
+- [X] T053 [P] Actualizar `CLAUDE.md`: el catálogo de skills ya no vive en el frontend, los
   middlewares de autorización, y que el cambio de tipo de cuenta y las decisiones sobre
   propuestas se hacen en el editor SQL de Supabase.
-- [ ] T054 Correr la suite completa: `npx tsc --noEmit` en `backend` y `apps/community`, los
-  unitarios de ambos, los de integración, el script de bypass y `pnpm test:e2e`. No debe quedar
-  nada en rojo.
+- [X] T054 Correr la suite completa: `npx tsc --noEmit` en `backend` y `apps/community`, los
+  unitarios de ambos, los de integración, los scripts de bypass y `pnpm test:e2e`. Resultado:
+  98 unitarios de backend, 56 de componentes, 70 de integración, 17 de bypass y 9 E2E, todo en
+  verde, con tsc limpio en ambos paquetes.
 - [ ] T055 **Tarea manual del usuario**: recorrer el nivel 6 de `quickstart.md` en el navegador
   (aprobar una propuesta en SQL y verla aprobada en la app, comprobar que ese skill nuevo se
   muestra como "aún no disponible" en `/examenes` mientras no tenga banco suficiente (FR-022),
   revisar `/empresas/twilio` y el banner de empresas, y confirmar que el formulario de preguntas
   incluye el skill nuevo).
-- [ ] T056 Actualizar la sección "Estado actual y cómo retomar" de
+- [X] T056 Actualizar la sección "Estado actual y cómo retomar" de
   `requirements/003-candidate-and-company-accounts.md` con el resultado de la implementación.
 
 ---

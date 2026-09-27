@@ -5,7 +5,7 @@
 | **Origen** | Plantilla de requerimiento, refinada con producto en tres rondas de preguntas y respuestas |
 | **Fecha** | 2026-09-13 |
 | **Spec derivada** | [`specs/003-account-foundation/`](../specs/003-account-foundation/spec.md), que cubre **solo la parte 1** (fundación) |
-| **Estado** | Parte 1: plan terminado, **siguiente paso `/speckit-tasks`**; partes 2 a 7 pendientes (ver "Estado actual y cómo retomar") |
+| **Estado** | Parte 1: implementada y verificada por tests + bypass; queda solo la validación manual del Nivel 6 del quickstart en navegador; partes 2 a 7 pendientes |
 
 Este requerimiento es más grande que una feature. Al final propone siete partes, y cada una
 tendrá su propia spec. El texto de abajo es la **versión final**, con las tres rondas de
@@ -27,7 +27,7 @@ exámenes"*.
 |---|---|
 | **Rama** | `003-account-foundation`, creada desde `master` en el commit `1751335`, que ya incluye las features 001 y 002. Subida a GitHub (`origin/003-account-foundation`) |
 | **Carpeta de la spec** | `specs/003-account-foundation/`. `.specify/feature.json` apunta a ella, pero ese archivo **no se sube a git** (`.specify/.gitignore`). En otra máquina o en un clon nuevo hay que crearlo (ver "Cómo retomar", paso 2) |
-| **Commits** | Tres commits de documentación: la carpeta `requirements/`, los artefactos de spec y plan de la parte 1, y la decisión de alcance sobre `sync-to-community.ts`. Todavía no hay código |
+| **Estado actual** | La parte 1 quedó implementada en `backend` y `apps/community`, con tests unitarios, integración y bypass de SQL verdes; la única verificación que sigue siendo manual es el Nivel 6 del navegador |
 
 ### Avance del flujo spec-kit (parte 1: fundación)
 
@@ -36,11 +36,11 @@ exámenes"*.
 | `/speckit-specify` | ✅ Hecho | `spec.md`: 5 historias, 30 requisitos, 7 criterios de éxito. Checklist de calidad 16/16 |
 | `/speckit-clarify` | ✅ Hecho | 3 preguntas respondidas (ver "Cambios posteriores al requerimiento", abajo) |
 | `/speckit-plan` | ✅ Hecho | `plan.md`, `research.md` (14 decisiones), `data-model.md`, `contracts/` (2), `quickstart.md`. Pasa los 6 principios de la constitución |
-| `/speckit-tasks` | ⏳ **Siguiente paso** | Genera `tasks.md` |
-| `/speckit-analyze` | Pendiente | Revisa que spec, plan y tareas sean consistentes, antes de implementar |
-| `/speckit-implement` | Pendiente | Código y pruebas: un commit por tarea |
-| Migración SQL | Pendiente | `backend/sql/account-foundation-migration.sql` se crea al implementar, y **la aplica una persona a mano** en el editor SQL de Supabase |
-| Verificación manual | Pendiente | Nivel 6 de `quickstart.md` |
+| `/speckit-tasks` | ✅ Hecho | `tasks.md` generado y ejecutado para la parte 1 |
+| `/speckit-analyze` | ✅ Hecho | Consistencia revisada entre spec, plan y tareas |
+| `/speckit-implement` | ✅ Hecho | Código y pruebas implementados para la parte 1 |
+| Migración SQL | ✅ Hecho | `backend/sql/account-foundation-migration.sql` aplicada en Supabase en la instancia del proyecto |
+| Verificación manual | ⏳ Pendiente | Nivel 6 de `quickstart.md` en navegador real |
 
 ### Decisiones tomadas
 
