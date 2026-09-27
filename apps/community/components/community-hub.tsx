@@ -167,7 +167,12 @@ function stripHtml(html: string): string {
   return html.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim()
 }
 
-function parseJobContent(text: string) {
+/**
+ * Extrae los datos de una vacante del texto con el que la guarda el scraper.
+ * La usan la tarjeta del feed y el detalle de vacante: es lo que permite
+ * mostrar la vacante por secciones sin tocar el backend.
+ */
+export function parseJobContent(text: string) {
   const decoded = unescapeHtml(text)
   const lines = decoded.split('\n').map(l => l.trim()).filter(Boolean)
   const company = lines.find(l => /\*\*Empresa:?\*\*/i.test(l))?.replace(/\*\*Empresa:?\*\*\s*/i, '') || null

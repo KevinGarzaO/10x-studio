@@ -6,7 +6,7 @@
 | **Fecha** | 2026-09-26 |
 | **Spec derivada** | Ninguna: por decisión del 2026-09-27 se implementa directo, con tests, sin pasar por spec-kit |
 | **Rama** | `004-forum-redesign`, desde `master` (que ya incluye 001, 002 y 003) |
-| **Estado** | Parte 1 (feed) implementada; faltan detalle de post, perfil y crear |
+| **Estado** | Partes 1 (feed) y 2 (detalle) implementadas; faltan perfil y crear |
 
 El prototipo `AvoTalent Foro.dc.html` es **referencia de diseño**, no código para copiar: el
 rediseño se recrea dentro del Next.js existente, reutilizando sus componentes y rutas.
@@ -16,7 +16,7 @@ rediseño se recrea dentro del Next.js existente, reutilizando sus componentes y
 | Parte | Contenido | Estado |
 |---|---|---|
 | 1 | Tokens de color, tipografía Inter, topbar, sidebars y tarjetas del feed | Hecha |
-| 2 | Detalle de post y de vacante | Pendiente |
+| 2 | Detalle de post y de vacante | Hecha |
 | 3 | Perfil público | Pendiente |
 | 4 | Crear publicación | Pendiente |
 
@@ -31,6 +31,13 @@ rediseño se recrea dentro del Next.js existente, reutilizando sus componentes y
   muestra solo lo que hay. También se omite "No especificado", que es el relleno del scraper.
 - **Placeholder de imagen**: solo en artículos y showcase. En una discusión, que es texto, un
   placeholder rayado sería ruido.
+- **Detalle de vacante sin conversación ni votos** (parte 2): el diseño lo define así, y
+  ninguna vacante del scraper tiene comentarios. El estado que las manejaba se eliminó.
+- **"Seguir" en el detalle de un artículo** (parte 2): se renderiza como en el diseño pero
+  deshabilitado, con su razón visible. No existe en el backend; es la parte 5 del requerimiento
+  de cuentas. Mostrarlo apagado deja claro que falta, en vez de fingir que funciona.
+- **El detalle pierde los sidebars**: el diseño lo pide en una sola columna, así que esas dos
+  rutas se renderizan fuera de la rejilla de tres columnas del feed.
 - **Cambio de paleta global**: el handoff pide reemplazar los valores de `:root`, pero los
   colores viejos estaban escritos a mano en ~1700 lugares del CSS y de estilos inline. Se
   reemplazaron todos, así que la piel nueva alcanza también a las pantallas que aún no se
