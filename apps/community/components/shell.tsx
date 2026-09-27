@@ -47,6 +47,7 @@ export function CommunityShell({ children }: { children: ReactNode }) {
   }, [])
 
   const activeTab = deriveActiveTab(pathname, searchParams)
+  const isFocusedRoute = pathname.startsWith('/post/') || pathname.startsWith('/vacantes/')
 
   const setActiveTab = useCallback((tab: string) => {
     const key = TAB_KEYS[tab]
@@ -88,11 +89,17 @@ export function CommunityShell({ children }: { children: ReactNode }) {
           <LeftSidebar onPublish={() => setPublishOpen(true)} activeTab={activeTab} setActiveTab={setActiveTab} activeTag={activeTag} onTagClick={onTagClick} />
         </div>
 
-        <div className="layout">
-          <LeftSidebar onPublish={() => setPublishOpen(true)} activeTab={activeTab} setActiveTab={setActiveTab} activeTag={activeTag} onTagClick={onTagClick} />
-          {children}
-          <RightSidebar onUnlock={requestAuth} activeTab={activeTab} />
-        </div>
+        {isFocusedRoute ? (
+          // El detalle de una publicación se lee en una sola columna: el diseño
+          // quita los sidebars para no competir con el contenido.
+          <div className="layout-focused">{children}</div>
+        ) : (
+          <div className="layout">
+            <LeftSidebar onPublish={() => setPublishOpen(true)} activeTab={activeTab} setActiveTab={setActiveTab} activeTag={activeTag} onTagClick={onTagClick} />
+            {children}
+            <RightSidebar onUnlock={requestAuth} activeTab={activeTab} />
+          </div>
+        )}
 
         {publishOpen && <PublishModal onClose={() => setPublishOpen(false)} />}
         {authOpen && <AuthModal onClose={() => setAuthOpen(false)} />}

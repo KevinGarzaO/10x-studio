@@ -3,10 +3,13 @@
 import Link from 'next/link'
 import { useParams, useRouter } from 'next/navigation'
 import { useState, useEffect, useRef } from 'react'
-import { ArrowLeft, ArrowBigUp, Bookmark, MessageCircle, Share2, Send, CheckCircle2, LockKeyhole, MapPin, Home as HomeIcon } from 'lucide-react'
+import { Building, Check, LockKeyhole, MapPin } from 'lucide-react'
 import { marked } from 'marked'
 import { useShell } from '../../../../lib/shell-context'
 import { companySlug, formatCompanyName } from '../../../../lib/company'
+import { parseJobContent } from '../../../../components/community-hub'
+import { DetailHeader } from '../../../../components/post-detail/DetailHeader'
+import { DetailFooter } from '../../../../components/post-detail/DetailFooter'
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'
 
@@ -15,18 +18,6 @@ const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'
 // embedding silently — the iframe just spins forever with no error, so for
 // those we open the apply link in a new tab instead.
 const IFRAME_EMBEDDABLE_PLATFORMS = new Set(['greenhouse', 'lever', 'workable'])
-
-function DetailAvatar({ company, logoUrl }: { company: string; logoUrl?: string | null }) {
-  const [logoFailed, setLogoFailed] = useState(false)
-  const initials = company.slice(0, 2).toUpperCase()
-  const showLogo = logoUrl && !logoFailed
-  return (
-    <div style={{ width: 56, height: 56, minWidth: 56, borderRadius: '50%', background: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', border: '2px solid #322f29', flexShrink: 0, position: 'relative' }}>
-      {showLogo && <img src={logoUrl!} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', position: 'absolute' }} onError={() => setLogoFailed(true)} />}
-      <div style={{ width: '100%', height: '100%', borderRadius: '50%', background: '#00A86B', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#18161a', fontWeight: 800, fontSize: 18, zIndex: showLogo ? -1 : 0 }}>{initials}</div>
-    </div>
-  )
-}
 
 marked.setOptions({ breaks: true, gfm: true })
 
@@ -58,7 +49,11 @@ function stripMetadata(content: string, title: string): string {
     if (/^🔗/i.test(t)) return false
     return true
   })
-  return filtered.join('\n').trim()
+  return filtered
+    .join('\n')
+    .replace(/#{1,6}\s*$/, '')
+    .replace(/\*{1,3}\s*$/, '')
+    .trim()
 }
 
 function parseJobMetadata(content: string) {
@@ -117,6 +112,8 @@ interface PostData {
   company?: string | null
   company_logo?: string | null
   is_scraper_post?: boolean
+  /** Lo escribe el clasificador del scraper; puede venir vacío. */
+  seniority_level?: string | null
 }
 
 function buildApplyUrl(platform: string | null, sourceUrl: string | null): string | null {
@@ -146,10 +143,7 @@ export default function VacancyPage() {
   const [post, setPost] = useState<PostData | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  const [votes, setVotes] = useState(0)
   const [saved, setSaved] = useState(false)
-  const [reply, setReply] = useState('')
-  const [sent, setSent] = useState(false)
   const [redirecting, setRedirecting] = useState(false)
   const [fullContent, setFullContent] = useState<string | null>(null)
   const [applyOpen, setApplyOpen] = useState(false)
@@ -198,7 +192,6 @@ export default function VacancyPage() {
           window.history.replaceState({}, '', `/vacantes/${data.slug}`)
         }
         setPost(data)
-        setVotes(data.votesCount || 0)
         setLoading(false)
 
         // Fetch full content from ATS API if source_url is available
@@ -208,8 +201,6 @@ export default function VacancyPage() {
       })
       .catch(() => { setError('Publicación no encontrada'); setLoading(false) })
   }, [slug])
-
-  function submitReply() { if (!reply.trim()) return; setSent(true); setReply('') }
 
   async function fetchAtsContent(url: string) {
     try {
@@ -249,24 +240,11 @@ export default function VacancyPage() {
     }
   }
 
-  if (loading) {
+  if (loading || error || !post) {
     return (
-      <div className="post-detail-wrap">
-        <button onClick={goBack} className="back-link"><ArrowLeft size={16} /> Volver</button>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '50vh' }}>
-          <p style={{ color: '#b3aba1' }}>Cargando vacante...</p>
-        </div>
-      </div>
-    )
-  }
-
-  if (error || !post) {
-    return (
-      <div className="post-detail-wrap">
-        <button onClick={goBack} className="back-link"><ArrowLeft size={16} /> Volver</button>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '50vh' }}>
-          <p style={{ color: '#b3aba1' }}>Vacante no encontrada</p>
-        </div>
+      <div className="detail-page">
+        <button onClick={goBack} className="detail-back">Volver al feed</button>
+        <p style={{ color: '#b3aba1' }}>{loading ? 'Cargando vacante...' : 'Vacante no encontrada'}</p>
       </div>
     )
   }
@@ -275,11 +253,22 @@ export default function VacancyPage() {
   const cleanContent = fullContent ? unescapeHtml(fullContent) : stripMetadata(rawContent, post.title)
   const renderedHtml = renderContent(cleanContent)
   const meta = parseJobMetadata(rawContent)
+  // Mismo parseo que usa la tarjeta del feed: de aquí salen descripción,
+  // requisitos y beneficios como datos, en vez de volcar el markdown entero.
+  const job = parseJobContent(rawContent)
   const time = formatTime(post.created_at)
   const isScraped = post.is_scraper_post
   const companyName = formatCompanyName(post.company || meta.company) || 'Comunidad'
   const applyUrl = buildApplyUrl(post.platform ?? null, post.source_url ?? null)
   const canEmbedApply = !!post.platform && IFRAME_EMBEDDABLE_PLATFORMS.has(post.platform)
+
+  // Con contenido traído del ATS se prefiere ese cuerpo, que es más completo.
+  // Y si el parseo no encontró nada, se cae al markdown: el peor caso es lo
+  // que se veía antes, no una vacante en blanco.
+  const hasStructured = !fullContent && (job.requirements.length > 0 || job.benefits.length > 0)
+  const levelAndType = [post.seniority_level, meta.modality]
+    .filter(value => value && !/no especificado/i.test(value))
+    .join(' · ')
 
   function handleApplyClick() {
     if (!applyUrl) return
@@ -292,148 +281,87 @@ export default function VacancyPage() {
 
   return (
     <>
-      <div className="post-detail-wrap">
-        <div className="detail-toolbar">
-          <button onClick={goBack} className="back-link"><ArrowLeft size={16} /> Volver</button>
-          <div className="detail-toolbar-actions">
-            <button className="detail-rail-action" onClick={() => setVotes(votes + 1)} aria-label="Votar"><ArrowBigUp size={18} /><span>{votes}</span></button>
-            <a href="#conversation" className="detail-rail-action" aria-label="Ir a conversación"><MessageCircle size={18} /><span>{post.commentsCount || 0}</span></a>
-            <button className={`detail-rail-action ${saved ? 'is-active' : ''}`} onClick={() => setSaved(!saved)} aria-label="Guardar"><Bookmark size={18} /></button>
-            <button className="detail-rail-action" onClick={() => navigator.clipboard?.writeText(window.location.href)} aria-label="Compartir"><Share2 size={18} /></button>
-          </div>
+      <div className="detail-page">
+        <DetailHeader
+          onBack={goBack}
+          authorName={companyName}
+          initials={companyName.slice(0, 2).toUpperCase()}
+          photoUrl={post.company_logo}
+          profileHref={`/empresas/${companySlug(companyName)}`}
+          typeLabel={isScraped ? 'VACANTE' : 'VACANTE VERIFICADA'}
+          time={time}
+          verified={!isScraped}
+          action={
+            applyUrl && user
+              ? { label: 'Postularse', onClick: handleApplyClick }
+              : undefined
+          }
+        />
+
+        <h1>{post.title}</h1>
+
+        <div className="detail-chips">
+          <span className="detail-chip"><Building size={14} /> {companyName}</span>
+          {meta.location && <span className="detail-chip"><MapPin size={14} /> {meta.location}</span>}
+          {levelAndType && <span className="detail-chip">{levelAndType}</span>}
+          {meta.salary && <span className="detail-chip is-salary">{meta.salary}</span>}
         </div>
-        <article className="post-detail-card detail-job">
-            <div className="detail-context">
-              <span className="detail-kicker">VACANTE</span>
-              {!isScraped && <>
-                <span className="context-divider">/</span>
-                <span>Oportunidad verificada</span>
-              </>}
-              <span className="context-spacer" />
-            </div>
 
-            <header className="detail-author">
-              <Link href={`/empresas/${companySlug(companyName)}`} style={{ display: 'flex', alignItems: 'center', gap: 12, textDecoration: 'none', color: 'inherit' }}>
-                <DetailAvatar company={companyName} logoUrl={post.company_logo} />
-                <div className="author-info">
-                  <div className="author-line">
-                    <strong>{companyName}</strong>
-                    {!isScraped && <span className="verified-pill"><CheckCircle2 size={12} /> Verificada</span>}
-                  </div>
-                  <div className="detail-meta">
-                    <span>{time}</span>
-                  </div>
+        {hasStructured ? (
+          <>
+            {job.description && <p className="detail-lead">{job.description}</p>}
+
+            {job.requirements.length > 0 && (
+              <>
+                <h2 className="detail-section-title">Requisitos</h2>
+                <ul className="detail-requirements">
+                  {job.requirements.map(req => <li key={req}>{req}</li>)}
+                </ul>
+              </>
+            )}
+
+            {job.benefits.length > 0 && (
+              <>
+                <h2 className="detail-section-title">Beneficios</h2>
+                <div className="detail-perks">
+                  {job.benefits.map(perk => (
+                    <span key={perk} className="detail-perk"><Check size={12} strokeWidth={2.5} /> {perk}</span>
+                  ))}
                 </div>
-              </Link>
-            </header>
-
-            <h1>{post.title}</h1>
-
-            {(() => {
-              const chips: React.ReactNode[] = []
-              const seen = new Set<string>()
-              const addChip = (key: string, icon: React.ReactNode, text: string) => {
-                const normalized = text.toLowerCase().trim()
-                if (!text || seen.has(normalized)) return
-                seen.add(normalized)
-                chips.push(<span key={key} style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '4px 10px', background: '#2a2723', borderRadius: 5, fontSize: 12, color: '#e8e2d8' }}>{icon} {text}</span>)
-              }
-              if (meta.location) addChip('loc', <MapPin size={12} />, meta.location)
-              if (meta.modality) addChip('mod', <HomeIcon size={12} />, meta.modality)
-              if (meta.department) addChip('dep', null, meta.department)
-              if (meta.salary) chips.push(<span key="sal" style={{ padding: '4px 10px', background: '#1e3328', color: '#00A86B', borderRadius: 5, fontSize: 12, fontWeight: 600 }}>{meta.salary}</span>)
-              return chips.length > 0 ? <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px 10px', margin: '12px 0 16px' }}>{chips}</div> : null
-            })()}
-
-            {renderedHtml && (
-              <div
-                className="job-content"
-                dangerouslySetInnerHTML={{ __html: renderedHtml }}
-                style={{ marginTop: 16, lineHeight: 1.7, color: '#e8e2d8' }}
-              />
+              </>
             )}
+          </>
+        ) : (
+          renderedHtml && (
+            <div
+              className="detail-body editorial-content"
+              dangerouslySetInnerHTML={{ __html: renderedHtml }}
+            />
+          )
+        )}
 
-            {applyUrl && user && (
-              <button
-                onClick={handleApplyClick}
-                style={{ marginTop: 20, padding: '12px 24px', background: '#00A86B', color: '#18161a', border: 'none', borderRadius: 8, fontWeight: 700, fontSize: 15, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 8 }}
-              >
-                Postularse ahora
-              </button>
-            )}
+        {applyUrl && !user && (
+          <div className="detail-guest-cta">
+            <LockKeyhole size={24} />
+            <h3>¿Interesado en esta vacante?</h3>
+            <p>Regístrate gratis para acceder al email, teléfono, WhatsApp y enlace de aplicación.</p>
+            <button type="button" className="detail-action" onClick={requestAuth}>Crear cuenta gratis</button>
+          </div>
+        )}
 
-            {applyUrl && !user && (
-              <div style={{ marginTop: 24, padding: '20px 24px', background: '#2a2723', border: '1px solid #322f29', borderRadius: 10, textAlign: 'center' }}>
-                <LockKeyhole size={24} style={{ color: '#00A86B', marginBottom: 10 }} />
-                <h3 style={{ color: '#e8e2d8', margin: '0 0 8px', fontSize: 16 }}>¿Interesado en esta vacante?</h3>
-                <p style={{ color: '#b3aba1', margin: '0 0 16px', fontSize: 14 }}>Regístrate gratis para acceder al email, teléfono, WhatsApp y enlace de aplicación.</p>
-                <button
-                  onClick={requestAuth}
-                  style={{ padding: '10px 24px', background: '#00A86B', color: '#18161a', border: 'none', borderRadius: 8, fontWeight: 700, fontSize: 14, cursor: 'pointer' }}
-                >
-                  Crear cuenta gratis
-                </button>
-              </div>
-            )}
+        {post.tags && post.tags.length > 0 && (
+          <div className="detail-tags">
+            {post.tags.map(tag => <span key={tag}>#{tag}</span>)}
+          </div>
+        )}
 
-            {post.tags && post.tags.length > 0 && (
-              <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 16 }}>
-                {post.tags.map(tag => (
-                  <span key={tag} style={{ padding: '4px 10px', background: '#2a2723', borderRadius: 6, fontSize: 12, color: '#b3aba1' }}>#{tag}</span>
-                ))}
-              </div>
-            )}
-          </article>
-
-          <section id="conversation" className="comment-section" style={{ marginTop: 24 }}>
-            <h3 style={{ color: '#e8e2d8', fontSize: 16, marginBottom: 16 }}>Conversación</h3>
-
-            <div style={{ display: 'flex', gap: 12, marginBottom: 24 }}>
-              <div style={{ width: 32, height: 32, borderRadius: '50%', background: '#2a2723', flexShrink: 0 }} />
-              <div style={{ flex: 1 }}>
-                <textarea
-                  value={reply}
-                  onChange={e => setReply(e.target.value)}
-                  placeholder="Escribe un comentario..."
-                  style={{ width: '100%', minHeight: 80, padding: '10px 14px', background: '#18161a', border: '1px solid #322f29', borderRadius: 8, color: '#e8e2d8', fontSize: 14, resize: 'vertical', fontFamily: 'inherit' }}
-                />
-                <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 8 }}>
-                  <button
-                    onClick={submitReply}
-                    disabled={!reply.trim()}
-                    style={{ padding: '8px 16px', background: reply.trim() ? '#00A86B' : '#2a2723', color: reply.trim() ? '#fff' : '#b3aba1', border: 'none', borderRadius: 6, cursor: reply.trim() ? 'pointer' : 'not-allowed', fontSize: 13, fontWeight: 600, display: 'flex', alignItems: 'center', gap: 6 }}
-                  >
-                    <Send size={14} /> Comentar
-                  </button>
-                </div>
-              </div>
-            </div>
-
-            {sent && (
-              <div style={{ padding: '12px 16px', background: '#0d2818', border: '1px solid #166534', borderRadius: 8, color: '#4ade80', fontSize: 13, marginBottom: 16 }}>
-                Comentario publicado
-              </div>
-            )}
-
-            {post.comments && post.comments.length > 0 ? (
-              post.comments.map((comment: any) => (
-                <div key={comment.id} style={{ display: 'flex', gap: 12, padding: '12px 0', borderBottom: '1px solid #2a2723' }}>
-                  <div style={{ width: 32, height: 32, borderRadius: '50%', background: '#2a2723', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#b3aba1', fontSize: 12, fontWeight: 700, flexShrink: 0 }}>
-                    {comment.author?.display_name?.split(' ').map((n: string) => n[0]).join('').substring(0, 2) || '?'}
-                  </div>
-                  <div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
-                      <strong style={{ color: '#e8e2d8', fontSize: 13 }}>{comment.author?.display_name || 'Anónimo'}</strong>
-                      <span style={{ color: '#b3aba1', fontSize: 12 }}>{formatTime(comment.created_at)}</span>
-                    </div>
-                    <p style={{ color: '#e8e2d8', fontSize: 14, lineHeight: 1.6, margin: 0 }}>{comment.content}</p>
-                  </div>
-                </div>
-              ))
-            ) : (
-              <p style={{ color: '#b3aba1', fontSize: 14, textAlign: 'center', padding: '24px 0' }}>Sé el primero en comentar</p>
-            )}
-          </section>
+        {/* Una vacante no se vota ni tiene conversación: así lo define el diseño,
+            y ninguna vacante del scraper tiene comentarios. */}
+        <DetailFooter
+          commentsCount={post.commentsCount || 0}
+          saved={saved}
+          onSave={() => (user ? setSaved(!saved) : requestAuth())}
+        />
       </div>
 
       {applyOpen && applyUrl && (
