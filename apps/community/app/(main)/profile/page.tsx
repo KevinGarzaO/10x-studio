@@ -33,7 +33,7 @@ export default function OwnProfilePage() {
   if (loading) {
     return (
       <div className="post-detail-wrap" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '60vh' }}>
-        <p style={{ color: '#8b949e' }}>Cargando perfil...</p>
+        <p style={{ color: '#b3aba1' }}>Cargando perfil...</p>
       </div>
     )
   }

@@ -14,22 +14,22 @@ import { SkillProposalsList } from './skill-proposals-list'
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'
 
 const styles = `
-.onboarding-page{min-height:100vh;background:#0d1117;color:#e6edf3;display:grid;place-items:center;padding:40px 20px;background-image:linear-gradient(#30363d16 1px,transparent 1px),linear-gradient(90deg,#30363d16 1px,transparent 1px);background-size:48px 48px}
-.onboarding-card{width:min(100%,560px);background:#161b22;border:1px solid #30363d;border-radius:14px;padding:38px;box-shadow:0 26px 90px #00000055;box-sizing:border-box}
+.onboarding-page{min-height:100vh;background:#18161a;color:#f3efe9;display:grid;place-items:center;padding:40px 20px;background-image:linear-gradient(#322f2916 1px,transparent 1px),linear-gradient(90deg,#322f2916 1px,transparent 1px);background-size:48px 48px}
+.onboarding-card{width:min(100%,560px);background:#221f1b;border:1px solid #322f29;border-radius:14px;padding:38px;box-shadow:0 26px 90px #00000055;box-sizing:border-box}
 .onboarding-brand{display:flex;align-items:center;gap:8px;font-weight:800;letter-spacing:-.04em;font-size:19px;margin-bottom:22px}
-.onboarding-brand .brand-mark{color:#00A86B;font-family:monospace}
-.onboarding-brand .brand-avo{color:#e6edf3}
+.onboarding-brand .brand-mark{display:grid;place-items:center;width:30px;height:30px;border-radius:9px;background:#00A86B;color:#0d1f16;font-weight:800}
+.onboarding-brand .brand-avo{color:#f3efe9}
 .onboarding-brand .brand-accent{color:#00A86B}
 .onboarding-kicker{color:#00A86B;font:11px monospace;text-transform:uppercase;letter-spacing:.08em;margin:0 0 8px}
 .onboarding-card h1{font-size:26px;letter-spacing:-.03em;margin:0 0 8px}
-.onboarding-card > p.muted{margin:0 0 26px;color:#8b949e;font-size:13px;line-height:1.6}
+.onboarding-card > p.muted{margin:0 0 26px;color:#b3aba1;font-size:13px;line-height:1.6}
 .onboarding-card .field{display:flex;flex-direction:column;gap:6px;margin-bottom:18px}
-.onboarding-card .field label{font-size:12px;color:#8b949e;font-weight:500}
-.onboarding-card .field input{background:#0d1117;border:1px solid #30363d;border-radius:8px;padding:10px 14px;color:#e6edf3;font-size:13px;font-family:inherit;box-sizing:border-box}
+.onboarding-card .field label{font-size:12px;color:#b3aba1;font-weight:500}
+.onboarding-card .field input{background:#18161a;border:1px solid #322f29;border-radius:8px;padding:10px 14px;color:#f3efe9;font-size:13px;font-family:inherit;box-sizing:border-box}
 .onboarding-card .field input:focus{outline:none;border-color:#00A86B}
 .onboarding-card .photo-picker-row{margin-bottom:22px}
 .onboarding-error{background:#3d1214;border:1px solid #5c2225;border-radius:8px;padding:10px 14px;color:#f87171;font-size:12px;margin-bottom:16px}
-.onboarding-submit{width:100%;background:#00A86B;color:#0d1117;border:none;padding:13px;border-radius:8px;font-size:14px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;margin-top:6px}
+.onboarding-submit{width:100%;background:#00A86B;color:#18161a;border:none;padding:13px;border-radius:8px;font-size:14px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;margin-top:6px}
 .onboarding-submit:hover{background:#00c97b}
 .onboarding-submit:disabled{opacity:.55;cursor:not-allowed}
 `
@@ -150,7 +150,7 @@ export function OnboardingPage() {
     <div className="onboarding-page">
       <style>{styles}</style>
       <div className="onboarding-card">
-        <div className="onboarding-brand"><span className="brand-mark">&gt;_</span><span><span className="brand-avo">Avo</span><span className="brand-accent">Talent</span></span></div>
+        <div className="onboarding-brand"><span className="brand-mark" aria-hidden="true">A</span><span><span className="brand-avo">Avo</span><span className="brand-accent">Talent</span></span></div>
         <p className="onboarding-kicker">Un último paso</p>
         <h1>Completa tu perfil</h1>
         <p className="muted">Esta información nos ayuda a mostrarte vacantes relevantes y a que tu perfil se vea real ante otros miembros de la comunidad.</p>

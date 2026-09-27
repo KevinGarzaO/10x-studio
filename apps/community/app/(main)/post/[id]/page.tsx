@@ -52,9 +52,9 @@ function maskContact(content: string): string {
     '',
     '### Contacto',
     '',
-    '<div style="padding:16px;background:#1c2430;border-radius:8px;text-align:center;border:1px dashed #30363d">',
-    '<p style="color:#8b949e;margin:0 0 8px">🔒 Regístrate para ver los datos de contacto</p>',
-    '<p style="color:#8b949e;margin:0;font-size:13px">Email, teléfono, WhatsApp y enlace de aplicación</p>',
+    '<div style="padding:16px;background:#2a2723;border-radius:8px;text-align:center;border:1px dashed #322f29">',
+    '<p style="color:#b3aba1;margin:0 0 8px">🔒 Regístrate para ver los datos de contacto</p>',
+    '<p style="color:#b3aba1;margin:0;font-size:13px">Email, teléfono, WhatsApp y enlace de aplicación</p>',
     '</div>',
   ].join('\n')
 
@@ -112,7 +112,7 @@ export default function PostPage() {
       <div className="post-detail-wrap">
         <button onClick={goBack} className="back-link"><ArrowLeft size={16} /> Volver</button>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '50vh' }}>
-          <p style={{ color: '#8b949e' }}>Cargando publicación...</p>
+          <p style={{ color: '#b3aba1' }}>Cargando publicación...</p>
         </div>
       </div>
     )
@@ -123,7 +123,7 @@ export default function PostPage() {
       <div className="post-detail-wrap">
         <button onClick={goBack} className="back-link"><ArrowLeft size={16} /> Volver</button>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '50vh' }}>
-          <p style={{ color: '#8b949e' }}>Publicación no encontrada</p>
+          <p style={{ color: '#b3aba1' }}>Publicación no encontrada</p>
         </div>
       </div>
     )
@@ -175,7 +175,7 @@ export default function PostPage() {
               {hasRealAuthor && post.author?.photo_url ? (
                 <img src={post.author.photo_url} alt="" style={{ width: '100%', height: '100%', borderRadius: '50%', objectFit: 'cover' }} />
               ) : !hasRealAuthor ? (
-                <div style={{ width: '100%', height: '100%', borderRadius: '50%', background: '#00A86B', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: 14, color: '#0d1117' }}>A</div>
+                <div style={{ width: '100%', height: '100%', borderRadius: '50%', background: '#00A86B', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: 14, color: '#18161a' }}>A</div>
               ) : initials}
             </div>
             <div className="author-info">
@@ -212,7 +212,7 @@ export default function PostPage() {
           <div
             className="editorial-content"
             dangerouslySetInnerHTML={{ __html: marked.parse(displayContent) as string }}
-            style={{ marginTop: 16, lineHeight: 1.7, color: '#c9d1d9' }}
+            style={{ marginTop: 16, lineHeight: 1.7, color: '#e8e2d8' }}
           />
         )}
 
@@ -220,18 +220,18 @@ export default function PostPage() {
           <div
             className="job-content"
             dangerouslySetInnerHTML={{ __html: marked.parse(displayContent) as string }}
-            style={{ marginTop: 16, lineHeight: 1.7, color: '#c9d1d9' }}
+            style={{ marginTop: 16, lineHeight: 1.7, color: '#e8e2d8' }}
           />
         )}
 
         {isJob && !user && (
-          <div style={{ marginTop: 20, padding: '16px 20px', background: '#1c2430', border: '1px solid #30363d', borderRadius: 10, textAlign: 'center' }}>
-            <LockKeyhole size={24} style={{ color: '#8b949e', marginBottom: 8 }} />
-            <h3 style={{ color: '#c9d1d9', margin: '0 0 8px', fontSize: 16 }}>¿Interesado en esta vacante?</h3>
-            <p style={{ color: '#8b949e', margin: '0 0 16px', fontSize: 14 }}>Regístrate para acceder al email, teléfono, WhatsApp y enlace de aplicación.</p>
+          <div style={{ marginTop: 20, padding: '16px 20px', background: '#2a2723', border: '1px solid #322f29', borderRadius: 10, textAlign: 'center' }}>
+            <LockKeyhole size={24} style={{ color: '#b3aba1', marginBottom: 8 }} />
+            <h3 style={{ color: '#e8e2d8', margin: '0 0 8px', fontSize: 16 }}>¿Interesado en esta vacante?</h3>
+            <p style={{ color: '#b3aba1', margin: '0 0 16px', fontSize: 14 }}>Regístrate para acceder al email, teléfono, WhatsApp y enlace de aplicación.</p>
             <button
               onClick={requestAuth}
-              style={{ padding: '10px 24px', background: '#10b981', color: '#0d1117', border: 'none', borderRadius: 8, fontWeight: 700, fontSize: 14, cursor: 'pointer' }}
+              style={{ padding: '10px 24px', background: '#00A86B', color: '#18161a', border: 'none', borderRadius: 8, fontWeight: 700, fontSize: 14, cursor: 'pointer' }}
             >
               Crear cuenta gratis
             </button>
@@ -241,29 +241,29 @@ export default function PostPage() {
         {post.tags && post.tags.length > 0 && (
           <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 16 }}>
             {post.tags.map(tag => (
-              <span key={tag} style={{ padding: '4px 10px', background: '#21262d', borderRadius: 6, fontSize: 12, color: '#8b949e' }}>#{tag}</span>
+              <span key={tag} style={{ padding: '4px 10px', background: '#2a2723', borderRadius: 6, fontSize: 12, color: '#b3aba1' }}>#{tag}</span>
             ))}
           </div>
         )}
       </article>
 
       <section id="conversation" className="comment-section" style={{ marginTop: 24 }}>
-        <h3 style={{ color: '#c9d1d9', fontSize: 16, marginBottom: 16 }}>Conversación</h3>
+        <h3 style={{ color: '#e8e2d8', fontSize: 16, marginBottom: 16 }}>Conversación</h3>
 
         <div style={{ display: 'flex', gap: 12, marginBottom: 24 }}>
-          <div style={{ width: 32, height: 32, borderRadius: '50%', background: '#21262d', flexShrink: 0 }} />
+          <div style={{ width: 32, height: 32, borderRadius: '50%', background: '#2a2723', flexShrink: 0 }} />
           <div style={{ flex: 1 }}>
             <textarea
               value={reply}
               onChange={e => setReply(e.target.value)}
               placeholder="Escribe un comentario..."
-              style={{ width: '100%', minHeight: 80, padding: '10px 14px', background: '#0d1117', border: '1px solid #30363d', borderRadius: 8, color: '#c9d1d9', fontSize: 14, resize: 'vertical', fontFamily: 'inherit' }}
+              style={{ width: '100%', minHeight: 80, padding: '10px 14px', background: '#18161a', border: '1px solid #322f29', borderRadius: 8, color: '#e8e2d8', fontSize: 14, resize: 'vertical', fontFamily: 'inherit' }}
             />
             <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 8 }}>
               <button
                 onClick={submitReply}
                 disabled={!reply.trim()}
-                style={{ padding: '8px 16px', background: reply.trim() ? '#00A86B' : '#21262d', color: reply.trim() ? '#fff' : '#8b949e', border: 'none', borderRadius: 6, cursor: reply.trim() ? 'pointer' : 'not-allowed', fontSize: 13, fontWeight: 600, display: 'flex', alignItems: 'center', gap: 6 }}
+                style={{ padding: '8px 16px', background: reply.trim() ? '#00A86B' : '#2a2723', color: reply.trim() ? '#fff' : '#b3aba1', border: 'none', borderRadius: 6, cursor: reply.trim() ? 'pointer' : 'not-allowed', fontSize: 13, fontWeight: 600, display: 'flex', alignItems: 'center', gap: 6 }}
               >
                 <Send size={14} /> Comentar
               </button>
@@ -279,21 +279,21 @@ export default function PostPage() {
 
         {post.comments && post.comments.length > 0 ? (
           post.comments.map((comment: any) => (
-            <div key={comment.id} style={{ display: 'flex', gap: 12, padding: '12px 0', borderBottom: '1px solid #21262d' }}>
-              <div style={{ width: 32, height: 32, borderRadius: '50%', background: '#21262d', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#8b949e', fontSize: 12, fontWeight: 700, flexShrink: 0 }}>
+            <div key={comment.id} style={{ display: 'flex', gap: 12, padding: '12px 0', borderBottom: '1px solid #2a2723' }}>
+              <div style={{ width: 32, height: 32, borderRadius: '50%', background: '#2a2723', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#b3aba1', fontSize: 12, fontWeight: 700, flexShrink: 0 }}>
                 {comment.author?.display_name?.split(' ').map((n: string) => n[0]).join('').substring(0, 2) || '?'}
               </div>
               <div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
-                  <strong style={{ color: '#c9d1d9', fontSize: 13 }}>{comment.author?.display_name || 'Anónimo'}</strong>
-                  <span style={{ color: '#8b949e', fontSize: 12 }}>{formatTime(comment.created_at)}</span>
+                  <strong style={{ color: '#e8e2d8', fontSize: 13 }}>{comment.author?.display_name || 'Anónimo'}</strong>
+                  <span style={{ color: '#b3aba1', fontSize: 12 }}>{formatTime(comment.created_at)}</span>
                 </div>
-                <p style={{ color: '#c9d1d9', fontSize: 14, lineHeight: 1.6, margin: 0 }}>{comment.content}</p>
+                <p style={{ color: '#e8e2d8', fontSize: 14, lineHeight: 1.6, margin: 0 }}>{comment.content}</p>
               </div>
             </div>
           ))
         ) : (
-          <p style={{ color: '#8b949e', fontSize: 14, textAlign: 'center', padding: '24px 0' }}>Sé el primero en comentar</p>
+          <p style={{ color: '#b3aba1', fontSize: 14, textAlign: 'center', padding: '24px 0' }}>Sé el primero en comentar</p>
         )}
       </section>
     </div>

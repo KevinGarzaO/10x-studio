@@ -5,9 +5,9 @@ export const metadata = {
 
 export default function PrivacyPage() {
   return (
-    <main style={{ maxWidth: 800, margin: '0 auto', padding: '40px 24px', color: '#c9d1d9' }}>
+    <main style={{ maxWidth: 800, margin: '0 auto', padding: '40px 24px', color: '#e8e2d8' }}>
       <h1 style={{ fontSize: 28, marginBottom: 24 }}>Política de Privacidad</h1>
-      <p style={{ color: '#8b949e', marginBottom: 24 }}>Última actualización: 5 de septiembre de 2026</p>
+      <p style={{ color: '#b3aba1', marginBottom: 24 }}>Última actualización: 5 de septiembre de 2026</p>
 
       <section style={{ marginBottom: 32 }}>
         <h2 style={{ fontSize: 20, marginBottom: 12 }}>1. Información que recopilamos</h2>

@@ -21,9 +21,9 @@ function DetailAvatar({ company, logoUrl }: { company: string; logoUrl?: string 
   const initials = company.slice(0, 2).toUpperCase()
   const showLogo = logoUrl && !logoFailed
   return (
-    <div style={{ width: 56, height: 56, minWidth: 56, borderRadius: '50%', background: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', border: '2px solid #30363d', flexShrink: 0, position: 'relative' }}>
+    <div style={{ width: 56, height: 56, minWidth: 56, borderRadius: '50%', background: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', border: '2px solid #322f29', flexShrink: 0, position: 'relative' }}>
       {showLogo && <img src={logoUrl!} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', position: 'absolute' }} onError={() => setLogoFailed(true)} />}
-      <div style={{ width: '100%', height: '100%', borderRadius: '50%', background: '#10b981', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#0d1117', fontWeight: 800, fontSize: 18, zIndex: showLogo ? -1 : 0 }}>{initials}</div>
+      <div style={{ width: '100%', height: '100%', borderRadius: '50%', background: '#00A86B', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#18161a', fontWeight: 800, fontSize: 18, zIndex: showLogo ? -1 : 0 }}>{initials}</div>
     </div>
   )
 }
@@ -254,7 +254,7 @@ export default function VacancyPage() {
       <div className="post-detail-wrap">
         <button onClick={goBack} className="back-link"><ArrowLeft size={16} /> Volver</button>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '50vh' }}>
-          <p style={{ color: '#8b949e' }}>Cargando vacante...</p>
+          <p style={{ color: '#b3aba1' }}>Cargando vacante...</p>
         </div>
       </div>
     )
@@ -265,7 +265,7 @@ export default function VacancyPage() {
       <div className="post-detail-wrap">
         <button onClick={goBack} className="back-link"><ArrowLeft size={16} /> Volver</button>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '50vh' }}>
-          <p style={{ color: '#8b949e' }}>Vacante no encontrada</p>
+          <p style={{ color: '#b3aba1' }}>Vacante no encontrada</p>
         </div>
       </div>
     )
@@ -336,12 +336,12 @@ export default function VacancyPage() {
                 const normalized = text.toLowerCase().trim()
                 if (!text || seen.has(normalized)) return
                 seen.add(normalized)
-                chips.push(<span key={key} style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '4px 10px', background: '#1c2430', borderRadius: 5, fontSize: 12, color: '#c9d1d9' }}>{icon} {text}</span>)
+                chips.push(<span key={key} style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '4px 10px', background: '#2a2723', borderRadius: 5, fontSize: 12, color: '#e8e2d8' }}>{icon} {text}</span>)
               }
               if (meta.location) addChip('loc', <MapPin size={12} />, meta.location)
               if (meta.modality) addChip('mod', <HomeIcon size={12} />, meta.modality)
               if (meta.department) addChip('dep', null, meta.department)
-              if (meta.salary) chips.push(<span key="sal" style={{ padding: '4px 10px', background: '#0d3320', color: '#10b981', borderRadius: 5, fontSize: 12, fontWeight: 600 }}>{meta.salary}</span>)
+              if (meta.salary) chips.push(<span key="sal" style={{ padding: '4px 10px', background: '#1e3328', color: '#00A86B', borderRadius: 5, fontSize: 12, fontWeight: 600 }}>{meta.salary}</span>)
               return chips.length > 0 ? <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px 10px', margin: '12px 0 16px' }}>{chips}</div> : null
             })()}
 
@@ -349,27 +349,27 @@ export default function VacancyPage() {
               <div
                 className="job-content"
                 dangerouslySetInnerHTML={{ __html: renderedHtml }}
-                style={{ marginTop: 16, lineHeight: 1.7, color: '#c9d1d9' }}
+                style={{ marginTop: 16, lineHeight: 1.7, color: '#e8e2d8' }}
               />
             )}
 
             {applyUrl && user && (
               <button
                 onClick={handleApplyClick}
-                style={{ marginTop: 20, padding: '12px 24px', background: '#10b981', color: '#0d1117', border: 'none', borderRadius: 8, fontWeight: 700, fontSize: 15, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 8 }}
+                style={{ marginTop: 20, padding: '12px 24px', background: '#00A86B', color: '#18161a', border: 'none', borderRadius: 8, fontWeight: 700, fontSize: 15, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 8 }}
               >
                 Postularse ahora
               </button>
             )}
 
             {applyUrl && !user && (
-              <div style={{ marginTop: 24, padding: '20px 24px', background: '#1c2430', border: '1px solid #30363d', borderRadius: 10, textAlign: 'center' }}>
-                <LockKeyhole size={24} style={{ color: '#10b981', marginBottom: 10 }} />
-                <h3 style={{ color: '#c9d1d9', margin: '0 0 8px', fontSize: 16 }}>¿Interesado en esta vacante?</h3>
-                <p style={{ color: '#8b949e', margin: '0 0 16px', fontSize: 14 }}>Regístrate gratis para acceder al email, teléfono, WhatsApp y enlace de aplicación.</p>
+              <div style={{ marginTop: 24, padding: '20px 24px', background: '#2a2723', border: '1px solid #322f29', borderRadius: 10, textAlign: 'center' }}>
+                <LockKeyhole size={24} style={{ color: '#00A86B', marginBottom: 10 }} />
+                <h3 style={{ color: '#e8e2d8', margin: '0 0 8px', fontSize: 16 }}>¿Interesado en esta vacante?</h3>
+                <p style={{ color: '#b3aba1', margin: '0 0 16px', fontSize: 14 }}>Regístrate gratis para acceder al email, teléfono, WhatsApp y enlace de aplicación.</p>
                 <button
                   onClick={requestAuth}
-                  style={{ padding: '10px 24px', background: '#10b981', color: '#0d1117', border: 'none', borderRadius: 8, fontWeight: 700, fontSize: 14, cursor: 'pointer' }}
+                  style={{ padding: '10px 24px', background: '#00A86B', color: '#18161a', border: 'none', borderRadius: 8, fontWeight: 700, fontSize: 14, cursor: 'pointer' }}
                 >
                   Crear cuenta gratis
                 </button>
@@ -379,29 +379,29 @@ export default function VacancyPage() {
             {post.tags && post.tags.length > 0 && (
               <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 16 }}>
                 {post.tags.map(tag => (
-                  <span key={tag} style={{ padding: '4px 10px', background: '#21262d', borderRadius: 6, fontSize: 12, color: '#8b949e' }}>#{tag}</span>
+                  <span key={tag} style={{ padding: '4px 10px', background: '#2a2723', borderRadius: 6, fontSize: 12, color: '#b3aba1' }}>#{tag}</span>
                 ))}
               </div>
             )}
           </article>
 
           <section id="conversation" className="comment-section" style={{ marginTop: 24 }}>
-            <h3 style={{ color: '#c9d1d9', fontSize: 16, marginBottom: 16 }}>Conversación</h3>
+            <h3 style={{ color: '#e8e2d8', fontSize: 16, marginBottom: 16 }}>Conversación</h3>
 
             <div style={{ display: 'flex', gap: 12, marginBottom: 24 }}>
-              <div style={{ width: 32, height: 32, borderRadius: '50%', background: '#21262d', flexShrink: 0 }} />
+              <div style={{ width: 32, height: 32, borderRadius: '50%', background: '#2a2723', flexShrink: 0 }} />
               <div style={{ flex: 1 }}>
                 <textarea
                   value={reply}
                   onChange={e => setReply(e.target.value)}
                   placeholder="Escribe un comentario..."
-                  style={{ width: '100%', minHeight: 80, padding: '10px 14px', background: '#0d1117', border: '1px solid #30363d', borderRadius: 8, color: '#c9d1d9', fontSize: 14, resize: 'vertical', fontFamily: 'inherit' }}
+                  style={{ width: '100%', minHeight: 80, padding: '10px 14px', background: '#18161a', border: '1px solid #322f29', borderRadius: 8, color: '#e8e2d8', fontSize: 14, resize: 'vertical', fontFamily: 'inherit' }}
                 />
                 <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 8 }}>
                   <button
                     onClick={submitReply}
                     disabled={!reply.trim()}
-                    style={{ padding: '8px 16px', background: reply.trim() ? '#00A86B' : '#21262d', color: reply.trim() ? '#fff' : '#8b949e', border: 'none', borderRadius: 6, cursor: reply.trim() ? 'pointer' : 'not-allowed', fontSize: 13, fontWeight: 600, display: 'flex', alignItems: 'center', gap: 6 }}
+                    style={{ padding: '8px 16px', background: reply.trim() ? '#00A86B' : '#2a2723', color: reply.trim() ? '#fff' : '#b3aba1', border: 'none', borderRadius: 6, cursor: reply.trim() ? 'pointer' : 'not-allowed', fontSize: 13, fontWeight: 600, display: 'flex', alignItems: 'center', gap: 6 }}
                   >
                     <Send size={14} /> Comentar
                   </button>
@@ -417,21 +417,21 @@ export default function VacancyPage() {
 
             {post.comments && post.comments.length > 0 ? (
               post.comments.map((comment: any) => (
-                <div key={comment.id} style={{ display: 'flex', gap: 12, padding: '12px 0', borderBottom: '1px solid #21262d' }}>
-                  <div style={{ width: 32, height: 32, borderRadius: '50%', background: '#21262d', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#8b949e', fontSize: 12, fontWeight: 700, flexShrink: 0 }}>
+                <div key={comment.id} style={{ display: 'flex', gap: 12, padding: '12px 0', borderBottom: '1px solid #2a2723' }}>
+                  <div style={{ width: 32, height: 32, borderRadius: '50%', background: '#2a2723', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#b3aba1', fontSize: 12, fontWeight: 700, flexShrink: 0 }}>
                     {comment.author?.display_name?.split(' ').map((n: string) => n[0]).join('').substring(0, 2) || '?'}
                   </div>
                   <div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
-                      <strong style={{ color: '#c9d1d9', fontSize: 13 }}>{comment.author?.display_name || 'Anónimo'}</strong>
-                      <span style={{ color: '#8b949e', fontSize: 12 }}>{formatTime(comment.created_at)}</span>
+                      <strong style={{ color: '#e8e2d8', fontSize: 13 }}>{comment.author?.display_name || 'Anónimo'}</strong>
+                      <span style={{ color: '#b3aba1', fontSize: 12 }}>{formatTime(comment.created_at)}</span>
                     </div>
-                    <p style={{ color: '#c9d1d9', fontSize: 14, lineHeight: 1.6, margin: 0 }}>{comment.content}</p>
+                    <p style={{ color: '#e8e2d8', fontSize: 14, lineHeight: 1.6, margin: 0 }}>{comment.content}</p>
                   </div>
                 </div>
               ))
             ) : (
-              <p style={{ color: '#8b949e', fontSize: 14, textAlign: 'center', padding: '24px 0' }}>Sé el primero en comentar</p>
+              <p style={{ color: '#b3aba1', fontSize: 14, textAlign: 'center', padding: '24px 0' }}>Sé el primero en comentar</p>
             )}
           </section>
       </div>
@@ -442,27 +442,27 @@ export default function VacancyPage() {
           onMouseDown={e => e.target === e.currentTarget && setApplyOpen(false)}
         >
           {applySuccess ? (
-            <div style={{ width: '100%', maxWidth: 400, background: '#161b22', borderRadius: 12, border: '1px solid #30363d', padding: '40px 24px', textAlign: 'center' }}>
+            <div style={{ width: '100%', maxWidth: 400, background: '#221f1b', borderRadius: 12, border: '1px solid #322f29', padding: '40px 24px', textAlign: 'center' }}>
               <div style={{ fontSize: 48, marginBottom: 16 }}>✅</div>
-              <h3 style={{ color: '#c9d1d9', fontSize: 18, marginBottom: 8 }}>¡Aplicación enviada!</h3>
-              <p style={{ color: '#8b949e', fontSize: 14, marginBottom: 20 }}>Tu postulación a <strong style={{ color: '#c9d1d9' }}>{companyName}</strong> fue enviada exitosamente.</p>
-              <button onClick={() => setApplyOpen(false)} style={{ background: '#10b981', color: '#0d1117', border: 'none', padding: '10px 24px', borderRadius: 6, fontWeight: 600, fontSize: 14, cursor: 'pointer' }}>Cerrar</button>
+              <h3 style={{ color: '#e8e2d8', fontSize: 18, marginBottom: 8 }}>¡Aplicación enviada!</h3>
+              <p style={{ color: '#b3aba1', fontSize: 14, marginBottom: 20 }}>Tu postulación a <strong style={{ color: '#e8e2d8' }}>{companyName}</strong> fue enviada exitosamente.</p>
+              <button onClick={() => setApplyOpen(false)} style={{ background: '#00A86B', color: '#18161a', border: 'none', padding: '10px 24px', borderRadius: 6, fontWeight: 600, fontSize: 14, cursor: 'pointer' }}>Cerrar</button>
             </div>
           ) : (
-            <div style={{ width: '100%', maxWidth: 750, height: window.innerWidth < 640 ? '95vh' : '90vh', background: '#161b22', borderRadius: window.innerWidth < 640 ? 8 : 12, border: '1px solid #30363d', overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 14px', borderBottom: '1px solid #30363d', background: '#0d1117' }}>
-                <span style={{ color: '#c9d1d9', fontSize: 13, fontWeight: 600 }}>Postularse — {companyName}</span>
+            <div style={{ width: '100%', maxWidth: 750, height: window.innerWidth < 640 ? '95vh' : '90vh', background: '#221f1b', borderRadius: window.innerWidth < 640 ? 8 : 12, border: '1px solid #322f29', overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 14px', borderBottom: '1px solid #322f29', background: '#18161a' }}>
+                <span style={{ color: '#e8e2d8', fontSize: 13, fontWeight: 600 }}>Postularse — {companyName}</span>
                 <button
                   onClick={() => setApplyOpen(false)}
-                  style={{ background: 'none', border: 'none', color: '#8b949e', cursor: 'pointer', fontSize: 20, padding: 4 }}
+                  style={{ background: 'none', border: 'none', color: '#b3aba1', cursor: 'pointer', fontSize: 20, padding: 4 }}
                   aria-label="Cerrar"
                 >
                   ×
                 </button>
               </div>
               {post.platform === 'greenhouse' && (
-                <div style={{ padding: '6px 14px', background: '#1c2430', borderBottom: '1px solid #30363d', fontSize: 11, color: '#8b949e' }}>
-                  Haz clic en <strong style={{ color: '#10b981' }}>Apply</strong> dentro del formulario para completar tu postulación
+                <div style={{ padding: '6px 14px', background: '#2a2723', borderBottom: '1px solid #322f29', fontSize: 11, color: '#b3aba1' }}>
+                  Haz clic en <strong style={{ color: '#00A86B' }}>Apply</strong> dentro del formulario para completar tu postulación
                 </div>
               )}
               <iframe

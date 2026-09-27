@@ -70,10 +70,10 @@ export function CommunityShell({ children }: { children: ReactNode }) {
       <div className="app-shell">
         <header className="topbar">
           <button className="mobile-menu-button icon-button" onClick={() => setMobileMenu(!mobileMenu)} aria-label="Abrir menú"><Menu size={20} /></button>
-          <Link href="/" className="brand"><span className="brand-mark">&gt;_</span><span><span className="brand-avo">Avo</span><span className="brand-accent">Talent</span></span></Link>
+          <Link href="/" className="brand" aria-label="AvoTalent"><span className="brand-mark" aria-hidden="true">A</span><span><span className="brand-avo">Avo</span><span className="brand-accent">Talent</span></span></Link>
           <div className="search-wrap">
             <Search size={17} />
-            <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Buscar discusiones, tags, personas..." aria-label="Buscar" />
+            <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Buscar personas, temas, vacantes..." aria-label="Buscar" />
             <kbd>⌘ K</kbd>
           </div>
           <div className="top-actions">

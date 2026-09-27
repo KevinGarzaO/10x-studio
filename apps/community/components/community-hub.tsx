@@ -7,7 +7,7 @@ import {
   Bell, Bookmark, BriefcaseBusiness, Flame,
   Hash, Menu, MessageCircle, PenLine, Plus, Search,
   Send, Settings, Share2, ShieldCheck, Sparkles, Tag, Target, TrendingUp, Users, X,
-  Zap, ArrowBigUp, LockKeyhole, CheckCircle2, Building, MapPin, Home as HomeIcon, Mail, Clock
+  Zap, ArrowBigUp, LockKeyhole, CheckCircle2, Building, MapPin, Home as HomeIcon, Mail, Clock, Check
 } from 'lucide-react'
 import { companySlug, formatCompanyName } from '../lib/company'
 import { useShell } from '../lib/shell-context'
@@ -58,6 +58,9 @@ interface EditorialPost {
   company?: string | null
   company_logo?: string | null
   location?: string | null
+  // Lo escribe el trigger de clasificación del scraper. Hoy viene null en las
+  // vacantes existentes, así que el chip de nivel solo aparece cuando hay dato.
+  seniority_level?: string | null
   isSaved?: boolean
   historyId?: string | null
 }
@@ -232,9 +235,9 @@ export function CompanyAvatar({ company, logoUrl, size = 40 }: { company: string
 
   const showLogo = resolvedLogo && !logoFailed
   return (
-    <div style={{ width: size, height: size, minWidth: size, borderRadius: '50%', background: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', border: '2px solid #30363d', flexShrink: 0, position: 'relative' }}>
+    <div style={{ width: size, height: size, minWidth: size, borderRadius: '50%', background: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', border: '2px solid #322f29', flexShrink: 0, position: 'relative' }}>
       {showLogo && <img src={resolvedLogo!} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', position: 'absolute' }} onError={() => setLogoFailed(true)} />}
-      <div style={{ width: '100%', height: '100%', borderRadius: '50%', background: '#10b981', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#0d1117', fontWeight: 800, fontSize: size * 0.35, position: 'relative', zIndex: showLogo ? -1 : 0 }}>{initials}</div>
+      <div style={{ width: '100%', height: '100%', borderRadius: '50%', background: '#00A86B', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#18161a', fontWeight: 800, fontSize: size * 0.35, position: 'relative', zIndex: showLogo ? -1 : 0 }}>{initials}</div>
     </div>
   )
 }
@@ -307,33 +310,51 @@ export function PostCard({ post, onAuthRequired, activeTab }: { post: FeedPost; 
   const openPost = (e?: React.MouseEvent<HTMLElement>) => { if (e?.target instanceof HTMLElement && e.target.closest('button, a, input, textarea, select')) return; const isJob = post.type === 'job'; const slug = post.slug || post.id; const basePath = isJob ? (slug.startsWith('/vacantes/') ? slug : `/vacantes/${slug}`) : `/post/${post.id}`; const tabParam = activeTab && activeTab !== 'Tendencias' ? `${basePath.includes('?') ? '&' : '?'}from=${TAB_KEYS[activeTab] || 'trending'}` : ''; router.push(`${basePath}${tabParam}`) }
 
   if (isJob) {
+    // Chips con icono en vez del bloque de texto denso: empresa, ubicación,
+    // nivel · modalidad y salario destacado en verde.
+    // "No especificado" es el relleno del scraper cuando no detectó modalidad:
+    // como chip solo ocupa espacio sin decir nada.
+    const modality = [job?.modality, post.modalidad].find(m => m && !/no especificado/i.test(m))
+    const levelAndType = [post.seniority_level, modality].filter(Boolean).join(' · ')
     return <article className={`post-card job-card`} onClick={openPost}>
-      <div className="job-line" />
-      <div className="post-top"><Link href={company ? `/empresas/${companySlug(company)}` : '#'} className="author-row author-link" onClick={e => !company && e.preventDefault()}>
-        <CompanyAvatar company={company} logoUrl={post.company_logo} size={40} />
-        <div><div className="author-name">{company || 'AvoTalent'}</div><div className="post-meta">{time}</div></div>
-      </Link></div>
-      <div className="post-type-label" style={{ color: '#10b981' }}>VACANTE</div>
-      <h2 style={{ fontSize: 17, marginBottom: 8 }}>{job?.role || post.title}</h2>
-      <div className="job-details" style={{ display: 'flex', flexWrap: 'wrap', gap: '6px 14px', margin: '6px 0 10px', fontSize: 13, color: '#8b949e' }}>
-        {company && <span style={{ background: '#1c2430', padding: '3px 8px', borderRadius: 4, display: 'inline-flex', alignItems: 'center', gap: 4 }}><Building size={12} /> {company}</span>}
-        {(job?.location || post.location) && <span style={{ background: '#1c2430', padding: '3px 8px', borderRadius: 4, display: 'inline-flex', alignItems: 'center', gap: 4 }}><MapPin size={12} /> {job?.location || post.location}</span>}
-        {job?.salary && <span style={{ background: '#0d3320', color: '#10b981', padding: '3px 8px', borderRadius: 4, fontWeight: 600 }}>{job.salary}</span>}
-        {job?.modality && <span style={{ background: '#1c2430', padding: '3px 8px', borderRadius: 4, display: 'inline-flex', alignItems: 'center', gap: 4 }}><HomeIcon size={12} /> {job.modality}</span>}
+      <div className="post-top">
+        <Link href={company ? `/empresas/${companySlug(company)}` : '#'} className="author-row author-link" onClick={e => !company && e.preventDefault()}>
+          <CompanyAvatar company={company} logoUrl={post.company_logo} size={44} />
+          <div><div className="author-name">{company || 'AvoTalent'}</div><div className="post-meta">{time}</div></div>
+        </Link>
+        <span className="post-type-badge">VACANTE</span>
       </div>
-      {job?.description && <p className="post-excerpt" style={{ fontSize: 13, lineHeight: 1.5, color: '#8b949e', margin: '4px 0 10px' }}>{job.description}</p>}
-      {job?.requirements && job.requirements.length > 0 && <div style={{ margin: '6px 0', fontSize: 12, color: '#8b949e' }}><strong style={{ color: '#c9d1d9' }}>Requisitos:</strong> {job.requirements.slice(0, 3).join(' · ')}{job.requirements.length > 3 ? ` +${job.requirements.length - 3} más` : ''}</div>}
+      <h2>{job?.role || post.title}</h2>
+      <div className="job-chips">
+        {company && <span className="job-chip"><Building size={12} /> {company}</span>}
+        {(job?.location || post.location) && <span className="job-chip"><MapPin size={12} /> {job?.location || post.location}</span>}
+        {levelAndType && <span className="job-chip">{levelAndType}</span>}
+        {job?.salary && <span className="job-chip is-salary">{job.salary}</span>}
+      </div>
+      {job?.description && <p className="post-excerpt">{job.description}</p>}
+      {job?.benefits && job.benefits.length > 0 && (
+        <div className="job-perks">
+          {job.benefits.slice(0, 4).map(perk => (
+            <span key={perk} className="job-perk"><Check size={11} strokeWidth={2.5} /> {perk}</span>
+          ))}
+        </div>
+      )}
       {user ? (
         <>
-          {applyUrl && <button className="unlock-button" style={{ display: 'inline-flex', alignItems: 'center', gap: 6, background: '#10b981', color: '#0d1117', padding: '8px 16px', borderRadius: 6, fontWeight: 600, fontSize: 13, border: 'none', cursor: 'pointer', margin: '8px 0' }} onClick={e => { e.stopPropagation(); openPost() }}>Postularse ahora →</button>}
-          {!applyUrl && job?.emails && job.emails.length > 0 && <div style={{ fontSize: 12, color: '#8b949e', margin: '6px 0', display: 'inline-flex', alignItems: 'center', gap: 4 }}><Mail size={12} /> {job.emails[0]}</div>}
+          {applyUrl && <button className="job-apply-button" onClick={e => { e.stopPropagation(); openPost() }}>Postularse ahora →</button>}
+          {!applyUrl && job?.emails && job.emails.length > 0 && <div style={{ fontSize: 12, color: '#b3aba1', margin: '6px 0', display: 'inline-flex', alignItems: 'center', gap: 4 }}><Mail size={12} /> {job.emails[0]}</div>}
         </>
       ) : (
-        <button className="unlock-button" style={{ display: 'inline-flex', alignItems: 'center', gap: 6, background: '#1c2430', border: '1px solid #30363d', color: '#c9d1d9', padding: '8px 16px', borderRadius: 6, fontWeight: 600, fontSize: 13, cursor: 'pointer', margin: '8px 0' }} onClick={e => { e.stopPropagation(); onAuthRequired?.() }}>
+        <button className="job-unlock-button" onClick={e => { e.stopPropagation(); onAuthRequired?.() }}>
           <LockKeyhole size={14} /> Desbloquear contacto
         </button>
       )}
-      <div className="post-footer"><button className={`vote-button ${voted ? 'voted' : ''}`} onClick={() => setVoted(!voted)}><ArrowBigUp size={17} fill={voted ? 'currentColor' : 'none'} />{post.votesCount + (voted ? 1 : 0)}</button><button className="engagement"><MessageCircle size={16} />{post.commentsCount}</button><span className="footer-spacer" /><button className={`icon-button ${saved ? 'saved' : ''}`} onClick={handleSaveClick} aria-label="Guardar"><Bookmark size={17} fill={saved ? 'currentColor' : 'none'} /></button><button className="icon-button" aria-label="Compartir"><Share2 size={16} /></button></div>
+      <div className="post-footer">
+        <button className="engagement"><MessageCircle size={16} />{post.commentsCount}</button>
+        <span className="footer-spacer" />
+        <button className={`icon-button ${saved ? 'saved' : ''}`} onClick={handleSaveClick} aria-label="Guardar"><Bookmark size={17} fill={saved ? 'currentColor' : 'none'} /></button>
+        <button className="icon-button" aria-label="Compartir"><Share2 size={16} /></button>
+      </div>
     </article>
   }
 
@@ -347,7 +368,11 @@ export function PostCard({ post, onAuthRequired, activeTab }: { post: FeedPost; 
   const authorName = hasRealAuthor ? (post.author?.display_name || authorUsername || 'Anónimo') : 'AvoTalent'
   const authorInitials = authorName.slice(0, 2).toUpperCase()
   const authorPhoto = hasRealAuthor ? post.author?.photo_url : null
-  const typeLabel = post.type === 'showcase' ? 'MOSTRAR PROYECTO' : post.type === 'discussion' ? 'POST NORMAL' : 'ARTÍCULO'
+  const typeLabel = post.type === 'showcase' ? 'SHOWCASE' : post.type === 'discussion' ? 'DISCUSIÓN' : 'ARTÍCULO'
+  const badgeTone = post.type === 'showcase' ? 'is-showcase' : post.type === 'discussion' ? '' : 'is-article'
+  // Solo artículos y showcase llevan imagen: una discusión es texto, y un
+  // placeholder rayado ahí solo metería ruido.
+  const showsMedia = post.type === 'showcase' || post.type === 'editorial'
 
   return <article className="post-card" onClick={openPost}>
     <div className="post-top">
@@ -355,11 +380,14 @@ export function PostCard({ post, onAuthRequired, activeTab }: { post: FeedPost; 
         <Avatar initials={authorInitials} tone="cyan" avatar={authorPhoto || undefined} />
         <div><div className="author-name">{authorName} {!hasRealAuthor && <ShieldCheck size={13} className="verified" />}</div><div className="post-meta">{!hasRealAuthor ? <>Staff AvoTalent <span>·</span> </> : null}{time}</div></div>
       </Link>
+      <span className={`post-type-badge ${badgeTone}`}>{typeLabel}</span>
     </div>
-    <div className="post-type-label">{typeLabel}</div><h2>{post.title}</h2>
-    {image && <div style={{ margin: '10px 0', borderRadius: 8, overflow: 'hidden' }}><img src={image} alt="" style={{ width: '100%', height: 200, objectFit: 'cover', display: 'block' }} /></div>}
+    <h2>{post.title}</h2>
+    {image
+      ? <div className="post-media"><img src={image} alt="" /></div>
+      : showsMedia && <div className="post-media is-placeholder"><span>{typeLabel}</span></div>}
     <p className="post-excerpt">{(post.content || '').substring(0, 200)}{(post.content || '').length > 200 ? '...' : ''}</p>
-    {post.word_count && <div style={{ fontSize: 12, color: '#8b949e', marginTop: 4, display: 'inline-flex', alignItems: 'center', gap: 4 }}><Clock size={12} /> {Math.max(1, Math.round(post.word_count / 200))} min de lectura</div>}
+    {post.word_count ? <div className="post-readtime"><Clock size={12} /> {Math.max(1, Math.round(post.word_count / 200))} min de lectura</div> : null}
     <div className="post-footer"><button className={`vote-button ${voted ? 'voted' : ''}`} onClick={() => setVoted(!voted)}><ArrowBigUp size={17} fill={voted ? 'currentColor' : 'none'} />{post.votesCount + (voted ? 1 : 0)}</button><button className="engagement"><MessageCircle size={16} />{post.commentsCount} comentarios</button><span className="footer-spacer" /><button className={`icon-button ${saved ? 'saved' : ''}`} onClick={() => setSaved(!saved)} aria-label="Guardar"><Bookmark size={17} fill={saved ? 'currentColor' : 'none'} /></button><button className="icon-button" aria-label="Compartir"><Share2 size={16} /></button></div>
   </article>
 }
@@ -414,7 +442,7 @@ export function RightSidebar({ onUnlock, activeTab }: { onUnlock: () => void; ac
           <span><strong>{post.title}</strong><small>{post.commentsCount} respuestas</small></span>
         </Link>
       )) : (
-        <p style={{ color: '#8b949e', fontSize: 13, padding: '8px 0' }}>Sé el primero en iniciar una conversación</p>
+        <p style={{ color: '#b3aba1', fontSize: 13, padding: '8px 0' }}>Sé el primero en iniciar una conversación</p>
       )}
     </section>
 
@@ -442,7 +470,7 @@ export function RightSidebar({ onUnlock, activeTab }: { onUnlock: () => void; ac
             </Link>
           )
         }) : (
-          <p style={{ color: '#8b949e', fontSize: 13, padding: '8px 0' }}>Próximamente verás aquí las mejores oportunidades</p>
+          <p style={{ color: '#b3aba1', fontSize: 13, padding: '8px 0' }}>Próximamente verás aquí las mejores oportunidades</p>
         )}
       </section>
     )}
@@ -464,7 +492,7 @@ export function PublishModal({ onClose }: { onClose: () => void }) {
 
 export function AuthModal({ onClose }: { onClose: () => void }) {
   const router = useRouter()
-  return <div className="modal-backdrop" role="presentation" onMouseDown={e => e.target === e.currentTarget && onClose()}><section className="auth-modal" role="dialog" aria-modal="true" aria-labelledby="auth-title"><button className="modal-close icon-button" onClick={onClose} aria-label="Cerrar"><X size={19} /></button><div className="lock-orb"><LockKeyhole size={20} /></div><p className="eyebrow">Contacto directo</p><h2 id="auth-title">Desbloquea esta oportunidad</h2><p>Regístrate para acceder a los datos de contacto y unirte a la conversación.</p><button className="oauth-button" style={{ width: '100%', marginBottom: 10, background: '#10b981', color: '#0d1117', border: 'none', padding: '12px 16px', borderRadius: 8, fontWeight: 700, fontSize: 14, cursor: 'pointer' }} onClick={() => { onClose(); router.push('/signup') }}>Crear cuenta gratis</button><button className="oauth-button" style={{ width: '100%', background: 'transparent', color: '#c9d1d9', border: '1px solid #30363d', padding: '12px 16px', borderRadius: 8, fontSize: 14, cursor: 'pointer' }} onClick={() => { onClose(); router.push('/login') }}>Iniciar sesión</button><small style={{ display: 'block', textAlign: 'center', marginTop: 12, color: '#8b949e', fontSize: 11 }}>Al continuar aceptas nuestras reglas de comunidad.</small></section></div>
+  return <div className="modal-backdrop" role="presentation" onMouseDown={e => e.target === e.currentTarget && onClose()}><section className="auth-modal" role="dialog" aria-modal="true" aria-labelledby="auth-title"><button className="modal-close icon-button" onClick={onClose} aria-label="Cerrar"><X size={19} /></button><div className="lock-orb"><LockKeyhole size={20} /></div><p className="eyebrow">Contacto directo</p><h2 id="auth-title">Desbloquea esta oportunidad</h2><p>Regístrate para acceder a los datos de contacto y unirte a la conversación.</p><button className="oauth-button" style={{ width: '100%', marginBottom: 10, background: '#00A86B', color: '#18161a', border: 'none', padding: '12px 16px', borderRadius: 8, fontWeight: 700, fontSize: 14, cursor: 'pointer' }} onClick={() => { onClose(); router.push('/signup') }}>Crear cuenta gratis</button><button className="oauth-button" style={{ width: '100%', background: 'transparent', color: '#e8e2d8', border: '1px solid #322f29', padding: '12px 16px', borderRadius: 8, fontSize: 14, cursor: 'pointer' }} onClick={() => { onClose(); router.push('/login') }}>Iniciar sesión</button><small style={{ display: 'block', textAlign: 'center', marginTop: 12, color: '#b3aba1', fontSize: 11 }}>Al continuar aceptas nuestras reglas de comunidad.</small></section></div>
 }
 
 // The feed's content column — rendered as {children} inside the shared
@@ -591,8 +619,8 @@ export function Feed() {
     </div>
     <div className="feed-tabs" role="tablist">{tabs.map(({ label, icon: Icon }) => <button key={label} role="tab" aria-selected={activeTab === label} className={activeTab === label ? 'active' : ''} onClick={() => setActiveTab(label)}><Icon size={15} />{label}</button>)}</div>
     <div className="post-list">{filteredPosts.map(post => <PostCard key={post.id} post={post} onAuthRequired={requestAuth} activeTab={activeTab} />)}</div>
-    {loading && <div style={{ textAlign: 'center', padding: 20, color: '#8b949e' }}><Sparkles size={16} className="spin" /> Cargando más posts...</div>}
-    {!loading && filteredPosts.length === 0 && <div style={{ textAlign: 'center', padding: 40, color: '#8b949e' }}><PenLine size={32} style={{ marginBottom: 12, opacity: 0.5 }} /><p>{activeTab === 'Vacantes & Freelance' ? 'No hay vacantes todavía' : activeTab === 'Showcase Projects' ? 'No hay proyectos todavía' : 'No hay posts disponibles'}</p></div>}
-    {!hasMore && filteredPosts.length > 0 && <div style={{ textAlign: 'center', padding: 20, color: '#8b949e' }}>No hay más posts</div>}
+    {loading && <div style={{ textAlign: 'center', padding: 20, color: '#b3aba1' }}><Sparkles size={16} className="spin" /> Cargando más posts...</div>}
+    {!loading && filteredPosts.length === 0 && <div style={{ textAlign: 'center', padding: 40, color: '#b3aba1' }}><PenLine size={32} style={{ marginBottom: 12, opacity: 0.5 }} /><p>{activeTab === 'Vacantes & Freelance' ? 'No hay vacantes todavía' : activeTab === 'Showcase Projects' ? 'No hay proyectos todavía' : 'No hay posts disponibles'}</p></div>}
+    {!hasMore && filteredPosts.length > 0 && <div style={{ textAlign: 'center', padding: 20, color: '#b3aba1' }}>No hay más posts</div>}
   </main>
 }
