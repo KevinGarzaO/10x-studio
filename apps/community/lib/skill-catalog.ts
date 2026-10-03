@@ -19,7 +19,13 @@ function fetchCatalog(force = false): Promise<SkillCatalog> {
         if (!res.ok) throw new Error('catalog_unavailable')
         return res.json()
       })
-      .then(data => ({ skills: data.skills || [], aliases: data.aliases || [] }))
+      .then(data => {
+        const catalog = { skills: data.skills || [], aliases: data.aliases || [] }
+        // Un catálogo vacío no es un catálogo: la persona no podría elegir
+        // ningún skill y el campo quedaría mudo. Se trata como no disponible.
+        if (catalog.skills.length === 0) throw new Error('catalog_empty')
+        return catalog
+      })
       .catch(error => {
         // Un fallo no se cachea: el siguiente intento vuelve a pedirlo.
         cached = null

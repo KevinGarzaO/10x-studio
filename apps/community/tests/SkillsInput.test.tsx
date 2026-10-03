@@ -57,6 +57,26 @@ describe('SkillsInput (T020)', () => {
     expect(await screen.findByRole('button', { name: 'Node.js' })).toBeTruthy()
   })
 
+  it('lists catalog skills as soon as the empty field is focused', async () => {
+    render(<Harness initial={['react']} />)
+    const input = await screen.findByPlaceholderText(/escribe y elige/i)
+
+    fireEvent.focus(input)
+
+    expect(await screen.findByRole('button', { name: 'Node.js' })).toBeTruthy()
+    expect(screen.getByRole('button', { name: 'Python' })).toBeTruthy()
+    // Lo que el perfil ya tiene no se vuelve a ofrecer.
+    expect(screen.queryByRole('button', { name: 'React' })).toBeNull()
+  })
+
+  it('treats a catalog that answers with zero skills as unavailable', async () => {
+    mockCatalog({ ok: true, body: { skills: [], aliases: [] } })
+    render(<Harness />)
+
+    expect(await screen.findByRole('alert')).toBeTruthy()
+    expect(screen.getByRole('button', { name: /reintentar/i })).toBeTruthy()
+  })
+
   // FR-013: la variante conocida se guarda con el nombre canónico.
   it('stores "reactjs" as the canonical react skill', async () => {
     render(<Harness />)

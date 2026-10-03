@@ -27,6 +27,13 @@ router.get('/', async (_req: Request, res: Response) => {
     if (skillsResult.error) throw skillsResult.error
     if (aliasesResult.error) throw aliasesResult.error
 
+    // Un catálogo genuinamente vacío es casi seguro una migración sin aplicar en
+    // este entorno. La respuesta sigue siendo 200 (la lectura sí funcionó), pero
+    // se deja rastro para no depender de que alguien reporte la pantalla.
+    if ((skillsResult.data || []).length === 0) {
+      console.warn('[Skills] El catálogo de skills aprobados está VACÍO: falta sembrar la tabla skills')
+    }
+
     res.json({
       skills: (skillsResult.data || []).map((row) => ({ name: row.name, label: row.label })),
       aliases: (aliasesResult.data || []).map((row) => ({

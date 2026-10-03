@@ -75,16 +75,17 @@ export function SkillsInput({ skills, onChange, inputValue, onInputChange, onPro
     setShowSuggestions(true)
   }
 
-  const suggestions = typed
-    ? catalog.skills
-        .filter(
-          skill =>
-            !skills.includes(skill.name) &&
-            (skill.label.toLowerCase().includes(typed.toLowerCase()) ||
-              skill.name.includes(typed.toLowerCase())),
-        )
-        .slice(0, 8)
-    : []
+  // Con el campo vacío se muestran los primeros del catálogo para que la lista
+  // sea descubrible; con texto, se filtra.
+  const suggestions = catalog.skills
+    .filter(
+      skill =>
+        !skills.includes(skill.name) &&
+        (!typed ||
+          skill.label.toLowerCase().includes(typed.toLowerCase()) ||
+          skill.name.includes(typed.toLowerCase())),
+    )
+    .slice(0, 8)
 
   function handleKeyDown(e: KeyboardEvent<HTMLInputElement>) {
     if (e.key === 'Enter' || e.key === ',') {
