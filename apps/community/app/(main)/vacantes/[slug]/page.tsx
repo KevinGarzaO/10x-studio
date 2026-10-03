@@ -10,6 +10,8 @@ import { companySlug, formatCompanyName } from '../../../../lib/company'
 import { parseJobContent } from '../../../../components/community-hub'
 import { DetailHeader } from '../../../../components/post-detail/DetailHeader'
 import { DetailFooter } from '../../../../components/post-detail/DetailFooter'
+import { DetailConversation, type DetailComment } from '../../../../components/post-detail/DetailConversation'
+import { commentsOf, createComment } from '../../../../lib/post-comments'
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'
 
@@ -108,7 +110,8 @@ interface PostData {
   source_url?: string | null
   source_name?: string | null
   contacts?: Record<string, any> | null
-  comments?: Array<{ id: string; content: string; author: { username: string; display_name: string }; created_at: string }>
+  comments?: DetailComment[]
+  community_comments?: DetailComment[]
   company?: string | null
   company_logo?: string | null
   is_scraper_post?: boolean
@@ -144,6 +147,9 @@ export default function VacancyPage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [saved, setSaved] = useState(false)
+  const [comments, setComments] = useState<DetailComment[]>([])
+  const [sent, setSent] = useState(false)
+  const [commentError, setCommentError] = useState<string | null>(null)
   const [redirecting, setRedirecting] = useState(false)
   const [fullContent, setFullContent] = useState<string | null>(null)
   const [applyOpen, setApplyOpen] = useState(false)
@@ -192,6 +198,7 @@ export default function VacancyPage() {
           window.history.replaceState({}, '', `/vacantes/${data.slug}`)
         }
         setPost(data)
+        setComments(commentsOf(data))
         setLoading(false)
 
         // Fetch full content from ATS API if source_url is available
@@ -355,12 +362,28 @@ export default function VacancyPage() {
           </div>
         )}
 
-        {/* Una vacante no se vota ni tiene conversación: así lo define el diseño,
-            y ninguna vacante del scraper tiene comentarios. */}
+        {/* Una vacante no se vota, pero tiene la misma conversación que un post. */}
         <DetailFooter
-          commentsCount={post.commentsCount || 0}
+          commentsCount={comments.length || post.commentsCount || 0}
           saved={saved}
           onSave={() => (user ? setSaved(!saved) : requestAuth())}
+          conversationHref="#conversation"
+        />
+
+        <DetailConversation
+          comments={comments}
+          currentUserInitials={user ? (user.display_name || user.username || 'U').slice(0, 2).toUpperCase() : null}
+          onSubmit={async text => {
+            setSent(false)
+            setCommentError(null)
+            const result = await createComment(post.id, text)
+            if ('error' in result) { setCommentError(result.error); return }
+            setComments(prev => [result.comment, ...prev])
+            setSent(true)
+          }}
+          formatTime={formatTime}
+          sent={sent}
+          error={commentError}
         />
       </div>
 

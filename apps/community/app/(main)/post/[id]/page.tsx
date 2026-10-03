@@ -8,6 +8,7 @@ import { useShell } from '../../../../lib/shell-context'
 import { DetailHeader } from '../../../../components/post-detail/DetailHeader'
 import { DetailFooter } from '../../../../components/post-detail/DetailFooter'
 import { DetailConversation, type DetailComment } from '../../../../components/post-detail/DetailConversation'
+import { commentsOf, createComment } from '../../../../lib/post-comments'
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'
 
@@ -28,6 +29,7 @@ interface PostData {
   word_count?: number
   created_at: string
   comments?: DetailComment[]
+  community_comments?: DetailComment[]
 }
 
 function formatTime(dateStr: string) {
@@ -83,7 +85,9 @@ export default function PostPage() {
   const [votes, setVotes] = useState(0)
   const [voted, setVoted] = useState(false)
   const [saved, setSaved] = useState(false)
+  const [comments, setComments] = useState<DetailComment[]>([])
   const [sent, setSent] = useState(false)
+  const [commentError, setCommentError] = useState<string | null>(null)
 
   // Opening a post shouldn't inherit whatever scroll depth the feed was at —
   // it should always start at the top. router.back() to return to the feed
@@ -104,6 +108,7 @@ export default function PostPage() {
       })
       .then(data => {
         setPost(data)
+        setComments(commentsOf(data))
         setVotes(data.votesCount || 0)
         setLoading(false)
       })
@@ -199,7 +204,7 @@ export default function PostPage() {
 
       <DetailFooter
         votes={isJob ? undefined : { count: votes + (voted ? 1 : 0), voted, onVote: () => setVoted(!voted) }}
-        commentsCount={post.comments?.length ?? post.commentsCount ?? 0}
+        commentsCount={comments.length || post.commentsCount || 0}
         saved={saved}
         onSave={() => (user ? setSaved(!saved) : requestAuth())}
         conversationHref={isJob ? undefined : '#conversation'}
@@ -207,11 +212,19 @@ export default function PostPage() {
 
       {!isJob && (
         <DetailConversation
-          comments={post.comments || []}
+          comments={comments}
           currentUserInitials={user ? (user.display_name || user.username || 'U').slice(0, 2).toUpperCase() : null}
-          onSubmit={() => setSent(true)}
+          onSubmit={async text => {
+            setSent(false)
+            setCommentError(null)
+            const result = await createComment(post.id, text)
+            if ('error' in result) { setCommentError(result.error); return }
+            setComments(prev => [result.comment, ...prev])
+            setSent(true)
+          }}
           formatTime={formatTime}
           sent={sent}
+          error={commentError}
         />
       )}
     </div>

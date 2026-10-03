@@ -16,8 +16,10 @@ export interface DetailConversationProps {
   onSubmit: (text: string) => void
   /** Cómo se formatea el tiempo de cada respuesta (lo tiene cada página). */
   formatTime: (dateStr: string) => string
-  /** Aviso tras enviar, mientras el comentario no vuelve del backend. */
+  /** Aviso tras publicar el comentario. */
   sent?: boolean
+  /** Por qué no se pudo publicar, si falló. */
+  error?: string | null
 }
 
 function initialsOf(name: string): string {
@@ -31,6 +33,7 @@ export function DetailConversation({
   onSubmit,
   formatTime,
   sent,
+  error,
 }: DetailConversationProps) {
   const [text, setText] = useState('')
 
@@ -64,6 +67,7 @@ export function DetailConversation({
       )}
 
       {sent && <p className="detail-composer-sent">Comentario publicado</p>}
+      {error && <p className="detail-composer-error" role="alert">{error}</p>}
 
       {comments.length === 0 ? (
         <p className="detail-conversation-empty">Sé la primera persona en comentar</p>
