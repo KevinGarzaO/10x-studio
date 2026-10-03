@@ -6,7 +6,7 @@
 | **Fecha** | 2026-09-26 |
 | **Spec derivada** | Ninguna: por decisión del 2026-09-27 se implementa directo, con tests, sin pasar por spec-kit |
 | **Rama** | `004-forum-redesign`, desde `master` (que ya incluye 001, 002 y 003) |
-| **Estado** | Partes 1 (feed) y 2 (detalle) implementadas; faltan perfil y crear |
+| **Estado** | Partes 1 (feed), 2 (detalle) y 3 (perfil) implementadas; falta crear publicación |
 
 El prototipo `AvoTalent Foro.dc.html` es **referencia de diseño**, no código para copiar: el
 rediseño se recrea dentro del Next.js existente, reutilizando sus componentes y rutas.
@@ -17,7 +17,7 @@ rediseño se recrea dentro del Next.js existente, reutilizando sus componentes y
 |---|---|---|
 | 1 | Tokens de color, tipografía Inter, topbar, sidebars y tarjetas del feed | Hecha |
 | 2 | Detalle de post y de vacante | Hecha |
-| 3 | Perfil público | Pendiente |
+| 3 | Perfil público | Hecha |
 | 4 | Crear publicación | Pendiente |
 
 ## Diferencias con el handoff, y por qué
@@ -38,6 +38,13 @@ rediseño se recrea dentro del Next.js existente, reutilizando sus componentes y
   de cuentas. Mostrarlo apagado deja claro que falta, en vez de fingir que funciona.
 - **El detalle pierde los sidebars**: el diseño lo pide en una sola columna, así que esas dos
   rutas se renderizan fuera de la rejilla de tres columnas del feed.
+- **Skills validados en el perfil** (parte 3): el prototipo es anterior a la feature de
+  exámenes y no los contempla. Se conservan y se destacan, porque son la razón de negocio de los
+  exámenes: van en su propia sección, con un color por nivel (avanzado en verde, intermedio en
+  ámbar, básico en azul) y los demás skills quedan abajo como chips simples.
+- **"Seguir" y "Mensaje" en el perfil** (parte 3): se muestran deshabilitados con su razón.
+  Seguir es la parte 5 del requerimiento de cuentas; la mensajería no existe en ningún
+  requerimiento.
 - **Cambio de paleta global**: el handoff pide reemplazar los valores de `:root`, pero los
   colores viejos estaban escritos a mano en ~1700 lugares del CSS y de estilos inline. Se
   reemplazaron todos, así que la piel nueva alcanza también a las pantallas que aún no se

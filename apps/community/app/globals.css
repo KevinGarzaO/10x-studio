@@ -433,3 +433,62 @@ button { cursor: pointer; }
   .detail-action { width: 100%; justify-content: center; }
   .detail-media { height: 200px; }
 }
+
+/* ============================================================
+   Perfil público (parte 3 del rediseño)
+   ============================================================ */
+.profile-page { max-width: 880px; margin: 0 auto; padding: 40px 24px 100px; }
+.profile-cover { height: 140px; border-radius: 20px; background: linear-gradient(135deg,#1f4d3a,#18161a); }
+.profile-head { display: flex; align-items: flex-end; gap: 20px; padding: 0 8px; margin-top: -40px; margin-bottom: 20px; }
+.profile-avatar { width: 96px; height: 96px; border-radius: 28px; flex: none; object-fit: cover; border: 5px solid #18161a; background: linear-gradient(135deg,#2f7a5c,#1c4a37); }
+.profile-avatar.is-initials { display: grid; place-items: center; color: #a8f0cf; font: 800 28px var(--font-sans); }
+.profile-title { flex: 1; min-width: 0; padding-bottom: 6px; }
+.profile-title h1 { display: flex; align-items: center; gap: 8px; font-size: 26px; font-weight: 800; letter-spacing: -.03em; margin: 0; color: #f3efe9; }
+.profile-title p { font-size: 13.5px; color: #8a8378; margin: 4px 0 0; }
+.profile-head-actions { display: flex; gap: 10px; padding-bottom: 6px; flex-wrap: wrap; }
+.profile-action { border: 1px solid #322f29; background: #221f1b; color: #f3efe9; font-weight: 600; font-size: 13px; padding: 10px 18px; border-radius: 10px; display: inline-flex; align-items: center; gap: 7px; text-decoration: none; }
+.profile-action:hover:not(:disabled) { border-color: #4a463e; }
+.profile-action.is-primary { border-color: transparent; background: #00A86B; color: #0d1f16; font-weight: 700; }
+.profile-action.is-primary:hover:not(:disabled) { background: #34C98B; }
+.profile-action:disabled { opacity: .45; cursor: not-allowed; }
+.profile-bio { font-size: 14.5px; line-height: 1.7; color: #c9c2b6; max-width: 620px; margin: 0 0 24px; }
+
+/* Los skills validados por examen son la señal que las empresas vienen a ver:
+   se muestran aparte de los declarados, y el color dice el nivel. */
+.profile-validated { margin-bottom: 20px; }
+.profile-validated h2 { display: flex; align-items: center; gap: 7px; font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; color: #7d766c; margin: 0 0 12px; }
+.profile-validated h2 svg { color: #4fd39a; }
+.profile-validated-list { display: flex; flex-wrap: wrap; gap: 10px; }
+.skill-badge { display: inline-flex; align-items: center; gap: 7px; padding: 9px 14px; border-radius: 12px; font-size: 13.5px; border: 1px solid; }
+.skill-badge strong { font-weight: 700; }
+.skill-badge em { font-style: normal; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; padding: 3px 8px; border-radius: 999px; }
+.skill-badge.is-avanzado { background: rgba(0,168,107,.14); border-color: #2f5a46; color: #4fd39a; }
+.skill-badge.is-avanzado em { background: #00A86B; color: #0d1f16; }
+.skill-badge.is-intermedio { background: #3a3320; border-color: #4a4026; color: #d4b85a; }
+.skill-badge.is-intermedio em { background: #d4b85a; color: #241f10; }
+.skill-badge.is-basico { background: #242b52; border-color: #3d4166; color: #a5b4fc; }
+.skill-badge.is-basico em { background: #a5b4fc; color: #1b2040; }
+
+.profile-skills { margin-bottom: 22px; }
+.profile-skills-label { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; color: #7d766c; margin: 0 0 10px; }
+.profile-skills-list { display: flex; flex-wrap: wrap; gap: 8px; }
+.skill-chip-plain { background: #221f1b; border: 1px solid #322f29; color: #b3aba1; font-size: 12.5px; padding: 7px 13px; border-radius: 999px; }
+
+.profile-details { display: flex; flex-wrap: wrap; gap: 16px; color: #8a8378; font-size: 12.5px; margin-bottom: 4px; }
+.profile-details span { display: inline-flex; align-items: center; gap: 6px; }
+.profile-details svg { color: #4fd39a; }
+.profile-stats { display: flex; gap: 36px; padding: 20px 0; border-top: 1px solid #2a2723; border-bottom: 1px solid #2a2723; margin: 20px 0 28px; }
+.profile-stats div { display: flex; flex-direction: column; gap: 3px; }
+.profile-stats strong { font-size: 19px; font-weight: 800; color: #f3efe9; }
+.profile-stats span { font-size: 11.5px; color: #7d766c; }
+.profile-activity h2 { font-size: 17px; font-weight: 700; margin: 0 0 16px; color: #f3efe9; }
+.profile-activity-empty { color: #8a8378; font-size: 13.5px; padding: 20px 0; }
+@media (max-width: 700px) {
+  .profile-page { padding: 24px 16px 80px; }
+  .profile-head { flex-wrap: wrap; gap: 14px; }
+  .profile-avatar { width: 76px; height: 76px; border-radius: 22px; }
+  .profile-title h1 { font-size: 21px; }
+  .profile-head-actions { width: 100%; }
+  .profile-head-actions .profile-action { flex: 1; justify-content: center; }
+  .profile-stats { gap: 22px; justify-content: space-between; }
+}

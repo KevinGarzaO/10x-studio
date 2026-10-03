@@ -47,7 +47,10 @@ export function CommunityShell({ children }: { children: ReactNode }) {
   }, [])
 
   const activeTab = deriveActiveTab(pathname, searchParams)
-  const isFocusedRoute = pathname.startsWith('/post/') || pathname.startsWith('/vacantes/')
+  // Detalle y perfiles se leen en una sola columna: el diseño quita los
+  // sidebars para no competir con el contenido.
+  const isFocusedRoute = ['/post/', '/vacantes/', '/users/', '/empresas/'].some(prefix => pathname.startsWith(prefix))
+    || pathname === '/profile'
 
   const setActiveTab = useCallback((tab: string) => {
     const key = TAB_KEYS[tab]

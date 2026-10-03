@@ -97,7 +97,8 @@ test.describe('Skill level exam', () => {
     const anon = await page.context().browser()!.newContext()
     const anonPage = await anon.newPage()
     await anonPage.goto(`/users/${ADMIN_USERNAME}`)
-    await expect(anonPage.locator('.profile-fact.is-validated')).toContainText(SKILL)
+    // El perfil rediseñado muestra los validados como badge con su nivel.
+    await expect(anonPage.locator('.skill-badge')).toContainText(SKILL)
     await anon.close()
 
     // --- US3: reintentar de inmediato queda bloqueado, con fecha ---
