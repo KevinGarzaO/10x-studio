@@ -230,6 +230,7 @@ export function SettingsPage() {
         githubUrl,
       },
       catalog,
+      user.skills || [],
     )
     if (validationError) {
       setError(messageForField(validationError))
@@ -286,7 +287,7 @@ export function SettingsPage() {
         {error && <div className="auth-error">{error}</div>}
         {catalogFailed && (
           <div className="auth-error" role="alert">
-            No pudimos cargar el catálogo de skills. Recarga la página antes de guardar.
+            No pudimos cargar el catálogo de skills. Puedes guardar tus demás cambios, pero no agregar skills nuevos hasta recargar.
           </div>
         )}
         <h2 className="section-title">Perfil público</h2>
@@ -311,7 +312,7 @@ export function SettingsPage() {
           <div className="field"><label>GitHub</label><input value={githubUrl} onChange={e => setGithubUrl(e.target.value)} placeholder="github.com/tuusuario" /></div>
         </div>
         <div className="button-row">
-          <button className="primary-btn" onClick={handleSave} disabled={saving || catalogFailed}>
+          <button className="primary-btn" onClick={handleSave} disabled={saving}>
             {saving ? <><Loader2 size={14} className="animate-spin" /> Guardando...</> : saved ? <><Check size={14} /> Guardado</> : <><Save size={14} /> Guardar cambios</>}
           </button>
         </div>

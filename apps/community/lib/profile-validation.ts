@@ -11,12 +11,20 @@ export interface ProfileValidationError {
  * formulario en vez de esperar el rechazo del servidor (FR-027).
  *
  * El backend vuelve a validar siempre: esto no lo sustituye.
+ * `keptSkills` son los skills que ya estaban guardados en el perfil.
  */
 export function validateCandidateProfile(
   payload: unknown,
   catalog: SkillCatalog,
+  keptSkills: string[] = [],
 ): ProfileValidationError | null {
-  const schema = buildCandidateProfileSchema(catalog.skills.map(skill => skill.name))
+  // Los skills que el perfil ya tiene guardados no se vuelven a exigir contra el
+  // catálogo: cambiar la foto o la bio no debe obligar a rehacer los skills, ni
+  // fallar porque el catálogo no cargó. Los skills NUEVOS sí deben ser del catálogo.
+  const schema = buildCandidateProfileSchema([
+    ...catalog.skills.map(skill => skill.name),
+    ...keptSkills,
+  ])
   const parsed = schema.safeParse(payload)
   if (parsed.success) return null
 

@@ -2,6 +2,7 @@ import { Router, Request, Response } from 'express'
 import { supabase } from '../../../services/supabase.service'
 import { communityAuthMiddleware, AuthRequest } from '../../../middleware/community-auth.middleware'
 import { uploadAvatar } from '../../../services/avatar'
+import { sameSkills } from '../../../lib/same-skills'
 import { buildCandidateProfileSchema, firstUnapprovedSkill } from '@avocado/schemas'
 import { requireAccountType } from '../../middleware/require-account-type.middleware'
 
@@ -166,7 +167,7 @@ router.put(
 
       const { data: user } = await supabase
         .from('users')
-        .select('id, photo_url')
+        .select('id, photo_url, skills')
         .eq('username', username)
         .single()
 
@@ -184,7 +185,14 @@ router.put(
       const { data: skillRows, error: skillsError } = await supabase.from('skills').select('name')
       if (skillsError) throw skillsError
 
-      const schema = buildCandidateProfileSchema((skillRows || []).map((row) => row.name as string))
+      // Los skills que el perfil ya tiene guardados siguen valiendo: cambiar la
+      // foto o la bio no debe obligar a rehacerlos. Solo los NUEVOS tienen que
+      // venir del catálogo aprobado.
+      const allowedSkills = [
+        ...(skillRows || []).map((row) => row.name as string),
+        ...(Array.isArray(user.skills) ? (user.skills as string[]) : []),
+      ]
+      const schema = buildCandidateProfileSchema(allowedSkills)
       const parsed = schema.safeParse(req.body)
 
       if (!parsed.success) {
@@ -195,7 +203,7 @@ router.put(
         if (field === 'skills' && Array.isArray(req.body?.skills)) {
           const offending = firstUnapprovedSkill(
             req.body.skills.filter((s: unknown) => typeof s === 'string'),
-            (skillRows || []).map((row) => row.name as string),
+            allowedSkills,
           )
           if (offending) {
             return res.status(400).json({
@@ -242,7 +250,10 @@ router.put(
           github_url: data.githubUrl,
           title: data.title,
           seniority: data.seniority,
-          skills: data.skills,
+          // Solo se escribe `skills` si cambiaron: el trigger de la base los
+          // revisa contra el catálogo en cada UPDATE que los incluya, y un
+          // guardado de foto o bio no debe fallar por eso.
+          ...(sameSkills(data.skills, user.skills) ? {} : { skills: data.skills }),
           location: data.location,
           work_modality: data.workModality,
           role_category: data.roleCategory,
