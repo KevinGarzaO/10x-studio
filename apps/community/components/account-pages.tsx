@@ -132,6 +132,30 @@ const styles = `
 .auth-pw-toggle{position:absolute;right:12px;top:50%;transform:translateY(-50%);background:none;border:none;color:#b3aba1;cursor:pointer;padding:0}
 .auth-field{position:relative}
 @media(max-width:768px){.auth-shell{grid-template-columns:1fr}.auth-aside{display:none}.auth-card{padding:28px 24px}}
+/* Celular: el menú lateral de 220px dejaba al formulario en ~100px. Pasa a una fila
+   con scroll horizontal arriba del contenido y todo lo demás ocupa el ancho. */
+@media(max-width:768px){
+.account-page{padding:16px}
+.account-nav{margin-bottom:18px}
+.account-grid{grid-template-columns:minmax(0,1fr);gap:16px}
+.account-menu{position:static;flex-direction:row;gap:6px;overflow-x:auto;padding-bottom:6px}
+.account-menu-label{display:none}
+.account-menu a{flex:none;white-space:nowrap;padding:9px 12px}
+.account-menu a.active{box-shadow:inset 0 -2px #00A86B}
+.account-card{padding:18px}
+.page-title{font-size:23px}
+.profile-hero{flex-direction:column;gap:14px}
+.profile-identity{flex-wrap:wrap}
+.profile-links{flex-wrap:wrap}
+.stat-row{flex-wrap:wrap;gap:10px}
+.stat{flex:1 1 90px;min-width:0}
+.button-row{flex-wrap:wrap}
+.button-row>*{flex:1 1 auto;justify-content:center}
+.setting-row{gap:12px}
+.field input,.field textarea,.field select{font-size:16px}
+.segmented{flex-wrap:wrap}
+.segmented button{flex:1 1 40%}
+}
 `
 
 export function AccountLayout({ children, active }: { children: React.ReactNode; active: string }) {

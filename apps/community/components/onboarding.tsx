@@ -34,6 +34,14 @@ const styles = `
 .onboarding-submit{width:100%;background:#00A86B;color:#18161a;border:none;padding:13px;border-radius:8px;font-size:14px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;margin-top:6px}
 .onboarding-submit:hover{background:#00c97b}
 .onboarding-submit:disabled{opacity:.55;cursor:not-allowed}
+@media(max-width:600px){
+.onboarding-page{padding:16px}
+.onboarding-card{padding:22px 18px}
+.onboarding-card h1{font-size:22px}
+.onboarding-card .field input{font-size:16px}
+.segmented{flex-wrap:wrap}
+.segmented button{flex:1 1 40%}
+}
 `
 
 export function OnboardingPage() {
