@@ -25,27 +25,47 @@ const base: PublicProfile = {
 }
 
 function renderProfile(overrides: Partial<PublicProfile> = {}) {
-  render(<PublicProfileView profile={{ ...base, ...overrides }} isOwnProfile={false} />)
+  return render(<PublicProfileView profile={{ ...base, ...overrides }} isOwnProfile={false} />)
 }
 
 describe('PublicProfileView skill levels', () => {
-  it('renders a validated skill differently from a declared one', () => {
-    renderProfile({
+  // Los validados son la señal que las empresas vienen a ver: van en su propia
+  // sección, separados de los que el candidato solo declaró.
+  it('separates a validated skill from a merely declared one', () => {
+    const { container } = renderProfile({
       skillLevels: [{ skillName: 'react', level: 'intermedio', achievedAt: '2026-09-01T00:00:00Z' }],
     })
 
-    const validated = screen.getByText('react').closest('span')
-    const plain = screen.getByText('azure').closest('span')
-
-    expect(validated?.className).toContain('is-validated')
-    expect(plain?.className).not.toContain('is-validated')
+    const badge = container.querySelector('.skill-badge')
+    expect(badge?.textContent).toContain('react')
     expect(screen.getByText('Intermedio')).toBeInTheDocument()
+
+    // El que no está validado queda como chip simple, fuera de esa sección.
+    const plain = screen.getByText('azure').closest('span')
+    expect(plain?.className).toContain('skill-chip-plain')
+    expect(container.querySelectorAll('.skill-badge')).toHaveLength(1)
   })
 
-  it('shows no level badge when nothing is validated', () => {
-    renderProfile({ skillLevels: [] })
-    expect(screen.queryByText('Intermedio')).not.toBeInTheDocument()
-    expect(screen.getByText('react').closest('span')?.className).not.toContain('is-validated')
+  it.each([
+    ['basico', 'Básico'],
+    ['intermedio', 'Intermedio'],
+    ['avanzado', 'Avanzado'],
+  ])('gives %s its own colour class', (level, label) => {
+    const { container } = renderProfile({
+      skillLevels: [{ skillName: 'react', level, achievedAt: '2026-09-01T00:00:00Z' }],
+    })
+
+    const badge = container.querySelector('.skill-badge')
+    expect(badge?.className).toContain(`is-${level}`)
+    expect(screen.getByText(label)).toBeInTheDocument()
+  })
+
+  it('shows no validated section when nothing is validated', () => {
+    const { container } = renderProfile({ skillLevels: [] })
+
+    expect(container.querySelector('.skill-badge')).toBeNull()
+    expect(screen.queryByText(/skills validados/i)).not.toBeInTheDocument()
+    expect(screen.getByText('react').closest('span')?.className).toContain('skill-chip-plain')
   })
 
   // El backend ya filtra, pero el render no debe depender de ello: parte de
@@ -67,5 +87,28 @@ describe('PublicProfileView skill levels', () => {
   it('survives a profile with no skillLevels field at all', () => {
     renderProfile({ skillLevels: undefined })
     expect(screen.getByText('react')).toBeInTheDocument()
+  })
+})
+
+describe('PublicProfileView actions', () => {
+  // Seguir y mensajería no existen en el backend: se muestran apagadas y
+  // diciendo por qué, en vez de fingir que funcionan.
+  it('disables the actions that are not built yet, with their reason', () => {
+    renderProfile()
+
+    const follow = screen.getByRole('button', { name: 'Seguir' })
+    const message = screen.getByRole('button', { name: 'Mensaje' })
+
+    expect(follow).toBeDisabled()
+    expect(follow.getAttribute('title')).toMatch(/todavía no/i)
+    expect(message).toBeDisabled()
+    expect(message.getAttribute('title')).toMatch(/todavía no/i)
+  })
+
+  it('offers editing instead of following on your own profile', () => {
+    render(<PublicProfileView profile={base} isOwnProfile />)
+
+    expect(screen.getByRole('link', { name: /editar perfil/i })).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Seguir' })).not.toBeInTheDocument()
   })
 })
