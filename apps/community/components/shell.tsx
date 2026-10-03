@@ -2,32 +2,15 @@
 
 import { useState, useEffect, useCallback, useMemo, type ReactNode } from 'react'
 import Link from 'next/link'
-import { usePathname, useSearchParams, useRouter } from 'next/navigation'
+import { usePathname, useRouter } from 'next/navigation'
 import { Bell, Menu, Plus, Search, X } from 'lucide-react'
 import { fetchCurrentUser, getCachedUser } from '../lib/session'
 import { ShellContext } from '../lib/shell-context'
-import { LeftSidebar, RightSidebar, ProfileMenu, PublishModal, AuthModal, TAB_KEYS, KEY_TABS, FOR_YOU_TAB } from './community-hub'
+import { LeftSidebar, RightSidebar, ProfileMenu, PublishModal, AuthModal } from './community-hub'
 import { ProfileGate } from './profile-gate'
-
-// The left/right sidebars need to know which of the 4 feed tabs is
-// "active" even on pages that aren't the feed itself (a post, a vacancy, a
-// profile) — derived straight from the URL so it doesn't depend on any
-// page-specific state.
-function deriveActiveTab(pathname: string, searchParams: URLSearchParams): string {
-  if (pathname === '/') {
-    const key = searchParams.get('tab')
-    return (key && KEY_TABS[key]) || 'Feed'
-  }
-  if (pathname.startsWith('/para-ti')) return FOR_YOU_TAB
-  if (pathname.startsWith('/vacantes/')) return 'Vacantes & Freelance'
-  const from = searchParams.get('from')
-  if (from && KEY_TABS[from]) return KEY_TABS[from]
-  return 'Feed'
-}
 
 export function CommunityShell({ children }: { children: ReactNode }) {
   const pathname = usePathname()
-  const searchParams = useSearchParams()
   const router = useRouter()
 
   const [user, setUser] = useState<any>(null)
@@ -47,24 +30,16 @@ export function CommunityShell({ children }: { children: ReactNode }) {
     // de cuenta que viven fuera de este layout (FR-024, FR-025).
   }, [])
 
-  const activeTab = deriveActiveTab(pathname, searchParams)
   // Detalle y perfiles se leen en una sola columna: el diseño quita los
   // sidebars para no competir con el contenido.
   const isFocusedRoute = ['/post/', '/vacantes/', '/users/', '/empresas/'].some(prefix => pathname.startsWith(prefix))
     || pathname === '/profile'
 
-  const setActiveTab = useCallback((tab: string) => {
-    if (tab === FOR_YOU_TAB) { router.push('/para-ti'); return }
-    const key = TAB_KEYS[tab]
-    const query = !key || tab === 'Feed' ? '' : `?tab=${key}`
-    router.push(`/${query}`, { scroll: false })
-  }, [router])
-
+  // Un tema filtra el feed; desde cualquier otra pantalla primero se vuelve a él.
   const onTagClick = useCallback((tag: string) => {
     setActiveTag(prev => (prev === tag ? null : tag))
-    if (tag === 'empleos') setActiveTab('Vacantes & Freelance')
-    else if (pathname !== '/') router.push('/')
-  }, [setActiveTab, pathname, router])
+    if (pathname !== '/') router.push('/')
+  }, [pathname, router])
 
   const requestAuth = useCallback(() => setAuthOpen(true), [])
 
@@ -91,7 +66,7 @@ export function CommunityShell({ children }: { children: ReactNode }) {
 
         <div className={`mobile-drawer ${mobileMenu ? 'open' : ''}`}>
           <div className="drawer-head"><strong>Menú</strong><button className="icon-button" onClick={() => setMobileMenu(false)} aria-label="Cerrar menú"><X size={18} /></button></div>
-          <LeftSidebar onPublish={() => setPublishOpen(true)} activeTab={activeTab} setActiveTab={setActiveTab} activeTag={activeTag} onTagClick={onTagClick} />
+          <LeftSidebar onPublish={() => setPublishOpen(true)} activeTag={activeTag} onTagClick={onTagClick} />
         </div>
 
         {isFocusedRoute ? (
@@ -100,9 +75,9 @@ export function CommunityShell({ children }: { children: ReactNode }) {
           <div className="layout-focused">{children}</div>
         ) : (
           <div className="layout">
-            <LeftSidebar onPublish={() => setPublishOpen(true)} activeTab={activeTab} setActiveTab={setActiveTab} activeTag={activeTag} onTagClick={onTagClick} />
+            <LeftSidebar onPublish={() => setPublishOpen(true)} activeTag={activeTag} onTagClick={onTagClick} />
             {children}
-            <RightSidebar onUnlock={requestAuth} activeTab={activeTab} />
+            <RightSidebar onUnlock={requestAuth} />
           </div>
         )}
 

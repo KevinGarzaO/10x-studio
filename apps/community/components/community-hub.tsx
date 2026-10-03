@@ -13,34 +13,13 @@ import { companySlug, formatCompanyName } from '../lib/company'
 import { useShell } from '../lib/shell-context'
 import { HeroBanner } from './hero-banner'
 import { getToken, clearSession } from '../lib/session'
+import { buildFeed, type MatchedItem } from '../lib/mixed-feed'
+import { ForYouCard } from './for-you-card'
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'
 
 // Module-level cache to preserve feed state across navigations
-const feedCache = new Map<string, { posts: FeedPost[]; page: number; hasMore: boolean }>()
-
-// Single source of truth for the feed destinations — used by both the left
-// sidebar nav and the feed tabs, so they always share the same label and icon
-// instead of drifting apart. "Para ti" is only offered to signed-in people and
-// lives on its own route (/para-ti), see navTabs().
-export const FOR_YOU_TAB = 'Para ti'
-
-export const tabs = [
-  { label: 'Feed', icon: Flame },
-  { label: 'Vacantes & Freelance', icon: BriefcaseBusiness },
-]
-
-const forYouTab = { label: FOR_YOU_TAB, icon: Target }
-
-/** Los destinos que ve cada quien: Feed y Vacantes, y Para ti si hay sesión. */
-export function navTabs(signedIn: boolean) {
-  return signedIn ? [...tabs, forYouTab] : tabs
-}
-
-// Short, URL-safe keys for the ?tab=/&from= query params — avoids spaces and
-// "&" in the address bar that come from using the display labels directly.
-export const TAB_KEYS: Record<string, string> = { 'Feed': 'trending', 'Vacantes & Freelance': 'jobs' }
-export const KEY_TABS: Record<string, string> = Object.fromEntries(Object.entries(TAB_KEYS).map(([label, key]) => [key, label]))
+const feedCache = new Map<string, FeedSnapshot>()
 
 interface EditorialPost {
   id: string
@@ -142,10 +121,8 @@ export function ProfileMenu({ user }: { user: any }) {
   )
 }
 
-export function LeftSidebar({ onPublish, activeTab, setActiveTab, activeTag, onTagClick }: { onPublish: () => void; activeTab: string; setActiveTab: (v: string) => void; activeTag: string | null; onTagClick: (tag: string) => void }) {
+export function LeftSidebar({ onPublish, activeTag, onTagClick }: { onPublish: () => void; activeTag: string | null; onTagClick: (tag: string) => void }) {
   const [tags, setTags] = useState<string[]>([])
-  const { user } = useShell()
-
   useEffect(() => {
     fetch(`${API_URL}/api/community/stats/tags?limit=6`)
       .then(r => r.ok ? r.json() : null)
@@ -154,12 +131,6 @@ export function LeftSidebar({ onPublish, activeTab, setActiveTab, activeTag, onT
   }, [])
 
   return <aside className="left-sidebar">
-    <div className="sidebar-section">
-      <p className="eyebrow">Comunidad</p>
-      <nav className="nav-list" aria-label="Navegación principal">
-        {navTabs(!!user).map(({ label, icon: Icon }) => <button key={label} className={`nav-item ${activeTab === label && !activeTag ? 'active' : ''}`} onClick={() => setActiveTab(label)}><Icon size={17} /><span>{label}</span></button>)}
-      </nav>
-    </div>
     {tags.length > 0 && (
       <div className="sidebar-section tags-section"><div className="section-heading"><p className="eyebrow">Temas en tendencia</p></div>{tags.map(tag => <button key={tag} className={`tag-link ${activeTag === tag ? 'active' : ''}`} aria-pressed={activeTag === tag} onClick={() => onTagClick(tag)}><Hash size={14} />{tag}</button>)}</div>
     )}
@@ -277,7 +248,7 @@ function buildApplyUrl(platform: string | null, sourceUrl: string | null): strin
   return sourceUrl
 }
 
-export function PostCard({ post, onAuthRequired, activeTab }: { post: FeedPost; onAuthRequired?: () => void; activeTab?: string }) {
+export function PostCard({ post, onAuthRequired }: { post: FeedPost; onAuthRequired?: () => void }) {
   const router = useRouter(); const [voted, setVoted] = useState(false); const [saved, setSaved] = useState(!!post.isSaved)
   const [historyId, setHistoryId] = useState<string | null>(post.historyId ?? null)
   // Session comes from the shared shell context — every card used to fetch
@@ -325,7 +296,7 @@ export function PostCard({ post, onAuthRequired, activeTab }: { post: FeedPost; 
   const rawApplyUrl = job?.applyUrl || post.source_url || null
   const applyUrl = buildApplyUrl(post.platform ?? null, rawApplyUrl)
 
-  const openPost = (e?: React.MouseEvent<HTMLElement>) => { if (e?.target instanceof HTMLElement && e.target.closest('button, a, input, textarea, select')) return; const isJob = post.type === 'job'; const slug = post.slug || post.id; const basePath = isJob ? (slug.startsWith('/vacantes/') ? slug : `/vacantes/${slug}`) : `/post/${post.id}`; const tabParam = activeTab && activeTab !== 'Tendencias' ? `${basePath.includes('?') ? '&' : '?'}from=${TAB_KEYS[activeTab] || 'trending'}` : ''; router.push(`${basePath}${tabParam}`) }
+  const openPost = (e?: React.MouseEvent<HTMLElement>) => { if (e?.target instanceof HTMLElement && e.target.closest('button, a, input, textarea, select')) return; const isJob = post.type === 'job'; const slug = post.slug || post.id; const basePath = isJob ? (slug.startsWith('/vacantes/') ? slug : `/vacantes/${slug}`) : `/post/${post.id}`; router.push(basePath) }
 
   if (isJob) {
     // Chips con icono en vez del bloque de texto denso: empresa, ubicación,
@@ -410,12 +381,7 @@ export function PostCard({ post, onAuthRequired, activeTab }: { post: FeedPost; 
   </article>
 }
 
-/** Las pestañas del feed. Las usan el feed y Para ti, así se ven idénticas. */
-export function FeedTabs({ activeTab, signedIn, onSelect }: { activeTab: string; signedIn: boolean; onSelect: (tab: string) => void }) {
-  return <div className="feed-tabs" role="tablist">{navTabs(signedIn).map(({ label, icon: Icon }) => <button key={label} role="tab" aria-selected={activeTab === label} className={activeTab === label ? 'active' : ''} onClick={() => onSelect(label)}><Icon size={15} />{label}</button>)}</div>
-}
-
-export function RightSidebar({ onUnlock, activeTab }: { onUnlock: () => void; activeTab: string }) {
+export function RightSidebar({ onUnlock }: { onUnlock: () => void }) {
   const [trending, setTrending] = useState<FeedPost[]>([])
   const [featured, setFeatured] = useState<FeedPost[]>([])
   const [stats, setStats] = useState<{ members: number; posts: number } | null>(null)
@@ -427,11 +393,6 @@ export function RightSidebar({ onUnlock, activeTab }: { onUnlock: () => void; ac
       .catch(() => {})
   }, [])
 
-  // The sidebar widgets stay constant across tabs — the only tab-driven
-  // change is hiding "Oportunidades destacadas" while already on the Jobs
-  // tab, to avoid showing the same jobs twice.
-  const showFeatured = activeTab !== 'Vacantes & Freelance'
-
   useEffect(() => {
     fetch(`${API_URL}/api/community/posts/editorial?page=1&limit=3`)
       .then(r => r.ok ? r.json() : null)
@@ -440,12 +401,11 @@ export function RightSidebar({ onUnlock, activeTab }: { onUnlock: () => void; ac
   }, [])
 
   useEffect(() => {
-    if (!showFeatured) return
     fetch(`${API_URL}/api/community/posts?page=1&limit=3&type=job`)
       .then(r => r.ok ? r.json() : null)
       .then(d => setFeatured(d?.posts || []))
       .catch(() => {})
-  }, [showFeatured])
+  }, [])
 
   const parseMiniJob = (content: string) => {
     const decoded = unescapeHtml(content)
@@ -469,7 +429,7 @@ export function RightSidebar({ onUnlock, activeTab }: { onUnlock: () => void; ac
       )}
     </section>
 
-    {showFeatured && (
+    {featured.length > 0 && (
       <section className="widget opportunities">
         <div className="widget-title"><span>Oportunidades destacadas</span><BriefcaseBusiness size={16} /></div>
         {featured.length > 0 ? featured.map(post => {
@@ -521,116 +481,161 @@ export function AuthModal({ onClose }: { onClose: () => void }) {
 // The feed's content column — rendered as {children} inside the shared
 // CommunityShell (topbar + sidebars) so navigating to/from a post, vacancy,
 // or profile only swaps this column instead of remounting the whole page.
+//
+// Un solo feed con tres tipos de tarjeta: artículos, vacantes y "Para ti"
+// (vacantes que coinciden con tus skills, solo con sesión). buildFeed() decide el
+// orden; aquí solo se traen las fuentes y se pagina.
+const ARTICLES_PER_PAGE = 10
+const JOBS_PER_PAGE = 7
+
+interface FeedSnapshot {
+  articles: FeedPost[]
+  jobs: FeedPost[]
+  forYou: MatchedItem[]
+  page: number
+  moreArticles: boolean
+  moreJobs: boolean
+}
+
+async function fetchJson(url: string, token?: string | null): Promise<any | null> {
+  try {
+    const res = await fetch(url, token ? { headers: { Authorization: `Bearer ${token}` } } : undefined)
+    return res.ok ? await res.json() : null
+  } catch {
+    return null
+  }
+}
+
 export function Feed() {
-  const router = useRouter()
-  const searchParams = useSearchParams()
-  const tabKeyFromUrl = searchParams.get('tab')
-  const initialTab = (tabKeyFromUrl && KEY_TABS[tabKeyFromUrl]) || 'Feed'
   const { search, activeTag, setActiveTag, requestAuth, user } = useShell()
 
-  const [activeTab, setActiveTabState] = useState(initialTab)
   const todayLabel = useMemo(() => {
     const label = new Date().toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long' })
     return label.charAt(0).toUpperCase() + label.slice(1)
   }, [])
-  const cached = feedCache.get(initialTab)
-  const [posts, setPosts] = useState<FeedPost[]>(cached?.posts || [])
-  const [page, setPage] = useState(cached?.page || 1)
-  const [loading, setLoading] = useState(false)
-  const [hasMore, setHasMore] = useState(cached?.hasMore ?? true)
 
-  // Keep activeTab in sync with the URL through Next's router (not raw
-  // history.pushState) so the browser's back/forward buttons work and the
-  // encoding matches the rest of the app (encodeURIComponent, not
-  // URLSearchParams' "+"-for-space form-encoding).
-  useEffect(() => {
-    const next = (tabKeyFromUrl && KEY_TABS[tabKeyFromUrl]) || 'Feed'
-    setActiveTabState(prev => (prev === next ? prev : next))
-  }, [tabKeyFromUrl])
+  // Quién ve el feed se decide por tener sesión, no por el usuario ya cargado:
+  // así "Para ti" entra desde la primera carga y las tarjetas no se reacomodan.
+  const [snapshot, setSnapshot] = useState<FeedSnapshot | null>(null)
+  const [loading, setLoading] = useState(true)
+  const snapshotRef = useRef<FeedSnapshot | null>(null)
+  const loadingRef = useRef(false)
+  const cacheKeyRef = useRef('guest')
 
-  const setActiveTab = useCallback((tab: string) => {
-    if (tab === FOR_YOU_TAB) { router.push('/para-ti'); return }
-    const key = TAB_KEYS[tab]
-    const query = !key || tab === 'Feed' ? '' : `?tab=${key}`
-    router.push(`/${query}`, { scroll: false })
-  }, [router])
+  const commit = (next: FeedSnapshot) => {
+    snapshotRef.current = next
+    feedCache.set(cacheKeyRef.current, next)
+    setSnapshot(next)
+  }
 
-  const fetchPosts = async (pageNum: number, tab: string, append = false) => {
-    setLoading(true)
-    try {
-      let url: string
-      // Jobs get a bigger page than other tabs — the feed interleaves one
-      // post per company per "round" for diversity, and with 10+ distinct
-      // companies now posting, a 10-item page can't fit a full round,
-      // silently pushing some companies' newest listings to page 2 no
-      // matter how recent they are.
-      const pageSize = tab === 'Vacantes & Freelance' ? 20 : 10
-      if (tab === 'Vacantes & Freelance') {
-        url = `${API_URL}/api/community/posts?page=${pageNum}&limit=${pageSize}&type=job`
-      } else {
-        url = `${API_URL}/api/community/posts/editorial?page=${pageNum}&limit=${pageSize}`
-      }
-      const res = await fetch(url)
-      const data = await res.json()
-      const newPosts: FeedPost[] = data.posts || []
-      if (append) {
-        setPosts(prev => {
-          const merged = [...prev, ...newPosts]
-          feedCache.set(tab, { posts: merged, page: pageNum, hasMore: newPosts.length === pageSize })
-          return merged
-        })
-      } else {
-        setPosts(newPosts)
-        feedCache.set(tab, { posts: newPosts, page: pageNum, hasMore: newPosts.length === pageSize })
-      }
-      setHasMore(newPosts.length === 10)
-    } catch {
-    } finally {
-      setLoading(false)
+  const fetchBatch = async (pageNum: number) => {
+    const [articles, jobs] = await Promise.all([
+      fetchJson(`${API_URL}/api/community/posts/editorial?page=${pageNum}&limit=${ARTICLES_PER_PAGE}`),
+      fetchJson(`${API_URL}/api/community/posts?page=${pageNum}&limit=${JOBS_PER_PAGE}&type=job`),
+    ])
+    return {
+      articles: (articles?.posts || []) as FeedPost[],
+      jobs: (jobs?.posts || []) as FeedPost[],
     }
   }
 
+  // Primera carga: desde caché si ya se había visto, o las tres fuentes a la vez.
   useEffect(() => {
-    // Switching tabs must always update what's on screen — either from
-    // cache, or by fetching. Previously this bailed out on a cache hit
-    // without ever calling setPosts, so the feed kept showing whatever the
-    // last-rendered tab had.
-    const tabCache = feedCache.get(activeTab)
-    if (tabCache) {
-      setPosts(tabCache.posts)
-      setPage(tabCache.page)
-      setHasMore(tabCache.hasMore)
+    const token = getToken()
+    cacheKeyRef.current = token ? 'member' : 'guest'
+
+    const cached = feedCache.get(cacheKeyRef.current)
+    if (cached) {
+      snapshotRef.current = cached
+      setSnapshot(cached)
+      setLoading(false)
       return
     }
-    setPosts([])
-    setPage(1)
-    fetchPosts(1, activeTab)
-  }, [activeTab])
+
+    let cancelled = false
+    loadingRef.current = true
+    const run = async () => {
+      const [batch, forYouData] = await Promise.all([
+        fetchBatch(1),
+        token ? fetchJson(`${API_URL}/api/community/feed/for-you`, token) : Promise.resolve(null),
+      ])
+      if (cancelled) return
+      const forYou = ((forYouData?.items || []) as MatchedItem[]).filter(item => item.matchingSkills > 0)
+      commit({
+        articles: batch.articles,
+        jobs: batch.jobs,
+        forYou,
+        page: 1,
+        moreArticles: batch.articles.length === ARTICLES_PER_PAGE,
+        moreJobs: batch.jobs.length === JOBS_PER_PAGE,
+      })
+      loadingRef.current = false
+      setLoading(false)
+    }
+    run()
+
+    return () => { cancelled = true; loadingRef.current = false }
+  }, [])
+
+  const loadMore = async () => {
+    const current = snapshotRef.current
+    if (!current || loadingRef.current || (!current.moreArticles && !current.moreJobs)) return
+    loadingRef.current = true
+    setLoading(true)
+    const nextPage = current.page + 1
+    const batch = await fetchBatch(nextPage)
+    const fresh = snapshotRef.current ?? current
+    const knownArticles = new Set(fresh.articles.map(p => p.id))
+    const knownJobs = new Set(fresh.jobs.map(p => p.id))
+    commit({
+      ...fresh,
+      articles: [...fresh.articles, ...batch.articles.filter(p => !knownArticles.has(p.id))],
+      jobs: [...fresh.jobs, ...batch.jobs.filter(p => !knownJobs.has(p.id))],
+      page: nextPage,
+      moreArticles: batch.articles.length === ARTICLES_PER_PAGE,
+      moreJobs: batch.jobs.length === JOBS_PER_PAGE,
+    })
+    loadingRef.current = false
+    setLoading(false)
+  }
 
   useEffect(() => {
     const handleScroll = () => {
-      if (loading || !hasMore) return
-      if (window.innerHeight + window.scrollY >= document.body.offsetHeight - 800) {
-        const nextPage = page + 1
-        setPage(nextPage)
-        fetchPosts(nextPage, activeTab, true)
-      }
+      if (window.innerHeight + window.scrollY >= document.body.offsetHeight - 800) loadMore()
     }
     window.addEventListener('scroll', handleScroll)
     return () => window.removeEventListener('scroll', handleScroll)
-  }, [page, loading, hasMore, activeTab])
+  }, [])
 
-  const filteredPosts = useMemo(() => {
-    return posts.filter(p => {
-      const haystack = `${(p as any).title || ''} ${(p as any).content || ''} ${(p.tags || []).join(' ')}`.toLowerCase()
+  const entries = useMemo(() => {
+    if (!snapshot) return []
+    const matches = (text: string) => {
+      const haystack = text.toLowerCase()
       if (!haystack.includes(search.toLowerCase())) return false
       if (activeTag && !haystack.includes(activeTag.toLowerCase())) return false
       return true
+    }
+    const postText = (p: FeedPost) => `${(p as any).title || ''} ${(p as any).content || ''} ${(p.tags || []).join(' ')}`
+    return buildFeed<FeedPost>({
+      articles: snapshot.articles.filter(p => matches(postText(p))),
+      jobs: snapshot.jobs.filter(p => matches(postText(p))),
+      forYou: snapshot.forYou.filter(item => matches(`${item.title} ${item.company || ''} ${item.skills.join(' ')}`)),
+      moreArticles: snapshot.moreArticles,
+      moreJobs: snapshot.moreJobs,
     })
-  }, [search, posts, activeTag])
+  }, [snapshot, search, activeTag])
+
+  // Si lo mostrado no llena la pantalla no hay scroll que dispare la siguiente
+  // página: se pide sola mientras falte contenido.
+  useEffect(() => {
+    if (loading || !snapshot) return
+    if (document.body.offsetHeight <= window.innerHeight + 800) loadMore()
+  }, [entries, loading, snapshot])
+
+  const hasMore = !!snapshot && (snapshot.moreArticles || snapshot.moreJobs)
 
   return <main className="feed">
-    {!user && <HeroBanner onViewJobs={() => setActiveTab('Vacantes & Freelance')} />}
+    {!user && <HeroBanner onViewJobs={() => document.querySelector('.post-card.job-card')?.scrollIntoView({ behavior: 'smooth' })} />}
     <div className="feed-heading">
       <div>
         <p className="eyebrow">{todayLabel}</p>
@@ -638,10 +643,13 @@ export function Feed() {
         {activeTag && <span className="active-filter-chip"><Hash size={12} />{activeTag}<button onClick={() => setActiveTag(null)} aria-label="Quitar filtro de tema"><X size={12} /></button></span>}
       </div>
     </div>
-    <FeedTabs activeTab={activeTab} signedIn={!!user} onSelect={setActiveTab} />
-    <div className="post-list">{filteredPosts.map(post => <PostCard key={post.id} post={post} onAuthRequired={requestAuth} activeTab={activeTab} />)}</div>
+    <div className="post-list">
+      {entries.map(entry => entry.kind === 'forYou'
+        ? <ForYouCard key={entry.key} item={entry.item} />
+        : <PostCard key={entry.key} post={entry.post} onAuthRequired={requestAuth} />)}
+    </div>
     {loading && <div style={{ textAlign: 'center', padding: 20, color: '#b3aba1' }}><Sparkles size={16} className="spin" /> Cargando más posts...</div>}
-    {!loading && filteredPosts.length === 0 && <div style={{ textAlign: 'center', padding: 40, color: '#b3aba1' }}><PenLine size={32} style={{ marginBottom: 12, opacity: 0.5 }} /><p>{activeTab === 'Vacantes & Freelance' ? 'No hay vacantes todavía' : 'No hay posts disponibles'}</p></div>}
-    {!hasMore && filteredPosts.length > 0 && <div style={{ textAlign: 'center', padding: 20, color: '#b3aba1' }}>No hay más posts</div>}
+    {!loading && entries.length === 0 && <div style={{ textAlign: 'center', padding: 40, color: '#b3aba1' }}><PenLine size={32} style={{ marginBottom: 12, opacity: 0.5 }} /><p>No hay posts disponibles</p></div>}
+    {!loading && !hasMore && entries.length > 0 && <div style={{ textAlign: 'center', padding: 20, color: '#b3aba1' }}>No hay más posts</div>}
   </main>
 }

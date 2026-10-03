@@ -102,7 +102,7 @@ export default function CompanyProfilePage() {
         </div>
         {jobs.length > 0 ? (
           <div className="post-list" style={{ marginTop: 16 }}>
-            {jobs.map(job => <PostCard key={job.id} post={job} onAuthRequired={requestAuth} activeTab="Vacantes & Freelance" />)}
+            {jobs.map(job => <PostCard key={job.id} post={job} onAuthRequired={requestAuth} />)}
           </div>
         ) : (
           <p className="muted" style={{ padding: '20px 0' }}>No hay vacantes activas de esta empresa por ahora.</p>

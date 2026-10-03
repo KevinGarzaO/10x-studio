@@ -537,3 +537,11 @@ button { cursor: pointer; }
 .claim-status.is-rejected{background:rgba(239,68,68,.08);border-color:rgba(239,68,68,.32)}
 .claim-status.is-rejected > svg{color:#f87171}
 .claim-form .spin{animation:spin 1s linear infinite}
+
+/* --- Feed único: cada tipo de tarjeta se distingue por su insignia y su acento --- */
+.post-type-badge { display: inline-flex; align-items: center; gap: 5px; }
+.post-type-badge.is-for-you { background: #34224a; color: #d8b4fe; }
+.post-card.is-for-you { border-color: #4a3562; box-shadow: inset 3px 0 0 #a855f7; }
+.match-pill { display: inline-flex; align-items: center; gap: 5px; padding: 4px 9px; border-radius: 999px; background: #34224a; color: #d8b4fe; font-size: 11px; font-weight: 600; }
+.post-card.job-card:not(.is-for-you) { box-shadow: inset 3px 0 0 #00A86B; }
+.post-card:not(.job-card) { box-shadow: inset 3px 0 0 #6366f1; }
