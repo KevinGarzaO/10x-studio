@@ -1,5 +1,5 @@
 import { Router, Request, Response } from 'express'
-import { supabase } from '../../../services/supabase.service'
+import { supabase, createAuthClient } from '../../../services/supabase.service'
 import { communityAuthMiddleware, AuthRequest } from '../../../middleware/community-auth.middleware'
 
 const router = Router()
@@ -23,7 +23,7 @@ router.post('/signup', async (req: Request, res: Response) => {
     }
 
     const communityAppUrl = process.env.COMMUNITY_APP_URL || 'http://localhost:3002'
-    const { data: authData, error: authError } = await supabase.auth.signUp({
+    const { data: authData, error: authError } = await createAuthClient().auth.signUp({
       email,
       password,
       options: {
@@ -64,7 +64,7 @@ router.post('/login', async (req: Request, res: Response) => {
       return res.status(400).json({ error: 'Email y password son requeridos' })
     }
 
-    const { data, error } = await supabase.auth.signInWithPassword({
+    const { data, error } = await createAuthClient().auth.signInWithPassword({
       email,
       password,
     })
@@ -92,7 +92,7 @@ router.post('/refresh', async (req: Request, res: Response) => {
       return res.status(400).json({ error: 'refresh_token es requerido' })
     }
 
-    const { data, error } = await supabase.auth.refreshSession({ refresh_token })
+    const { data, error } = await createAuthClient().auth.refreshSession({ refresh_token })
 
     if (error || !data.session) {
       return res.status(401).json({ error: error?.message || 'No se pudo renovar la sesión' })
