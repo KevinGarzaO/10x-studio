@@ -1,6 +1,7 @@
 import { Router, Response } from 'express'
 import { supabase } from '../../../services/supabase.service'
 import { communityAuthMiddleware, AuthRequest } from '../../../middleware/community-auth.middleware'
+import { syncVacancyToCommunity } from '../../../services/scraper/sync'
 
 const router = Router()
 
@@ -99,12 +100,16 @@ router.get('/for-you', communityAuthMiddleware, async (req: AuthRequest, res: Re
       })
     }
 
-    items.sort((a, b) => {
+    // "Para ti" solo muestra lo que de verdad coincide con tus skills: una
+    // vacante de tu rol y nivel que no pide ninguno de ellos no es un match.
+    const matched = items.filter(item => item.matchingSkills > 0)
+
+    matched.sort((a, b) => {
       if (b.matchingSkills !== a.matchingSkills) return b.matchingSkills - a.matchingSkills
       return new Date(b.postDate ?? 0).getTime() - new Date(a.postDate ?? 0).getTime()
     })
 
-    const page = items.slice(0, 50)
+    const page = matched.slice(0, 50)
 
     // Snapshot side effect — every vacancy shown gets (or refreshes) a
     // history row, so it survives even if scraper_posts later sweeps it.
@@ -138,10 +143,67 @@ router.get('/for-you', communityAuthMiddleware, async (req: AuthRequest, res: Re
       })
     }
 
-    res.json({ items: itemsWithHistory, total: items.length })
+    res.json({ items: itemsWithHistory, total: matched.length })
   } catch (error) {
     console.error('Community for-you feed error:', error)
     res.status(500).json({ error: 'Error al obtener tu feed personalizado' })
+  }
+})
+
+/**
+ * POST /api/community/feed/for-you/open
+ *
+ * AUTH: comunidad. Devuelve la página de detalle de una vacante de "Para ti".
+ *
+ * Las vacantes del scraper que aparecen en "Para ti" viven en un área de paso
+ * (`scraper_posts`) y no tienen página propia hasta que el sync las promueve a
+ * `community_posts`, con un tope diario. Al abrirla desde aquí se promueve en el
+ * momento, para que la persona caiga en el detalle y no en un sitio externo.
+ *
+ * `{ url: null }` significa que no hay detalle (la empresa ya tiene dueño, o la
+ * vacante ya no existe): el frontend abre entonces el enlace original.
+ */
+router.post('/for-you/open', communityAuthMiddleware, async (req: AuthRequest, res: Response) => {
+  try {
+    const sourceId = typeof req.body?.sourceId === 'string' ? req.body.sourceId : ''
+    const externalUrl = typeof req.body?.url === 'string' ? req.body.url : ''
+    if (!sourceId) return res.status(400).json({ error: 'sourceId es requerido' })
+
+    let communityId: string | null = null
+
+    const { data: staged } = await supabase
+      .from('scraper_posts')
+      .select('id, post_type, is_spam')
+      .eq('id', sourceId)
+      .maybeSingle()
+
+    if (staged) {
+      // Solo se promueve lo que el feed habría mostrado: una vacante real.
+      if (staged.post_type !== 'vacancy' || staged.is_spam) return res.json({ url: null })
+      communityId = await syncVacancyToCommunity(staged.id)
+    } else if (externalUrl) {
+      // Otra persona (o el sync) ya la promovió y el área de paso la borró: se
+      // encuentra por el enlace original, que la vacante conserva como source_url.
+      const { data: existing } = await supabase
+        .from('community_posts')
+        .select('id')
+        .eq('source_url', externalUrl)
+        .maybeSingle()
+      communityId = existing?.id ?? null
+    }
+
+    if (!communityId) return res.json({ url: null })
+
+    const { data: post } = await supabase
+      .from('community_posts')
+      .select('id, slug')
+      .eq('id', communityId)
+      .maybeSingle()
+
+    res.json({ url: post ? `/vacantes/${post.slug || post.id}` : null })
+  } catch (error) {
+    console.error('Community for-you open error:', error)
+    res.status(500).json({ error: 'No pudimos abrir la vacante' })
   }
 })
 
