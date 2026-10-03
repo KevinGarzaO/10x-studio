@@ -40,6 +40,7 @@ export default function ParaTiPage() {
   const router = useRouter()
   const [items, setItems] = useState<MatchedItem[] | null>(null)
   const [error, setError] = useState('')
+  const [opening, setOpening] = useState<string | null>(null)
 
   useEffect(() => {
     fetchCurrentUser().then(user => {
@@ -85,6 +86,34 @@ export default function ParaTiPage() {
     }
   }
 
+  // Solo lo que de verdad coincide con tus skills; el backend ya lo filtra, esto
+  // cubre una respuesta más vieja.
+  const matches = items?.filter(item => item.matchingSkills > 0) ?? null
+
+  // Abre el detalle de la vacante dentro de AvoTalent, igual que "Postularse" en
+  // Vacantes. Las del scraper no tienen página hasta que se promueven, así que el
+  // backend lo hace en ese momento; si no hay detalle, se abre el enlace original.
+  async function openItem(item: MatchedItem) {
+    if (item.sourceType === 'community') { router.push(item.url); return }
+
+    const key = `${item.sourceType}:${item.id}`
+    setOpening(key)
+    try {
+      const res = await fetch(`${API_URL}/api/community/feed/for-you/open`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${getToken()}` },
+        body: JSON.stringify({ sourceId: item.id, url: item.url }),
+      })
+      const data = res.ok ? await res.json() : null
+      if (data?.url) { router.push(data.url); return }
+    } catch {
+      // sin conexión o sin detalle: se abre el enlace original
+    } finally {
+      setOpening(null)
+    }
+    if (!window.open(item.url, '_blank', 'noopener,noreferrer')) window.location.assign(item.url)
+  }
+
   // Las pestañas navegan igual que en el feed: Feed y Vacantes vuelven a "/", y
   // esta pantalla es la pestaña "Para ti".
   const selectTab = (tab: string) => {
@@ -107,26 +136,29 @@ export default function ParaTiPage() {
 
       {!error && items === null && <p className="muted" style={{ padding: '20px 0' }}>Buscando vacantes que hagan match contigo...</p>}
 
-      {!error && items && items.length === 0 && (
+      {!error && matches && matches.length === 0 && (
         <div className="empty-state">
           <Target size={28} />
-          <h2>Todavía no hay vacantes para tu perfil</h2>
-          <p>Vuelve pronto — revisamos nuevas vacantes constantemente.</p>
+          <h2>Todavía no hay vacantes que coincidan con tus skills</h2>
+          <p>Vuelve pronto, o agrega más skills a tu perfil para ver más opciones.</p>
         </div>
       )}
 
-      {!error && items && items.length > 0 && (
+      {!error && matches && matches.length > 0 && (
         <div className="post-list">
-          {items.map(item => {
+          {matches.map(item => {
             const company = formatCompanyName(item.company) || null
             const key = `${item.sourceType}:${item.id}`
-            const isExternal = item.sourceType === 'scraper'
             const level = SENIORITY_LABELS[item.seniorityLevel ?? ''] || item.seniorityLevel
             const role = ROLE_CATEGORY_LABELS[item.roleCategory ?? '']
             // Misma tarjeta que en Vacantes; la única diferencia es lo que aporta
             // "Para ti": cuántos de tus skills pide la vacante.
             return (
-              <article className="post-card job-card" key={key}>
+              <article
+                className="post-card job-card"
+                key={key}
+                onClick={e => { if (e.target instanceof HTMLElement && e.target.closest('button, a')) return; openItem(item) }}
+              >
                 <div className="post-top">
                   <Link href={company ? `/empresas/${companySlug(company)}` : '#'} className="author-row author-link" onClick={e => !company && e.preventDefault()}>
                     <CompanyAvatar company={company} logoUrl={item.companyLogo} size={44} />
@@ -148,11 +180,9 @@ export default function ParaTiPage() {
                     {item.skills.slice(0, 6).map(skill => <span key={skill} className="stack-badge">{skill}</span>)}
                   </div>
                 )}
-                {isExternal ? (
-                  <a href={item.url} target="_blank" rel="noopener noreferrer" className="job-apply-button">Ver vacante →</a>
-                ) : (
-                  <Link href={item.url} className="job-apply-button">Ver vacante →</Link>
-                )}
+                <button className="job-apply-button" onClick={() => openItem(item)} disabled={opening === key}>
+                  {opening === key ? 'Abriendo...' : 'Ver vacante →'}
+                </button>
                 <div className="post-footer">
                   <span className="footer-spacer" />
                   <button className={`icon-button ${item.isSaved ? 'saved' : ''}`} onClick={() => handleToggleSave(item)} aria-label="Guardar">
