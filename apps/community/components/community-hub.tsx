@@ -384,7 +384,7 @@ export function PostCard({ post, onAuthRequired }: { post: FeedPost; onAuthRequi
 export function RightSidebar({ onUnlock }: { onUnlock: () => void }) {
   const [trending, setTrending] = useState<FeedPost[]>([])
   const [featured, setFeatured] = useState<FeedPost[]>([])
-  const [stats, setStats] = useState<{ members: number; posts: number } | null>(null)
+  const [stats, setStats] = useState<{ members: number; companies: number; vacancies: number } | null>(null)
 
   useEffect(() => {
     fetch(`${API_URL}/api/community/stats`)
@@ -461,8 +461,9 @@ export function RightSidebar({ onUnlock }: { onUnlock: () => void }) {
     <section className="widget community-widget">
       <div className="widget-title"><span>La comunidad</span><Users size={16} /></div>
       <div className="community-stats">
-        <div><strong>{stats ? formatCount(stats.members) : '—'}</strong><small>miembros</small></div>
-        <div><strong>{stats ? formatCount(stats.posts) : '—'}</strong><small>publicaciones</small></div>
+        <div><strong>{stats?.members != null ? formatCount(stats.members) : '—'}</strong><small>miembros</small></div>
+        <div><strong>{stats?.companies != null ? formatCount(stats.companies) : '—'}</strong><small>empresas</small></div>
+        <div><strong>{stats?.vacancies != null ? formatCount(stats.vacancies) : '—'}</strong><small>vacantes</small></div>
       </div>
     </section>
   </aside>

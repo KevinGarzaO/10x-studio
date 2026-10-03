@@ -3,21 +3,74 @@ import { supabase } from '../../../services/supabase.service'
 
 const router = Router()
 
-// Real counts for the "La comunidad" sidebar widget — replaces the
-// hardcoded 18.4k/2.1k/94%/342-online placeholders. There's no presence
-// tracking, so "online now" and "% respond" have no real number behind them
-// and are intentionally not part of this response.
+// Conteos reales para el widget "La comunidad". No hay seguimiento de presencia,
+// así que "en línea" y "% que responde" no tienen número real y no se devuelven.
+//
+// Solo cuentan cuentas REALES: las de prueba (is_test_account) no, y tampoco los
+// perfiles que crea el scraper. Se reparten en:
+//   members    personas: candidatos y superadmins
+//   companies  empresas, con o sin dueño (las del scraper también son empresas
+//              reales que publican vacantes en el sitio)
+//   vacancies  vacantes publicadas
+// `posts` se conserva por compatibilidad con la versión anterior del frontend.
+async function countCommunity() {
+  const count = (table: string, build: (q: any) => any) =>
+    build(supabase.from(table).select('*', { count: 'exact', head: true }))
+
+  const [members, companies, vacancies, posts] = await Promise.all([
+    count('users', q => q.in('user_kind', ['user', 'superadmin']).eq('is_test_account', false).not('is_scraper_profile', 'is', true)),
+    count('users', q => q.eq('user_kind', 'company').eq('is_test_account', false)),
+    count('community_posts', q => q.eq('type', 'job')),
+    count('community_posts', q => q),
+  ])
+
+  for (const result of [members, companies, vacancies, posts]) {
+    if (result.error) throw result.error
+  }
+
+  return {
+    members: members.count || 0,
+    companies: companies.count || 0,
+    vacancies: vacancies.count || 0,
+    posts: posts.count || 0,
+  }
+}
+
+// Mientras las migraciones user_kind / is_test_account no estén aplicadas en la
+// base, el conteo nuevo no existe: se cuenta como antes en vez de dejar el
+// widget roto.
+async function countCommunityLegacy() {
+  const count = (table: string, build: (q: any) => any) =>
+    build(supabase.from(table).select('*', { count: 'exact', head: true }))
+
+  const [members, companies, vacancies, posts] = await Promise.all([
+    count('users', q => q.neq('account_type', 'company')),
+    count('users', q => q.eq('account_type', 'company')),
+    count('community_posts', q => q.eq('type', 'job')),
+    count('community_posts', q => q),
+  ])
+
+  for (const result of [members, companies, vacancies, posts]) {
+    if (result.error) throw result.error
+  }
+
+  return {
+    members: members.count || 0,
+    companies: companies.count || 0,
+    vacancies: vacancies.count || 0,
+    posts: posts.count || 0,
+  }
+}
+
 router.get('/', async (req: Request, res: Response) => {
   try {
-    const [{ count: members, error: membersError }, { count: posts, error: postsError }] = await Promise.all([
-      supabase.from('users').select('*', { count: 'exact', head: true }),
-      supabase.from('community_posts').select('*', { count: 'exact', head: true }),
-    ])
-
-    if (membersError) throw membersError
-    if (postsError) throw postsError
-
-    res.json({ members: members || 0, posts: posts || 0 })
+    try {
+      return res.json(await countCommunity())
+    } catch (error: any) {
+      if (!/user_kind|is_test_account/.test(String(error?.message))) throw error
+      console.warn('[Stats] Faltan user_kind / is_test_account: se cuenta sin separar pruebas')
+      return res.json(await countCommunityLegacy())
+    }
   } catch (error) {
     console.error('Community Get stats error:', error)
     res.status(500).json({ error: 'Error al obtener estadísticas' })
