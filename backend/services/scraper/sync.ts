@@ -4,6 +4,13 @@ import { companySlug, formatCompanyName } from "../company";
 
 const SCRAPER_BOT_ID = "00000000-0000-0000-0000-000000000001";
 
+/**
+ * Marca de "esta empresa ya tiene dueño". No es un id: es la señal de que la
+ * vacante NO debe publicarse, y se distingue de `null` (nombre vacío), donde sí
+ * se publica a nombre del bot.
+ */
+export const CLAIMED_COMPANY = "claimed" as const;
+
 // Per-process cache so a scraper run doesn't re-look-up the same company for
 // every one of its job posts.
 const companyUserCache = new Map<string, string>();
@@ -17,7 +24,7 @@ const companyUserCache = new Map<string, string>();
 export async function getOrCreateCompanyUser(
   rawName: string | null | undefined,
   logo: string | null | undefined
-): Promise<string | null> {
+): Promise<string | typeof CLAIMED_COMPANY | null> {
   if (!rawName) return null;
   const slug = companySlug(rawName);
   if (!slug) return null;
@@ -30,12 +37,17 @@ export async function getOrCreateCompanyUser(
   // las vacantes de esa empresa a su perfil personal (FR-028).
   const { data: existing } = await supabase
     .from("users")
-    .select("id, photo_url")
+    .select("id, photo_url, claimed_by")
     .eq("company_slug", slug)
     .eq("account_type", "company")
     .maybeSingle();
 
   if (existing) {
+    // Una empresa reclamada la administra su dueño: el scraper deja de
+    // actualizarla y de publicarle vacantes (requerimiento 003, sección F).
+    if (existing.claimed_by) {
+      return CLAIMED_COMPANY;
+    }
     if (logo && !existing.photo_url) {
       await supabase.from("users").update({ photo_url: logo }).eq("id", existing.id);
     }
@@ -166,7 +178,14 @@ export async function syncVacancyToCommunity(
     }
   }
 
-  const companyUserId = (await getOrCreateCompanyUser(companyName, companyLogo)) || SCRAPER_BOT_ID;
+  const companyUser = await getOrCreateCompanyUser(companyName, companyLogo);
+
+  if (companyUser === CLAIMED_COMPANY) {
+    log(`[Sync] ${companyName} ya tiene dueño: su vacante no se publica`);
+    return null;
+  }
+
+  const companyUserId = companyUser || SCRAPER_BOT_ID;
 
   // Insert into community_posts
   const { data: communityPost, error: insertError } = await supabase
