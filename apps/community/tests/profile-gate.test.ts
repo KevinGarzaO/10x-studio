@@ -90,3 +90,31 @@ describe('profileGateReason (T041)', () => {
     expect(profileGateReason(converted, catalog)).toBe('missing_fields')
   })
 })
+
+describe('profileGateReason with the server-computed profile_completed', () => {
+  it('lets a complete profile through when the server agrees', () => {
+    expect(profileGateReason({ ...completeCandidate, profile_completed: true }, catalog)).toBeNull()
+  })
+
+  it('sends to onboarding when the server says the profile is incomplete, even if the local rules find nothing', () => {
+    expect(profileGateReason({ ...completeCandidate, profile_completed: false }, catalog)).toBe('missing_fields')
+  })
+
+  it('keeps the specific reason when there is one', () => {
+    expect(
+      profileGateReason({ ...completeCandidate, photo_url: null, profile_completed: false }, catalog),
+    ).toBe('missing_photo')
+  })
+
+  it('also holds a company account until the server marks it complete', () => {
+    const company = { account_type: 'company', photo_url: 'https://example.com/logo.png' }
+
+    expect(profileGateReason({ ...company, profile_completed: false }, catalog)).toBe('missing_fields')
+    expect(profileGateReason({ ...company, profile_completed: true }, catalog)).toBeNull()
+  })
+
+  it('falls back to the local rules when an older server does not send the field', () => {
+    expect(profileGateReason(completeCandidate, catalog)).toBeNull()
+    expect(profileGateReason({ ...completeCandidate, title: '' }, catalog)).toBe('missing_fields')
+  })
+})

@@ -5,6 +5,8 @@ export type ProfileGateReason = 'missing_photo' | 'missing_fields' | 'unresolved
 
 export interface GatedUser {
   account_type?: string | null
+  /** Lo calcula la base (users.profile_completed). Puede faltar en respuestas viejas. */
+  profile_completed?: boolean | null
   photo_url?: string | null
   title?: string | null
   role_category?: string | null
@@ -38,6 +40,14 @@ export function profileGateReason(
 ): ProfileGateReason | null {
   if (!user) return null
 
+  // La base dice cuándo un perfil está completo y el servidor es la fuente de
+  // verdad: si dice que no, se manda a onboarding aunque las reglas de abajo no
+  // encuentren el motivo (por ejemplo, si la base exige algo nuevo).
+  return specificReason(user, catalog) ?? (user.profile_completed === false ? 'missing_fields' : null)
+}
+
+/** El motivo concreto, para poder explicarle a la persona qué le falta. */
+function specificReason(user: GatedUser, catalog: SkillCatalog): ProfileGateReason | null {
   if (blank(user.photo_url)) return 'missing_photo'
 
   if (user.account_type === 'company') return null
