@@ -7,7 +7,7 @@ import {
   Bell, Bookmark, BriefcaseBusiness, Flame,
   Hash, Menu, MessageCircle, PenLine, Plus, Search,
   LogOut, Send, Settings, Share2, ShieldCheck, Sparkles, Tag, Target, TrendingUp, Users, X,
-  Zap, ArrowBigUp, LockKeyhole, CheckCircle2, Building, MapPin, Home as HomeIcon, Mail, Clock, Check
+  ArrowBigUp, LockKeyhole, CheckCircle2, Building, MapPin, Home as HomeIcon, Mail, Clock, Check
 } from 'lucide-react'
 import { companySlug, formatCompanyName } from '../lib/company'
 import { useShell } from '../lib/shell-context'
@@ -19,19 +19,27 @@ const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'
 // Module-level cache to preserve feed state across navigations
 const feedCache = new Map<string, { posts: FeedPost[]; page: number; hasMore: boolean }>()
 
-// Single source of truth for the 4 feed destinations — used by both the
-// left sidebar nav and the feed tabs, so they always share the same label
-// and icon instead of drifting apart (Inicio/Home vs Tendencias/Flame etc).
+// Single source of truth for the feed destinations — used by both the left
+// sidebar nav and the feed tabs, so they always share the same label and icon
+// instead of drifting apart. "Para ti" is only offered to signed-in people and
+// lives on its own route (/para-ti), see navTabs().
+export const FOR_YOU_TAB = 'Para ti'
+
 export const tabs = [
-  { label: 'Tendencias', icon: Flame },
-  { label: 'Últimos Envíos', icon: Zap },
+  { label: 'Feed', icon: Flame },
   { label: 'Vacantes & Freelance', icon: BriefcaseBusiness },
-  { label: 'Showcase Projects', icon: Sparkles },
 ]
+
+const forYouTab = { label: FOR_YOU_TAB, icon: Target }
+
+/** Los destinos que ve cada quien: Feed y Vacantes, y Para ti si hay sesión. */
+export function navTabs(signedIn: boolean) {
+  return signedIn ? [...tabs, forYouTab] : tabs
+}
 
 // Short, URL-safe keys for the ?tab=/&from= query params — avoids spaces and
 // "&" in the address bar that come from using the display labels directly.
-export const TAB_KEYS: Record<string, string> = { 'Tendencias': 'trending', 'Últimos Envíos': 'latest', 'Vacantes & Freelance': 'jobs', 'Showcase Projects': 'showcase' }
+export const TAB_KEYS: Record<string, string> = { 'Feed': 'trending', 'Vacantes & Freelance': 'jobs' }
 export const KEY_TABS: Record<string, string> = Object.fromEntries(Object.entries(TAB_KEYS).map(([label, key]) => [key, label]))
 
 interface EditorialPost {
@@ -149,10 +157,7 @@ export function LeftSidebar({ onPublish, activeTab, setActiveTab, activeTag, onT
     <div className="sidebar-section">
       <p className="eyebrow">Comunidad</p>
       <nav className="nav-list" aria-label="Navegación principal">
-        {user && (
-          <Link href="/para-ti" className="nav-item nav-item-highlight"><Target size={17} /><span>Para ti</span></Link>
-        )}
-        {tabs.map(({ label, icon: Icon }) => <button key={label} className={`nav-item ${activeTab === label && !activeTag ? 'active' : ''}`} onClick={() => setActiveTab(label)}><Icon size={17} /><span>{label}</span></button>)}
+        {navTabs(!!user).map(({ label, icon: Icon }) => <button key={label} className={`nav-item ${activeTab === label && !activeTag ? 'active' : ''}`} onClick={() => setActiveTab(label)}><Icon size={17} /><span>{label}</span></button>)}
       </nav>
     </div>
     {tags.length > 0 && (
@@ -405,6 +410,11 @@ export function PostCard({ post, onAuthRequired, activeTab }: { post: FeedPost; 
   </article>
 }
 
+/** Las pestañas del feed. Las usan el feed y Para ti, así se ven idénticas. */
+export function FeedTabs({ activeTab, signedIn, onSelect }: { activeTab: string; signedIn: boolean; onSelect: (tab: string) => void }) {
+  return <div className="feed-tabs" role="tablist">{navTabs(signedIn).map(({ label, icon: Icon }) => <button key={label} role="tab" aria-selected={activeTab === label} className={activeTab === label ? 'active' : ''} onClick={() => onSelect(label)}><Icon size={15} />{label}</button>)}</div>
+}
+
 export function RightSidebar({ onUnlock, activeTab }: { onUnlock: () => void; activeTab: string }) {
   const [trending, setTrending] = useState<FeedPost[]>([])
   const [featured, setFeatured] = useState<FeedPost[]>([])
@@ -515,7 +525,7 @@ export function Feed() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const tabKeyFromUrl = searchParams.get('tab')
-  const initialTab = (tabKeyFromUrl && KEY_TABS[tabKeyFromUrl]) || 'Tendencias'
+  const initialTab = (tabKeyFromUrl && KEY_TABS[tabKeyFromUrl]) || 'Feed'
   const { search, activeTag, setActiveTag, requestAuth, user } = useShell()
 
   const [activeTab, setActiveTabState] = useState(initialTab)
@@ -534,13 +544,14 @@ export function Feed() {
   // encoding matches the rest of the app (encodeURIComponent, not
   // URLSearchParams' "+"-for-space form-encoding).
   useEffect(() => {
-    const next = (tabKeyFromUrl && KEY_TABS[tabKeyFromUrl]) || 'Tendencias'
+    const next = (tabKeyFromUrl && KEY_TABS[tabKeyFromUrl]) || 'Feed'
     setActiveTabState(prev => (prev === next ? prev : next))
   }, [tabKeyFromUrl])
 
   const setActiveTab = useCallback((tab: string) => {
+    if (tab === FOR_YOU_TAB) { router.push('/para-ti'); return }
     const key = TAB_KEYS[tab]
-    const query = !key || tab === 'Tendencias' ? '' : `?tab=${key}`
+    const query = !key || tab === 'Feed' ? '' : `?tab=${key}`
     router.push(`/${query}`, { scroll: false })
   }, [router])
 
@@ -556,11 +567,8 @@ export function Feed() {
       const pageSize = tab === 'Vacantes & Freelance' ? 20 : 10
       if (tab === 'Vacantes & Freelance') {
         url = `${API_URL}/api/community/posts?page=${pageNum}&limit=${pageSize}&type=job`
-      } else if (tab === 'Showcase Projects') {
-        url = `${API_URL}/api/community/posts?page=${pageNum}&limit=${pageSize}&type=showcase`
       } else {
         url = `${API_URL}/api/community/posts/editorial?page=${pageNum}&limit=${pageSize}`
-        if (tab === 'Últimos Envíos') url += '&days=7'
       }
       const res = await fetch(url)
       const data = await res.json()
@@ -630,10 +638,10 @@ export function Feed() {
         {activeTag && <span className="active-filter-chip"><Hash size={12} />{activeTag}<button onClick={() => setActiveTag(null)} aria-label="Quitar filtro de tema"><X size={12} /></button></span>}
       </div>
     </div>
-    <div className="feed-tabs" role="tablist">{tabs.map(({ label, icon: Icon }) => <button key={label} role="tab" aria-selected={activeTab === label} className={activeTab === label ? 'active' : ''} onClick={() => setActiveTab(label)}><Icon size={15} />{label}</button>)}</div>
+    <FeedTabs activeTab={activeTab} signedIn={!!user} onSelect={setActiveTab} />
     <div className="post-list">{filteredPosts.map(post => <PostCard key={post.id} post={post} onAuthRequired={requestAuth} activeTab={activeTab} />)}</div>
     {loading && <div style={{ textAlign: 'center', padding: 20, color: '#b3aba1' }}><Sparkles size={16} className="spin" /> Cargando más posts...</div>}
-    {!loading && filteredPosts.length === 0 && <div style={{ textAlign: 'center', padding: 40, color: '#b3aba1' }}><PenLine size={32} style={{ marginBottom: 12, opacity: 0.5 }} /><p>{activeTab === 'Vacantes & Freelance' ? 'No hay vacantes todavía' : activeTab === 'Showcase Projects' ? 'No hay proyectos todavía' : 'No hay posts disponibles'}</p></div>}
+    {!loading && filteredPosts.length === 0 && <div style={{ textAlign: 'center', padding: 40, color: '#b3aba1' }}><PenLine size={32} style={{ marginBottom: 12, opacity: 0.5 }} /><p>{activeTab === 'Vacantes & Freelance' ? 'No hay vacantes todavía' : 'No hay posts disponibles'}</p></div>}
     {!hasMore && filteredPosts.length > 0 && <div style={{ textAlign: 'center', padding: 20, color: '#b3aba1' }}>No hay más posts</div>}
   </main>
 }

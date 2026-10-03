@@ -6,7 +6,7 @@ import { usePathname, useSearchParams, useRouter } from 'next/navigation'
 import { Bell, Menu, Plus, Search, X } from 'lucide-react'
 import { fetchCurrentUser, getCachedUser } from '../lib/session'
 import { ShellContext } from '../lib/shell-context'
-import { LeftSidebar, RightSidebar, ProfileMenu, PublishModal, AuthModal, TAB_KEYS, KEY_TABS } from './community-hub'
+import { LeftSidebar, RightSidebar, ProfileMenu, PublishModal, AuthModal, TAB_KEYS, KEY_TABS, FOR_YOU_TAB } from './community-hub'
 import { ProfileGate } from './profile-gate'
 
 // The left/right sidebars need to know which of the 4 feed tabs is
@@ -16,12 +16,13 @@ import { ProfileGate } from './profile-gate'
 function deriveActiveTab(pathname: string, searchParams: URLSearchParams): string {
   if (pathname === '/') {
     const key = searchParams.get('tab')
-    return (key && KEY_TABS[key]) || 'Tendencias'
+    return (key && KEY_TABS[key]) || 'Feed'
   }
+  if (pathname.startsWith('/para-ti')) return FOR_YOU_TAB
   if (pathname.startsWith('/vacantes/')) return 'Vacantes & Freelance'
   const from = searchParams.get('from')
   if (from && KEY_TABS[from]) return KEY_TABS[from]
-  return 'Tendencias'
+  return 'Feed'
 }
 
 export function CommunityShell({ children }: { children: ReactNode }) {
@@ -53,8 +54,9 @@ export function CommunityShell({ children }: { children: ReactNode }) {
     || pathname === '/profile'
 
   const setActiveTab = useCallback((tab: string) => {
+    if (tab === FOR_YOU_TAB) { router.push('/para-ti'); return }
     const key = TAB_KEYS[tab]
-    const query = !key || tab === 'Tendencias' ? '' : `?tab=${key}`
+    const query = !key || tab === 'Feed' ? '' : `?tab=${key}`
     router.push(`/${query}`, { scroll: false })
   }, [router])
 
