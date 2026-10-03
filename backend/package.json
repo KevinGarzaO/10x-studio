@@ -10,7 +10,8 @@
     "test": "vitest run tests/unit",
     "test:integration": "vitest run tests/integration",
     "migrate-history": "tsx scripts/migrate-history.ts",
-    "sync-to-community": "tsx scripts/sync-to-community.ts"
+    "sync-to-community": "tsx scripts/sync-to-community.ts",
+    "purge-claim-docs": "tsx scripts/purge-claim-documents.ts"
   },
   "dependencies": {
     "@avocado/schemas": "workspace:*",

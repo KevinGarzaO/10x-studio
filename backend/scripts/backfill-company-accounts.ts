@@ -1,5 +1,5 @@
 import { supabase } from '../services/supabase.service'
-import { getOrCreateCompanyUser } from '../services/scraper/sync'
+import { getOrCreateCompanyUser, CLAIMED_COMPANY } from '../services/scraper/sync'
 import { companySlug } from '../services/company'
 
 const SCRAPER_BOT_ID = '00000000-0000-0000-0000-000000000001'
@@ -35,6 +35,7 @@ async function main() {
   let linked = 0
   for (const [slug, entry] of bySlugIds) {
     const userId = await getOrCreateCompanyUser(entry.name, entry.logo)
+    if (userId === CLAIMED_COMPANY) continue
     if (!userId) {
       console.error(`  Skipped "${entry.name}" (${slug}) — could not create/find user`)
       continue

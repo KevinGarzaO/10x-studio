@@ -29,6 +29,7 @@ import communitySkillExamsRoutes from './src/routes/community/skill-exams.routes
 import communitySkillsRoutes from './src/routes/community/skills.routes'
 import communitySkillProposalsRoutes from './src/routes/community/skill-proposals.routes'
 import communityCompaniesRoutes from './src/routes/community/companies.routes'
+import communityCompanyClaimsRoutes from './src/routes/community/company-claims.routes'
 
 // Admin routes
 import adminExamQuestionsRoutes from './src/routes/admin/exam-questions.routes'
@@ -109,6 +110,7 @@ app.use('/api/community/skill-exams', communitySkillExamsRoutes)
 app.use('/api/community/skills', communitySkillsRoutes)
 app.use('/api/community/skill-proposals', communitySkillProposalsRoutes)
 app.use('/api/community/companies', communityCompaniesRoutes)
+app.use('/api/community/company-claims', communityCompanyClaimsRoutes)
 app.use('/api/admin/exam-questions', adminExamQuestionsRoutes)
 
 // Scraper routes (internal use, no auth required for now)

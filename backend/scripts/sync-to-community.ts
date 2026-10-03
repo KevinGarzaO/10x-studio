@@ -2,7 +2,7 @@ import { createClient } from "@supabase/supabase-js";
 // Se importa la del servicio en vez de copiarla: esta copia tenía el mismo bug
 // de colisión (buscaba la empresa por username, así que podía devolver la cuenta
 // de una persona con ese nombre) y tendría que arreglarse dos veces.
-import { getOrCreateCompanyUser } from "../services/scraper/sync";
+import { getOrCreateCompanyUser, CLAIMED_COMPANY } from "../services/scraper/sync";
 import path from "path";
 import dotenv from "dotenv";
 
@@ -32,7 +32,12 @@ async function syncVacancy(post: any): Promise<string | null> {
     unknown: "No especificado",
   };
   const modalidad = modalidadMap[post.work_modality ?? "unknown"] ?? "No especificado";
-  const companyUserId = (await getOrCreateCompanyUser(post.company ?? null, post.company_logo ?? null)) || SCRAPER_BOT_ID;
+  const companyUser = await getOrCreateCompanyUser(post.company ?? null, post.company_logo ?? null);
+  if (companyUser === CLAIMED_COMPANY) {
+    console.log(`  ${post.company} ya tiene dueño: su vacante no se publica`);
+    return null;
+  }
+  const companyUserId = companyUser || SCRAPER_BOT_ID;
 
   const { data: communityPost, error } = await supabase
     .from("community_posts")

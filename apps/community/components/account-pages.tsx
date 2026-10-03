@@ -15,6 +15,7 @@ import { useSkillCatalog } from '../lib/skill-catalog'
 import { validateCandidateProfile, messageForField } from '../lib/profile-validation'
 import { useSkillProposals } from '../lib/skill-proposals'
 import { SkillProposalsList } from './skill-proposals-list'
+import { SIGNUP_INTENT_KEY } from '../lib/company-claim'
 import { ProfileGate } from './profile-gate'
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'
@@ -327,6 +328,9 @@ export function AuthPage({ mode }: { mode: 'login' | 'signup' }) {
   const [username, setUsername] = useState('')
   const [displayName, setDisplayName] = useState('')
   const [showPassword, setShowPassword] = useState(false)
+  // Candidato o empresa: solo decide qué onboarding se muestra; el tipo de
+  // cuenta real lo cambia el superadmin al aprobar el reclamo.
+  const [intent, setIntent] = useState<'candidate' | 'company'>('candidate')
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
   const [loading, setLoading] = useState(false)
@@ -367,6 +371,13 @@ export function AuthPage({ mode }: { mode: 'login' | 'signup' }) {
 
       if (data.session?.access_token) {
         saveSession(data.session, data.user)
+        if (signup) {
+          try {
+            localStorage.setItem(SIGNUP_INTENT_KEY, intent)
+          } catch {
+            // Sin localStorage el onboarding simplemente vuelve a preguntar.
+          }
+        }
         router.push(signup ? '/onboarding' : '/')
         router.refresh()
       } else if (signup) {
@@ -415,6 +426,20 @@ export function AuthPage({ mode }: { mode: 'login' | 'signup' }) {
               <label htmlFor="auth-email">Correo electrónico</label>
               <input id="auth-email" type="email" placeholder="tu@email.com" autoComplete="email" required value={email} onChange={e => setEmail(e.target.value)} />
             </div>
+
+            {signup && (
+              <div className="auth-field">
+                <label>¿Cómo vas a usar AvoTalent?</label>
+                <div className="auth-intent">
+                  <button type="button" className={intent === 'candidate' ? 'is-active' : ''} onClick={() => setIntent('candidate')}>
+                    Busco trabajo
+                  </button>
+                  <button type="button" className={intent === 'company' ? 'is-active' : ''} onClick={() => setIntent('company')}>
+                    Represento una empresa
+                  </button>
+                </div>
+              </div>
+            )}
 
             {signup && (
               <div className="auth-field">

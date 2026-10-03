@@ -492,3 +492,47 @@ button { cursor: pointer; }
   .profile-head-actions .profile-action { flex: 1; justify-content: center; }
   .profile-stats { gap: 22px; justify-content: space-between; }
 }
+
+
+/* ---- Alta de empresa: reclamo con documentos (requerimiento 003, parte 2) ---- */
+.auth-intent{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.auth-intent button{padding:10px 12px;border:1px solid #322f29;border-radius:10px;background:#18161a;color:#b3aba1;font-size:12.5px;font-weight:600}
+.auth-intent button:hover{border-color:#00A86B}
+.auth-intent button.is-active{border-color:#00A86B;background:rgba(0,168,107,.14);color:#f3efe9}
+.onboarding-kind{display:grid;gap:12px;margin-top:4px}
+.onboarding-kind button{display:grid;gap:4px;text-align:left;padding:16px 18px;border:1px solid #322f29;border-radius:14px;background:#18161a}
+.onboarding-kind button:hover{border-color:#00A86B}
+.onboarding-kind strong{font-size:14.5px;color:#f3efe9}
+.onboarding-kind small{font-size:12.5px;color:#8a8378;line-height:1.55}
+.onboarding-switch{margin-top:18px;font-size:12.5px}
+.claim-form{display:grid;gap:2px;margin-top:4px;text-align:left}
+.claim-form .field textarea,.claim-form .field select{background:#18161a;border:1px solid #322f29;border-radius:8px;padding:10px 14px;color:#f3efe9;font-size:13px;font-family:inherit;box-sizing:border-box}
+.claim-form .field textarea{min-height:88px;resize:vertical}
+.claim-form .field textarea:focus,.claim-form .field select:focus{outline:none;border-color:#00A86B}
+.claim-matches{margin-top:8px;display:grid;gap:6px;padding:12px;border:1px solid #322f29;border-radius:12px;background:#18161a}
+.claim-matches > p{margin:0 0 4px;font-size:11.5px;color:#8a8378}
+.claim-matches button{display:flex;align-items:center;gap:8px;padding:8px 10px;border:1px solid transparent;border-radius:10px;background:#221f1b;color:#f3efe9;font-size:13px;text-align:left}
+.claim-matches button:hover{border-color:#00A86B}
+.claim-picked{display:flex;align-items:center;gap:6px;margin:8px 0 0;font-size:11.5px;color:#4fd39a}
+.claim-picked button{border:0;background:none;color:#8a8378;font-size:11.5px;text-decoration:underline;padding:0}
+.claim-documents{display:grid;gap:10px;padding:16px;border:1px dashed #322f29;border-radius:14px;margin:6px 0 18px}
+.claim-documents-title{margin:0;font-size:13.5px;font-weight:700;color:#f3efe9}
+.claim-documents-note{margin:0 0 4px;font-size:11.5px;line-height:1.55;color:#8a8378}
+.claim-document{position:relative;display:flex;align-items:flex-start;gap:10px;padding:12px;border:1px solid #322f29;border-radius:12px;background:#18161a;cursor:pointer}
+.claim-document:hover{border-color:#00A86B}
+.claim-document > svg{margin-top:2px;color:#8a8378;flex-shrink:0}
+.claim-document span{display:grid;gap:2px}
+.claim-document strong{font-size:12.5px;color:#f3efe9}
+.claim-document small{font-size:11.5px;color:#8a8378;line-height:1.5}
+.claim-document em{font-size:11.5px;color:#4fd39a;font-style:normal}
+.claim-document input[type='file']{position:absolute;width:1px;height:1px;opacity:0;pointer-events:none}
+.claim-status{display:flex;align-items:flex-start;gap:12px;padding:16px;border-radius:14px;border:1px solid #322f29;margin-top:18px;text-align:left}
+.claim-status strong{display:block;font-size:13.5px;margin-bottom:6px;color:#f3efe9}
+.claim-status p{margin:0 0 6px;font-size:12.5px;line-height:1.6;color:#b3aba1}
+.claim-status .claim-status-docs{font-size:11.5px;color:#8a8378;margin:0}
+.claim-status > svg{margin-top:2px;flex-shrink:0}
+.claim-status.is-pending{background:rgba(212,184,90,.1);border-color:rgba(212,184,90,.4)}
+.claim-status.is-pending > svg{color:#d4b85a}
+.claim-status.is-rejected{background:rgba(239,68,68,.08);border-color:rgba(239,68,68,.32)}
+.claim-status.is-rejected > svg{color:#f87171}
+.claim-form .spin{animation:spin 1s linear infinite}

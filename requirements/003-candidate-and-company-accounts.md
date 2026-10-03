@@ -19,7 +19,7 @@ exámenes"*.
 
 ## Estado actual y cómo retomar
 
-*Actualizado: 2026-09-26.* Actualiza esta sección cada vez que avance o se pause el trabajo.
+*Actualizado: 2026-10-03.* Actualiza esta sección cada vez que avance o se pause el trabajo.
 
 ### Dónde está el trabajo
 
@@ -84,8 +84,8 @@ Cada parte es su propia feature, con su propio `/speckit-specify` y su propia ra
 
 | Parte | Contenido | Estado |
 |---|---|---|
-| 1 | Fundación: tipo de cuenta, superadmin, catálogo de skills aprobado, foto obligatoria, colisión del scraper | En curso (`003-account-foundation`) |
-| 2 | Registro de empresa y reclamo con documentos (México) | Pendiente |
+| 1 | Fundación: tipo de cuenta, superadmin, catálogo de skills aprobado, foto obligatoria, colisión del scraper | ✅ Mergeada a `master`; solo falta la verificación manual en navegador (T055) |
+| 2 | Registro de empresa y reclamo con documentos (México) | ✅ Implementada en `005-company-claim` (sin spec-kit, por decisión del 2026-10-03). Falta que un superadmin apruebe un reclamo real en SQL y correr `npm run purge-claim-docs` para ver el ciclo completo |
 | 3 | Miembros de empresa y catálogo global de roles | Pendiente |
 | 4 | Settings y perfiles para ambos tipos de cuenta, y navegación a `/examenes` | Pendiente |
 | 5 | Seguir, feed de seguidos y guardados personales | Pendiente |
@@ -93,6 +93,31 @@ Cada parte es su propia feature, con su propio `/speckit-specify` y su propia ra
 | 7 | Búsqueda de candidatos por nivel y vacantes con nivel mínimo | Pendiente |
 | — | Pantallas de superadmin en Avocado Studio (cambio de tipo de cuenta, revisión de propuestas de skills) | Pendiente, sin fecha |
 | — | Postulaciones internas | Fuera de alcance, se planea después |
+
+### Parte 2 — Registro y reclamo de empresa (hecha el 2026-10-03)
+
+Se implementó directo, con plan y pruebas, sin spec-kit ni OpenSpec (decisión del usuario).
+Rama `005-company-claim`.
+
+- **Migración**: `backend/sql/company-claims-migration.sql` (aplicada en Supabase). Agrega
+  `users.company_id` y `users.claimed_by`, las tablas `company_claims` y
+  `company_claim_documents`, las funciones `approve_company_claim()` /
+  `reject_company_claim()`, la vista `pending_company_claims` y el bucket **privado**
+  `company-docs`.
+- **Quién decide**: solo un superadmin, desde el editor SQL de Supabase, igual que el cambio de
+  tipo de cuenta de la parte 1. La app nunca aprueba.
+- **Documentos**: acta/constancia e identificación son obligatorias; el poder notarial es
+  opcional. Nunca se exponen por la API (solo el tipo y el nombre del archivo) y se borran al
+  decidir: `npm run purge-claim-docs` en `backend/` limpia el bucket de los reclamos ya
+  aprobados o rechazados, porque SQL no puede borrar archivos.
+- **Mientras está pendiente** la cuenta sigue siendo de candidato: nadie actúa en nombre de una
+  empresa sin aprobación.
+- **Scraper**: una empresa con `claimed_by` queda fuera. `getOrCreateCompanyUser()` devuelve el
+  centinela `CLAIMED_COMPANY` y la vacante no se publica — tampoco a nombre del bot.
+- **Frontend**: al registrarse se elige candidato o empresa; el onboarding ramifica al
+  formulario de reclamo, con estados "en revisión" y "rechazado con motivo".
+- **Pruebas**: 11 unitarias del schema, 18 de integración de las rutas y los candados de la base,
+  4 del scraper con empresas reclamadas, 12 de componente (formulario y onboarding).
 
 ### Pendientes relacionados, fuera de esta spec
 
