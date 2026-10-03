@@ -6,13 +6,13 @@ import { useRouter, useSearchParams } from 'next/navigation'
 import {
   Bell, Bookmark, BriefcaseBusiness, Flame,
   Hash, Menu, MessageCircle, PenLine, Plus, Search,
-  Send, Settings, Share2, ShieldCheck, Sparkles, Tag, Target, TrendingUp, Users, X,
+  LogOut, Send, Settings, Share2, ShieldCheck, Sparkles, Tag, Target, TrendingUp, Users, X,
   Zap, ArrowBigUp, LockKeyhole, CheckCircle2, Building, MapPin, Home as HomeIcon, Mail, Clock, Check
 } from 'lucide-react'
 import { companySlug, formatCompanyName } from '../lib/company'
 import { useShell } from '../lib/shell-context'
 import { HeroBanner } from './hero-banner'
-import { getToken } from '../lib/session'
+import { getToken, clearSession } from '../lib/session'
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'
 
@@ -120,6 +120,14 @@ export function ProfileMenu({ user }: { user: any }) {
           <Link href="/settings" className="profile-menu-item" role="menuitem" onClick={() => setOpen(false)}>
             <Settings size={15} /> Configuración
           </Link>
+          <button
+            type="button"
+            className="profile-menu-item profile-menu-logout"
+            role="menuitem"
+            onClick={() => { clearSession(); window.location.href = '/login' }}
+          >
+            <LogOut size={15} /> Cerrar sesión
+          </button>
         </div>
       )}
     </div>
