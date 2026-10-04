@@ -1,3 +1,4 @@
+import { pickDailyVacancies } from "./daily-selection";
 import { supabase } from "../supabase.service";
 import { generateSlug } from "../slug";
 import { companySlug, formatCompanyName } from "../company";
@@ -370,7 +371,8 @@ export async function syncAllPending(
   log: (msg: string) => void = () => {}
 ): Promise<{ vacancies: number; profiles: number }> {
   const DAILY_LIMIT = 20;
-  const PER_COMBO_CAP = 2;
+  const PER_COMPANY_CAP = 2;
+  const PER_COMBO_CAP = 3;
 
   const nativeCount = await getTodayNativePostCount();
   const scraperCount = await getTodayScraperPostCount();
@@ -382,29 +384,28 @@ export async function syncAllPending(
     log("[Sync] Límite diario alcanzado, no se sincronizan más posts scraper");
     return { vacancies: 0, profiles: 0 };
   }
-  // Get unsynced vacancy posts that have at least one contact method and are
-  // ≤30 days old — checked against post_date (when the job was actually
-  // posted), not created_at (when we happened to scrape it); a job posted
-  // 40 days ago that we only just scraped yesterday is still stale.
-  // Ordered oldest-created-first (not fetched previously — an unordered
-  // query left Postgres free to return whichever rows it felt like, which
-  // in practice meant a handful of high-volume companies crowded out
-  // everyone else, day after day) and pulled from a wide candidate pool
-  // (not capped at remainingSlots) so the diversity cap below has enough
-  // rows to actually pick from.
+  // Candidatas: vacantes sin sincronizar, con algún medio de contacto y de ≤30
+  // días — contados desde post_date (cuándo se publicó el puesto), no desde
+  // created_at (cuándo lo scrapeamos): un puesto de hace 40 días que scrapeamos
+  // ayer sigue siendo viejo.
+  //
+  // Van de la más reciente a la más vieja, y se trae un grupo amplio. Antes eran
+  // las 500 MÁS ANTIGUAS por fecha de scraping, y ahí dominaban las empresas que
+  // se scrapearon primero: las más nuevas ni siquiera entraban al grupo, y 20
+  // vacantes al día salían de dos o tres empresas.
   const thirtyDaysAgo = new Date();
   thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
   const thirtyDaysAgoISO = thirtyDaysAgo.toISOString();
 
   const { data: vacancyPosts } = await supabase
     .from("scraper_posts")
-    .select("id, contacts, created_at, company, role_category, seniority_level")
+    .select("id, contacts, created_at, post_date, company, source, role_category, seniority_level")
     .eq("post_type", "vacancy")
     .eq("synced_to_community", false)
     .eq("is_spam", false)
     .gte("post_date", thirtyDaysAgoISO)
-    .order("created_at", { ascending: true })
-    .limit(500);
+    .order("post_date", { ascending: false })
+    .limit(1000);
 
   // Filter posts that have at least email or phone
   const postsWithContact = (vacancyPosts ?? []).filter((post) => {
@@ -416,22 +417,17 @@ export async function syncAllPending(
     return hasEmail || hasWhatsapp || hasTelegram || hasApplyUrl;
   });
 
-  // Diversity cap: at most PER_COMBO_CAP per (role_category, seniority_level)
-  // combo per day, so a high-volume company (SpaceX, Databricks, ...) can't
-  // eat the whole day's quota with jobs from a single category and starve
-  // every other role/level combination.
-  const perComboCount = new Map<string, number>();
-  const selected: typeof postsWithContact = [];
-  for (const post of postsWithContact) {
-    if (selected.length >= remainingSlots) break;
-    const key = `${post.role_category ?? "sin-categoria"}:${post.seniority_level ?? "sin-nivel"}`;
-    const count = perComboCount.get(key) || 0;
-    if (count >= PER_COMBO_CAP) continue;
-    perComboCount.set(key, count + 1);
-    selected.push(post);
-  }
+  // Reparto del día: varias empresas distintas (máx PER_COMPANY_CAP cada una
+  // mientras alcance) y sin llenarlo de un solo tipo de puesto (PER_COMBO_CAP por
+  // rol+nivel). La empresa que abre el reparto cambia cada día.
+  const selected = pickDailyVacancies(postsWithContact, remainingSlots, {
+    perCompanyCap: PER_COMPANY_CAP,
+    perComboCap: PER_COMBO_CAP,
+    rotation: Math.floor(Date.now() / 86400000),
+  });
 
-  log(`[Sync] ${selected.length} vacantes seleccionadas de ${postsWithContact.length} con contacto (${vacancyPosts?.length ?? 0} candidatas, máx ${PER_COMBO_CAP}/combinación rol+nivel)`);
+  const distinctCompanies = new Set(selected.map((post) => post.company ?? post.source ?? "")).size;
+  log(`[Sync] ${selected.length} vacantes seleccionadas de ${postsWithContact.length} con contacto (${vacancyPosts?.length ?? 0} candidatas), de ${distinctCompanies} empresas distintas`);
 
   // Get unsynced profile posts
   const { data: profilePosts } = await supabase
