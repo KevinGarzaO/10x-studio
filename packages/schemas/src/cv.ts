@@ -41,12 +41,17 @@ const month = z.string().regex(MONTH, 'Usa el formato AAAA-MM')
 const YEAR = /^(19|20)\d{2}$/
 const year = z.string().regex(YEAR, 'Usa un año de 4 dígitos')
 
-/** Un enlace opcional: vacío o una dirección web. */
+/**
+ * Un enlace opcional: vacío o una dirección web. Solo http(s): sin `:` salvo el de
+ * `https://`, así `javascript:...` o `data:...` no pasan aunque lleven un punto.
+ */
+export const WEB_URL = /^(https?:\/\/)?[a-z0-9-]+(\.[a-z0-9-]+)+([/?#][^\s]*)?$/i
+
 const optionalUrl = z
   .string()
   .trim()
   .max(300)
-  .refine((value) => value === '' || /^(https?:\/\/)?[^\s.]+\.[^\s]{2,}$/i.test(value), 'No parece un enlace válido')
+  .refine((value) => value === '' || WEB_URL.test(value), 'No parece un enlace válido')
   .default('')
 
 export const cvExperienceSchema = z

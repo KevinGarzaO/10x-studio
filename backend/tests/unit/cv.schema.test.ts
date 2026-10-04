@@ -87,6 +87,16 @@ describe('cvSchema', () => {
     })
   })
 
+  it('only accepts web links, never a script or data URL', () => {
+    for (const url of ['javascript:alert(1)//.com', 'data:text/html,<script>.x', 'JAVASCRIPT:alert(1).com', 'ftp://x.com', 'vbscript:x.com']) {
+      expect(cvSchema.safeParse({ linkedinUrl: url }).success, url).toBe(false)
+      expect(cvSchema.safeParse({ projects: [{ name: 'X', url }] }).success, url).toBe(false)
+    }
+    for (const url of ['linkedin.com/in/ana', 'https://github.com/ana/repo?tab=readme', 'http://sitio.mx/a/b#c', 'avotalent.io']) {
+      expect(cvSchema.safeParse({ linkedinUrl: url }).success, url).toBe(true)
+    }
+  })
+
   it('checks the contact email and the LinkedIn link', () => {
     expect(cvSchema.safeParse({ contactEmail: 'ana@' }).success).toBe(false)
     expect(cvSchema.safeParse({ contactEmail: '' }).success).toBe(true)

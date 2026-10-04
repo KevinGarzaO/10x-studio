@@ -549,3 +549,88 @@ button { cursor: pointer; }
 .skills-role-hint { margin: 6px 0 0; font-size: 11px; color: #b3aba1; line-height: 1.5; }
 .skills-role-hint strong { color: #e8e2d8; font-weight: 600; }
 .skills-role-hint button { background: none; border: 0; padding: 0; color: #4fd39a; cursor: pointer; text-decoration: underline; font: inherit; }
+
+/* --- Configuración: pestañas Perfil / Mi CV / Vista previa --- */
+.settings-tabs { display: flex; gap: 4px; margin: 18px 0 8px; border-bottom: 1px solid #322f29; overflow-x: auto; }
+.settings-tabs button { background: none; border: 0; border-bottom: 2px solid transparent; padding: 10px 14px; color: #b3aba1; font-size: 13px; font-weight: 600; cursor: pointer; white-space: nowrap; margin-bottom: -1px; }
+.settings-tabs button:hover { color: #e8e2d8; }
+.settings-tabs button.active { color: #4fd39a; border-bottom-color: #00A86B; }
+
+/* --- Formulario del CV --- */
+.cv-form { display: flex; flex-direction: column; gap: 6px; }
+.cv-form-section { margin-top: 22px; padding-top: 20px; border-top: 1px solid #322f29; }
+.cv-form-section:first-child { border-top: 0; padding-top: 0; margin-top: 8px; }
+.cv-form-section-head h3 { font-size: 15px; margin: 0 0 4px; }
+.cv-form-section-head .muted { margin: 0 0 12px; font-size: 12px; }
+.cv-form-entry { background: #1d1b17; border: 1px solid #322f29; border-radius: 10px; padding: 14px; margin-bottom: 10px; }
+.cv-form-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.cv-field { display: flex; flex-direction: column; gap: 5px; min-width: 0; }
+.cv-field.is-wide { grid-column: 1 / -1; }
+.cv-field > span { font-size: 12px; color: #b3aba1; font-weight: 500; }
+.cv-field > span em { color: #4fd39a; font-style: normal; }
+.cv-field input, .cv-field select, .cv-field textarea { background: #18161a; border: 1px solid #322f29; border-radius: 8px; padding: 9px 12px; color: #f3efe9; font-size: 13px; font-family: inherit; width: 100%; box-sizing: border-box; }
+.cv-field textarea { resize: vertical; min-height: 70px; }
+.cv-field input:focus, .cv-field select:focus, .cv-field textarea:focus { outline: none; border-color: #00A86B; }
+.cv-field input:disabled { opacity: .5; }
+.cv-counter { align-self: flex-end; color: #7d766c; font-size: 11px; }
+.cv-check { display: inline-flex; align-items: center; gap: 8px; font-size: 13px; color: #e8e2d8; cursor: pointer; }
+.cv-check input { width: 16px; height: 16px; accent-color: #00A86B; }
+.cv-remove { margin-top: 10px; background: none; border: 0; color: #f87171; font-size: 12px; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; padding: 4px 0; }
+.cv-remove:hover { text-decoration: underline; }
+.cv-add { margin-top: 2px; }
+.cv-add:disabled { opacity: .5; cursor: not-allowed; }
+.cv-public-toggle { margin-top: 4px; }
+.cv-share { margin: 10px 0 0; font-size: 12px; }
+.cv-share a { color: #4fd39a; }
+.cv-dirty { font-size: 12px; align-self: center; }
+.cv-toolbar { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-bottom: 14px; }
+.cv-toolbar .muted { margin: 0; font-size: 12px; }
+.cv-toolbar-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+.cv-toolbar-actions a { text-decoration: none; }
+.cv-private-note { margin: 0; display: inline-flex; align-items: center; gap: 6px; font-size: 12px; color: #d4b85a; }
+.cv-private-note a { color: #4fd39a; }
+
+/* --- La hoja del CV: papel blanco, igual en vista previa, en línea y al imprimir --- */
+.cv-sheet { background: #fff; color: #1f2937; border-radius: 10px; padding: 36px 40px; font-family: Inter, system-ui, sans-serif; line-height: 1.5; box-shadow: 0 8px 30px #00000040; max-width: 820px; margin: 0 auto; }
+.cv-head { display: flex; gap: 18px; align-items: center; padding-bottom: 16px; border-bottom: 2px solid #00A86B; }
+.cv-photo { width: 84px; height: 84px; border-radius: 50%; object-fit: cover; flex: none; }
+.cv-head-main { min-width: 0; }
+.cv-sheet h1 { font-size: 26px; margin: 0; letter-spacing: -.02em; color: #111827; }
+.cv-headline { margin: 2px 0 8px; font-size: 14px; color: #00805a; font-weight: 600; }
+.cv-contact { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 4px 14px; font-size: 12px; color: #4b5563; }
+.cv-contact a, .cv-entry-top a { color: #0f766e; text-decoration: none; word-break: break-all; }
+.cv-section { margin-top: 20px; }
+.cv-sheet h2 { font-size: 12px; text-transform: uppercase; letter-spacing: .1em; color: #00805a; margin: 0 0 8px; padding-bottom: 4px; border-bottom: 1px solid #e5e7eb; }
+.cv-text { margin: 4px 0 0; font-size: 13px; white-space: pre-line; color: #374151; }
+.cv-entry { margin-bottom: 12px; break-inside: avoid; }
+.cv-entry-top { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; flex-wrap: wrap; }
+.cv-entry-top strong { font-size: 14px; color: #111827; }
+.cv-period { font-size: 12px; color: #6b7280; white-space: nowrap; }
+.cv-entry-sub { font-size: 13px; color: #4b5563; }
+.cv-chips { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 6px; }
+.cv-chips li { background: #ecfdf5; color: #065f46; border-radius: 999px; padding: 3px 10px; font-size: 12px; font-weight: 500; }
+.cv-plain { list-style: none; margin: 0; padding: 0; font-size: 13px; color: #374151; display: grid; gap: 4px; }
+.cv-empty { margin: 24px 0 0; text-align: center; color: #6b7280; font-size: 13px; }
+
+/* --- CV en línea (/cv/[username]) --- */
+.cv-page { min-height: 100vh; background: #18161a; color: #f3efe9; padding: 24px 16px 56px; }
+.cv-page-bar { display: flex; align-items: center; justify-content: space-between; max-width: 820px; margin: 0 auto 22px; }
+.cv-page .cv-toolbar { max-width: 820px; margin-left: auto; margin-right: auto; }
+.cv-page-note { max-width: 820px; margin: 40px auto; text-align: center; }
+.cv-preview-wrap .cv-toolbar { max-width: none; }
+
+@media (max-width: 700px) {
+  .cv-form-grid { grid-template-columns: minmax(0, 1fr); }
+  .cv-field input, .cv-field select, .cv-field textarea { font-size: 16px; }
+  .cv-sheet { padding: 22px 18px; }
+  .cv-head { flex-direction: column; align-items: flex-start; }
+  .cv-entry-top { flex-direction: column; gap: 2px; }
+}
+
+/* Al imprimir solo sale la hoja: sin menús, botones ni fondo oscuro. */
+@media print {
+  body * { visibility: hidden !important; }
+  .cv-sheet, .cv-sheet * { visibility: visible !important; }
+  .cv-sheet { position: absolute; left: 0; top: 0; width: 100%; max-width: none; box-shadow: none; border-radius: 0; padding: 0; }
+  .cv-chips li { border: 1px solid #a7f3d0; }
+}

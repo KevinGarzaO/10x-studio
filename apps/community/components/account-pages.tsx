@@ -9,9 +9,10 @@ import {
   Eye, EyeOff, MessageCircle, Heart, Loader2, Tag
 } from 'lucide-react'
 import { saveSession, getToken, fetchCurrentUser } from '../lib/session'
-import { SENIORITY_OPTIONS, MODALITY_OPTIONS, ROLE_CATEGORY_OPTIONS } from '../lib/profile-options'
+import { SENIORITY_OPTIONS, MODALITY_OPTIONS, ROLE_CATEGORY_OPTIONS, ROLE_CATEGORY_LABELS, SENIORITY_LABELS } from '../lib/profile-options'
 import { PhotoPicker, SegmentedControl, SkillsInput, RoleCategorySelect } from './profile-form-fields'
-import { useSkillCatalog } from '../lib/skill-catalog'
+import { useSkillCatalog, skillLabel } from '../lib/skill-catalog'
+import { CvSettings } from './cv/CvSettings'
 import { validateCandidateProfile, messageForField } from '../lib/profile-validation'
 import { useSkillProposals } from '../lib/skill-proposals'
 import { SkillProposalsList } from './skill-proposals-list'
@@ -35,6 +36,9 @@ interface User {
   seniority?: string | null
   skills?: string[] | null
   work_modality?: string | null
+  /** El CV tal como lo guardó el servidor, y si es visible en línea. */
+  cv?: unknown
+  cv_public?: boolean
   created_at: string
 }
 
@@ -204,6 +208,7 @@ export function SettingsPage() {
   const [skillInput, setSkillInput] = useState('')
   const [location, setLocation] = useState('')
   const [workModality, setWorkModality] = useState<string | null>(null)
+  const [tab, setTab] = useState<'profile' | 'cv' | 'preview'>('profile')
   const { catalog, failed: catalogFailed } = useSkillCatalog()
   const addSkill = (name: string) => setSkills(prev => (prev.includes(name) ? prev : [...prev, name]))
   const { proposals, message: proposalMessage, propose } = useSkillProposals(addSkill)
@@ -304,7 +309,36 @@ export function SettingsPage() {
       <section className="account-card">
         <p className="page-kicker">Tu espacio</p>
         <h1 className="page-title">Configuración</h1>
-        <p className="muted page-description">Controla tu perfil público y preferencias.</p>
+        <p className="muted page-description">Controla tu perfil público, arma tu CV y míralo en línea.</p>
+        <div className="settings-tabs" role="tablist" aria-label="Secciones de configuración">
+          {([['profile', 'Perfil'], ['cv', 'Mi CV'], ['preview', 'Vista previa']] as const).map(([key, label]) => (
+            <button key={key} type="button" role="tab" aria-selected={tab === key} className={tab === key ? 'active' : ''} onClick={() => setTab(key)}>
+              {label}
+            </button>
+          ))}
+        </div>
+
+        {/* El CV se queda montado al cambiar de pestaña, para no perder lo que aún no se guarda. */}
+        <div hidden={tab === 'profile'}>
+          <CvSettings
+            view={tab === 'preview' ? 'preview' : 'form'}
+            username={user.username}
+            initialCv={user.cv}
+            initialPublic={!!user.cv_public}
+            profile={{
+              displayName: displayName || user.username,
+              headline: [roleCategory ? ROLE_CATEGORY_LABELS[roleCategory] : '', seniority ? SENIORITY_LABELS[seniority] : ''].filter(Boolean).join(' · '),
+              location,
+              workModality,
+              website,
+              githubUrl,
+              photoUrl: photoBase64 || photoUrl,
+              skills: skills.map(skill => skillLabel(skill, catalog)),
+            }}
+          />
+        </div>
+
+        <div hidden={tab !== 'profile'}>
         {error && <div className="auth-error">{error}</div>}
         {catalogFailed && (
           <div className="auth-error" role="alert">
@@ -316,7 +350,7 @@ export function SettingsPage() {
           <div className="field"><label>Foto de perfil</label><PhotoPicker photoUrl={photoBase64 || photoUrl} onPick={setPhotoBase64} onError={setError} /></div>
           <div className="field"><label>Nombre visible</label><input value={displayName} onChange={e => setDisplayName(e.target.value)} placeholder="Tu nombre" /></div>
           <div className="field"><label>Usuario</label><input value={`@${user.username}`} disabled style={{ opacity: 0.6 }} /></div>
-          <div className="field"><label>Puesto</label><RoleCategorySelect options={ROLE_CATEGORY_OPTIONS} value={roleCategory} onChange={setRoleCategory} /></div>
+          <div className="field"><label htmlFor="settings-role-category">Puesto</label><RoleCategorySelect id="settings-role-category" options={ROLE_CATEGORY_OPTIONS} value={roleCategory} onChange={setRoleCategory} /></div>
           <div className="field"><label>Nivel</label><SegmentedControl options={SENIORITY_OPTIONS} value={seniority} onChange={setSeniority} /></div>
           <div className="field">
             <label><Tag size={12} style={{ verticalAlign: -1, marginRight: 4 }} />Skills</label>
@@ -335,6 +369,7 @@ export function SettingsPage() {
           <button className="primary-btn" onClick={handleSave} disabled={saving}>
             {saving ? <><Loader2 size={14} className="animate-spin" /> Guardando...</> : saved ? <><Check size={14} /> Guardado</> : <><Save size={14} /> Guardar cambios</>}
           </button>
+        </div>
         </div>
       </section>
     </AccountLayout>
