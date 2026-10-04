@@ -101,7 +101,9 @@ export function ForYouCard({ item }: { item: MatchedItem }) {
       <div className="job-chips">
         {company && <span className="job-chip"><Building size={12} /> {company}</span>}
         {role && <span className="job-chip">{role}</span>}
+        {item.roleFit === 'adjacent' && <span className="job-chip is-adjacent" title="No es exactamente tu puesto, pero es cercano y pide skills que tienes">Rol cercano al tuyo</span>}
         {level && <span className="job-chip">{level}</span>}
+        {item.modalidad && !/no especificado/i.test(item.modalidad) && <span className="job-chip">{item.modalidad}</span>}
         {typeof item.matchScore === 'number' && <span className="match-score" title="Qué tan bien encaja contigo: puesto, skills, nivel y modalidad">{item.matchScore}% match</span>}
         <span className="match-pill"><Target size={11} /> {item.matchingSkills} {item.matchingSkills === 1 ? 'skill' : 'skills'} en común</span>
       </div>

@@ -637,3 +637,9 @@ button { cursor: pointer; }
 
 .match-score { display: inline-flex; align-items: center; padding: 4px 9px; border-radius: 999px; background: #1e3328; color: #4fd39a; font-size: 11px; font-weight: 700; }
 .stack-badge.is-shared { background: #34224a; color: #d8b4fe; border-color: #4a3562; }
+
+.detail-chip.is-role { background: rgba(0,168,107,.14); border-color: transparent; color: #4fd39a; font-weight: 600; }
+.detail-match { background: #241a33; border: 1px solid #4a3562; box-shadow: inset 3px 0 0 #a855f7; border-radius: 10px; padding: 14px 16px; margin: 18px 0; }
+.detail-match-head { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; color: #d8b4fe; }
+.detail-match ul { margin: 0; padding-left: 18px; color: #c9c2b6; font-size: 13px; line-height: 1.7; }
+.job-chip.is-adjacent { background: #34224a; color: #d8b4fe; }

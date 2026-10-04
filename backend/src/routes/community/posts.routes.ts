@@ -3,6 +3,7 @@ import { supabase } from '../../../services/supabase.service'
 import { communityAuthMiddleware, AuthRequest } from '../../../middleware/community-auth.middleware'
 import { generateSlug } from '../../../services/slug'
 import { companySlug } from '../../../services/company'
+import { scoreMatch } from '../../../services/matching/score'
 import { evaluateVacancy, REJECT_REASON_LABEL } from '../../../services/vacancies/publish-rule'
 
 const router = Router()
@@ -292,8 +293,37 @@ router.get('/:id', async (req: Request, res: Response) => {
     if (!error && post) {
       const viewerId = await getOptionalUserId(req)
       const savedMap = await getSavedMap(viewerId, [(post as any).id])
+
+      // En una vacante, qué tan bien encaja con quien la mira (el mismo puntaje de "Para ti").
+      let match: ReturnType<typeof scoreMatch> | null = null
+      if (viewerId && (post as any).type === 'job') {
+        const { data: viewer } = await supabase
+          .from('users')
+          .select('role_category, seniority, skills, work_modality')
+          .eq('id', viewerId)
+          .maybeSingle()
+        if (viewer?.role_category) {
+          const vacancy = post as any
+          match = scoreMatch(
+            {
+              roleCategory: viewer.role_category,
+              seniority: viewer.seniority ?? null,
+              skills: ((viewer.skills || []) as string[]).map((skill) => skill.toLowerCase()),
+              workModality: viewer.work_modality ?? null,
+            },
+            {
+              roleCategory: vacancy.role_category ?? null,
+              seniority: vacancy.seniority_level ?? null,
+              skills: (Array.isArray(vacancy.skills) ? vacancy.skills : []).map((skill: string) => skill.toLowerCase()),
+              workModality: vacancy.modalidad ?? null,
+            },
+          )
+        }
+      }
+
       return res.json({
         ...post,
+        match,
         author: normalizeAuthor(post.author),
         community_comments: ((post as any).community_comments || []).map((c: any) => ({ ...c, author: normalizeAuthor(c.author) })),
         tags: (post as any).community_post_tags?.map((pt: any) => pt.tag?.name).filter(Boolean) || [],
