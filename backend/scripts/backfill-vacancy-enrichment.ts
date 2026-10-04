@@ -60,7 +60,7 @@ async function main() {
 
   const { data: posts, error } = await supabase
     .from('community_posts')
-    .select('id, original_text, content, source_name, source_url, role_category, seniority_level, skills, modalidad')
+    .select('id, original_text, content, source_name, source_url, location, role_category, seniority_level, skills, modalidad')
     .eq('type', 'job')
     .eq('is_scraper_post', true)
     .limit(2000)
@@ -83,7 +83,7 @@ async function main() {
       await sleep(250)
     }
 
-    const found: VacancyEnrichment = enrichVacancy({ text, location: null, work_modality: null }, matchers)
+    const found: VacancyEnrichment = enrichVacancy({ text, location: post.location ?? null, work_modality: null }, matchers)
     const modalidad = found.work_modality !== 'unknown' ? MODALITY_LABEL[found.work_modality] : post.modalidad
     const next = { role_category: found.role_category, seniority_level: found.seniority_level, skills: found.skills, modalidad }
 
