@@ -324,7 +324,7 @@ export function SettingsPage() {
           <div className="field"><label>Nivel</label><SegmentedControl options={SENIORITY_OPTIONS} value={seniority} onChange={setSeniority} /></div>
           <div className="field">
             <label><Tag size={12} style={{ verticalAlign: -1, marginRight: 4 }} />Skills</label>
-            <SkillsInput skills={skills} onChange={setSkills} inputValue={skillInput} onInputChange={setSkillInput} onPropose={propose} />
+            <SkillsInput skills={skills} onChange={setSkills} inputValue={skillInput} onInputChange={setSkillInput} onPropose={propose} roleCategory={roleCategory} />
             {proposalMessage && <p className="skill-proposal-message">{proposalMessage}</p>}
             <SkillProposalsList proposals={proposals} onAddSkill={addSkill} />
             <Link href="/examenes" className="skills-validate-link">Validar mis skills con un examen →</Link>

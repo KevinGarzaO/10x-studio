@@ -29,6 +29,12 @@ export function normalizeSkillKey(text: string): string {
 export interface CatalogSkill {
   name: string
   label: string
+  /**
+   * Categorías de rol (users.role_category) en las que tiene sentido ofrecer el
+   * skill. Vacío o ausente: no está ligado a ningún rol y solo se encuentra al
+   * buscar por texto o al ver todos.
+   */
+  roleCategories?: string[]
 }
 
 export interface CatalogAlias {

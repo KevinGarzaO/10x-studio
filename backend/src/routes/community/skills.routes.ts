@@ -16,10 +16,18 @@ const router = Router()
  */
 router.get('/', async (_req: Request, res: Response) => {
   try {
-    const [skillsResult, aliasesResult] = await Promise.all([
-      supabase.from('skills').select('name, label').order('label'),
+    const [richSkills, aliasesResult] = await Promise.all([
+      supabase.from('skills').select('name, label, role_categories').order('label'),
       supabase.from('skill_aliases').select('alias_key, skill_name'),
     ])
+
+    // Mientras la migración de roles no esté aplicada la columna no existe: el
+    // catálogo se sirve igual, sin el dato de roles, en vez de dejarlo roto.
+    let skillsResult: { data: any[] | null; error: any } = richSkills
+    if (richSkills.error && /role_categories/.test(String(richSkills.error.message))) {
+      console.warn('[Skills] Falta skills.role_categories: se sirve el catálogo sin roles')
+      skillsResult = await supabase.from('skills').select('name, label').order('label')
+    }
 
     // Un fallo de lectura NO se devuelve como catálogo vacío: el frontend
     // trataría "sin skills" como un catálogo legítimo y dejaría guardar un
@@ -35,7 +43,11 @@ router.get('/', async (_req: Request, res: Response) => {
     }
 
     res.json({
-      skills: (skillsResult.data || []).map((row) => ({ name: row.name, label: row.label })),
+      skills: (skillsResult.data || []).map((row) => ({
+        name: row.name,
+        label: row.label,
+        roleCategories: Array.isArray(row.role_categories) ? row.role_categories : [],
+      })),
       aliases: (aliasesResult.data || []).map((row) => ({
         alias: row.alias_key,
         skillName: row.skill_name,

@@ -256,7 +256,7 @@ export function OnboardingPage() {
 
         <div className="field">
           <label htmlFor="onboarding-skills"><Tag size={12} style={{ verticalAlign: -1, marginRight: 4 }} />Skills</label>
-          <SkillsInput skills={skills} onChange={setSkills} inputValue={skillInput} onInputChange={setSkillInput} onPropose={propose} />
+          <SkillsInput skills={skills} onChange={setSkills} inputValue={skillInput} onInputChange={setSkillInput} onPropose={propose} roleCategory={roleCategory} />
           {proposalMessage && <p className="skill-proposal-message">{proposalMessage}</p>}
           <SkillProposalsList proposals={proposals} onAddSkill={addSkill} />
         </div>

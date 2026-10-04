@@ -3,7 +3,8 @@
 import { useRef, useState, KeyboardEvent } from 'react'
 import { Sparkles, UploadCloud, X } from 'lucide-react'
 import { resolveSkill } from '@avocado/schemas'
-import { useSkillCatalog, skillLabel, unresolvedSkills } from '../lib/skill-catalog'
+import { useSkillCatalog, skillLabel, unresolvedSkills, skillsForRole, hasRoleData } from '../lib/skill-catalog'
+import { ROLE_CATEGORY_LABELS } from '../lib/profile-options'
 
 // Shared building blocks for both the onboarding form and the settings
 // "edit profile" form, so the two never drift apart visually or behaviorally.
@@ -36,6 +37,8 @@ export interface SkillsInputProps {
   onInputChange: (v: string) => void
   /** Propone un skill que no existe en el catálogo. Lo conecta la feature de propuestas. */
   onPropose?: (text: string) => void
+  /** La categoría de rol elegida: la lista ofrece primero los skills de ese rol. */
+  roleCategory?: string | null
 }
 
 /**
@@ -45,8 +48,9 @@ export interface SkillsInputProps {
  * (FR-013). Un texto que no corresponde a ningún skill NO se agrega: se ofrece
  * proponerlo.
  */
-export function SkillsInput({ skills, onChange, inputValue, onInputChange, onPropose }: SkillsInputProps) {
+export function SkillsInput({ skills, onChange, inputValue, onInputChange, onPropose, roleCategory }: SkillsInputProps) {
   const [showSuggestions, setShowSuggestions] = useState(false)
+  const [showAll, setShowAll] = useState(false)
   const blurTimeout = useRef<ReturnType<typeof setTimeout> | null>(null)
   const { catalog, loading, failed, reload } = useSkillCatalog()
 
@@ -75,17 +79,31 @@ export function SkillsInput({ skills, onChange, inputValue, onInputChange, onPro
     setShowSuggestions(true)
   }
 
-  // Con el campo vacío se muestran los primeros del catálogo para que la lista
-  // sea descubrible; con texto, se filtra.
-  const suggestions = catalog.skills
-    .filter(
-      skill =>
-        !skills.includes(skill.name) &&
-        (!typed ||
-          skill.label.toLowerCase().includes(typed.toLowerCase()) ||
-          skill.name.includes(typed.toLowerCase())),
-    )
-    .slice(0, 8)
+  // Si ya eligió una categoría de rol, la lista gira alrededor de ella: con el
+  // campo vacío solo se ofrecen los skills de ese rol (o todos, si lo pide). Al
+  // escribir se busca en TODO el catálogo —nadie debe quedarse sin poder agregar
+  // "Figma" por ser de backend—, pero los del rol salen primero.
+  // "Otro" y quien aún no elige ven el catálogo completo.
+  const roleActive = !!roleCategory && roleCategory !== 'otro' && hasRoleData(catalog)
+  const roleSkills = new Set(skillsForRole(catalog, roleCategory).map(skill => skill.name))
+  const matchesTyped = (skill: { name: string; label: string }) =>
+    !skills.includes(skill.name) &&
+    (!typed ||
+      skill.label.toLowerCase().includes(typed.toLowerCase()) ||
+      skill.name.includes(typed.toLowerCase()))
+
+  const suggestions = (() => {
+    if (typed) {
+      const found = catalog.skills.filter(matchesTyped)
+      const ordered = roleActive
+        ? [...found.filter(skill => roleSkills.has(skill.name)), ...found.filter(skill => !roleSkills.has(skill.name))]
+        : found
+      return ordered.slice(0, 8)
+    }
+    const pool = roleActive && !showAll ? catalog.skills.filter(skill => roleSkills.has(skill.name)) : catalog.skills
+    // La lista tiene su propio scroll: no hace falta recortarla por rol.
+    return pool.filter(matchesTyped).slice(0, roleActive && !showAll ? 60 : 8)
+  })()
 
   function handleKeyDown(e: KeyboardEvent<HTMLInputElement>) {
     if (e.key === 'Enter' || e.key === ',') {
@@ -145,6 +163,19 @@ export function SkillsInput({ skills, onChange, inputValue, onInputChange, onPro
           </div>
         )}
       </div>
+
+      {!loading && roleCategory !== undefined && hasRoleData(catalog) && (
+        roleActive ? (
+          <p className="skills-role-hint">
+            {showAll ? 'Mostrando todos los skills.' : <>Mostrando skills de <strong>{ROLE_CATEGORY_LABELS[roleCategory!] || roleCategory}</strong>.</>}{' '}
+            <button type="button" onClick={() => setShowAll(v => !v)}>
+              {showAll ? 'Ver solo los de mi rol' : 'Ver todos los skills'}
+            </button>
+          </p>
+        ) : !roleCategory ? (
+          <p className="skills-role-hint">Elige tu categoría de rol para ver primero los skills de tu área.</p>
+        ) : null
+      )}
 
       {typed && !resolved && suggestions.length === 0 && !loading && (
         <div className="skills-propose-row">
