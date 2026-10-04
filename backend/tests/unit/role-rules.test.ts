@@ -46,10 +46,13 @@ describe('classifyRole: the defects of the old classifier', () => {
     expect(classifyRole(text)).toBe('finanzas')
   })
 
-  it('uses the body only for unmistakable technical roles when the title says nothing', () => {
-    expect(classifyRole(post('Member of Technical Staff', 'Join our devops team'))).toBe('devops')
-    // El cuerpo no sirve para etiquetar puestos de negocio.
-    expect(classifyRole(post('Member of Technical Staff', 'You will collaborate with marketing and recruiting'))).toBeNull()
+  it('never guesses a role from the body, even a technical one', () => {
+    // Probado con vacantes reales: asignar el rol por el cuerpo dejaba un "Account
+    // Executive" como fullstack y todos los "Sales Engineer" como devops.
+    expect(classifyRole(post('Member of Technical Staff', 'Join our devops team'))).toBeNull()
+    expect(classifyRole(post('Account Executive', 'You will sell our full stack platform to devops teams'))).toBeNull()
+    expect(classifyRole(post('Commercial Sales Engineer', 'Partner with our devops and site reliability engineers'))).toBeNull()
+    expect(classifyRole(post('Curriculum Manager', 'Build learning paths for engineers, devops and data engineer roles'))).toBeNull()
   })
 
   it('leaves a role it does not know unclassified instead of guessing', () => {
@@ -118,8 +121,9 @@ describe('role-categories-migration.sql stays in step with the rules', () => {
     expect(checks('v_title')).toEqual(ROLE_RULES.map(rule => ({ regex: rule.title, role: rule.role })))
   })
 
-  it('has every body rule, in the same order', () => {
-    expect(checks('v_body')).toEqual(ROLE_RULES.filter(rule => rule.body).map(rule => ({ regex: rule.body!, role: rule.role })))
+  it('has no rule that looks at the body', () => {
+    expect(fn).not.toMatch(/v_body/)
+    expect(ROLE_RULES.every(rule => !('body' in rule))).toBe(true)
   })
 
   it('makes the scraper trigger use the function instead of its own keyword list', () => {

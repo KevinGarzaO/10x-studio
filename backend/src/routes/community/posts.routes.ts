@@ -3,6 +3,7 @@ import { supabase } from '../../../services/supabase.service'
 import { communityAuthMiddleware, AuthRequest } from '../../../middleware/community-auth.middleware'
 import { generateSlug } from '../../../services/slug'
 import { companySlug } from '../../../services/company'
+import { evaluateVacancy, REJECT_REASON_LABEL } from '../../../services/vacancies/publish-rule'
 
 const router = Router()
 
@@ -344,10 +345,51 @@ router.get('/:id', async (req: Request, res: Response) => {
 
 router.post('/', communityAuthMiddleware, async (req: AuthRequest, res: Response) => {
   try {
-    const { title, content, type, budget, modalidad, tags } = req.body
+    const { title, content, type, budget, modalidad, tags, roleCategory, seniority, skills, applyUrl, company } = req.body
 
     if (!title || !content || !type) {
       return res.status(400).json({ error: 'Título, contenido y tipo son requeridos' })
+    }
+
+    // REGLA DE NEGOCIO (services/vacancies/publish-rule.ts): una vacante solo se publica si
+    // queda ligada a los catálogos. Es la misma regla que se le exige a las que trae el
+    // scraper; sin ella no se podría cruzar con candidatos ni medir.
+    const vacancy: Record<string, unknown> = {}
+    if (type === 'job') {
+      const requestedSkills: string[] = Array.isArray(skills) ? skills.filter((s: unknown): s is string => typeof s === 'string') : []
+
+      const [{ data: catalogRows }, { data: author }] = await Promise.all([
+        supabase.from('skills').select('name'),
+        supabase.from('users').select('display_name').eq('id', req.userId).maybeSingle(),
+      ])
+
+      const verdict = evaluateVacancy(
+        {
+          title,
+          company: company || author?.display_name,
+          applyUrl,
+          roleCategory,
+          skills: requestedSkills,
+          seniority,
+        },
+        new Set((catalogRows || []).map((row: { name: string }) => row.name)),
+      )
+
+      if (!verdict.valid) {
+        return res.status(400).json({
+          error: 'vacancy_not_linked',
+          reasons: verdict.reasons,
+          message: `La vacante no se puede publicar: ${verdict.reasons.map((reason) => REJECT_REASON_LABEL[reason]).join(', ')}. Elige un rol y al menos un skill del catálogo, y agrega el enlace para postularse.`,
+        })
+      }
+
+      Object.assign(vacancy, {
+        role_category: roleCategory,
+        seniority_level: seniority ?? null,
+        skills: requestedSkills,
+        source_url: applyUrl,
+        company: company || author?.display_name,
+      })
     }
 
     const { data: post, error } = await supabase
@@ -359,6 +401,7 @@ router.post('/', communityAuthMiddleware, async (req: AuthRequest, res: Response
         budget,
         modalidad,
         author_id: req.userId,
+        ...vacancy,
       })
       .select()
       .single()

@@ -1,4 +1,5 @@
 import { getActiveSources, insertPost } from "./db";
+import { describeRejections, type RejectReason } from "../vacancies/publish-rule";
 import { fetchWorkable } from "./sources/workable";
 import { fetchGreenhouse } from "./sources/greenhouse";
 import { fetchLever } from "./sources/lever";
@@ -33,6 +34,9 @@ export async function runProduction(
   postsFound: number;
   postsWithContact: number;
   postsInserted: number;
+  /** Vacantes que NO cumplen la regla de negocio y no se guardaron. */
+  postsRejected: number;
+  rejections: Partial<Record<RejectReason, number>>;
 }> {
   const sources = await getActiveSources();
   // Only ATS platforms
@@ -43,6 +47,8 @@ export async function runProduction(
   let postsFound = 0;
   let postsWithContact = 0;
   let postsInserted = 0;
+  let postsRejected = 0;
+  const rejections: Partial<Record<RejectReason, number>> = {};
 
   for (const source of atsSources) {
     log(`[Production] Scraping ${source.platform}/${source.source_id}...`);
@@ -97,7 +103,7 @@ export async function runProduction(
         // Upsert (see insertPost) — a job seen before gets its content
         // refreshed instead of being silently skipped, so an incomplete
         // first scrape self-heals on the next run.
-        await insertPost({
+        const result = await insertPost({
           platform: post.platform,
           source: post.source,
           post_id: post.postId,
@@ -122,6 +128,15 @@ export async function runProduction(
           analysis_text: post.analysisText ?? null,
         });
 
+        if (!result.stored) {
+          // Un fallo pasajero del análisis no trae motivo: no es un rechazo, se reintenta.
+          if (result.reasons.length > 0) {
+            postsRejected++;
+            rejections[result.reasons[0]] = (rejections[result.reasons[0]] ?? 0) + 1;
+          }
+          continue;
+        }
+
         postsInserted++;
       }
 
@@ -133,9 +148,9 @@ export async function runProduction(
     await sleep(2000);
   }
 
-  log(`[Production] Completado: ${sourcesTested} fuentes, ${postsFound} posts, ${postsWithContact} con contacto, ${postsInserted} insertados`);
+  log(`[Production] Completado: ${sourcesTested} fuentes, ${postsFound} posts, ${postsWithContact} con contacto, ${postsInserted} insertados, ${postsRejected} rechazados por no cumplir la regla de vacantes (${describeRejections(rejections)})`);
 
   await enforceSafetyCap(log);
 
-  return { sourcesTested, postsFound, postsWithContact, postsInserted };
+  return { sourcesTested, postsFound, postsWithContact, postsInserted, postsRejected, rejections };
 }

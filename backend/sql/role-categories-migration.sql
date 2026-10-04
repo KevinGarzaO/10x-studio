@@ -13,8 +13,8 @@
 --      función. Corrige dos defectos del clasificador anterior:
 --        - buscaba pedazos de palabra ("ios" dentro de "positions"), y clasificaba un
 --          Senior Accountant como móvil; ahora son palabras completas;
---        - miraba todo el texto; ahora manda el TÍTULO, y el cuerpo solo se consulta,
---          para puestos técnicos inequívocos, cuando el título no dice nada.
+--        - miraba todo el texto; ahora solo cuenta el TÍTULO (el cuerpo daba roles
+--          equivocados: "Account Executive" como fullstack, "Sales Engineer" como devops).
 --   3. Reclasifica lo que ya existe: las vacantes en espera y las ya publicadas. Solo
 --      se toca role_category (ni nivel ni skills).
 --
@@ -36,9 +36,9 @@ RETURNS TEXT AS $$
 DECLARE
   -- El título es la primera línea, sin los # de markdown.
   v_title TEXT := lower(btrim(regexp_replace(split_part(coalesce(p_text, ''), E'\n', 1), $re$^#+\s*$re$, '')));
-  v_body  TEXT := lower(coalesce(p_text, ''));
 BEGIN
-  -- 1. Por el título: lo que dice qué puesto es.
+  -- Solo por el título: lo que dice qué puesto es. El cuerpo no se mira: mirarlo como
+  -- respaldo asignaba roles equivocados ("Account Executive" como fullstack).
   IF v_title ~ $re$\m(full[ -]?stack)\M$re$ THEN
     RETURN 'fullstack';
   END IF;
@@ -86,32 +86,6 @@ BEGIN
   END IF;
   IF v_title ~ $re$\m(software (engineer\w*|developer\w*|development engineer\w*)|desarrollador(a)?|programador(a)?|arquitecto de software|ingenier[oa] de software|swe|sde)\M$re$ THEN
     RETURN 'fullstack';
-  END IF;
-
-  -- 2. Por el cuerpo, solo para puestos técnicos con términos inequívocos.
-  IF v_body ~ $re$\m(full[ -]?stack)\M$re$ THEN
-    RETURN 'fullstack';
-  END IF;
-  IF v_body ~ $re$\m(devops|site reliability)\M$re$ THEN
-    RETURN 'devops';
-  END IF;
-  IF v_body ~ $re$\m(data scientist|machine learning engineer)\M$re$ THEN
-    RETURN 'data_scientist';
-  END IF;
-  IF v_body ~ $re$\mdata engineer\M$re$ THEN
-    RETURN 'data_engineer';
-  END IF;
-  IF v_body ~ $re$\mquality assurance (engineer|analyst)\M$re$ THEN
-    RETURN 'qa';
-  END IF;
-  IF v_body ~ $re$\m(ios|android) (engineer|developer)\M$re$ THEN
-    RETURN 'mobile';
-  END IF;
-  IF v_body ~ $re$\mfront[ -]?end (engineer|developer)\M$re$ THEN
-    RETURN 'frontend';
-  END IF;
-  IF v_body ~ $re$\mback[ -]?end (engineer|developer)\M$re$ THEN
-    RETURN 'backend';
   END IF;
 
   RETURN NULL;

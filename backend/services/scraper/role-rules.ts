@@ -12,9 +12,11 @@
  *  - Antes se buscaba cada palabra como pedazo de cualquier texto: "ios" aparecía
  *    dentro de "positions", así que un "Senior Accountant" salía como `mobile`.
  *    Ahora son palabras completas.
- *  - Antes se miraba todo el texto de la vacante. Ahora manda el TÍTULO, que es lo
- *    que dice qué puesto es; el cuerpo solo se consulta, y solo para puestos
- *    técnicos con términos inequívocos, cuando el título no dice nada.
+ *  - Antes se miraba todo el texto de la vacante. Ahora SOLO el título, que es lo que
+ *    dice qué puesto es. Se probó mirar también el cuerpo como respaldo y salía mal:
+ *    de 27 roles asignados solo por el cuerpo, casi todos estaban equivocados ("Account
+ *    Executive" como fullstack, todos los "Sales Engineer" como devops). Como el rol
+ *    decide si una vacante entra al feed, un rol equivocado es peor que ninguno.
  *
  * Sintaxis: `\m` y `\M` son los límites de palabra de PostgreSQL. Aquí se
  * traducen a su equivalente en JavaScript para poder probarlos.
@@ -24,8 +26,6 @@ export interface RoleRule {
   role: string
   /** Se aplica al título (primera línea). */
   title: string
-  /** Si existe, se aplica al texto completo cuando ningún título coincidió. */
-  body?: string
 }
 
 // El orden importa: gana la primera regla que coincide, de lo más específico a lo
@@ -34,42 +34,34 @@ export const ROLE_RULES: RoleRule[] = [
   {
     role: 'fullstack',
     title: String.raw`\m(full[ -]?stack)\M`,
-    body: String.raw`\m(full[ -]?stack)\M`,
   },
   {
     role: 'devops',
     title: String.raw`\m(devops|sre|site reliability|platform engineer\w*|infrastructure engineer\w*|cloud engineer\w*)\M`,
-    body: String.raw`\m(devops|site reliability)\M`,
   },
   {
     role: 'data_scientist',
     title: String.raw`\m(data scientist\w*|machine learning|ml engineer\w*|research scientist\w*|applied scientist\w*|data analyst\w*|ai engineer\w*|artificial intelligence|científic[oa] de datos|analista de datos)\M`,
-    body: String.raw`\m(data scientist|machine learning engineer)\M`,
   },
   {
     role: 'data_engineer',
     title: String.raw`\m(data engineer\w*|analytics engineer\w*|ingenier[oa] de datos|ingenier[oa] de integración de datos|arquitecto de datos|desarrollador(a)? bi|etl developer\w*|big data)\M`,
-    body: String.raw`\mdata engineer\M`,
   },
   {
     role: 'qa',
     title: String.raw`\m(qa|quality assurance|sdet|test engineer\w*|test automation|tester|ingenier[oa] de calidad|analista de calidad|analista qa)\M`,
-    body: String.raw`\mquality assurance (engineer|analyst)\M`,
   },
   {
     role: 'mobile',
     title: String.raw`\m(ios|android|react native|flutter|mobile (engineer|developer|app\w*)|desarrollador(a)? móvil)\M`,
-    body: String.raw`\m(ios|android) (engineer|developer)\M`,
   },
   {
     role: 'frontend',
     title: String.raw`\m(front[ -]?end|ui engineer\w*|web developer\w*|desarrollador(a)? web)\M`,
-    body: String.raw`\mfront[ -]?end (engineer|developer)\M`,
   },
   {
     role: 'backend',
     title: String.raw`\m(back[ -]?end|api engineer\w*|server[ -]side)\M`,
-    body: String.raw`\mback[ -]?end (engineer|developer)\M`,
   },
   {
     role: 'ux_ui',
@@ -114,11 +106,7 @@ function toJs(source: string): RegExp {
   return new RegExp(source.replace(/\\m/g, before).replace(/\\M/g, after), 'iu')
 }
 
-const COMPILED = ROLE_RULES.map((rule) => ({
-  role: rule.role,
-  title: toJs(rule.title),
-  body: rule.body ? toJs(rule.body) : null,
-}))
+const COMPILED = ROLE_RULES.map((rule) => ({ role: rule.role, title: toJs(rule.title) }))
 
 /** El título de una vacante: su primera línea, sin los `#` de markdown. */
 export function titleOf(text: string): string {
@@ -129,9 +117,5 @@ export function titleOf(text: string): string {
 export function classifyRole(text: string): string | null {
   const title = titleOf(text)
   for (const rule of COMPILED) if (rule.title.test(title)) return rule.role
-
-  const body = text.toLowerCase()
-  for (const rule of COMPILED) if (rule.body && rule.body.test(body)) return rule.role
-
   return null
 }

@@ -2,6 +2,15 @@ import { supabase } from "../supabase.service";
 import type { Post } from "./types";
 import { enrichVacancy, type VacancyEnrichment } from "../vacancies/enrich";
 import { loadSkillMatchers } from "../vacancies/catalog";
+import { evaluateVacancy, type RejectReason } from "../vacancies/publish-rule";
+import { vacancyTitle } from "../vacancies/text";
+
+/** Qué pasó con una vacante al intentar guardarla. */
+export interface InsertResult {
+  stored: boolean;
+  /** Por qué NO se guardó (vacío si se guardó, o si el análisis falló y se reintentará). */
+  reasons: RejectReason[];
+}
 
 // ---------------------------------------------------------------------------
 // Sources
@@ -132,20 +141,44 @@ export async function insertPost(post: {
   company_logo?: string | null;
   /** El texto completo de la vacante, solo para analizarla (no se guarda). */
   analysis_text?: string | null;
-}): Promise<void> {
-  // Cada vacante nace ya ligada: rol, nivel, skills del catálogo y modalidad, sacados
-  // de su descripción COMPLETA. Si el análisis falla la vacante se guarda igual (sin
-  // esos campos, y el trigger de la base pone un rol de respaldo): perder una oferta
-  // por un error de análisis sería peor que guardarla sin enriquecer.
+}): Promise<InsertResult> {
+  // REGLA DE NEGOCIO (services/vacancies/publish-rule.ts): una vacante solo se guarda si
+  // queda ligada a los catálogos: un rol y al menos un skill del catálogo, además de
+  // título, empresa y enlace. Cada vacante se analiza sobre su descripción COMPLETA.
+  // La que no cumple NO se guarda, y si ya estaba guardada se elimina del área de paso:
+  // sin esos datos no se puede cruzar con nadie, y solo ensucia la información.
   let enrichment: VacancyEnrichment | null = null;
   if (post.post_type === "vacancy") {
+    let matchers;
     try {
+      matchers = await loadSkillMatchers();
       enrichment = enrichVacancy(
         { text: post.analysis_text ?? post.text, location: post.location, work_modality: post.work_modality },
-        await loadSkillMatchers(),
+        matchers,
       );
     } catch (err) {
-      console.warn(`[Enrich] No se pudo enriquecer ${post.source}/${post.post_id}: ${(err as Error).message}`);
+      // Un fallo del análisis (por ejemplo, el catálogo no se pudo leer) es pasajero: no se
+      // guarda esta vez, pero tampoco se borra nada; la próxima corrida lo reintenta.
+      console.warn(`[Enrich] No se pudo analizar ${post.source}/${post.post_id}: ${(err as Error).message}`);
+      return { stored: false, reasons: [] };
+    }
+
+    const verdict = evaluateVacancy(
+      {
+        title: vacancyTitle(post.text),
+        company: post.company,
+        applyUrl: post.url ?? ((post.contacts as { applyUrl?: string } | null)?.applyUrl ?? null),
+        roleCategory: enrichment.role_category,
+        skills: enrichment.skills,
+        seniority: enrichment.seniority_level,
+        modality: enrichment.work_modality,
+      },
+      new Set(matchers.map((matcher) => matcher.name)),
+    );
+
+    if (!verdict.valid) {
+      await removeStaged(post.platform, post.source, post.post_id);
+      return { stored: false, reasons: verdict.reasons };
     }
   }
 
@@ -192,6 +225,22 @@ export async function insertPost(post: {
     company_logo: post.company_logo ?? null,
   }, { onConflict: "platform,source,post_id" });
   if (error) throw error;
+  return { stored: true, reasons: [] };
+}
+
+/**
+ * Elimina del área de paso una vacante que dejó de cumplir la regla (por ejemplo, su
+ * descripción se editó), para que no se quede esperando a ser publicada.
+ */
+async function removeStaged(platform: string, source: string, postId: string | null): Promise<void> {
+  if (!postId) return;
+  const { error } = await supabase
+    .from("scraper_posts")
+    .delete()
+    .eq("platform", platform)
+    .eq("source", source)
+    .eq("post_id", postId);
+  if (error) console.warn(`[Enrich] No se pudo quitar ${source}/${postId} del área de paso: ${error.message}`);
 }
 
 // ---------------------------------------------------------------------------
