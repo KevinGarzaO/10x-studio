@@ -15,7 +15,9 @@
     "user-stats": "tsx scripts/user-stats.ts",
     "match-report": "tsx scripts/match-report.ts",
     "backfill-vacancies": "tsx scripts/backfill-vacancy-enrichment.ts",
-    "clean-vacancies": "tsx scripts/clean-vacancies.ts"
+    "clean-vacancies": "tsx scripts/clean-vacancies.ts",
+    "linkedin-vacancy-preview": "tsx scripts/linkedin-vacancy-preview.ts",
+    "signup-sources": "tsx scripts/signup-sources.ts"
   },
   "dependencies": {
     "@avocado/schemas": "workspace:*",

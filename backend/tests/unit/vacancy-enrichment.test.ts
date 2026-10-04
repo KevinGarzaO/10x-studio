@@ -83,6 +83,13 @@ describe('inferModality', () => {
     expect(inferModality('onsite', null, 'fully remote')).toBe('onsite')
   })
 
+  it('lets the location win over a stray mention in the text', () => {
+    expect(inferModality('unknown', 'Remoto', 'Join our onsite events and in-person offsites')).toBe('remote')
+    expect(inferModality(null, 'Remote - Mexico', 'in-office days are optional')).toBe('remote')
+    expect(inferModality(null, 'Hybrid - Austin', 'fully remote friendly')).toBe('hybrid')
+    expect(inferModality(null, 'Onsite - Austin', 'remote work is rare')).toBe('onsite')
+  })
+
   it('reads the text when the source does not know', () => {
     expect(inferModality('unknown', null, 'This is a fully remote position')).toBe('remote')
     expect(inferModality('unknown', null, 'Modalidad híbrida, 3 días en oficina')).toBe('hybrid')

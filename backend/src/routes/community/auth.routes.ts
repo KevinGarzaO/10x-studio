@@ -1,5 +1,6 @@
 import { Router, Request, Response } from 'express'
 import { supabase, createAuthClient } from '../../../services/supabase.service'
+import { sanitizeAttribution } from '../../../services/attribution'
 import { communityAuthMiddleware, AuthRequest } from '../../../middleware/community-auth.middleware'
 
 const router = Router()
@@ -37,12 +38,31 @@ router.post('/signup', async (req: Request, res: Response) => {
     }
 
     if (authData.user) {
-      await supabase.from('users').insert({
+      const row = {
         id: authData.user.id,
         email,
         username,
         display_name: displayName || username,
-      })
+      }
+
+      // De dónde llegó (UTM): el navegador lo manda al registrarse. Si falla guardarlo
+      // (por ejemplo, la migración aún no se aplicó) la cuenta se crea igual: medir el
+      // origen nunca debe impedir un registro.
+      const attribution = sanitizeAttribution(req.body.attribution)
+      const origin = attribution && {
+        signup_source: attribution.source,
+        signup_medium: attribution.medium,
+        signup_campaign: attribution.campaign,
+        signup_content: attribution.content,
+        signup_referrer: attribution.referrer,
+        signup_landing_path: attribution.landingPath,
+      }
+
+      const { error: insertError } = await supabase.from('users').insert({ ...row, ...origin })
+      if (insertError && origin) {
+        console.warn('[Signup] No se guardó el origen del registro:', insertError.message)
+        await supabase.from('users').insert(row)
+      }
     }
 
     res.status(201).json({

@@ -23,6 +23,14 @@ export function inferModality(
   const given = (declared || '').toLowerCase() as VacancyModality
   if (KNOWN.includes(given)) return given
 
+  // La ubicación manda sobre el texto: una oferta con ubicación "Remoto" es remota aunque
+  // el cuerpo hable de "onsite events" o "in-person" (visto en vacantes reales: 18 de 43
+  // ofertas remotas quedaban como presenciales por una mención suelta en el texto).
+  const place = location || ''
+  if (HYBRID.test(place)) return 'hybrid'
+  if (ONSITE.test(place)) return 'onsite'
+  if (REMOTE.test(place)) return 'remote'
+
   // Lo híbrido se revisa primero: "hybrid, 3 days remote" no es remoto.
   const haystack = `${location || ''}\n${text}`
   if (HYBRID.test(haystack)) return 'hybrid'

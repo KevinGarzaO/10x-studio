@@ -18,6 +18,7 @@ import { useSkillProposals } from '../lib/skill-proposals'
 import { SkillProposalsList } from './skill-proposals-list'
 import { SIGNUP_INTENT_KEY } from '../lib/company-claim'
 import { ProfileGate } from './profile-gate'
+import { getAttribution } from '../lib/attribution'
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'
 
@@ -405,10 +406,13 @@ export function AuthPage({ mode }: { mode: 'login' | 'signup' }) {
       }
 
       const endpoint = signup ? '/api/community/auth/signup' : '/api/community/auth/login'
-      const body: Record<string, string> = { email, password }
+      const body: Record<string, unknown> = { email, password }
       if (signup) {
         body.username = username.trim()
         body.displayName = displayName.trim() || username.trim()
+        // De dónde llegó (UTM), para saber qué trae registros.
+        const attribution = getAttribution()
+        if (attribution) body.attribution = attribution
       }
 
       const res = await fetch(`${API_URL}${endpoint}`, {

@@ -23,6 +23,7 @@ import communityUsersRoutes from './src/routes/community/users.routes'
 import communitySavedRoutes from './src/routes/community/saved.routes'
 import faviconRoutes from './src/routes/community/favicon.routes'
 import communityStatsRoutes from './src/routes/community/stats.routes'
+import communityAttributionRoutes from './src/routes/community/attribution.routes'
 import communityFeedRoutes from './src/routes/community/feed.routes'
 import communityHistoryRoutes from './src/routes/community/history.routes'
 import communitySkillExamsRoutes from './src/routes/community/skill-exams.routes'
@@ -104,6 +105,7 @@ app.use('/api/community/users', communityUsersRoutes)
 app.use('/api/community/saved', communityAuthMiddleware, communitySavedRoutes)
 app.use('/api/community/favicon', faviconRoutes)
 app.use('/api/community/stats', communityStatsRoutes)
+app.use('/api/community/attribution', communityAttributionRoutes)
 app.use('/api/community/feed', communityFeedRoutes)
 app.use('/api/community/history', communityHistoryRoutes)
 app.use('/api/community/skill-exams', communitySkillExamsRoutes)
