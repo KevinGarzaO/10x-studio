@@ -7,6 +7,7 @@ import { getToken, fetchCurrentUser, captureSessionFromUrl } from '../lib/sessio
 import { SENIORITY_OPTIONS, MODALITY_OPTIONS, ROLE_CATEGORY_OPTIONS } from '../lib/profile-options'
 import { PhotoPicker, SegmentedControl, SkillsInput, RoleCategorySelect } from './profile-form-fields'
 import { useSkillCatalog } from '../lib/skill-catalog'
+import { takeReturnTo } from '../lib/return-to'
 import { validateCandidateProfile, messageForField } from '../lib/profile-validation'
 import { useSkillProposals } from '../lib/skill-proposals'
 import { useMyCompanyClaim, SIGNUP_INTENT_KEY } from '../lib/company-claim'
@@ -147,7 +148,8 @@ export function OnboardingPage() {
         return
       }
       localStorage.setItem('avocado_user', JSON.stringify(data.user))
-      router.push('/')
+      // Termina el recorrido: si venía de una vacante, vuelve a ella.
+      router.push(takeReturnTo() ?? '/')
       router.refresh()
     } catch {
       setError('Error de conexión. Intenta de nuevo.')

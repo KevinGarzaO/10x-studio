@@ -10,7 +10,8 @@ import {
   ArrowBigUp, LockKeyhole, CheckCircle2, Building, MapPin, Home as HomeIcon, Mail, Clock, Check
 } from 'lucide-react'
 import { companySlug, formatCompanyName } from '../lib/company'
-import { useShell } from '../lib/shell-context'
+import { useShell, type AuthRequest } from '../lib/shell-context'
+import { saveReturnTo } from '../lib/return-to'
 import { HeroBanner } from './hero-banner'
 import { getToken, clearSession } from '../lib/session'
 import { buildFeed, type MatchedItem } from '../lib/mixed-feed'
@@ -474,9 +475,25 @@ export function PublishModal({ onClose }: { onClose: () => void }) {
   return <div className="modal-backdrop" role="presentation" onMouseDown={e => e.target === e.currentTarget && onClose()}><section className="publish-modal" role="dialog" aria-modal="true" aria-labelledby="publish-title"><div className="modal-header"><div><p className="eyebrow">Nueva publicación</p><h2 id="publish-title">¿Qué quieres compartir?</h2></div><button className="icon-button" onClick={onClose} aria-label="Cerrar"><X size={20} /></button></div><div className="publish-tabs">{['Post Normal', 'Publicar Vacante / Proyecto', 'Mostrar Proyecto'].map(item => <button key={item} className={mode === item ? 'selected' : ''} onClick={() => setMode(item)}>{item}</button>)}</div><div className="editor-toolbar"><span className="mono-label">MARKDOWN</span><button className={preview ? 'tool-active' : ''} onClick={() => setPreview(!preview)}>{preview ? 'Editar' : 'Vista previa'}</button></div>{preview ? <div className="preview-pane"><p className="eyebrow">Vista previa</p><h3>Comparte algo que valga la pena leer</h3><p>Tu publicación aparecerá aquí con formato Markdown.</p></div> : <textarea className="editor" placeholder={mode === 'Publicar Vacante / Proyecto' ? 'Describe el proyecto, stack, presupuesto y modalidad...' : 'Escribe algo que la comunidad quiera conversar...'} aria-label="Contenido de la publicación" /> }<div className="modal-bottom"><div className="stack-picker"><Tag size={15} /><span>Añadir tags</span><span className="stack-badge">React</span><span className="stack-badge">+</span></div><button className="publish-button" onClick={onClose}>Publicar <Send size={15} /></button></div></section></div>
 }
 
-export function AuthModal({ onClose }: { onClose: () => void }) {
+export function AuthModal({ onClose, request }: { onClose: () => void; request?: AuthRequest | null }) {
   const router = useRouter()
-  return <div className="modal-backdrop" role="presentation" onMouseDown={e => e.target === e.currentTarget && onClose()}><section className="auth-modal" role="dialog" aria-modal="true" aria-labelledby="auth-title"><button className="modal-close icon-button" onClick={onClose} aria-label="Cerrar"><X size={19} /></button><div className="lock-orb"><LockKeyhole size={20} /></div><p className="eyebrow">Contacto directo</p><h2 id="auth-title">Desbloquea esta oportunidad</h2><p>Regístrate para acceder a los datos de contacto y unirte a la conversación.</p><button className="oauth-button" style={{ width: '100%', marginBottom: 10, background: '#00A86B', color: '#18161a', border: 'none', padding: '12px 16px', borderRadius: 8, fontWeight: 700, fontSize: 14, cursor: 'pointer' }} onClick={() => { onClose(); router.push('/signup') }}>Crear cuenta gratis</button><button className="oauth-button" style={{ width: '100%', background: 'transparent', color: '#e8e2d8', border: '1px solid #322f29', padding: '12px 16px', borderRadius: 8, fontSize: 14, cursor: 'pointer' }} onClick={() => { onClose(); router.push('/login') }}>Iniciar sesión</button><small style={{ display: 'block', textAlign: 'center', marginTop: 12, color: '#b3aba1', fontSize: 11 }}>Al continuar aceptas nuestras reglas de comunidad.</small></section></div>
+  const vacancy = request?.variant === 'vacancy'
+
+  // Se recuerda la página en la que estaba: al terminar el registro (y el onboarding) se
+  // le regresa a ella en lugar de mandarla al inicio.
+  function go(path: '/signup' | '/login') {
+    saveReturnTo(window.location.pathname)
+    onClose()
+    router.push(path)
+  }
+
+  const eyebrow = vacancy ? 'Vacante' : 'Contacto directo'
+  const title = vacancy ? '¿Te interesa esta vacante?' : 'Desbloquea esta oportunidad'
+  const text = vacancy
+    ? 'Regístrate gratis para postularte, guardarla y ver qué tan bien encajas con tus skills. Al terminar tu perfil volverás a esta vacante.'
+    : 'Regístrate para acceder a los datos de contacto y unirte a la conversación.'
+
+  return <div className="modal-backdrop" role="presentation" onMouseDown={e => e.target === e.currentTarget && onClose()}><section className="auth-modal" role="dialog" aria-modal="true" aria-labelledby="auth-title"><button className="modal-close icon-button" onClick={onClose} aria-label="Cerrar"><X size={19} /></button><div className="lock-orb"><LockKeyhole size={20} /></div><p className="eyebrow">{eyebrow}</p><h2 id="auth-title">{title}</h2>{vacancy && request?.subject && <p className="auth-subject"><strong>{request.subject}</strong></p>}<p>{text}</p><button className="oauth-button" style={{ width: '100%', marginBottom: 10, background: '#00A86B', color: '#18161a', border: 'none', padding: '12px 16px', borderRadius: 8, fontWeight: 700, fontSize: 14, cursor: 'pointer' }} onClick={() => go('/signup')}>Crear cuenta gratis</button><button className="oauth-button" style={{ width: '100%', background: 'transparent', color: '#e8e2d8', border: '1px solid #322f29', padding: '12px 16px', borderRadius: 8, fontSize: 14, cursor: 'pointer' }} onClick={() => go('/login')}>Iniciar sesión</button>{vacancy && <button type="button" className="auth-dismiss" onClick={onClose}>Seguir viendo la vacante</button>}<small style={{ display: 'block', textAlign: 'center', marginTop: 12, color: '#b3aba1', fontSize: 11 }}>Al continuar aceptas nuestras reglas de comunidad.</small></section></div>
 }
 
 // The feed's content column — rendered as {children} inside the shared

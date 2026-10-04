@@ -27,7 +27,7 @@ const match = {
 
 function renderFeed(user: unknown) {
   return render(
-    <ShellContext.Provider value={{ user, requestAuth: vi.fn(), search: '', activeTag: null, setActiveTag: vi.fn() }}>
+    <ShellContext.Provider value={{ user, userLoaded: true, requestAuth: vi.fn(), search: '', activeTag: null, setActiveTag: vi.fn() }}>
       <Feed />
     </ShellContext.Provider>,
   )

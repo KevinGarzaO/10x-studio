@@ -5,7 +5,7 @@ import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { Bell, Menu, Plus, Search, X } from 'lucide-react'
 import { fetchCurrentUser, getCachedUser } from '../lib/session'
-import { ShellContext } from '../lib/shell-context'
+import { ShellContext, type AuthRequest } from '../lib/shell-context'
 import { LeftSidebar, RightSidebar, ProfileMenu, PublishModal, AuthModal } from './community-hub'
 import { ProfileGate } from './profile-gate'
 
@@ -19,12 +19,14 @@ export function CommunityShell({ children }: { children: ReactNode }) {
   const [mobileMenu, setMobileMenu] = useState(false)
   const [publishOpen, setPublishOpen] = useState(false)
   const [authOpen, setAuthOpen] = useState(false)
+  const [authRequest, setAuthRequest] = useState<AuthRequest | null>(null)
+  const [userLoaded, setUserLoaded] = useState(false)
 
   useEffect(() => {
     setUser(getCachedUser())
     fetchCurrentUser().then(u => {
       setUser(u)
-    }).catch(() => {})
+    }).catch(() => {}).finally(() => setUserLoaded(true))
     // Quién debe completar su perfil lo decide <ProfileGate>, que también cubre
     // la foto y los skills fuera del catálogo, y se monta igual en las pantallas
     // de cuenta que viven fuera de este layout (FR-024, FR-025).
@@ -41,9 +43,13 @@ export function CommunityShell({ children }: { children: ReactNode }) {
     if (pathname !== '/') router.push('/')
   }, [pathname, router])
 
-  const requestAuth = useCallback(() => setAuthOpen(true), [])
+  const requestAuth = useCallback((request?: unknown) => {
+    // Como onClick directo llega un evento, no unas opciones: solo se acepta lo que trae `variant`.
+    setAuthRequest(request && typeof request === 'object' && (request as AuthRequest).variant === 'vacancy' ? (request as AuthRequest) : null)
+    setAuthOpen(true)
+  }, [])
 
-  const contextValue = useMemo(() => ({ user, requestAuth, search, activeTag, setActiveTag }), [user, requestAuth, search, activeTag])
+  const contextValue = useMemo(() => ({ user, userLoaded, requestAuth, search, activeTag, setActiveTag }), [user, userLoaded, requestAuth, search, activeTag])
 
   return (
     <ShellContext.Provider value={contextValue}>
@@ -82,7 +88,7 @@ export function CommunityShell({ children }: { children: ReactNode }) {
         )}
 
         {publishOpen && <PublishModal onClose={() => setPublishOpen(false)} />}
-        {authOpen && <AuthModal onClose={() => setAuthOpen(false)} />}
+        {authOpen && <AuthModal onClose={() => setAuthOpen(false)} request={authRequest} />}
       </div>
     </ShellContext.Provider>
   )

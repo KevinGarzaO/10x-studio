@@ -161,7 +161,7 @@ function buildApplyUrl(platform: string | null, sourceUrl: string | null): strin
 export default function VacancyPage() {
   const { slug } = useParams<{ slug: string }>()
   const router = useRouter()
-  const { user, requestAuth } = useShell()
+  const { user, userLoaded, requestAuth } = useShell()
   // router.back() returns to whatever page the user actually came from
   // (feed, another post, a search) instead of a fixed guess at the tab.
   const goBack = () => router.back()
@@ -271,6 +271,23 @@ export default function VacancyPage() {
     }
   }
 
+  // Quien llega sin cuenta (por ejemplo, desde LinkedIn) ve al entrar un aviso para
+  // registrarse: al terminar su perfil vuelve justo a esta vacante (ver AuthModal y
+  // lib/return-to.ts). Una vez por sesión y vacante, y cerrable: no estorba al que solo
+  // quiere leer. No aparece mientras se confirma la sesión, para no avisar a quien ya
+  // tiene cuenta.
+  useEffect(() => {
+    if (!post || !userLoaded || user) return
+    const key = `avo_vacancy_prompt_${slug}`
+    try {
+      if (sessionStorage.getItem(key)) return
+      sessionStorage.setItem(key, '1')
+    } catch {
+      // sin sessionStorage el aviso sale cada vez; es lo más seguro para el registro
+    }
+    requestAuth({ variant: 'vacancy', subject: [post.title, formatCompanyName(post.company)].filter(Boolean).join(' — ') })
+  }, [post, userLoaded, user, slug, requestAuth])
+
   if (loading || error || !post) {
     return (
       <div className="detail-page">
@@ -329,7 +346,10 @@ export default function VacancyPage() {
           action={
             applyUrl && user
               ? { label: 'Postularse', onClick: handleApplyClick }
-              : undefined
+              // Sin cuenta, "Postularse" lleva a registrarse y de vuelta a esta vacante.
+              : applyUrl
+                ? { label: 'Postularse', onClick: () => requestAuth({ variant: 'vacancy', subject: `${post.title} — ${companyName}` }) }
+                : undefined
           }
         />
 

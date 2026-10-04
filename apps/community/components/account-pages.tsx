@@ -19,6 +19,7 @@ import { SkillProposalsList } from './skill-proposals-list'
 import { SIGNUP_INTENT_KEY } from '../lib/company-claim'
 import { ProfileGate } from './profile-gate'
 import { getAttribution } from '../lib/attribution'
+import { peekReturnTo } from '../lib/return-to'
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'
 
@@ -438,7 +439,8 @@ export function AuthPage({ mode }: { mode: 'login' | 'signup' }) {
             // Sin localStorage el onboarding simplemente vuelve a preguntar.
           }
         }
-        router.push(signup ? '/onboarding' : '/')
+        // Quien venía de una vacante vuelve a ella; el registro pasa primero por el onboarding.
+        router.push(signup ? '/onboarding' : (peekReturnTo() ?? '/'))
         router.refresh()
       } else if (signup) {
         setSuccess('Cuenta creada. Revisa tu correo para confirmar tu email y luego inicia sesión.')
