@@ -2,7 +2,7 @@ import { supabase } from "../supabase.service";
 import type { Post } from "./types";
 import { enrichVacancy, type VacancyEnrichment } from "../vacancies/enrich";
 import { loadSkillMatchers } from "../vacancies/catalog";
-import { evaluateVacancy, type RejectReason } from "../vacancies/publish-rule";
+import { evaluateVacancy, locationFromText, type RejectReason } from "../vacancies/publish-rule";
 import { vacancyTitle } from "../vacancies/text";
 
 /** Qué pasó con una vacante al intentar guardarla. */
@@ -168,6 +168,7 @@ export async function insertPost(post: {
         title: vacancyTitle(post.text),
         company: post.company,
         applyUrl: post.url ?? ((post.contacts as { applyUrl?: string } | null)?.applyUrl ?? null),
+        location: post.location ?? locationFromText(post.analysis_text ?? post.text),
         roleCategory: enrichment.role_category,
         skills: enrichment.skills,
         seniority: enrichment.seniority_level,

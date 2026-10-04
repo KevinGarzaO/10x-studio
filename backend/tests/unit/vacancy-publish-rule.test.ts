@@ -3,6 +3,8 @@ import { readFileSync } from 'fs'
 import { join } from 'path'
 import {
   evaluateVacancy,
+  MANUAL_PUBLISH_RULE,
+  locationFromText,
   tallyRejections,
   describeRejections,
   VACANCY_ROLES,
@@ -16,6 +18,7 @@ const good: VacancyCandidate = {
   title: 'Senior Backend Engineer',
   company: 'Acme',
   applyUrl: 'https://acme.com/jobs/1',
+  location: 'Remoto',
   roleCategory: 'backend',
   skills: ['python'],
 }
@@ -25,12 +28,18 @@ describe('evaluateVacancy', () => {
     expect(evaluateVacancy(good, catalog)).toEqual({ valid: true, reasons: [] })
   })
 
-  it('does not require seniority, modality or location', () => {
+  it('does not require seniority or modality for what the scraper brings', () => {
     expect(evaluateVacancy({ ...good, seniority: null, modality: 'unknown' }, catalog).valid).toBe(true)
+  })
+
+  it('requires a location for every vacancy', () => {
+    expect(evaluateVacancy({ ...good, location: '  ' }, catalog).reasons).toEqual(['no_location'])
+    expect(evaluateVacancy({ ...good, location: null }, catalog).valid).toBe(false)
   })
 
   it.each([
     [{ title: '  ' }, 'no_title'],
+    [{ location: '' }, 'no_location'],
     [{ company: null }, 'no_company'],
     [{ applyUrl: '' }, 'no_apply_url'],
     [{ roleCategory: null }, 'no_role'],
@@ -58,6 +67,41 @@ describe('evaluateVacancy', () => {
   })
 })
 
+describe('MANUAL_PUBLISH_RULE (vacancies a company creates by hand)', () => {
+  const manual = { ...good, seniority: 'senior', modality: 'Remoto' }
+
+  it('accepts a complete vacancy', () => {
+    expect(evaluateVacancy(manual, catalog, MANUAL_PUBLISH_RULE).valid).toBe(true)
+  })
+
+  it.each([
+    [{ seniority: null }, 'no_seniority'],
+    [{ seniority: 'experto' }, 'no_seniority'],
+    [{ modality: null }, 'no_modality'],
+    [{ modality: 'No especificado' }, 'no_modality'],
+    [{ modality: 'unknown' }, 'no_modality'],
+  ] as const)('requires level and modality: %j -> %s', (patch, reason) => {
+    expect(evaluateVacancy({ ...manual, ...patch }, catalog, MANUAL_PUBLISH_RULE).reasons).toEqual([reason])
+  })
+
+  it('accepts the three modalities and the three levels', () => {
+    for (const modality of ['Remoto', 'Híbrido', 'Presencial']) {
+      expect(evaluateVacancy({ ...manual, modality }, catalog, MANUAL_PUBLISH_RULE).valid).toBe(true)
+    }
+    for (const seniority of ['junior', 'semi_senior', 'senior']) {
+      expect(evaluateVacancy({ ...manual, seniority }, catalog, MANUAL_PUBLISH_RULE).valid).toBe(true)
+    }
+  })
+})
+
+describe('locationFromText', () => {
+  it('reads the location out of the stored text', () => {
+    expect(locationFromText('## T\n**Ubicación:** Austin, TX\n**Modalidad:** Remoto')).toBe('Austin, TX')
+    expect(locationFromText('## T\nsin ubicación')).toBeNull()
+    expect(locationFromText(null)).toBeNull()
+  })
+})
+
 describe('tallyRejections / describeRejections', () => {
   it('counts the first reason of each rejected vacancy', () => {
     const counts = tallyRejections([
@@ -78,6 +122,7 @@ describe('planCleanup', () => {
     title: 'Backend Engineer',
     company: 'Acme',
     source_url: 'https://acme.com/1',
+    location: 'Remoto',
     role_category: 'backend',
     skills: ['python'],
     ...patch,
@@ -133,8 +178,24 @@ describe('vacancy-publish-rule-migration.sql stays in step with the rule', () =>
   })
 
   it('checks every field the rule checks', () => {
-    for (const reason of ['no_title', 'no_company', 'no_apply_url', 'no_role', 'unknown_role', 'no_skills', 'unknown_skill']) {
+    for (const reason of ['no_title', 'no_company', 'no_apply_url', 'no_location', 'no_role', 'unknown_role', 'no_skills', 'unknown_skill']) {
       expect(sql).toContain(reason)
     }
+  })
+
+  it('demands level and modality only from vacancies that do not come from the scraper', () => {
+    const manual = sql.slice(sql.indexOf('IF NOT coalesce(NEW.is_scraper_post, false) THEN'))
+    expect(manual).toContain('no_seniority')
+    expect(manual).toContain('no_modality')
+    // ...y no antes de ese bloque: el scraper no los necesita.
+    const before = sql.slice(0, sql.indexOf('IF NOT coalesce(NEW.is_scraper_post, false) THEN'))
+    expect(before).not.toContain('no_seniority')
+    expect(before).not.toContain('no_modality')
+  })
+
+  it('is repeated, up to date, in the sales and legal migration', () => {
+    const salesLegal = readFileSync(join(__dirname, '../../sql/sales-legal-roles-migration.sql'), 'utf8').replace(/\r\n/g, '\n')
+    const fn = (text: string) => text.slice(text.indexOf('CREATE OR REPLACE FUNCTION enforce_vacancy_linkage'), text.indexOf('$$ LANGUAGE plpgsql;'))
+    expect(fn(salesLegal)).toBe(fn(sql))
   })
 })

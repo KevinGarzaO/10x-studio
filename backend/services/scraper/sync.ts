@@ -1,5 +1,5 @@
 import { pickDailyVacancies } from "./daily-selection";
-import { evaluateVacancy, describeRejections, tallyRejections, type PublishVerdict } from "../vacancies/publish-rule";
+import { evaluateVacancy, locationFromText, describeRejections, tallyRejections, type PublishVerdict } from "../vacancies/publish-rule";
 import { loadSkillMatchers } from "../vacancies/catalog";
 import { vacancyTitle } from "../vacancies/text";
 import { supabase } from "../supabase.service";
@@ -179,6 +179,7 @@ export async function syncVacancyToCommunity(
       title,
       company: companyName,
       applyUrl: post.url ?? (contacts?.applyUrl as string | undefined) ?? null,
+      location: post.location ?? locationFromText(post.text),
       roleCategory: post.role_category,
       skills: Array.isArray(post.skills) ? post.skills : [],
       seniority: post.seniority_level,
@@ -446,7 +447,7 @@ export async function syncAllPending(
 
   const { data: vacancyPosts } = await supabase
     .from("scraper_posts")
-    .select("id, text, url, skills, work_modality, contacts, created_at, post_date, company, source, role_category, seniority_level")
+    .select("id, text, url, skills, work_modality, contacts, created_at, post_date, company, source, role_category, seniority_level, location")
     .eq("post_type", "vacancy")
     .eq("synced_to_community", false)
     .eq("is_spam", false)
@@ -477,6 +478,7 @@ export async function syncAllPending(
         title: vacancyTitle(post.text),
         company: post.company ?? post.source,
         applyUrl: post.url ?? ((post.contacts as Record<string, unknown> | null)?.applyUrl as string | undefined) ?? null,
+        location: post.location ?? locationFromText(post.text),
         roleCategory: post.role_category,
         skills: Array.isArray(post.skills) ? post.skills : [],
         seniority: post.seniority_level,

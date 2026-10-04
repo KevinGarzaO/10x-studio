@@ -643,3 +643,5 @@ button { cursor: pointer; }
 .detail-match-head { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; color: #d8b4fe; }
 .detail-match ul { margin: 0; padding-left: 18px; color: #c9c2b6; font-size: 13px; line-height: 1.7; }
 .job-chip.is-adjacent { background: #34224a; color: #d8b4fe; }
+.stack-badge.is-validated { display: inline-flex; align-items: center; gap: 5px; background: #12351f; color: #6ee7a8; border: 1px solid #1f6b3f; }
+.match-pill.is-validated { background: #12351f; color: #6ee7a8; }

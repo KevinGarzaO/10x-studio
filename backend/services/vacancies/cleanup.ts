@@ -1,4 +1,4 @@
-import { evaluateVacancy, tallyRejections, type PublishVerdict, type RejectReason } from './publish-rule'
+import { evaluateVacancy, locationFromText, tallyRejections, type PublishVerdict, type RejectReason } from './publish-rule'
 
 /** Una vacante ya publicada en el feed, tal como se guarda en community_posts. */
 export interface PublishedVacancy {
@@ -6,6 +6,8 @@ export interface PublishedVacancy {
   title: string | null
   company: string | null
   source_url: string | null
+  location?: string | null
+  original_text?: string | null
   role_category: string | null
   skills: unknown
 }
@@ -43,6 +45,7 @@ export function planCleanup(
         title: vacancy.title,
         company: vacancy.company,
         applyUrl: vacancy.source_url,
+        location: vacancy.location ?? locationFromText(vacancy.original_text),
         roleCategory: vacancy.role_category,
         skills: asSkills(vacancy.skills),
       },

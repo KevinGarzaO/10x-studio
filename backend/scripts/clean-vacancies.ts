@@ -13,7 +13,7 @@
 import { supabase } from '../services/supabase.service'
 import { loadSkillMatchers } from '../services/vacancies/catalog'
 import { planCleanup, type PublishedVacancy } from '../services/vacancies/cleanup'
-import { describeRejections, evaluateVacancy, tallyRejections } from '../services/vacancies/publish-rule'
+import { describeRejections, evaluateVacancy, locationFromText, tallyRejections } from '../services/vacancies/publish-rule'
 import { vacancyTitle } from '../services/vacancies/text'
 
 const apply = process.argv.includes('--apply')
@@ -53,7 +53,7 @@ async function main() {
   // 1. Publicadas en el feed
   const { data: published, error } = await supabase
     .from('community_posts')
-    .select('id, title, company, source_url, role_category, skills')
+    .select('id, title, company, source_url, location, original_text, role_category, skills')
     .eq('type', 'job')
     .limit(5000)
   if (error) throw error
@@ -71,7 +71,7 @@ async function main() {
   // 2. En espera en el área de paso
   const { data: staged, error: stagedError } = await supabase
     .from('scraper_posts')
-    .select('id, text, url, company, contacts, skills, role_category')
+    .select('id, text, url, company, contacts, skills, role_category, location')
     .eq('post_type', 'vacancy')
     .limit(10000)
   if (stagedError) throw stagedError
@@ -84,6 +84,7 @@ async function main() {
         title: vacancyTitle(row.text ?? ''),
         company: row.company,
         applyUrl: row.url ?? row.contacts?.applyUrl,
+        location: row.location ?? locationFromText(row.text),
         roleCategory: row.role_category,
         skills: Array.isArray(row.skills) ? row.skills : [],
       },

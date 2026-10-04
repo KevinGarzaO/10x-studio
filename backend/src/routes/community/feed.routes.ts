@@ -2,7 +2,8 @@ import { Router, Response } from 'express'
 import { supabase } from '../../../services/supabase.service'
 import { communityAuthMiddleware, AuthRequest } from '../../../middleware/community-auth.middleware'
 import { syncVacancyToCommunity } from '../../../services/scraper/sync'
-import { scoreMatch } from '../../../services/matching/score'
+import { scoreMatch, type ValidationLevel } from '../../../services/matching/score'
+import { loadValidatedSkills } from '../../../services/matching/validated'
 
 const router = Router()
 
@@ -23,6 +24,8 @@ interface MatchedItem {
   sharedSkills: string[]
   /** 0 a 100: qué tan bien encaja contigo (rol, skills, nivel y modalidad). */
   matchScore: number
+  /** Tus skills que pide la vacante y validaste con examen, con su nivel. */
+  validatedSkills: { skill: string; level: ValidationLevel }[]
   /** Qué tan cerca está el rol de la vacante del de la persona. */
   roleFit: 'exact' | 'adjacent' | 'unknown' | 'none'
   /** Cómo encajan nivel y modalidad (para explicar el porcentaje). */
@@ -66,6 +69,7 @@ router.get('/for-you', communityAuthMiddleware, async (req: AuthRequest, res: Re
       seniority: (user.seniority as string | null) ?? null,
       skills: ((user.skills || []) as string[]).map((skill) => skill.toLowerCase()),
       workModality: (user.work_modality as string | null) ?? null,
+      validatedSkills: await loadValidatedSkills(req.userId),
     }
 
     // Las más recientes de cada fuente: se puntúan en memoria, así no depende de que
@@ -88,7 +92,7 @@ router.get('/for-you', communityAuthMiddleware, async (req: AuthRequest, res: Re
 
     const items: MatchedItem[] = []
 
-    const consider = (item: Omit<MatchedItem, 'matchingSkills' | 'sharedSkills' | 'matchScore' | 'roleFit' | 'seniorityFit' | 'modalityFit'>, modality: string | null) => {
+    const consider = (item: Omit<MatchedItem, 'matchingSkills' | 'sharedSkills' | 'matchScore' | 'validatedSkills' | 'roleFit' | 'seniorityFit' | 'modalityFit'>, modality: string | null) => {
       const result = scoreMatch(candidate, {
         roleCategory: item.roleCategory,
         seniority: item.seniorityLevel,
@@ -96,7 +100,7 @@ router.get('/for-you', communityAuthMiddleware, async (req: AuthRequest, res: Re
         workModality: modality,
       })
       if (!result.qualifies) return
-      items.push({ ...item, matchingSkills: result.sharedSkills.length, sharedSkills: result.sharedSkills, matchScore: result.score, roleFit: result.role, seniorityFit: result.seniority, modalityFit: result.modality })
+      items.push({ ...item, matchingSkills: result.sharedSkills.length, sharedSkills: result.sharedSkills, matchScore: result.score, validatedSkills: result.validatedSkills, roleFit: result.role, seniorityFit: result.seniority, modalityFit: result.modality })
     }
 
     for (const row of scraperRows || []) {
@@ -141,6 +145,7 @@ router.get('/for-you', communityAuthMiddleware, async (req: AuthRequest, res: Re
     const matched = items
     matched.sort((a, b) => {
       if (b.matchScore !== a.matchScore) return b.matchScore - a.matchScore
+      if (b.validatedSkills.length !== a.validatedSkills.length) return b.validatedSkills.length - a.validatedSkills.length
       return new Date(b.postDate ?? 0).getTime() - new Date(a.postDate ?? 0).getTime()
     })
 

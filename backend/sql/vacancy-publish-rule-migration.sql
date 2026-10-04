@@ -9,8 +9,13 @@
 -- La regla (definida en backend/services/vacancies/publish-rule.ts, y probada allí) es:
 --   * título, empresa y enlace para postularse;
 --   * un ROL del catálogo (y no "otro");
---   * al menos un SKILL, y todos del catálogo.
--- El nivel, la modalidad y la ubicación no son obligatorios.
+--   * al menos un SKILL, y todos del catálogo;
+--   * ubicación.
+-- Las vacantes que NO vienen del scraper (las que una empresa crea a mano, con
+-- is_scraper_post en falso) además deben traer nivel y modalidad: quien publica los
+-- sabe, y así quedan completas. A las del scraper no se les exige: muchas ofertas no
+-- los dicen.
+-- Requiere vacancy-enrichment-migration.sql (la columna community_posts.location).
 --
 -- El código ya la hace cumplir al ingresar (scraper), al promover al feed (sync) y al
 -- crear una vacante a mano (API). Este trigger es la última barrera: aunque algún
@@ -39,6 +44,19 @@ BEGIN
   END IF;
   IF btrim(coalesce(NEW.source_url, '')) = '' THEN
     RAISE EXCEPTION 'vacancy_not_linked: no_apply_url';
+  END IF;
+  IF btrim(coalesce(NEW.location, '')) = '' THEN
+    RAISE EXCEPTION 'vacancy_not_linked: no_location';
+  END IF;
+
+  -- Solo la vacante creada a mano: nivel y modalidad obligatorios.
+  IF NOT coalesce(NEW.is_scraper_post, false) THEN
+    IF NEW.seniority_level IS NULL OR NEW.seniority_level NOT IN ('junior', 'semi_senior', 'senior') THEN
+      RAISE EXCEPTION 'vacancy_not_linked: no_seniority';
+    END IF;
+    IF NEW.modalidad IS NULL OR NEW.modalidad NOT IN ('Remoto', 'Híbrido', 'Presencial') THEN
+      RAISE EXCEPTION 'vacancy_not_linked: no_modality';
+    END IF;
   END IF;
 
   -- Los mismos roles que backend/services/vacancies/publish-rule.ts (todos menos 'otro').
@@ -78,8 +96,8 @@ CREATE TRIGGER enforce_vacancy_linkage_trigger
 -- ============================================
 -- Debe FALLAR con "vacancy_not_linked: no_role" (y no deja rastro, se deshace sola):
 -- DO $$ BEGIN
---   INSERT INTO community_posts (title, content, type, company, source_url, skills)
---   VALUES ('Prueba', 'x', 'job', 'Acme', 'https://x.com', '["python"]'::jsonb);
+--   INSERT INTO community_posts (title, content, type, company, source_url, location, skills)
+--   VALUES ('Prueba', 'x', 'job', 'Acme', 'https://x.com', 'Remoto', '["python"]'::jsonb);
 -- END $$;
 --
 -- Cuántas vacantes publicadas hoy NO cumplen la regla (se limpian con npm run clean-vacancies):

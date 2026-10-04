@@ -3,7 +3,7 @@
 import Link from 'next/link'
 import { useParams, useRouter } from 'next/navigation'
 import { useState, useEffect, useRef } from 'react'
-import { Building, Check, LockKeyhole, MapPin } from 'lucide-react'
+import { BadgeCheck, Building, Check, LockKeyhole, MapPin } from 'lucide-react'
 import { marked } from 'marked'
 import { useShell } from '../../../../lib/shell-context'
 import { getToken } from '../../../../lib/session'
@@ -21,6 +21,7 @@ interface VacancyMatch {
   seniority: 'exact' | 'near' | 'unknown' | 'far'
   modality: 'match' | 'compatible' | 'unknown' | 'mismatch'
   sharedSkills: string[]
+  validatedSkills?: { skill: string; level: 'basico' | 'intermedio' | 'avanzado' }[]
   vacancySkills: number
   qualifies: boolean
 }
@@ -302,6 +303,7 @@ export default function VacancyPage() {
   const skills = Array.isArray(post.skills) ? post.skills : []
   const match = post.match?.qualifies ? post.match : null
   const shared = new Set((match?.sharedSkills ?? []).map(skill => skill.toLowerCase()))
+  const validated = new Map((post.match?.validatedSkills ?? []).map(entry => [entry.skill.toLowerCase(), entry.level]))
 
   function handleApplyClick() {
     if (!applyUrl) return
@@ -350,7 +352,7 @@ export default function VacancyPage() {
             </div>
             <ul>
               <li>{ROLE_FIT_TEXT[match.role]}{match.role === 'adjacent' && roleLabel ? ` (${roleLabel})` : ''}</li>
-              <li>{match.sharedSkills.length} de {match.vacancySkills || skills.length} skills que pide los tienes tú</li>
+              <li>{match.sharedSkills.length} de {match.vacancySkills || skills.length} skills que pide los tienes tú{validated.size > 0 ? `, ${validated.size} validados con examen` : ''}</li>
               <li>{SENIORITY_FIT_TEXT[match.seniority]}</li>
               <li>{MODALITY_FIT_TEXT[match.modality]}</li>
             </ul>
@@ -361,9 +363,12 @@ export default function VacancyPage() {
           <>
             <h2 className="detail-section-title">Skills que pide</h2>
             <div className="stack-row">
-              {[...skills].sort((a, b) => Number(shared.has(b.toLowerCase())) - Number(shared.has(a.toLowerCase()))).map(skill => (
-                <span key={skill} className={`stack-badge${shared.has(skill.toLowerCase()) ? ' is-shared' : ''}`}>{skill}</span>
-              ))}
+              {[...skills].sort((a, b) => Number(validated.has(b.toLowerCase())) - Number(validated.has(a.toLowerCase())) || Number(shared.has(b.toLowerCase())) - Number(shared.has(a.toLowerCase()))).map(skill => {
+                const level = validated.get(skill.toLowerCase())
+                return level
+                  ? <span key={skill} className="stack-badge is-validated" title="Lo validaste con examen"><BadgeCheck size={12} /> {skill} · {level === 'basico' ? 'básico' : level}</span>
+                  : <span key={skill} className={`stack-badge${shared.has(skill.toLowerCase()) ? ' is-shared' : ''}`}>{skill}</span>
+              })}
             </div>
           </>
         )}

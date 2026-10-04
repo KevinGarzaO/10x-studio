@@ -16,15 +16,51 @@ const vacancy = (patch: Partial<MatchVacancy> = {}): MatchVacancy => ({
   ...patch,
 })
 
+describe('skills validated by exam', () => {
+  const same = vacancy({ skills: ['python', 'postgresql', 'aws'] })
+
+  it('scores higher the same skills when they were validated', () => {
+    const declared = scoreMatch(person, same)
+    const validated = scoreMatch({ ...person, validatedSkills: { python: 'intermedio', postgresql: 'avanzado' } }, same)
+
+    expect(validated.score).toBeGreaterThan(declared.score)
+    expect(validated.validatedSkills).toEqual([
+      { skill: 'python', level: 'intermedio' },
+      { skill: 'postgresql', level: 'avanzado' },
+    ])
+    expect(declared.validatedSkills).toEqual([])
+  })
+
+  it('weighs a higher level more', () => {
+    const basic = scoreMatch({ ...person, validatedSkills: { python: 'basico' } }, same)
+    const advanced = scoreMatch({ ...person, validatedSkills: { python: 'avanzado' } }, same)
+    expect(advanced.score).toBeGreaterThan(basic.score)
+  })
+
+  it('ignores a validated skill the vacancy does not ask for', () => {
+    const result = scoreMatch({ ...person, validatedSkills: { docker: 'avanzado' } }, same)
+    expect(result.validatedSkills).toEqual([])
+    expect(result.score).toBe(scoreMatch(person, same).score)
+  })
+
+  it('never goes over 100', () => {
+    const all = { python: 'avanzado', postgresql: 'avanzado', docker: 'avanzado' } as const
+    expect(scoreMatch({ ...person, validatedSkills: all }, vacancy({ skills: ['python'] })).score).toBeLessThanOrEqual(100)
+  })
+})
+
 describe('scoreMatch', () => {
   it('weights add up to 100', () => {
     expect(Object.values(WEIGHTS).reduce((a, b) => a + b, 0)).toBe(100)
   })
 
-  it('gives a near perfect score to the same role, level, modality and skills', () => {
+  it('gives the top score only to the same role, level, modality and skills validated by exam', () => {
+    const validated = { ...person, validatedSkills: { python: 'avanzado', postgresql: 'avanzado' } as const }
+    expect(scoreMatch(validated, vacancy({ skills: ['python', 'postgresql'] })).score).toBe(100)
+
     const result = scoreMatch(person, vacancy({ skills: ['python', 'postgresql'] }))
 
-    expect(result.score).toBe(100)
+    expect(result.score).toBe(WEIGHTS.role + WEIGHTS.skills + WEIGHTS.seniority + WEIGHTS.modality)
     expect(result.role).toBe('exact')
     expect(result.seniority).toBe('exact')
     expect(result.modality).toBe('match')

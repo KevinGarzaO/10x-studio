@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { Bookmark, Building, Target } from 'lucide-react'
+import { BadgeCheck, Bookmark, Building, Target } from 'lucide-react'
 import { getToken } from '../lib/session'
 import { formatCompanyName, companySlug } from '../lib/company'
 import { ROLE_CATEGORY_LABELS, SENIORITY_LABELS } from '../lib/profile-options'
@@ -24,11 +24,13 @@ const ROLE_TEXT: Record<string, string> = { exact: 'es tu puesto', adjacent: 'pu
 const LEVEL_TEXT: Record<string, string> = { exact: 'tu nivel', near: 'un nivel de diferencia', unknown: 'no indica nivel', far: 'nivel muy distinto' }
 const MODALITY_TEXT: Record<string, string> = { match: 'tu modalidad', compatible: 'modalidad compatible', unknown: 'no indica modalidad', mismatch: 'otra modalidad' }
 
-/** El porcentaje se compone de puesto 35, skills 35, nivel 15 y modalidad 15. */
+const LEVEL_NAME = { basico: 'básico', intermedio: 'intermedio', avanzado: 'avanzado' }
+
+/** El porcentaje se compone de puesto 35, skills 28, validación con examen 7, nivel 15 y modalidad 15. */
 function matchExplanation(item: MatchedItem): string {
   return [
     `Puesto: ${ROLE_TEXT[item.roleFit ?? 'unknown']}`,
-    `Skills: ${item.matchingSkills} en común`,
+    `Skills: ${item.matchingSkills} en común${item.validatedSkills?.length ? `, ${item.validatedSkills.length} validados con examen` : ''}`,
     `Nivel: ${LEVEL_TEXT[item.seniorityFit ?? 'unknown']}`,
     `Modalidad: ${MODALITY_TEXT[item.modalityFit ?? 'unknown']}`,
   ].join(' · ')
@@ -45,6 +47,7 @@ export function ForYouCard({ item }: { item: MatchedItem }) {
   const [saved, setSaved] = useState(item.isSaved)
   const [historyId, setHistoryId] = useState(item.historyId)
 
+  const validated = new Map((item.validatedSkills || []).map(entry => [entry.skill.toLowerCase(), entry.level]))
   const shared = new Set((item.sharedSkills || []).map(skill => skill.toLowerCase()))
   const company = formatCompanyName(item.company) || null
   const level = SENIORITY_LABELS[item.seniorityLevel ?? ''] || item.seniorityLevel
@@ -120,13 +123,17 @@ export function ForYouCard({ item }: { item: MatchedItem }) {
         {item.modalidad && !/no especificado|unknown/i.test(item.modalidad) && <span className="job-chip">{item.modalidad}</span>}
         {typeof item.matchScore === 'number' && <span className="match-score" title={matchExplanation(item)}>{item.matchScore}% match</span>}
         <span className="match-pill"><Target size={11} /> {item.matchingSkills} {item.matchingSkills === 1 ? 'skill' : 'skills'} en común</span>
+        {validated.size > 0 && <span className="match-pill is-validated" title="Skills que pide la vacante y aprobaste con examen"><BadgeCheck size={11} /> {validated.size} {validated.size === 1 ? 'validado' : 'validados'} con examen</span>}
       </div>
       {item.skills.length > 0 && (
         <div className="stack-row">
           {/* Los skills que tú tienes van primero y resaltados. */}
-          {[...item.skills].sort((a, b) => Number(shared.has(b)) - Number(shared.has(a))).slice(0, 6).map(skill => (
-            <span key={skill} className={`stack-badge${shared.has(skill) ? ' is-shared' : ''}`}>{skill}</span>
-          ))}
+          {[...item.skills].sort((a, b) => Number(validated.has(b.toLowerCase())) - Number(validated.has(a.toLowerCase())) || Number(shared.has(b)) - Number(shared.has(a))).slice(0, 6).map(skill => {
+            const level = validated.get(skill.toLowerCase())
+            return level
+              ? <span key={skill} className="stack-badge is-validated" title={`Validado con examen: ${LEVEL_NAME[level]}`}><BadgeCheck size={12} /> {skill} · {LEVEL_NAME[level]}</span>
+              : <span key={skill} className={`stack-badge${shared.has(skill) ? ' is-shared' : ''}`}>{skill}</span>
+          })}
         </div>
       )}
       <button className="job-apply-button" onClick={open} disabled={opening}>

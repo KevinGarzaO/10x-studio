@@ -15,6 +15,8 @@ export interface MatchedItem {
   sharedSkills?: string[]
   /** 0 a 100: qué tan bien encaja contigo. Puede faltar si el backend es anterior. */
   matchScore?: number
+  /** Tus skills que pide la vacante y validaste con examen. */
+  validatedSkills?: { skill: string; level: 'basico' | 'intermedio' | 'avanzado' }[]
   /** Qué tan cerca está el rol de la vacante del tuyo. */
   roleFit?: 'exact' | 'adjacent' | 'unknown' | 'none'
   modalidad?: string | null

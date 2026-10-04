@@ -12,12 +12,17 @@ import { modalityFromLabel, type VacancyModality } from '../vacancies/modality'
  * reporte de huecos y las pruebas.
  */
 
+/** El nivel que sacó la persona en el examen de un skill. */
+export type ValidationLevel = 'basico' | 'intermedio' | 'avanzado'
+
 export interface MatchCandidate {
   roleCategory: string | null
   seniority: string | null
   skills: string[]
   /** Lo que la persona eligió: "Remoto", "Híbrido" o "Presencial". */
   workModality: string | null
+  /** Skills validados con examen (nombre en minúsculas -> nivel). Opcional. */
+  validatedSkills?: Record<string, ValidationLevel>
 }
 
 export interface MatchVacancy {
@@ -40,6 +45,8 @@ export interface MatchResult {
   modality: ModalityFit
   /** Los skills de la persona que la vacante pide. */
   sharedSkills: string[]
+  /** De esos, los que la persona validó con examen, con su nivel. */
+  validatedSkills: { skill: string; level: ValidationLevel }[]
   /** Cuántos skills se detectaron en la vacante (0 = no se sabe qué pide). */
   vacancySkills: number
   /** ¿Vale la pena mostrársela? */
@@ -70,13 +77,19 @@ const ADJACENT_ROLES: Record<string, string[]> = {
 const SENIORITY_RANK: Record<string, number> = { junior: 0, semi_senior: 1, senior: 2 }
 
 /** Peso de cada dimensión; suman 100. */
-export const WEIGHTS = { role: 35, skills: 35, seniority: 15, modality: 15 } as const
+export const WEIGHTS = { role: 35, skills: 28, validation: 7, seniority: 15, modality: 15 } as const
+
+/**
+ * Cuánto vale un skill según lo validado: un examen avanzado pesa lo de un skill
+ * completo; uno básico, la mitad. Un skill sin examen no suma al bonus (sí a "skills").
+ */
+export const VALIDATION_WEIGHT: Record<ValidationLevel, number> = { basico: 0.5, intermedio: 0.8, avanzado: 1 }
 
 /** Cuántos skills pedidos bastan para considerar cubierta la parte de skills. */
 const SKILLS_FULL_COVERAGE = 4
 
 /** Puntaje mínimo para mostrar una vacante en "Para ti". */
-export const MIN_SCORE = 45
+export const MIN_SCORE = 42
 
 function roleFit(candidate: string | null, vacancy: string | null): RoleFit {
   if (!vacancy) return 'unknown'
@@ -126,9 +139,24 @@ export function scoreMatch(candidate: MatchCandidate, vacancy: MatchVacancy): Ma
   if (vacancySkills === 0) skillsPoints = candidate.skills.length > 0 ? 0.3 : 0
   else skillsPoints = Math.min(1, sharedSkills.length / Math.min(vacancySkills, SKILLS_FULL_COVERAGE))
 
+  // Bonus por lo validado con examen, medido contra los mismos skills que cubren la parte
+  // de "skills". Un skill declarado y uno aprobado ya no valen igual.
+  const validatedSkills = sharedSkills.flatMap((skill) => {
+    const level = candidate.validatedSkills?.[skill]
+    return level ? [{ skill, level }] : []
+  })
+  const validationPoints =
+    vacancySkills === 0
+      ? 0
+      : Math.min(
+          1,
+          validatedSkills.reduce((sum, item) => sum + VALIDATION_WEIGHT[item.level], 0) / Math.min(vacancySkills, SKILLS_FULL_COVERAGE),
+        )
+
   const score = Math.round(
     WEIGHTS.role * POINTS.role[role] +
       WEIGHTS.skills * skillsPoints +
+      WEIGHTS.validation * validationPoints +
       WEIGHTS.seniority * POINTS.seniority[seniority] +
       WEIGHTS.modality * POINTS.modality[modality],
   )
@@ -138,5 +166,5 @@ export function scoreMatch(candidate: MatchCandidate, vacancy: MatchVacancy): Ma
   const concrete = sharedSkills.length > 0 || (vacancySkills === 0 && role === 'exact')
   const qualifies = concrete && score >= MIN_SCORE && role !== 'none'
 
-  return { score, role, seniority, modality, sharedSkills, vacancySkills, qualifies }
+  return { score, role, seniority, modality, sharedSkills, validatedSkills, vacancySkills, qualifies }
 }

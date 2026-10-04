@@ -3,8 +3,9 @@ import { supabase } from '../../../services/supabase.service'
 import { communityAuthMiddleware, AuthRequest } from '../../../middleware/community-auth.middleware'
 import { generateSlug } from '../../../services/slug'
 import { companySlug } from '../../../services/company'
+import { loadValidatedSkills } from '../../../services/matching/validated'
 import { scoreMatch } from '../../../services/matching/score'
-import { evaluateVacancy, REJECT_REASON_LABEL } from '../../../services/vacancies/publish-rule'
+import { evaluateVacancy, MANUAL_PUBLISH_RULE, REJECT_REASON_LABEL } from '../../../services/vacancies/publish-rule'
 
 const router = Router()
 
@@ -310,6 +311,7 @@ router.get('/:id', async (req: Request, res: Response) => {
               seniority: viewer.seniority ?? null,
               skills: ((viewer.skills || []) as string[]).map((skill) => skill.toLowerCase()),
               workModality: viewer.work_modality ?? null,
+              validatedSkills: await loadValidatedSkills(viewerId),
             },
             {
               roleCategory: vacancy.role_category ?? null,
@@ -375,7 +377,7 @@ router.get('/:id', async (req: Request, res: Response) => {
 
 router.post('/', communityAuthMiddleware, async (req: AuthRequest, res: Response) => {
   try {
-    const { title, content, type, budget, modalidad, tags, roleCategory, seniority, skills, applyUrl, company } = req.body
+    const { title, content, type, budget, modalidad, tags, roleCategory, seniority, skills, applyUrl, company, location } = req.body
 
     if (!title || !content || !type) {
       return res.status(400).json({ error: 'Título, contenido y tipo son requeridos' })
@@ -398,24 +400,29 @@ router.post('/', communityAuthMiddleware, async (req: AuthRequest, res: Response
           title,
           company: company || author?.display_name,
           applyUrl,
+          location,
           roleCategory,
           skills: requestedSkills,
           seniority,
+          modality: modalidad,
         },
         new Set((catalogRows || []).map((row: { name: string }) => row.name)),
+        // Una vacante creada a mano exige además nivel y modalidad: quien publica los sabe.
+        MANUAL_PUBLISH_RULE,
       )
 
       if (!verdict.valid) {
         return res.status(400).json({
           error: 'vacancy_not_linked',
           reasons: verdict.reasons,
-          message: `La vacante no se puede publicar: ${verdict.reasons.map((reason) => REJECT_REASON_LABEL[reason]).join(', ')}. Elige un rol y al menos un skill del catálogo, y agrega el enlace para postularse.`,
+          message: `La vacante no se puede publicar: ${verdict.reasons.map((reason) => REJECT_REASON_LABEL[reason]).join(', ')}. Elige un rol, un nivel, una modalidad y al menos un skill del catálogo, e indica la ubicación y el enlace para postularse.`,
         })
       }
 
       Object.assign(vacancy, {
         role_category: roleCategory,
-        seniority_level: seniority ?? null,
+        seniority_level: seniority,
+        location: String(location).trim(),
         skills: requestedSkills,
         source_url: applyUrl,
         company: company || author?.display_name,

@@ -1,4 +1,5 @@
-import { ROLE_CATEGORY } from '@avocado/schemas'
+import { ROLE_CATEGORY, SENIORITY } from '@avocado/schemas'
+import { modalityFromLabel } from './modality'
 
 /**
  * REGLA DE NEGOCIO: una vacante solo entra al feed si está ligada a los catálogos.
@@ -17,22 +18,43 @@ import { ROLE_CATEGORY } from '@avocado/schemas'
  * Qué se exige:
  *  - título, empresa y enlace para postularse (sin esos datos no hay qué mostrar);
  *  - un ROL del catálogo (y no "otro", que dice que no se sabe);
- *  - al menos un SKILL, y todos del catálogo.
+ *  - al menos un SKILL, y todos del catálogo;
+ *  - UBICACIÓN.
  *
- * El nivel, la modalidad y la ubicación NO son obligatorios: muchas ofertas no los
- * dicen, y el match sabe tratarlos como "no se sabe". Si el negocio decide exigirlos,
- * se cambia aquí (y en el trigger) y nada más.
+ * El nivel y la modalidad son opcionales para lo que trae el scraper: muchas ofertas
+ * no los dicen, y el match sabe tratarlos como "no se sabe". En cambio son OBLIGATORIOS
+ * para la vacante que una empresa crea a mano (MANUAL_PUBLISH_RULE): ahí quien publica
+ * sí los sabe, así que se le exigen y quedan completas y correctas.
+ *
+ * Si el negocio cambia lo que se exige, se cambia aquí (y en el trigger) y nada más.
  */
-export const PUBLISH_RULE = {
+export interface PublishRule {
+  minSkills: number
+  requireLocation: boolean
+  requireSeniority: boolean
+  requireModality: boolean
+}
+
+/** Lo que se le pide a toda vacante, venga de donde venga. */
+export const PUBLISH_RULE: PublishRule = {
   minSkills: 1,
+  requireLocation: true,
   requireSeniority: false,
   requireModality: false,
-} as const
+}
+
+/** Lo que se le pide a la vacante que una empresa crea a mano. */
+export const MANUAL_PUBLISH_RULE: PublishRule = {
+  ...PUBLISH_RULE,
+  requireSeniority: true,
+  requireModality: true,
+}
 
 export type RejectReason =
   | 'no_title'
   | 'no_company'
   | 'no_apply_url'
+  | 'no_location'
   | 'no_role'
   | 'unknown_role'
   | 'no_skills'
@@ -45,6 +67,7 @@ export const REJECT_REASON_LABEL: Record<RejectReason, string> = {
   no_title: 'sin título',
   no_company: 'sin empresa',
   no_apply_url: 'sin enlace para postularse',
+  no_location: 'sin ubicación',
   no_role: 'sin rol',
   unknown_role: 'rol que no está en el catálogo',
   no_skills: 'sin skills',
@@ -57,6 +80,7 @@ export interface VacancyCandidate {
   title: string | null | undefined
   company: string | null | undefined
   applyUrl: string | null | undefined
+  location?: string | null
   roleCategory: string | null | undefined
   skills: string[]
   seniority?: string | null
@@ -72,6 +96,12 @@ export interface PublishVerdict {
 /** Los roles con los que se puede ligar una vacante: todos menos "otro". */
 export const VACANCY_ROLES: readonly string[] = ROLE_CATEGORY.filter((role) => role !== 'otro')
 
+/** La ubicación que trae el texto de una vacante ("**Ubicación:** Austin, TX"), si la tiene. */
+export function locationFromText(text: string | null | undefined): string | null {
+  const found = (text ?? '').match(/\*\*Ubicaci[oó]n:\*\*\s*([^\n]+)/)
+  return found ? found[1].trim() || null : null
+}
+
 const blank = (value: string | null | undefined) => !value || value.trim() === ''
 
 /**
@@ -81,13 +111,14 @@ const blank = (value: string | null | undefined) => !value || value.trim() === '
 export function evaluateVacancy(
   vacancy: VacancyCandidate,
   skillCatalog?: ReadonlySet<string>,
-  rule: typeof PUBLISH_RULE = PUBLISH_RULE,
+  rule: PublishRule = PUBLISH_RULE,
 ): PublishVerdict {
   const reasons: RejectReason[] = []
 
   if (blank(vacancy.title)) reasons.push('no_title')
   if (blank(vacancy.company)) reasons.push('no_company')
   if (blank(vacancy.applyUrl)) reasons.push('no_apply_url')
+  if (rule.requireLocation && blank(vacancy.location)) reasons.push('no_location')
 
   if (blank(vacancy.roleCategory)) reasons.push('no_role')
   else if (!VACANCY_ROLES.includes(vacancy.roleCategory!)) reasons.push('unknown_role')
@@ -95,10 +126,8 @@ export function evaluateVacancy(
   if (vacancy.skills.length < rule.minSkills) reasons.push('no_skills')
   else if (skillCatalog && vacancy.skills.some((skill) => !skillCatalog.has(skill))) reasons.push('unknown_skill')
 
-  if (rule.requireSeniority && blank(vacancy.seniority)) reasons.push('no_seniority')
-  if (rule.requireModality && (blank(vacancy.modality) || vacancy.modality === 'unknown' || vacancy.modality === 'No especificado')) {
-    reasons.push('no_modality')
-  }
+  if (rule.requireSeniority && !(SENIORITY as readonly string[]).includes(vacancy.seniority ?? '')) reasons.push('no_seniority')
+  if (rule.requireModality && modalityFromLabel(vacancy.modality) === 'unknown') reasons.push('no_modality')
 
   return { valid: reasons.length === 0, reasons }
 }

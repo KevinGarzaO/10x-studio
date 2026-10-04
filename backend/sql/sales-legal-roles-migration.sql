@@ -155,7 +155,7 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql IMMUTABLE;
 
--- BLOQUE 4 — La regla de vacantes acepta los dos roles nuevos
+-- BLOQUE 4 — La regla de vacantes acepta los dos roles nuevos (y exige ubicación)
 CREATE OR REPLACE FUNCTION enforce_vacancy_linkage()
 RETURNS TRIGGER AS $$
 DECLARE
@@ -173,6 +173,19 @@ BEGIN
   END IF;
   IF btrim(coalesce(NEW.source_url, '')) = '' THEN
     RAISE EXCEPTION 'vacancy_not_linked: no_apply_url';
+  END IF;
+  IF btrim(coalesce(NEW.location, '')) = '' THEN
+    RAISE EXCEPTION 'vacancy_not_linked: no_location';
+  END IF;
+
+  -- Solo la vacante creada a mano: nivel y modalidad obligatorios.
+  IF NOT coalesce(NEW.is_scraper_post, false) THEN
+    IF NEW.seniority_level IS NULL OR NEW.seniority_level NOT IN ('junior', 'semi_senior', 'senior') THEN
+      RAISE EXCEPTION 'vacancy_not_linked: no_seniority';
+    END IF;
+    IF NEW.modalidad IS NULL OR NEW.modalidad NOT IN ('Remoto', 'Híbrido', 'Presencial') THEN
+      RAISE EXCEPTION 'vacancy_not_linked: no_modality';
+    END IF;
   END IF;
 
   -- Los mismos roles que backend/services/vacancies/publish-rule.ts (todos menos 'otro').
