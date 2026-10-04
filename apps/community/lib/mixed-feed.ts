@@ -18,6 +18,8 @@ export interface MatchedItem {
   /** Qué tan cerca está el rol de la vacante del tuyo. */
   roleFit?: 'exact' | 'adjacent' | 'unknown' | 'none'
   modalidad?: string | null
+  seniorityFit?: string
+  modalityFit?: string
   historyId: string
   isSaved: boolean
 }
@@ -58,6 +60,10 @@ function timeOf(value: string | null | undefined): number {
  * solo se agregan tarjetas al final; las anteriores conservan su lugar.
  *
  * Una vacante que ya sale como "Para ti" no se repite como vacante normal.
+ *
+ * Las "Para ti" van AL PRINCIPIO, de mayor a menor porcentaje de match (a igual
+ * porcentaje, la más reciente): son lo que la persona más quiere ver. Siempre llegan
+ * completas, así que ponerlas arriba no mueve nada al cargar más.
  */
 export function buildFeed<P extends { id: string; created_at?: string | null }>(
   sources: FeedSources<P>,
@@ -76,13 +82,9 @@ export function buildFeed<P extends { id: string; created_at?: string | null }>(
     if (matchedCommunityIds.has(post.id)) continue
     items.push({ time: timeOf(post.created_at), order: order++, entry: { kind: 'job', key: `job:${post.id}`, post } })
   }
-  for (const item of sources.forYou) {
-    items.push({
-      time: timeOf(item.postDate),
-      order: order++,
-      entry: { kind: 'forYou', key: `forYou:${item.sourceType}:${item.id}`, item },
-    })
-  }
+  const forYou: FeedEntry<P>[] = [...sources.forYou]
+    .sort((a, b) => (b.matchScore ?? 0) - (a.matchScore ?? 0) || timeOf(b.postDate) - timeOf(a.postDate))
+    .map(item => ({ kind: 'forYou', key: `forYou:${item.sourceType}:${item.id}`, item }))
 
   // Más nuevo primero; a igual fecha, se respeta el orden en que llegó cada fuente.
   items.sort((a, b) => b.time - a.time || a.order - b.order)
@@ -94,7 +96,7 @@ export function buildFeed<P extends { id: string; created_at?: string | null }>(
   if (sources.moreJobs) limits.push(oldestOf(sources.jobs))
   const frontier = limits.length > 0 ? Math.max(...limits) : -Infinity
 
-  return items.filter(item => item.time >= frontier).map(item => item.entry)
+  return [...forYou, ...items.filter(item => item.time >= frontier).map(item => item.entry)]
 }
 
 /** La fecha más vieja que ya se trajo de una fuente; Infinity si no trajo nada. */

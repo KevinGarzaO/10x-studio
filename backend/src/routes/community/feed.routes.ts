@@ -25,6 +25,9 @@ interface MatchedItem {
   matchScore: number
   /** Qué tan cerca está el rol de la vacante del de la persona. */
   roleFit: 'exact' | 'adjacent' | 'unknown' | 'none'
+  /** Cómo encajan nivel y modalidad (para explicar el porcentaje). */
+  seniorityFit: string
+  modalityFit: string
   modalidad: string | null
 }
 
@@ -85,7 +88,7 @@ router.get('/for-you', communityAuthMiddleware, async (req: AuthRequest, res: Re
 
     const items: MatchedItem[] = []
 
-    const consider = (item: Omit<MatchedItem, 'matchingSkills' | 'sharedSkills' | 'matchScore' | 'roleFit'>, modality: string | null) => {
+    const consider = (item: Omit<MatchedItem, 'matchingSkills' | 'sharedSkills' | 'matchScore' | 'roleFit' | 'seniorityFit' | 'modalityFit'>, modality: string | null) => {
       const result = scoreMatch(candidate, {
         roleCategory: item.roleCategory,
         seniority: item.seniorityLevel,
@@ -93,7 +96,7 @@ router.get('/for-you', communityAuthMiddleware, async (req: AuthRequest, res: Re
         workModality: modality,
       })
       if (!result.qualifies) return
-      items.push({ ...item, matchingSkills: result.sharedSkills.length, sharedSkills: result.sharedSkills, matchScore: result.score, roleFit: result.role })
+      items.push({ ...item, matchingSkills: result.sharedSkills.length, sharedSkills: result.sharedSkills, matchScore: result.score, roleFit: result.role, seniorityFit: result.seniority, modalityFit: result.modality })
     }
 
     for (const row of scraperRows || []) {

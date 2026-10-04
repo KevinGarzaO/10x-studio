@@ -6,6 +6,7 @@ import { useState, useEffect, useRef } from 'react'
 import { Building, Check, LockKeyhole, MapPin } from 'lucide-react'
 import { marked } from 'marked'
 import { useShell } from '../../../../lib/shell-context'
+import { getToken } from '../../../../lib/session'
 import { companySlug, formatCompanyName } from '../../../../lib/company'
 import { parseJobContent } from '../../../../components/community-hub'
 import { DetailHeader } from '../../../../components/post-detail/DetailHeader'
@@ -210,7 +211,9 @@ export default function VacancyPage() {
   useEffect(() => {
     setLoading(true)
     setError(null)
-    fetch(`${API_URL}/api/community/posts/${slug}`)
+    // Con sesión, el backend agrega qué tan bien encaja la vacante contigo.
+    const token = getToken()
+    fetch(`${API_URL}/api/community/posts/${slug}`, token ? { headers: { Authorization: `Bearer ${token}` } } : undefined)
       .then(res => { if (!res.ok) throw new Error('Post no encontrado'); return res.json() })
       .then(data => {
         if (data.slug && data.slug !== slug && !redirecting) {

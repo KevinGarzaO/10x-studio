@@ -20,6 +20,20 @@ function formatTime(dateStr: string | null) {
   return `hace ${days}d`
 }
 
+const ROLE_TEXT: Record<string, string> = { exact: 'es tu puesto', adjacent: 'puesto cercano al tuyo', unknown: 'no indica el puesto', none: 'otro puesto' }
+const LEVEL_TEXT: Record<string, string> = { exact: 'tu nivel', near: 'un nivel de diferencia', unknown: 'no indica nivel', far: 'nivel muy distinto' }
+const MODALITY_TEXT: Record<string, string> = { match: 'tu modalidad', compatible: 'modalidad compatible', unknown: 'no indica modalidad', mismatch: 'otra modalidad' }
+
+/** El porcentaje se compone de puesto 35, skills 35, nivel 15 y modalidad 15. */
+function matchExplanation(item: MatchedItem): string {
+  return [
+    `Puesto: ${ROLE_TEXT[item.roleFit ?? 'unknown']}`,
+    `Skills: ${item.matchingSkills} en común`,
+    `Nivel: ${LEVEL_TEXT[item.seniorityFit ?? 'unknown']}`,
+    `Modalidad: ${MODALITY_TEXT[item.modalityFit ?? 'unknown']}`,
+  ].join(' · ')
+}
+
 /**
  * Una vacante que coincide con los skills de la persona. Se parece a la tarjeta de
  * vacante pero se distingue de un vistazo: insignia "PARA TI", acento de color y
@@ -103,8 +117,8 @@ export function ForYouCard({ item }: { item: MatchedItem }) {
         {role && <span className="job-chip">{role}</span>}
         {item.roleFit === 'adjacent' && <span className="job-chip is-adjacent" title="No es exactamente tu puesto, pero es cercano y pide skills que tienes">Rol cercano al tuyo</span>}
         {level && <span className="job-chip">{level}</span>}
-        {item.modalidad && !/no especificado/i.test(item.modalidad) && <span className="job-chip">{item.modalidad}</span>}
-        {typeof item.matchScore === 'number' && <span className="match-score" title="Qué tan bien encaja contigo: puesto, skills, nivel y modalidad">{item.matchScore}% match</span>}
+        {item.modalidad && !/no especificado|unknown/i.test(item.modalidad) && <span className="job-chip">{item.modalidad}</span>}
+        {typeof item.matchScore === 'number' && <span className="match-score" title={matchExplanation(item)}>{item.matchScore}% match</span>}
         <span className="match-pill"><Target size={11} /> {item.matchingSkills} {item.matchingSkills === 1 ? 'skill' : 'skills'} en común</span>
       </div>
       {item.skills.length > 0 && (

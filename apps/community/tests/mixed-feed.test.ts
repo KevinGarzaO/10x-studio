@@ -21,7 +21,7 @@ describe('buildFeed (newest first)', () => {
       ...none,
     })
 
-    expect(ids(entries)).toEqual(['j1', 'a1', 'm1', 'j2', 'a2'])
+    expect(ids(entries)).toEqual(['m1', 'j1', 'a1', 'j2', 'a2'])
   })
 
   it('never puts an older card above a newer one', () => {
@@ -140,5 +140,22 @@ describe('buildFeed with pages still pending', () => {
     })
 
     expect(ids(entries)).toEqual(['j1', 'a1'])
+  })
+})
+
+describe('buildFeed: Para ti goes first, best match first', () => {
+  it('puts Para ti on top ordered by match percentage, then the rest by date', () => {
+    const entries = buildFeed({
+      articles: [post('a1', '2026-10-03T10:00:00Z')],
+      jobs: [post('j1', '2026-10-02T10:00:00Z')],
+      forYou: [
+        { ...match('low', '2026-10-03T00:00:00Z'), matchScore: 52 },
+        { ...match('high', '2026-09-01T00:00:00Z'), matchScore: 91 },
+        { ...match('mid-new', '2026-10-01T00:00:00Z'), matchScore: 70 },
+        { ...match('mid-old', '2026-09-20T00:00:00Z'), matchScore: 70 },
+      ],
+      ...none,
+    })
+    expect(ids(entries)).toEqual(['high', 'mid-new', 'mid-old', 'low', 'a1', 'j1'])
   })
 })
