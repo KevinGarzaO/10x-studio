@@ -4,6 +4,7 @@
  *   npm run linkedin-vacancy-preview              las próximas 4 (dos días de publicaciones)
  *   npm run linkedin-vacancy-preview -- --count 12
  *   npm run linkedin-vacancy-preview -- --publish-now   publica UNA ahora (prueba real)
+ *   npm run linkedin-vacancy-preview -- --publish-now --slug <slug>   publica esa vacante
  *
  * Sirve para revisar cómo se ven los textos antes de activar la publicación automática
  * (LINKEDIN_VACANCY_POSTS=on en Railway).
@@ -16,7 +17,8 @@ const count = countFlag >= 0 ? Math.max(1, Number(process.argv[countFlag + 1]) |
 
 async function main() {
   if (process.argv.includes('--publish-now')) {
-    const result = await publishVacancyPost()
+    const slugFlag = process.argv.indexOf('--slug')
+    const result = await publishVacancyPost({ slug: slugFlag >= 0 ? process.argv[slugFlag + 1] : undefined })
     console.log(result.status === 'published' ? `Publicado: ${result.linkedinPostId}\n\n${result.text}` : `No se publicó: ${result.reason}`)
     return
   }

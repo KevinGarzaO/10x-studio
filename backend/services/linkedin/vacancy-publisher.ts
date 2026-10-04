@@ -97,13 +97,14 @@ export async function loadPool(): Promise<{ candidates: LinkedInVacancy[]; histo
 
 /**
  * @param dryRun  arma el texto y lo devuelve sin publicar ni guardar nada.
+ * @param slug    publica esa vacante en lugar de la que elegiría el sistema (para pruebas).
  */
-export async function publishVacancyPost(options: { dryRun?: boolean } = {}): Promise<PublishResult> {
+export async function publishVacancyPost(options: { dryRun?: boolean; slug?: string } = {}): Promise<PublishResult> {
   const base = siteUrl()
   if (!base) return { status: 'skipped', reason: 'COMMUNITY_APP_URL no está configurada con la dirección pública del sitio' }
 
   const { candidates, history, posted, skillLabels } = await loadPool()
-  const vacancy = pickVacancy(candidates, history)
+  const vacancy = options.slug ? candidates.find((candidate) => candidate.slug === options.slug) ?? null : pickVacancy(candidates, history)
   if (!vacancy || !vacancy.slug) return { status: 'skipped', reason: 'no hay vacantes disponibles para publicar' }
 
   const url = vacancyUrl(base, vacancy.slug)
