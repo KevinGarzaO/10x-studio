@@ -72,6 +72,11 @@ export const ROLE_RULES: RoleRule[] = [
     title: String.raw`\m(product manager\w*|product owner\w*|product lead|head of product|director of product|vp of product|product operations|product management|gerente de producto|technical product)\M`,
   },
   {
+    // Antes de administración: "Sales Operations Manager" es de ventas, no de operaciones.
+    role: 'ventas',
+    title: String.raw`\m(sales|account (executive|manager|director)s?|business development|sdr|bdr|solutions? (engineer\w*|architect\w*|consultant\w*)|pre[ -]?sales|partnerships? (manager|lead|director|executive)|channel (manager|partner\w*)|revenue operations|ventas|vendedor(a)?(es)?|ejecutiv[oa] (de cuenta|comercial|de ventas)|desarrollo de negocio|comercial)\M`,
+  },
+  {
     role: 'recursos_humanos',
     title: String.raw`\m(recruiter\w*|recruiting|talent acquisition|talent partner\w*|sourcer\w*|human resources|recursos humanos|rrhh|hrbp|hr (business partner|manager|generalist|coordinator|specialist)|people (partner\w*|operations|ops|business partner\w*|programs?|team|experience)|compensation|payroll|nómina|nomina|reclutador(a)?(es)?|reclutamiento|employee (experience|relations)|learning (and|&) development)\M`,
   },
@@ -82,6 +87,11 @@ export const ROLE_RULES: RoleRule[] = [
   {
     role: 'administracion',
     title: String.raw`\m(administrative|administrativ[oa]s?|administraci[oó]n|office manager|executive assistant|executive business partner|asistente|business operations|operations (manager|coordinator|specialist|analyst|associate)|procurement|compras|legal operations|contracts? (manager|specialist|administrator|analyst|coordinator|lead)|coordinador(a)?(es)?|coordinator|supply chain|logística|logistics|chief of staff)\M`,
+  },
+  {
+    // Después de administración: "Legal Operations Specialist" sigue siendo administración.
+    role: 'legal',
+    title: String.raw`\m(counsel|attorney\w*|lawyer\w*|paralegal\w*|legal (director|manager|associate|analyst|specialist|assistant|advisor|officer|lead|affairs)|compliance|regulatory|abogad[oa]s?|jurídic[oa]s?|litigation|privacy (officer|manager|analyst|lead)|data protection|cumplimiento normativo)\M`,
   },
   {
     role: 'marketing',

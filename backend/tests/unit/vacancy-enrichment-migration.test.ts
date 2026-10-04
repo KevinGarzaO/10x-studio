@@ -8,15 +8,17 @@ const names = (sql: string) => [...sql.matchAll(/^\s*\('([a-z0-9-]+)',\s*'/gm)].
 
 const enrichment = read('vacancy-enrichment-migration.sql')
 const analytics = read('vacancy-analytics-migration.sql')
+const salesLegal = read('sales-legal-roles-migration.sql')
 
 const catalog = [
   ...names(read('seed-skills-catalog.sql').split('INSERT INTO skill_aliases')[0]),
   ...names(read('skills-catalog-expansion.sql').split('INSERT INTO skill_aliases')[0]),
+  ...names(salesLegal.split('INSERT INTO skill_aliases')[0]),
 ]
 
 /** Los términos que la migración le da a cada skill. */
 const sqlTerms = new Map<string, string[]>(
-  [...enrichment.matchAll(/^\s*\('([a-z0-9-]+)', ARRAY\[([^\]]*)\]::text\[\]\)/gm)].map(m => [
+  [...(enrichment + salesLegal.split('SET role_categories = m.roles')[0]).matchAll(/^\s*\('([a-z0-9-]+)', ARRAY\[([^\]]*)\]::text\[\]\)/gm)].map(m => [
     m[1],
     [...m[2].matchAll(/'((?:[^']|'')*)'/g)].map(t => t[1].replace(/''/g, "'")),
   ]),
@@ -83,7 +85,7 @@ describe('vacancy-analytics-migration.sql', () => {
   })
 
   it('knows every role category, the new business roles included', () => {
-    for (const role of ['frontend', 'backend', 'recursos_humanos', 'administracion', 'finanzas', 'otro']) {
+    for (const role of ['frontend', 'backend', 'recursos_humanos', 'administracion', 'finanzas', 'ventas', 'legal', 'otro']) {
       expect(analytics).toContain(`'${role}'`)
     }
   })

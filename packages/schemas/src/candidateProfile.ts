@@ -22,6 +22,8 @@ export const ROLE_CATEGORY = [
   'recursos_humanos',
   'administracion',
   'finanzas',
+  'ventas',
+  'legal',
   'otro',
 ] as const
 
@@ -49,6 +51,8 @@ export const ROLE_CATEGORY_LABEL: Record<RoleCategory, string> = {
   recursos_humanos: 'Recursos Humanos',
   administracion: 'Administración',
   finanzas: 'Finanzas y Contabilidad',
+  ventas: 'Ventas y Desarrollo de Negocio',
+  legal: 'Legal y Cumplimiento',
   otro: 'Otro',
 }
 

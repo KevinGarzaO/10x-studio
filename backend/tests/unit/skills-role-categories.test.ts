@@ -93,7 +93,9 @@ describe('skills-role-categories-migration.sql', () => {
   })
 
   it('leaves every role with something to offer, administration, finance and human resources included', () => {
-    const offered = new Set([...mapping.values()].flat())
+    // Ventas y legal se ligan en su propia migración (sales-legal-roles-migration.sql).
+    const salesLegal = read('sales-legal-roles-migration.sql')
+    const offered = new Set([...mapping.values()].flat().concat([...salesLegal.matchAll(/ARRAY\[((?:'[a-z_]+'(?:, )?)+)\]::text\[\]\)/g)].flatMap(m => [...m[1].matchAll(/'([a-z_]+)'/g)].map(r => r[1]))))
     // "otro" muestra el catálogo completo, por eso ningún skill se liga a él.
     expect(ROLE_CATEGORY.filter(role => role !== 'otro' && !offered.has(role))).toEqual([])
     for (const role of ['recursos_humanos', 'administracion', 'finanzas']) expect(offered.has(role)).toBe(true)

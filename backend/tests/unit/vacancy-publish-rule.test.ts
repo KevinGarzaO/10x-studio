@@ -35,7 +35,7 @@ describe('evaluateVacancy', () => {
     [{ applyUrl: '' }, 'no_apply_url'],
     [{ roleCategory: null }, 'no_role'],
     [{ roleCategory: 'otro' }, 'unknown_role'],
-    [{ roleCategory: 'ventas' }, 'unknown_role'],
+    [{ roleCategory: 'astronauta' }, 'unknown_role'],
     [{ skills: [] }, 'no_skills'],
     [{ skills: ['cobol'] }, 'unknown_skill'],
   ] as const)('rejects %j with %s', (patch, reason) => {
@@ -47,6 +47,10 @@ describe('evaluateVacancy', () => {
   it('reports every reason, not just the first', () => {
     const verdict = evaluateVacancy({ ...good, roleCategory: null, skills: [] }, catalog)
     expect(verdict.reasons).toEqual(['no_role', 'no_skills'])
+  })
+
+  it('accepts the sales and legal roles', () => {
+    expect(VACANCY_ROLES).toEqual(expect.arrayContaining(['ventas', 'legal']))
   })
 
   it('never accepts "otro" as a role', () => {

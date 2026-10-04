@@ -27,6 +27,30 @@ describe('classifyRole: the new categories', () => {
   })
 })
 
+describe('classifyRole: ventas and legal', () => {
+  it.each([
+    ['Account Executive - Italy', 'ventas'],
+    ['Enterprise Sales Executive', 'ventas'],
+    ['Sales Development Representative', 'ventas'],
+    ['Business Development Manager', 'ventas'],
+    ['Solutions Engineer', 'ventas'],
+    ['Sales Operations Manager', 'ventas'],
+    ['Ejecutivo de Cuenta', 'ventas'],
+    ['General Counsel', 'legal'],
+    ['Corporate Attorney', 'legal'],
+    ['Compliance Analyst', 'legal'],
+    ['Abogado Corporativo', 'legal'],
+    ['Paralegal', 'legal'],
+    ['Legal Operations Specialist - Palantir', 'administracion'],
+  ])('puts "%s" in %s', (title, role) => {
+    expect(classifyRole(post(title))).toBe(role)
+  })
+
+  it('does not take "sales" out of "Salesforce"', () => {
+    expect(classifyRole(post('Salesforce Administrator'))).toBeNull()
+  })
+})
+
 describe('classifyRole: the defects of the old classifier', () => {
   it('no longer reads "ios" inside "positions"', () => {
     // Un Senior Accountant salía como mobile porque su texto decía "positions".
@@ -50,14 +74,14 @@ describe('classifyRole: the defects of the old classifier', () => {
     // Probado con vacantes reales: asignar el rol por el cuerpo dejaba un "Account
     // Executive" como fullstack y todos los "Sales Engineer" como devops.
     expect(classifyRole(post('Member of Technical Staff', 'Join our devops team'))).toBeNull()
-    expect(classifyRole(post('Account Executive', 'You will sell our full stack platform to devops teams'))).toBeNull()
-    expect(classifyRole(post('Commercial Sales Engineer', 'Partner with our devops and site reliability engineers'))).toBeNull()
+    expect(classifyRole(post('Account Executive', 'You will sell our full stack platform to devops teams'))).toBe('ventas')
+    expect(classifyRole(post('Commercial Sales Engineer', 'Partner with our devops and site reliability engineers'))).toBe('ventas')
     expect(classifyRole(post('Curriculum Manager', 'Build learning paths for engineers, devops and data engineer roles'))).toBeNull()
   })
 
   it('leaves a role it does not know unclassified instead of guessing', () => {
-    expect(classifyRole(post('Account Executive - Italy'))).toBeNull()
-    expect(classifyRole(post('Enterprise Sales Executive'))).toBeNull()
+    expect(classifyRole(post('Member of Technical Staff'))).toBeNull()
+    expect(classifyRole(post('Curriculum Manager'))).toBeNull()
   })
 })
 

@@ -27,7 +27,7 @@ CREATE OR REPLACE VIEW role_supply_demand AS
 WITH roles(role) AS (
   VALUES ('frontend'), ('backend'), ('fullstack'), ('mobile'), ('devops'), ('data_engineer'),
          ('data_scientist'), ('qa'), ('ux_ui'), ('marketing'), ('customer_support'), ('product'),
-         ('recursos_humanos'), ('administracion'), ('finanzas'), ('otro')
+         ('recursos_humanos'), ('administracion'), ('finanzas'), ('ventas'), ('legal'), ('otro')
 ),
 candidates AS (
   SELECT role_category AS role, count(*) AS candidates

@@ -220,13 +220,14 @@ describe('enrichVacancy', () => {
   })
 
   it('does not invent what the text does not say', () => {
-    const result = enrichVacancy({ text: '## Account Executive\nSell things to people' }, catalog)
+    const result = enrichVacancy({ text: '## Member of Technical Staff\nBuild things with people' }, catalog)
 
     expect(result).toEqual({ role_category: null, seniority_level: null, skills: [], work_modality: 'unknown' })
   })
 
   it('classifies the new business roles', () => {
     expect(enrichVacancy({ text: '## Senior Accountant\nClose the books' }, catalog).role_category).toBe('finanzas')
+    expect(enrichVacancy({ text: '## Account Executive\nSell to companies' }, catalog).role_category).toBe('ventas')
     expect(enrichVacancy({ text: '## Talent Acquisition Lead\nHire people' }, catalog).role_category).toBe('recursos_humanos')
   })
 })

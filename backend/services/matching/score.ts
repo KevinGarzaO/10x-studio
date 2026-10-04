@@ -58,9 +58,12 @@ const ADJACENT_ROLES: Record<string, string[]> = {
   qa: ['fullstack'],
   ux_ui: ['frontend', 'product'],
   product: ['ux_ui', 'marketing'],
-  marketing: ['product'],
+  marketing: ['product', 'ventas'],
   recursos_humanos: ['administracion'],
-  administracion: ['recursos_humanos', 'finanzas'],
+  administracion: ['recursos_humanos', 'finanzas', 'legal'],
+  ventas: ['marketing', 'customer_support'],
+  customer_support: ['ventas'],
+  legal: ['administracion'],
   finanzas: ['administracion'],
 }
 

@@ -105,4 +105,13 @@ export const SKILL_TERMS: Record<string, string[]> = {
   // Sin 'product manager': en casi toda oferta técnica es con quién se colabora, no lo que se hace.
   'product-management': ['product management', 'gestión de producto', 'product owner'],
   'customer-service': ['customer service', 'customer support', 'customer success', 'atención al cliente', 'servicio al cliente'],
+  // --- ventas y legal ---
+  sales: ['sales', 'ventas', 'b2b sales', 'prospecting', 'prospección', 'cold calling', 'outbound', 'quota attainment'],
+  crm: ['crm', 'pipedrive', 'zoho crm'],
+  'business-development': ['business development', 'desarrollo de negocio', 'lead generation', 'generación de leads'],
+  negotiation: ['negotiation', 'negotiating', 'negociación'],
+  contracts: ['contract drafting', 'contract negotiation', 'contract management', 'contratos'],
+  compliance: ['compliance', 'regulatory', 'cumplimiento normativo', 'gdpr', 'sox', 'aml', 'kyc'],
+  'corporate-law': ['corporate law', 'litigation', 'derecho corporativo', 'derecho mercantil', 'derecho laboral', 'intellectual property', 'propiedad intelectual', 'paralegal', '^attorney', '^counsel', '^abogado', '^abogada'],
+  'data-privacy': ['data privacy', 'privacy law', 'ccpa', 'protección de datos', 'privacidad de datos'],
 }

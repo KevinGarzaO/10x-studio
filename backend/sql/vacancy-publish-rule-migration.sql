@@ -48,7 +48,7 @@ BEGIN
   IF NEW.role_category NOT IN (
     'frontend', 'backend', 'fullstack', 'mobile', 'devops', 'data_engineer', 'data_scientist',
     'qa', 'ux_ui', 'marketing', 'customer_support', 'product',
-    'recursos_humanos', 'administracion', 'finanzas'
+    'recursos_humanos', 'administracion', 'finanzas', 'ventas', 'legal'
   ) THEN
     RAISE EXCEPTION 'vacancy_not_linked: unknown_role (%)', NEW.role_category;
   END IF;

@@ -69,6 +69,9 @@ BEGIN
   IF v_title ~ $re$\m(product manager\w*|product owner\w*|product lead|head of product|director of product|vp of product|product operations|product management|gerente de producto|technical product)\M$re$ THEN
     RETURN 'product';
   END IF;
+  IF v_title ~ $re$\m(sales|account (executive|manager|director)s?|business development|sdr|bdr|solutions? (engineer\w*|architect\w*|consultant\w*)|pre[ -]?sales|partnerships? (manager|lead|director|executive)|channel (manager|partner\w*)|revenue operations|ventas|vendedor(a)?(es)?|ejecutiv[oa] (de cuenta|comercial|de ventas)|desarrollo de negocio|comercial)\M$re$ THEN
+    RETURN 'ventas';
+  END IF;
   IF v_title ~ $re$\m(recruiter\w*|recruiting|talent acquisition|talent partner\w*|sourcer\w*|human resources|recursos humanos|rrhh|hrbp|hr (business partner|manager|generalist|coordinator|specialist)|people (partner\w*|operations|ops|business partner\w*|programs?|team|experience)|compensation|payroll|nómina|nomina|reclutador(a)?(es)?|reclutamiento|employee (experience|relations)|learning (and|&) development)\M$re$ THEN
     RETURN 'recursos_humanos';
   END IF;
@@ -77,6 +80,9 @@ BEGIN
   END IF;
   IF v_title ~ $re$\m(administrative|administrativ[oa]s?|administraci[oó]n|office manager|executive assistant|executive business partner|asistente|business operations|operations (manager|coordinator|specialist|analyst|associate)|procurement|compras|legal operations|contracts? (manager|specialist|administrator|analyst|coordinator|lead)|coordinador(a)?(es)?|coordinator|supply chain|logística|logistics|chief of staff)\M$re$ THEN
     RETURN 'administracion';
+  END IF;
+  IF v_title ~ $re$\m(counsel|attorney\w*|lawyer\w*|paralegal\w*|legal (director|manager|associate|analyst|specialist|assistant|advisor|officer|lead|affairs)|compliance|regulatory|abogad[oa]s?|jurídic[oa]s?|litigation|privacy (officer|manager|analyst|lead)|data protection|cumplimiento normativo)\M$re$ THEN
+    RETURN 'legal';
   END IF;
   IF v_title ~ $re$\m(marketing|growth|seo|sem|ppc|content (writer|strategist|creator|marketing|designer)|copywriter\w*|social media|community manager|brand|demand generation|lifecycle|public relations|comunicaci\w+|mercadotecnia|publicidad|campaign\w*)\M$re$ THEN
     RETURN 'marketing';
