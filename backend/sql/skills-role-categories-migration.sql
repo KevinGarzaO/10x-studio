@@ -5,25 +5,28 @@
 -- Idempotente: se puede volver a correr.
 --
 -- Liga cada skill a las categorías de rol en las que tiene sentido ofrecerlo
--- (users.role_category). En el perfil, quien elige "Backend" ve primero skills de
--- backend en vez de las 82 del catálogo; sigue pudiendo escribir cualquier
--- otro o ver todos.
+-- (users.role_category). En el perfil, quien elige "Desarrollo Backend" ve primero
+-- skills de backend en vez de las 82 del catálogo; sigue pudiendo escribir
+-- cualquier otro o ver todos.
 --
---   * role_categories vacío  -> el skill no está ligado a ningún rol todavía: solo
+--   * role_categories vacío -> el skill no está ligado a ningún rol todavía: solo
 --     sale al buscar por texto o al ver todos.
---   * La categoría 'otro' muestra el catálogo completo, así que los skills de
---     administración y finanzas (que aún no tienen categoría propia) se ligan a ella.
+--   * La categoría 'otro' muestra el catálogo completo, por eso ningún skill se liga
+--     a ella.
 --
--- Solo llena los skills que aún no tienen roles: si ajustas uno a mano, volver a
--- correr esto no lo pisa.
+-- El bloque 2 llena los skills que aún no tienen roles (no pisa ajustes manuales).
+-- El bloque 3 reasigna a propósito los de administración, finanzas y recursos
+-- humanos, que ganan categorías propias en role-categories-migration.sql.
 --
 -- Un skill nuevo (incluido uno que se aprueba desde una propuesta) nace sin roles;
 -- asígnaselos con:
 --   UPDATE skills SET role_categories = ARRAY['backend','devops'] WHERE name = 'xyz';
 -- ============================================
 
+-- BLOQUE 1 — Columna
 ALTER TABLE skills ADD COLUMN IF NOT EXISTS role_categories TEXT[] NOT NULL DEFAULT '{}';
 
+-- BLOQUE 2 — Llenar los que están vacíos
 UPDATE skills AS s
    SET role_categories = m.roles
   FROM (VALUES
@@ -35,7 +38,7 @@ UPDATE skills AS s
   ('aws', ARRAY['backend', 'fullstack', 'devops', 'data_engineer']::text[]),
   ('docker', ARRAY['backend', 'fullstack', 'devops', 'data_engineer']::text[]),
   ('kubernetes', ARRAY['devops', 'backend']::text[]),
-  ('sql', ARRAY['backend', 'fullstack', 'data_engineer', 'data_scientist']::text[]),
+  ('sql', ARRAY['backend', 'fullstack', 'data_engineer', 'data_scientist', 'finanzas']::text[]),
   ('golang', ARRAY['backend', 'devops']::text[]),
   ('ia', ARRAY['data_scientist', 'data_engineer', 'backend', 'product']::text[]),
   ('figma', ARRAY['ux_ui', 'product', 'frontend']::text[]),
@@ -48,7 +51,7 @@ UPDATE skills AS s
   ('salesforce', ARRAY['marketing', 'customer_support']::text[]),
   ('zendesk', ARRAY['customer_support']::text[]),
   ('intercom', ARRAY['customer_support', 'product', 'marketing']::text[]),
-  ('excel', ARRAY['marketing', 'product', 'data_scientist', 'customer_support', 'otro']::text[]),
+  ('excel', ARRAY['marketing', 'product', 'data_scientist', 'customer_support', 'administracion', 'finanzas', 'recursos_humanos']::text[]),
   ('canva', ARRAY['marketing', 'ux_ui']::text[]),
   ('java', ARRAY['backend', 'fullstack', 'mobile']::text[]),
   ('dotnet', ARRAY['backend', 'fullstack']::text[]),
@@ -78,21 +81,21 @@ UPDATE skills AS s
   ('spark', ARRAY['data_engineer', 'data_scientist']::text[]),
   ('ci-cd', ARRAY['devops', 'backend', 'fullstack', 'qa']::text[]),
   ('test-automation', ARRAY['qa']::text[]),
-  ('tableau', ARRAY['data_scientist', 'data_engineer', 'product', 'marketing']::text[]),
-  ('power-bi', ARRAY['data_scientist', 'data_engineer', 'product', 'marketing']::text[]),
-  ('jira', ARRAY['qa', 'product']::text[]),
-  ('sap', ARRAY['otro']::text[]),
-  ('accounting', ARRAY['otro']::text[]),
-  ('financial-analysis', ARRAY['otro']::text[]),
-  ('budgeting', ARRAY['otro']::text[]),
-  ('quickbooks', ARRAY['otro']::text[]),
-  ('payroll', ARRAY['otro']::text[]),
-  ('recruiting', ARRAY['otro']::text[]),
-  ('human-resources', ARRAY['otro']::text[]),
-  ('project-management', ARRAY['product', 'otro']::text[]),
-  ('agile-scrum', ARRAY['product', 'qa', 'otro']::text[]),
-  ('business-administration', ARRAY['otro']::text[]),
-  ('procurement', ARRAY['otro']::text[]),
+  ('tableau', ARRAY['data_scientist', 'data_engineer', 'product', 'marketing', 'finanzas']::text[]),
+  ('power-bi', ARRAY['data_scientist', 'data_engineer', 'product', 'marketing', 'finanzas']::text[]),
+  ('jira', ARRAY['qa', 'product', 'administracion']::text[]),
+  ('sap', ARRAY['finanzas', 'administracion']::text[]),
+  ('accounting', ARRAY['finanzas']::text[]),
+  ('financial-analysis', ARRAY['finanzas']::text[]),
+  ('budgeting', ARRAY['finanzas', 'administracion']::text[]),
+  ('quickbooks', ARRAY['finanzas', 'administracion']::text[]),
+  ('payroll', ARRAY['recursos_humanos', 'finanzas', 'administracion']::text[]),
+  ('recruiting', ARRAY['recursos_humanos']::text[]),
+  ('human-resources', ARRAY['recursos_humanos']::text[]),
+  ('project-management', ARRAY['administracion', 'product']::text[]),
+  ('agile-scrum', ARRAY['product', 'qa', 'administracion']::text[]),
+  ('business-administration', ARRAY['administracion']::text[]),
+  ('procurement', ARRAY['administracion', 'finanzas']::text[]),
   ('ui-ux-design', ARRAY['ux_ui', 'product', 'frontend']::text[]),
   ('graphic-design', ARRAY['ux_ui', 'marketing']::text[]),
   ('design-systems', ARRAY['ux_ui', 'frontend']::text[]),
@@ -112,6 +115,30 @@ UPDATE skills AS s
   ) AS m(name, roles)
  WHERE s.name = m.name
    AND s.role_categories = '{}';
+
+-- BLOQUE 3 — Reasignar administración, finanzas y recursos humanos
+UPDATE skills AS s
+   SET role_categories = m.roles
+  FROM (VALUES
+  ('sql', ARRAY['backend', 'fullstack', 'data_engineer', 'data_scientist', 'finanzas']::text[]),
+  ('excel', ARRAY['marketing', 'product', 'data_scientist', 'customer_support', 'administracion', 'finanzas', 'recursos_humanos']::text[]),
+  ('tableau', ARRAY['data_scientist', 'data_engineer', 'product', 'marketing', 'finanzas']::text[]),
+  ('power-bi', ARRAY['data_scientist', 'data_engineer', 'product', 'marketing', 'finanzas']::text[]),
+  ('jira', ARRAY['qa', 'product', 'administracion']::text[]),
+  ('sap', ARRAY['finanzas', 'administracion']::text[]),
+  ('accounting', ARRAY['finanzas']::text[]),
+  ('financial-analysis', ARRAY['finanzas']::text[]),
+  ('budgeting', ARRAY['finanzas', 'administracion']::text[]),
+  ('quickbooks', ARRAY['finanzas', 'administracion']::text[]),
+  ('payroll', ARRAY['recursos_humanos', 'finanzas', 'administracion']::text[]),
+  ('recruiting', ARRAY['recursos_humanos']::text[]),
+  ('human-resources', ARRAY['recursos_humanos']::text[]),
+  ('project-management', ARRAY['administracion', 'product']::text[]),
+  ('agile-scrum', ARRAY['product', 'qa', 'administracion']::text[]),
+  ('business-administration', ARRAY['administracion']::text[]),
+  ('procurement', ARRAY['administracion', 'finanzas']::text[])
+  ) AS m(name, roles)
+ WHERE s.name = m.name;
 
 -- ============================================
 -- Verificación

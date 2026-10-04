@@ -24,7 +24,7 @@ export function SegmentedControl({ options, value, onChange }: { options: { valu
 export function RoleCategorySelect({ options, value, onChange, id }: { options: { value: string; label: string }[]; value: string | null; onChange: (v: string) => void; id?: string }) {
   return (
     <select id={id} className="role-category-select" value={value ?? ''} onChange={e => onChange(e.target.value)}>
-      <option value="" disabled>Selecciona una categoría</option>
+      <option value="" disabled>Selecciona tu puesto</option>
       {options.map(opt => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
     </select>
   )

@@ -53,14 +53,15 @@ describe('OnboardingPage (T042)', () => {
   it('preloads every field the account already has, not just the photo', async () => {
     render(<OnboardingPage />)
 
-    // El título y la ubicación vuelven a aparecer capturados.
+    // La ubicación vuelve a aparecer capturada.
     await waitFor(() => {
-      expect(screen.getByLabelText(/título profesional/i)).toHaveValue('Backend Developer')
+      expect(screen.getByLabelText(/ubicación/i)).toHaveValue('Monterrey, MX')
     })
-    expect(screen.getByLabelText(/ubicación/i)).toHaveValue('Monterrey, MX')
 
-    // La categoría, el nivel y la modalidad quedan seleccionados.
-    expect(screen.getByLabelText(/categoría de rol/i)).toHaveValue('backend')
+    // El puesto se elige de un listado (ya no hay un título escrito aparte), y el
+    // nivel y la modalidad quedan seleccionados.
+    expect(screen.queryByLabelText(/título profesional/i)).toBeNull()
+    expect(screen.getByLabelText(/puesto/i)).toHaveValue('backend')
     expect(screen.getByRole('button', { name: 'Senior' }).className).toContain('active')
     expect(screen.getByRole('button', { name: 'Remoto' }).className).toContain('active')
 

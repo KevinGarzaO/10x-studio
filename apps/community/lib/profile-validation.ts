@@ -37,8 +37,7 @@ export function validateCandidateProfile(
 
 /** Mensaje amable para cada campo obligatorio vacío. */
 export const REQUIRED_FIELD_MESSAGES: Record<string, string> = {
-  title: 'Tu título profesional es obligatorio',
-  roleCategory: 'Elige tu categoría de rol',
+  roleCategory: 'Elige tu puesto',
   seniority: 'Elige tu nivel',
   skills: 'Elige al menos un skill del catálogo',
   location: 'Tu ubicación es obligatoria',

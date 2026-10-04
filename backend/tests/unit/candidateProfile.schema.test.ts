@@ -5,7 +5,6 @@ const approved = ['react', 'nodejs', 'postgresql']
 const schema = buildCandidateProfileSchema(approved)
 
 const valid = {
-  title: 'Backend Developer',
   roleCategory: 'backend',
   seniority: 'senior',
   skills: ['nodejs', 'postgresql'],
@@ -21,11 +20,9 @@ describe('buildCandidateProfileSchema (T005)', () => {
   it('trims the free-text fields', () => {
     const parsed = schema.parse({
       ...valid,
-      title: '  Backend Developer  ',
       location: '  Monterrey, MX ',
       bio: '  hola  ',
     })
-    expect(parsed.title).toBe('Backend Developer')
     expect(parsed.location).toBe('Monterrey, MX')
     expect(parsed.bio).toBe('hola')
   })
@@ -36,7 +33,26 @@ describe('buildCandidateProfileSchema (T005)', () => {
     expect(parsed.website).toBeNull()
   })
 
-  it.each(['title', 'location'])('rejects a blank %s', (field) => {
+  // El puesto se elige de un listado: no se captura un título libre. Se deriva del
+  // rol, así perfiles y vacantes hablan el mismo idioma y el match no depende de
+  // cómo escribió cada quien.
+  it('derives the title from the chosen role category, in Spanish', () => {
+    expect(schema.parse(valid).title).toBe('Desarrollo Backend')
+    expect(schema.parse({ ...valid, roleCategory: 'finanzas' }).title).toBe('Finanzas y Contabilidad')
+    expect(schema.parse({ ...valid, roleCategory: 'recursos_humanos' }).title).toBe('Recursos Humanos')
+  })
+
+  it('ignores a title sent by a client: the role decides', () => {
+    expect(schema.parse({ ...valid, title: 'Ninja Rockstar' }).title).toBe('Desarrollo Backend')
+  })
+
+  it('accepts the administration, finance and human resources roles', () => {
+    for (const roleCategory of ['recursos_humanos', 'administracion', 'finanzas']) {
+      expect(schema.safeParse({ ...valid, roleCategory }).success).toBe(true)
+    }
+  })
+
+  it.each(['location'])('rejects a blank %s', (field) => {
     expect(schema.safeParse({ ...valid, [field]: '   ' }).success).toBe(false)
     expect(schema.safeParse({ ...valid, [field]: undefined }).success).toBe(false)
   })

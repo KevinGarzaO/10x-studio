@@ -48,7 +48,6 @@ export function OnboardingPage() {
   const router = useRouter()
 
   const [photoPreview, setPhotoPreview] = useState<string | null>(null)
-  const [title, setTitle] = useState('')
   const [roleCategory, setRoleCategory] = useState<string | null>(null)
   const [seniority, setSeniority] = useState<string | null>(null)
   const [skills, setSkills] = useState<string[]>([])
@@ -86,7 +85,6 @@ export function OnboardingPage() {
       // a quien vuelve aquí por un campo nuevo no se le vuelve a pedir lo que
       // ya había capturado.
       if (user.photo_url) setPhotoPreview(user.photo_url)
-      if (user.title) setTitle(user.title)
       if (user.role_category) setRoleCategory(user.role_category)
       if (user.seniority) setSeniority(user.seniority)
       if (Array.isArray(user.skills)) setSkills(user.skills)
@@ -94,7 +92,7 @@ export function OnboardingPage() {
       if (user.work_modality) setWorkModality(user.work_modality)
       // A quien ya capturó perfil de candidato no se le pregunta de nuevo si
       // es empresa: su respuesta ya está en la cuenta.
-      if (user.title || (Array.isArray(user.skills) && user.skills.length > 0)) {
+      if (user.role_category || (Array.isArray(user.skills) && user.skills.length > 0)) {
         setAccountKind(prev => prev ?? 'candidate')
       }
       setCheckingSession(false)
@@ -104,7 +102,6 @@ export function OnboardingPage() {
   // La foto es obligatoria para toda cuenta (FR-024); el resto lo valida el
   // schema compartido, el mismo que usa el backend.
   const payload = {
-    title: title.trim(),
     roleCategory,
     seniority,
     skills,
@@ -240,12 +237,7 @@ export function OnboardingPage() {
         <PhotoPicker photoUrl={photoPreview} onPick={setPhotoPreview} onError={setError} />
 
         <div className="field">
-          <label htmlFor="onboarding-title">Título profesional</label>
-          <input id="onboarding-title" type="text" placeholder="Ej. Backend Developer" value={title} onChange={e => setTitle(e.target.value)} />
-        </div>
-
-        <div className="field">
-          <label htmlFor="onboarding-role-category">Categoría de rol</label>
+          <label htmlFor="onboarding-role-category">Puesto</label>
           <RoleCategorySelect id="onboarding-role-category" options={ROLE_CATEGORY_OPTIONS} value={roleCategory} onChange={setRoleCategory} />
         </div>
 

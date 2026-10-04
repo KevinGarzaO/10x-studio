@@ -198,7 +198,6 @@ export function SettingsPage() {
   const [githubUrl, setGithubUrl] = useState('')
   const [photoUrl, setPhotoUrl] = useState<string | null>(null)
   const [photoBase64, setPhotoBase64] = useState<string | null>(null)
-  const [title, setTitle] = useState('')
   const [roleCategory, setRoleCategory] = useState<string | null>(null)
   const [seniority, setSeniority] = useState<string | null>(null)
   const [skills, setSkills] = useState<string[]>([])
@@ -220,7 +219,6 @@ export function SettingsPage() {
         setWebsite(u.website || '')
         setGithubUrl(u.github_url || '')
         setPhotoUrl(u.photo_url || null)
-        setTitle(u.title || '')
         setRoleCategory(u.role_category || null)
         setSeniority(u.seniority || null)
         setSkills(u.skills || [])
@@ -242,7 +240,6 @@ export function SettingsPage() {
     }
     const validationError = validateCandidateProfile(
       {
-        title: title.trim(),
         roleCategory,
         seniority,
         skills,
@@ -271,7 +268,7 @@ export function SettingsPage() {
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
         body: JSON.stringify({
           displayName, bio, website, githubUrl,
-          title: title.trim(), roleCategory, seniority, skills,
+          roleCategory, seniority, skills,
           location: location.trim(), workModality,
           ...(photoBase64 ? { photoBase64 } : {}),
         }),
@@ -319,8 +316,7 @@ export function SettingsPage() {
           <div className="field"><label>Foto de perfil</label><PhotoPicker photoUrl={photoBase64 || photoUrl} onPick={setPhotoBase64} onError={setError} /></div>
           <div className="field"><label>Nombre visible</label><input value={displayName} onChange={e => setDisplayName(e.target.value)} placeholder="Tu nombre" /></div>
           <div className="field"><label>Usuario</label><input value={`@${user.username}`} disabled style={{ opacity: 0.6 }} /></div>
-          <div className="field"><label>Título profesional</label><input value={title} onChange={e => setTitle(e.target.value)} placeholder="Ej. Backend Developer" /></div>
-          <div className="field"><label>Categoría de rol</label><RoleCategorySelect options={ROLE_CATEGORY_OPTIONS} value={roleCategory} onChange={setRoleCategory} /></div>
+          <div className="field"><label>Puesto</label><RoleCategorySelect options={ROLE_CATEGORY_OPTIONS} value={roleCategory} onChange={setRoleCategory} /></div>
           <div className="field"><label>Nivel</label><SegmentedControl options={SENIORITY_OPTIONS} value={seniority} onChange={setSeniority} /></div>
           <div className="field">
             <label><Tag size={12} style={{ verticalAlign: -1, marginRight: 4 }} />Skills</label>

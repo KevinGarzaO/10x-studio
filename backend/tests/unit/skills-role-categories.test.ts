@@ -92,9 +92,21 @@ describe('skills-role-categories-migration.sql', () => {
     expect(unknown).toEqual([])
   })
 
-  it('leaves every technical and business role with something to offer', () => {
+  it('leaves every role with something to offer, administration, finance and human resources included', () => {
     const offered = new Set([...mapping.values()].flat())
-    expect(ROLE_CATEGORY.filter(role => !offered.has(role))).toEqual([])
+    // "otro" muestra el catálogo completo, por eso ningún skill se liga a él.
+    expect(ROLE_CATEGORY.filter(role => role !== 'otro' && !offered.has(role))).toEqual([])
+    for (const role of ['recursos_humanos', 'administracion', 'finanzas']) expect(offered.has(role)).toBe(true)
+  })
+
+  it('does not tie any skill to "otro", which already shows everything', () => {
+    expect([...mapping.values()].flat().includes('otro')).toBe(false)
+  })
+
+  it('moves the administration and finance skills onto their own categories', () => {
+    expect(mapping.get('accounting')).toContain('finanzas')
+    expect(mapping.get('recruiting')).toContain('recursos_humanos')
+    expect(mapping.get('business-administration')).toContain('administracion')
   })
 
   it('does not overwrite roles that were adjusted by hand', () => {
