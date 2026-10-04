@@ -11,6 +11,10 @@ export interface MatchedItem {
   url: string
   postDate: string | null
   matchingSkills: number
+  /** Cuáles de tus skills pide la vacante (en el nombre del catálogo). */
+  sharedSkills?: string[]
+  /** 0 a 100: qué tan bien encaja contigo. Puede faltar si el backend es anterior. */
+  matchScore?: number
   historyId: string
   isSaved: boolean
 }

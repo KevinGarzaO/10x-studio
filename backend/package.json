@@ -12,7 +12,9 @@
     "migrate-history": "tsx scripts/migrate-history.ts",
     "sync-to-community": "tsx scripts/sync-to-community.ts",
     "purge-claim-docs": "tsx scripts/purge-claim-documents.ts",
-    "user-stats": "tsx scripts/user-stats.ts"
+    "user-stats": "tsx scripts/user-stats.ts",
+    "match-report": "tsx scripts/match-report.ts",
+    "backfill-vacancies": "tsx scripts/backfill-vacancy-enrichment.ts"
   },
   "dependencies": {
     "@avocado/schemas": "workspace:*",

@@ -2,6 +2,7 @@ import { Router, Response } from 'express'
 import { supabase } from '../../../services/supabase.service'
 import { communityAuthMiddleware, AuthRequest } from '../../../middleware/community-auth.middleware'
 import { syncVacancyToCommunity } from '../../../services/scraper/sync'
+import { scoreMatch } from '../../../services/matching/score'
 
 const router = Router()
 
@@ -16,7 +17,13 @@ interface MatchedItem {
   skills: string[]
   url: string
   postDate: string | null
+  /** Cuántos de tus skills pide la vacante. */
   matchingSkills: number
+  /** Cuáles. */
+  sharedSkills: string[]
+  /** 0 a 100: qué tan bien encaja contigo (rol, skills, nivel y modalidad). */
+  matchScore: number
+  modalidad: string | null
 }
 
 function toSkillArray(raw: unknown): string[] {
@@ -24,15 +31,20 @@ function toSkillArray(raw: unknown): string[] {
   return []
 }
 
-// "Para ti" — matches a candidate's role_category + seniority_level against
-// both the scraper staging buffer (not yet promoted) and the published
-// community_posts, unlike the daily Sync cron this has no per-combo cap —
-// it's the user's own full pool, not a shared daily quota.
+// "Para ti" — las vacantes que mejor encajan con una persona, tanto las que ya están
+// publicadas (community_posts) como las que siguen en el área de paso del scraper.
+//
+// Antes se pedía el mismo rol y el mismo nivel, exactos: se perdía quien busca algo
+// cercano y se mostraban vacantes sin un solo skill en común. Ahora cada vacante
+// reciente recibe un puntaje (services/matching/score.ts: rol, skills, nivel y
+// modalidad) y se muestran las que de verdad encajan, las mejores primero.
+const POOL_SIZE = 600
+
 router.get('/for-you', communityAuthMiddleware, async (req: AuthRequest, res: Response) => {
   try {
     const { data: user, error: userError } = await supabase
       .from('users')
-      .select('id, role_category, seniority, skills')
+      .select('id, role_category, seniority, skills, work_modality')
       .eq('id', req.userId)
       .single()
 
@@ -40,72 +52,90 @@ router.get('/for-you', communityAuthMiddleware, async (req: AuthRequest, res: Re
       return res.status(404).json({ error: 'Usuario no encontrado' })
     }
 
-    if (!user.role_category || !user.seniority) {
-      return res.status(400).json({ error: 'Completa tu perfil (rol y nivel) para ver tu feed personalizado' })
+    if (!user.role_category) {
+      return res.status(400).json({ error: 'Completa tu perfil (tu puesto) para ver tu feed personalizado' })
     }
 
-    const userSkills = new Set((user.skills || []).map((s: string) => s.toLowerCase()))
+    const candidate = {
+      roleCategory: user.role_category as string,
+      seniority: (user.seniority as string | null) ?? null,
+      skills: ((user.skills || []) as string[]).map((skill) => skill.toLowerCase()),
+      workModality: (user.work_modality as string | null) ?? null,
+    }
 
+    // Las más recientes de cada fuente: se puntúan en memoria, así no depende de que
+    // la vacante tenga justo el mismo rol y nivel.
     const [{ data: scraperRows }, { data: communityRows }] = await Promise.all([
       supabase
         .from('scraper_posts')
-        .select('id, text, company, company_logo, role_category, seniority_level, skills, url, post_date, created_at')
+        .select('id, text, company, company_logo, role_category, seniority_level, skills, url, post_date, created_at, work_modality')
         .eq('post_type', 'vacancy')
         .eq('is_spam', false)
-        .eq('role_category', user.role_category)
-        .eq('seniority_level', user.seniority)
-        .limit(200),
+        .order('post_date', { ascending: false })
+        .limit(POOL_SIZE),
       supabase
         .from('community_posts')
-        .select('id, title, company, company_logo, role_category, seniority_level, skills, slug, created_at')
+        .select('id, title, company, company_logo, role_category, seniority_level, skills, slug, created_at, modalidad')
         .eq('type', 'job')
-        .eq('role_category', user.role_category)
-        .eq('seniority_level', user.seniority)
-        .limit(200),
+        .order('created_at', { ascending: false })
+        .limit(POOL_SIZE),
     ])
 
     const items: MatchedItem[] = []
 
-    for (const row of scraperRows || []) {
-      const skills = toSkillArray(row.skills)
-      items.push({
-        sourceType: 'scraper',
-        id: row.id,
-        title: row.text?.split('\n')[0]?.replace(/^##\s*/, '').substring(0, 150) || 'Vacante sin título',
-        company: row.company,
-        companyLogo: row.company_logo,
-        roleCategory: row.role_category,
-        seniorityLevel: row.seniority_level,
-        skills,
-        url: row.url || '',
-        postDate: row.post_date || row.created_at,
-        matchingSkills: skills.filter(s => userSkills.has(s.toLowerCase())).length,
+    const consider = (item: Omit<MatchedItem, 'matchingSkills' | 'sharedSkills' | 'matchScore'>, modality: string | null) => {
+      const result = scoreMatch(candidate, {
+        roleCategory: item.roleCategory,
+        seniority: item.seniorityLevel,
+        skills: item.skills.map((skill) => skill.toLowerCase()),
+        workModality: modality,
       })
+      if (!result.qualifies) return
+      items.push({ ...item, matchingSkills: result.sharedSkills.length, sharedSkills: result.sharedSkills, matchScore: result.score })
+    }
+
+    for (const row of scraperRows || []) {
+      consider(
+        {
+          sourceType: 'scraper',
+          id: row.id,
+          title: row.text?.split('\n')[0]?.replace(/^##\s*/, '').substring(0, 150) || 'Vacante sin título',
+          company: row.company,
+          companyLogo: row.company_logo,
+          roleCategory: row.role_category,
+          seniorityLevel: row.seniority_level,
+          skills: toSkillArray(row.skills),
+          url: row.url || '',
+          postDate: row.post_date || row.created_at,
+          modalidad: row.work_modality ?? null,
+        },
+        row.work_modality ?? null,
+      )
     }
 
     for (const row of communityRows || []) {
-      const skills = toSkillArray(row.skills)
-      items.push({
-        sourceType: 'community',
-        id: row.id,
-        title: row.title,
-        company: row.company,
-        companyLogo: row.company_logo,
-        roleCategory: row.role_category,
-        seniorityLevel: row.seniority_level,
-        skills,
-        url: `/vacantes/${row.slug || row.id}`,
-        postDate: row.created_at,
-        matchingSkills: skills.filter(s => userSkills.has(s.toLowerCase())).length,
-      })
+      consider(
+        {
+          sourceType: 'community',
+          id: row.id,
+          title: row.title,
+          company: row.company,
+          companyLogo: row.company_logo,
+          roleCategory: row.role_category,
+          seniorityLevel: row.seniority_level,
+          skills: toSkillArray(row.skills),
+          url: `/vacantes/${row.slug || row.id}`,
+          postDate: row.created_at,
+          modalidad: row.modalidad ?? null,
+        },
+        row.modalidad ?? null,
+      )
     }
 
-    // "Para ti" solo muestra lo que de verdad coincide con tus skills: una
-    // vacante de tu rol y nivel que no pide ninguno de ellos no es un match.
-    const matched = items.filter(item => item.matchingSkills > 0)
-
+    // Lo que mejor encaja primero; a igual puntaje, lo más reciente.
+    const matched = items
     matched.sort((a, b) => {
-      if (b.matchingSkills !== a.matchingSkills) return b.matchingSkills - a.matchingSkills
+      if (b.matchScore !== a.matchScore) return b.matchScore - a.matchScore
       return new Date(b.postDate ?? 0).getTime() - new Date(a.postDate ?? 0).getTime()
     })
 

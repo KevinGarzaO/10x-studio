@@ -31,6 +31,7 @@ export function ForYouCard({ item }: { item: MatchedItem }) {
   const [saved, setSaved] = useState(item.isSaved)
   const [historyId, setHistoryId] = useState(item.historyId)
 
+  const shared = new Set((item.sharedSkills || []).map(skill => skill.toLowerCase()))
   const company = formatCompanyName(item.company) || null
   const level = SENIORITY_LABELS[item.seniorityLevel ?? ''] || item.seniorityLevel
   const role = ROLE_CATEGORY_LABELS[item.roleCategory ?? '']
@@ -101,11 +102,15 @@ export function ForYouCard({ item }: { item: MatchedItem }) {
         {company && <span className="job-chip"><Building size={12} /> {company}</span>}
         {role && <span className="job-chip">{role}</span>}
         {level && <span className="job-chip">{level}</span>}
+        {typeof item.matchScore === 'number' && <span className="match-score" title="Qué tan bien encaja contigo: puesto, skills, nivel y modalidad">{item.matchScore}% match</span>}
         <span className="match-pill"><Target size={11} /> {item.matchingSkills} {item.matchingSkills === 1 ? 'skill' : 'skills'} en común</span>
       </div>
       {item.skills.length > 0 && (
         <div className="stack-row">
-          {item.skills.slice(0, 6).map(skill => <span key={skill} className="stack-badge">{skill}</span>)}
+          {/* Los skills que tú tienes van primero y resaltados. */}
+          {[...item.skills].sort((a, b) => Number(shared.has(b)) - Number(shared.has(a))).slice(0, 6).map(skill => (
+            <span key={skill} className={`stack-badge${shared.has(skill) ? ' is-shared' : ''}`}>{skill}</span>
+          ))}
         </div>
       )}
       <button className="job-apply-button" onClick={open} disabled={opening}>
