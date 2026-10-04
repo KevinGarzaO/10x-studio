@@ -220,7 +220,7 @@ describe('enrichVacancy', () => {
   })
 
   it('does not invent what the text does not say', () => {
-    const result = enrichVacancy({ text: '## Member of Technical Staff\nBuild things with people' }, catalog)
+    const result = enrichVacancy({ text: '## Curriculum Manager\nBuild things with people' }, catalog)
 
     expect(result).toEqual({ role_category: null, seniority_level: null, skills: [], work_modality: 'unknown' })
   })
