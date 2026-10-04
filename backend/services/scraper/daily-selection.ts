@@ -19,6 +19,36 @@ export interface DailySelectionOptions {
    * todas tengan su turno de abrir el reparto.
    */
   rotation?: number;
+  /**
+   * Cuántas personas hay por rol (`users.role_category`). Con esto, cada rol recibe
+   * un tope de cupos del día proporcional a su comunidad: un rol del que hay muchas
+   * vacantes pero pocas personas (ventas) no llena el feed, y uno con mucha gente
+   * (backend) no se queda sin vacantes. Sin esto, los roles se reparten parejo.
+   */
+  roleDemand?: Record<string, number>;
+}
+
+/** Qué parte del reparto sigue a la comunidad; el resto se reparte parejo entre los roles. */
+const DEMAND_WEIGHT = 0.5;
+
+/**
+ * Cuántos cupos del día puede ocupar cada rol: mitad según cuánta gente hay en ese rol
+ * y mitad parejo entre los roles que hoy tienen vacantes. Los topes suman al menos
+ * `slots`, así que nunca impiden llenar el día.
+ */
+export function roleCaps(
+  roles: string[],
+  slots: number,
+  roleDemand: Record<string, number> = {},
+): Map<string, number> {
+  const total = roles.reduce((sum, role) => sum + (roleDemand[role] || 0), 0);
+  const caps = new Map<string, number>();
+  for (const role of roles) {
+    const demandShare = total > 0 ? (roleDemand[role] || 0) / total : 1 / roles.length;
+    const share = DEMAND_WEIGHT * demandShare + (1 - DEMAND_WEIGHT) / roles.length;
+    caps.set(role, Math.max(1, Math.ceil(slots * share)));
+  }
+  return caps;
 }
 
 /**
@@ -38,13 +68,15 @@ export interface DailySelectionOptions {
  *     repartiendo parejo, para no desperdiciar cupo.
  *  4. Un rol y nivel conocidos no pasan de `perComboCap` por día, para no llenar
  *     el día con un solo tipo de puesto. Lo que no está clasificado no se limita.
+ *  5. Cada rol tiene un tope de cupos (`roleCaps`) según cuánta gente hay en él. Si
+ *     tras respetar los topes sobra cupo, se llena sin ellos: nunca queda vacío.
  */
 export function pickDailyVacancies<T extends VacancyCandidate>(
   candidates: T[],
   slots: number,
   options: DailySelectionOptions = {},
 ): T[] {
-  const { perCompanyCap = 2, perComboCap = 3, rotation = 0 } = options;
+  const { perCompanyCap = 2, perComboCap = 3, rotation = 0, roleDemand } = options;
   if (slots <= 0 || candidates.length === 0) return [];
 
   const queues = new Map<string, T[]>();
@@ -61,39 +93,57 @@ export function pickDailyVacancies<T extends VacancyCandidate>(
 
   const combos = new Map<string, number>();
   const taken = new Map<string, number>();
+  const roleTaken = new Map<string, number>();
   const selected: T[] = [];
 
+  const roles = [...new Set(candidates.map((candidate) => candidate.role_category || "sin-rol"))];
+  const caps = roleCaps(roles, slots, roleDemand);
+
   // Una ronda: una vacante por empresa que aún pueda aportar.
-  const round = (cap: number): boolean => {
+  const round = (cap: number, respectRoleCaps: boolean): boolean => {
     let added = false;
     for (const name of order) {
       if (selected.length >= slots) return added;
       if ((taken.get(name) || 0) >= cap) continue;
 
       const queue = queues.get(name)!;
-      while (queue.length > 0) {
-        const candidate = queue.shift()!;
+      // La primera de la empresa que todavía cabe. Las que no caben se quedan en la
+      // cola (no se descartan): una ronda posterior, sin topes de rol, puede usarlas.
+      const index = queue.findIndex((candidate) => {
         const known = candidate.role_category && candidate.seniority_level;
         const combo = `${candidate.role_category}:${candidate.seniority_level}`;
-        if (known && (combos.get(combo) || 0) >= perComboCap) continue;
-
+        if (known && (combos.get(combo) || 0) >= perComboCap) return false;
+        const role = candidate.role_category || "sin-rol";
+        return !(respectRoleCaps && (roleTaken.get(role) || 0) >= (caps.get(role) ?? slots));
+      });
+      if (index >= 0) {
+        const candidate = queue.splice(index, 1)[0];
+        const known = candidate.role_category && candidate.seniority_level;
+        const combo = `${candidate.role_category}:${candidate.seniority_level}`;
+        const role = candidate.role_category || "sin-rol";
         if (known) combos.set(combo, (combos.get(combo) || 0) + 1);
+        roleTaken.set(role, (roleTaken.get(role) || 0) + 1);
         taken.set(name, (taken.get(name) || 0) + 1);
         selected.push(candidate);
         added = true;
-        break;
       }
     }
     return added;
   };
 
-  // Primero con el tope por empresa.
-  for (let cap = 1; cap <= perCompanyCap && selected.length < slots; cap++) round(cap);
+  // Primero con el tope por empresa y el tope por rol.
+  for (let cap = 1; cap <= perCompanyCap && selected.length < slots; cap++) round(cap, true);
 
-  // Si sobró cupo, rondas extra sin ese tope (y sin pasar a quien ya no tiene).
+  // Si sobró cupo, rondas extra con el tope de rol y sin el de empresa...
   let progressed = true;
   while (selected.length < slots && progressed) {
-    progressed = round(Number.POSITIVE_INFINITY);
+    progressed = round(Number.POSITIVE_INFINITY, true);
+  }
+
+  // ...y, si aun así sobra, sin topes de rol: es mejor llenar el día que dejarlo vacío.
+  progressed = true;
+  while (selected.length < slots && progressed) {
+    progressed = round(Number.POSITIVE_INFINITY, false);
   }
 
   return selected;

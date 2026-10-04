@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { pickDailyVacancies, type VacancyCandidate } from '../../services/scraper/daily-selection'
+import { pickDailyVacancies, roleCaps, type VacancyCandidate } from '../../services/scraper/daily-selection'
 
 let counter = 0
 const job = (company: string | null, role: string | null = null, level: string | null = null): VacancyCandidate => ({
@@ -109,5 +109,61 @@ describe('pickDailyVacancies', () => {
     const pool = [job(null), job(null), { ...job(null), source: 'Reddit' }]
 
     expect(pickDailyVacancies(pool, 3)).toHaveLength(3)
+  })
+})
+
+describe('reparto por rol', () => {
+  // Sin nivel (lo habitual en lo que trae el scraper), para probar solo el tope por rol.
+  // Muchas vacantes de ventas, de muchas empresas, y pocas de los demás roles.
+  const pool = () => [
+    ...Array.from({ length: 60 }, (_, i) => job(`ventas-co-${i}`, 'ventas', null)),
+    ...Array.from({ length: 10 }, (_, i) => job(`back-co-${i}`, 'backend', null)),
+    ...Array.from({ length: 10 }, (_, i) => job(`front-co-${i}`, 'frontend', null)),
+    ...Array.from({ length: 10 }, (_, i) => job(`prod-co-${i}`, 'product', null)),
+  ]
+  const rolesOf = (picked: VacancyCandidate[]) => countBy(picked.map(p => p.role_category))
+
+  it('does not let a role with many vacancies fill the day', () => {
+    const picked = pickDailyVacancies(pool(), 20, { roleDemand: { backend: 50, frontend: 30, product: 10, ventas: 10 } })
+
+    expect(picked).toHaveLength(20)
+    expect(rolesOf(picked).ventas).toBeLessThanOrEqual(6)
+  })
+
+  it('gives more room to the roles where the community is', () => {
+    const picked = pickDailyVacancies(pool(), 20, { roleDemand: { backend: 70, frontend: 5, product: 5, ventas: 20 } })
+    const roles = rolesOf(picked)
+
+    expect(roles.backend).toBeGreaterThan(roles.frontend)
+    expect(roles.backend).toBeGreaterThan(roles.product)
+  })
+
+  it('shares evenly between roles when the community is unknown', () => {
+    const roles = rolesOf(pickDailyVacancies(pool(), 20))
+    expect(Math.max(...Object.values(roles))).toBeLessThanOrEqual(6)
+  })
+
+  it('still fills the whole day when only one role has vacancies', () => {
+    const only = Array.from({ length: 30 }, (_, i) => job(`co-${i}`, 'ventas', null))
+    expect(pickDailyVacancies(only, 20, { roleDemand: { backend: 100 } })).toHaveLength(20)
+  })
+
+  it('keeps the vacancies it did not pick for a later day', () => {
+    const candidates = pool()
+    const picked = pickDailyVacancies(candidates, 20, { roleDemand: { backend: 100 } })
+    expect(new Set(picked.map(p => p.id)).size).toBe(20)
+  })
+})
+
+describe('roleCaps', () => {
+  it('always adds up to at least the slots, so the caps never stop the day from filling', () => {
+    for (const roles of [['a'], ['a', 'b'], ['a', 'b', 'c', 'd', 'e', 'f', 'g']]) {
+      const total = [...roleCaps(roles, 20, { a: 90, b: 1 }).values()].reduce((sum, n) => sum + n, 0)
+      expect(total).toBeGreaterThanOrEqual(20)
+    }
+  })
+
+  it('gives every role at least one slot', () => {
+    expect(roleCaps(['x', 'y'], 20, { x: 1000 }).get('y')).toBeGreaterThanOrEqual(1)
   })
 })
