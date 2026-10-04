@@ -120,6 +120,10 @@ router.get('/', async (req: Request, res: Response) => {
   try {
     const type = req.query.type as string | undefined
     const search = req.query.search as string | undefined
+    // `sort=recent`: lo más nuevo primero, paginado en la base. Es lo que usa el
+    // feed principal. Sin él se conserva el reparto por empresa, que usan las
+    // columnas laterales ("Oportunidades destacadas") para mostrar variedad.
+    const recent = (req.query.sort as string | undefined) === 'recent'
     const page = parseInt((req.query.page as string) || '1', 10)
     const limit = parseInt((req.query.limit as string) || '20', 10)
     const from = (page - 1) * limit
@@ -129,10 +133,17 @@ router.get('/', async (req: Request, res: Response) => {
       .from('community_posts')
       .select('*, author:users(id, username, display_name, name, handle, photo_url), community_post_tags(tag:community_tags(name))', { count: 'exact' })
 
-    // Order: nativas first (is_scraper_post=false), then by votes, then by date
-    query = query.order('is_scraper_post', { ascending: true })
-    query = query.order('votes_count', { ascending: false })
-    query = query.order('created_at', { ascending: false })
+    if (recent) {
+      // El id desempata las vacantes creadas en el mismo instante, para que dos
+      // páginas seguidas nunca repitan ni se salten una.
+      query = query.order('created_at', { ascending: false })
+      query = query.order('id', { ascending: false })
+    } else {
+      // Order: nativas first (is_scraper_post=false), then by votes, then by date
+      query = query.order('is_scraper_post', { ascending: true })
+      query = query.order('votes_count', { ascending: false })
+      query = query.order('created_at', { ascending: false })
+    }
 
     if (type) query = query.eq('type', type)
     // Only ATS platforms — exclude Telegram/old sources
@@ -141,8 +152,9 @@ router.get('/', async (req: Request, res: Response) => {
       query = query.or(`title.ilike.%${search}%,content.ilike.%${search}%`)
     }
 
-    // For job posts, fetch ALL to interleave by company
-    const isJobFeed = type === 'job'
+    // For job posts, fetch ALL to interleave by company (salvo en modo recent,
+    // que pagina directo en la base)
+    const isJobFeed = type === 'job' && !recent
     if (!isJobFeed) {
       query = query.range(from, to)
     }
