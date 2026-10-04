@@ -37,6 +37,14 @@ async function deleteIn(table: string, ids: string[]): Promise<void> {
   }
 }
 
+/** Quita de la fuente (scraper_posts) las filas ligadas a vacantes publicadas que se van a eliminar. */
+async function deleteStagedLinkedTo(communityIds: string[]): Promise<void> {
+  for (let i = 0; i < communityIds.length; i += CHUNK) {
+    const { error } = await supabase.from('scraper_posts').delete().in('community_post_id', communityIds.slice(i, i + CHUNK))
+    if (error) throw error
+  }
+}
+
 async function main() {
   const matchers = await loadSkillMatchers(true)
   const catalog = new Set(matchers.map((matcher) => matcher.name))
@@ -94,6 +102,8 @@ async function main() {
     return
   }
 
+  // scraper_posts.community_post_id apunta a la publicada: primero la fuente, luego la publicada.
+  await deleteStagedLinkedTo(plan.remove)
   await deleteIn('community_posts', plan.remove)
   await deleteIn('scraper_posts', stagedInvalid)
   console.log(`Eliminadas: ${plan.remove.length} publicadas y ${stagedInvalid.length} en espera.`)
