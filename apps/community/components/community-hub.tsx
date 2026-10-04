@@ -484,10 +484,12 @@ export function AuthModal({ onClose }: { onClose: () => void }) {
 // or profile only swaps this column instead of remounting the whole page.
 //
 // Un solo feed con tres tipos de tarjeta: artículos, vacantes y "Para ti"
-// (vacantes que coinciden con tus skills, solo con sesión). buildFeed() decide el
-// orden; aquí solo se traen las fuentes y se pagina.
+// (vacantes que coinciden con tus skills, solo con sesión), de lo más nuevo a lo
+// más antiguo. buildFeed() decide el orden; aquí solo se traen las fuentes y se
+// pagina.
 const ARTICLES_PER_PAGE = 10
-const JOBS_PER_PAGE = 7
+// Entran unas 20 vacantes nuevas al día: una página de 20 cubre más o menos un día.
+const JOBS_PER_PAGE = 20
 
 interface FeedSnapshot {
   articles: FeedPost[]
@@ -532,7 +534,7 @@ export function Feed() {
   const fetchBatch = async (pageNum: number) => {
     const [articles, jobs] = await Promise.all([
       fetchJson(`${API_URL}/api/community/posts/editorial?page=${pageNum}&limit=${ARTICLES_PER_PAGE}`),
-      fetchJson(`${API_URL}/api/community/posts?page=${pageNum}&limit=${JOBS_PER_PAGE}&type=job`),
+      fetchJson(`${API_URL}/api/community/posts?page=${pageNum}&limit=${JOBS_PER_PAGE}&type=job&sort=recent`),
     ])
     return {
       articles: (articles?.posts || []) as FeedPost[],

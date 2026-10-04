@@ -20,7 +20,7 @@ export type FeedEntry<P extends { id: string }> =
   | { kind: 'job'; key: string; post: P }
   | { kind: 'forYou'; key: string; item: MatchedItem }
 
-export interface FeedSources<P extends { id: string }> {
+export interface FeedSources<P extends { id: string; created_at?: string | null }> {
   articles: P[]
   jobs: P[]
   /** Solo coincidencias reales; vacío si no hay sesión. */
@@ -30,50 +30,68 @@ export interface FeedSources<P extends { id: string }> {
   moreJobs: boolean
 }
 
-// Un "Para ti" cada seis tarjetas, vacantes intercaladas y el resto artículos.
-// El orden es fijo para que las tarjetas ya mostradas no se muevan al cargar más.
-const CYCLE = ['forYou', 'article', 'job', 'article', 'job', 'article'] as const
+type Dated<T> = { time: number; order: number; entry: T }
+
+function timeOf(value: string | null | undefined): number {
+  const time = value ? new Date(value).getTime() : NaN
+  // Sin fecha válida, al final: nunca se cuela entre lo reciente.
+  return Number.isNaN(time) ? 0 : time
+}
 
 /**
- * Mezcla artículos, vacantes y coincidencias "Para ti" en un solo feed.
+ * Mezcla artículos, vacantes y coincidencias "Para ti" en UN solo feed, de lo más
+ * nuevo a lo más antiguo.
  *
- * - Una vacante que ya sale como "Para ti" no se repite como vacante normal.
- * - Si a una fuente se le acaba lo cargado pero el backend aún tiene más, el feed
- *   se detiene ahí en vez de saltarla: así, al cargar la siguiente página, las
- *   tarjetas anteriores conservan su lugar. Si la fuente de verdad se agotó, se
- *   salta y el feed sigue con las demás.
+ * Cada fuente llega por páginas, así que no se puede ordenar solo lo cargado:
+ * si la página 2 de las vacantes trae algo más nuevo que lo último que se cargó
+ * de los artículos, las tarjetas ya mostradas tendrían que moverse. Por eso solo
+ * se muestra lo que ya no puede ser superado por algo sin cargar: una fuente con
+ * más páginas pendientes sabe que lo que falta es más viejo que lo último que
+ * trajo, y el feed se corta ahí (el "frente") hasta que cargue más. Al cargar más
+ * solo se agregan tarjetas al final; las anteriores conservan su lugar.
+ *
+ * Una vacante que ya sale como "Para ti" no se repite como vacante normal.
  */
-export function buildFeed<P extends { id: string }>(sources: FeedSources<P>): FeedEntry<P>[] {
+export function buildFeed<P extends { id: string; created_at?: string | null }>(
+  sources: FeedSources<P>,
+): FeedEntry<P>[] {
   const matchedCommunityIds = new Set(
     sources.forYou.filter(item => item.sourceType === 'community').map(item => item.id),
   )
 
-  const queues = {
-    forYou: [...sources.forYou],
-    article: [...sources.articles],
-    job: sources.jobs.filter(job => !matchedCommunityIds.has(job.id)),
+  const items: Dated<FeedEntry<P>>[] = []
+  let order = 0
+
+  for (const post of sources.articles) {
+    items.push({ time: timeOf(post.created_at), order: order++, entry: { kind: 'article', key: `article:${post.id}`, post } })
   }
-  const hasMore = { forYou: false, article: sources.moreArticles, job: sources.moreJobs }
-
-  const remaining = () => queues.forYou.length + queues.article.length + queues.job.length
-  const out: FeedEntry<P>[] = []
-
-  for (let slot = 0; remaining() > 0; slot++) {
-    const kind = CYCLE[slot % CYCLE.length]
-
-    if (queues[kind].length === 0) {
-      if (hasMore[kind]) break
-      continue
-    }
-
-    if (kind === 'forYou') {
-      const item = queues.forYou.shift()!
-      out.push({ kind, key: `forYou:${item.sourceType}:${item.id}`, item })
-    } else {
-      const post = queues[kind].shift()!
-      out.push({ kind, key: `${kind}:${post.id}`, post })
-    }
+  for (const post of sources.jobs) {
+    if (matchedCommunityIds.has(post.id)) continue
+    items.push({ time: timeOf(post.created_at), order: order++, entry: { kind: 'job', key: `job:${post.id}`, post } })
+  }
+  for (const item of sources.forYou) {
+    items.push({
+      time: timeOf(item.postDate),
+      order: order++,
+      entry: { kind: 'forYou', key: `forYou:${item.sourceType}:${item.id}`, item },
+    })
   }
 
-  return out
+  // Más nuevo primero; a igual fecha, se respeta el orden en que llegó cada fuente.
+  items.sort((a, b) => b.time - a.time || a.order - b.order)
+
+  // El frente: de cada fuente con páginas pendientes, lo más viejo que ya trajo.
+  // Todo lo más nuevo que el más reciente de esos límites es seguro de mostrar.
+  const limits: number[] = []
+  if (sources.moreArticles) limits.push(oldestOf(sources.articles))
+  if (sources.moreJobs) limits.push(oldestOf(sources.jobs))
+  const frontier = limits.length > 0 ? Math.max(...limits) : -Infinity
+
+  return items.filter(item => item.time >= frontier).map(item => item.entry)
+}
+
+/** La fecha más vieja que ya se trajo de una fuente; Infinity si no trajo nada. */
+function oldestOf<P extends { created_at?: string | null }>(posts: P[]): number {
+  if (posts.length === 0) return Infinity
+  return Math.min(...posts.map(post => timeOf(post.created_at)))
 }
