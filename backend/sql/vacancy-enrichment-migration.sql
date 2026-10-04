@@ -100,7 +100,7 @@ UPDATE skills AS s
   ('agile-scrum', ARRAY['scrum', 'agile', 'kanban', 'metodologías ágiles']::text[]),
   ('business-administration', ARRAY['business administration', 'administración de empresas', 'office administration']::text[]),
   ('procurement', ARRAY['procurement', 'purchasing', 'compras', 'supply chain', 'cadena de suministro']::text[]),
-  ('ui-ux-design', ARRAY['ui/ux', 'ux/ui', 'ux design', 'ui design', 'user experience', 'user interface', 'diseño ux', 'diseño ui']::text[]),
+  ('ui-ux-design', ARRAY['ui/ux', 'ux/ui', 'ux design', 'ui design', 'user experience design', 'user experience designer', 'user interface design', 'diseño ux', 'diseño ui']::text[]),
   ('graphic-design', ARRAY['graphic design', 'diseño gráfico']::text[]),
   ('design-systems', ARRAY['design system', 'design systems', 'sistemas de diseño']::text[]),
   ('video-editing', ARRAY['video editing', 'edición de video', 'premiere pro', 'final cut', 'davinci resolve', 'capcut']::text[]),

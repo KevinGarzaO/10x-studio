@@ -238,3 +238,30 @@ describe('enrichVacancy', () => {
     expect(enrichVacancy({ text: '## Talent Acquisition Lead\nHire people' }, catalog).role_category).toBe('recursos_humanos')
   })
 })
+
+describe('real terms of ui-ux-design and sales (false positives seen in LinkedIn posts)', () => {
+  const catalog = skills([
+    ['ui-ux-design', 'Diseño UI/UX', SKILL_TERMS['ui-ux-design'], ['ux_ui']],
+    ['sales', 'Ventas', SKILL_TERMS.sales, ['ventas']],
+  ])
+
+  it('does not read "End-user Experience Platform" as UX design', () => {
+    const header = '## Backend Engineer, Developer & End-user Experience Platform'
+    expect(detectSkills({ header, body: 'We improve the end-user experience of our platform.' }, catalog, 'backend')).toEqual([])
+  })
+
+  it('still reads real UX design', () => {
+    expect(detectSkills({ header: '## Product Designer', body: 'You will do ux design and ui design.' }, catalog, 'ux_ui')).toEqual(['ui-ux-design'])
+    expect(detectSkills({ header: '## User Experience Designer', body: '' }, catalog, 'ux_ui')).toEqual(['ui-ux-design'])
+  })
+
+  it('does not read a data scientist that mentions sales in passing as a sales skill', () => {
+    const body = 'Partner with sales and the sales team. Forecast sales. Support the sales org on sales analytics.'
+    expect(detectSkills({ header: '## Data Scientist, Finance', body }, catalog, 'data_scientist')).toEqual([])
+  })
+
+  it('still reads sales when the title or the work is sales', () => {
+    expect(detectSkills({ header: '## Sales Development Representative', body: '' }, catalog, 'ventas')).toEqual(['sales'])
+    expect(detectSkills({ header: '## Account Executive', body: 'Own the sales pipeline and hit your quota attainment.' }, catalog, 'ventas')).toEqual(['sales'])
+  })
+})

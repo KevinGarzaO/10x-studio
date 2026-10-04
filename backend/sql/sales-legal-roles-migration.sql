@@ -57,7 +57,7 @@ ON CONFLICT DO NOTHING;
 UPDATE skills AS s
    SET detect_terms = m.terms
   FROM (VALUES
-  ('sales', ARRAY['sales', 'ventas', 'b2b sales', 'prospecting', 'prospección', 'cold calling', 'outbound', 'quota attainment']::text[]),
+  ('sales', ARRAY['^sales', '^ventas', 'sales experience', 'sales pipeline', 'b2b sales', 'outbound sales', 'prospecting', 'prospección', 'cold calling', 'quota attainment', 'experiencia en ventas', 'ventas b2b']::text[]),
   ('crm', ARRAY['crm', 'pipedrive', 'zoho crm']::text[]),
   ('business-development', ARRAY['business development', 'desarrollo de negocio', 'lead generation', 'generación de leads']::text[]),
   ('negotiation', ARRAY['negotiation', 'negotiating', 'negociación']::text[]),

@@ -87,7 +87,7 @@ export const SKILL_TERMS: Record<string, string[]> = {
   'business-administration': ['business administration', 'administración de empresas', 'office administration'],
   procurement: ['procurement', 'purchasing', 'compras', 'supply chain', 'cadena de suministro'],
   // --- diseño ---
-  'ui-ux-design': ['ui/ux', 'ux/ui', 'ux design', 'ui design', 'user experience', 'user interface', 'diseño ux', 'diseño ui'],
+  'ui-ux-design': ['ui/ux', 'ux/ui', 'ux design', 'ui design', 'user experience design', 'user experience designer', 'user interface design', 'diseño ux', 'diseño ui'],
   'graphic-design': ['graphic design', 'diseño gráfico'],
   'design-systems': ['design system', 'design systems', 'sistemas de diseño'],
   'video-editing': ['video editing', 'edición de video', 'premiere pro', 'final cut', 'davinci resolve', 'capcut'],
@@ -106,7 +106,7 @@ export const SKILL_TERMS: Record<string, string[]> = {
   'product-management': ['product management', 'gestión de producto', 'product owner'],
   'customer-service': ['customer service', 'customer support', 'customer success', 'atención al cliente', 'servicio al cliente'],
   // --- ventas y legal ---
-  sales: ['sales', 'ventas', 'b2b sales', 'prospecting', 'prospección', 'cold calling', 'outbound', 'quota attainment'],
+  sales: ['^sales', '^ventas', 'sales experience', 'sales pipeline', 'b2b sales', 'outbound sales', 'prospecting', 'prospección', 'cold calling', 'quota attainment', 'experiencia en ventas', 'ventas b2b'],
   crm: ['crm', 'pipedrive', 'zoho crm'],
   'business-development': ['business development', 'desarrollo de negocio', 'lead generation', 'generación de leads'],
   negotiation: ['negotiation', 'negotiating', 'negociación'],
