@@ -5,7 +5,7 @@ import request from 'supertest'
 // Cada llamada a from(tabla).select(...) devuelve un "query" que registra los
 // filtros que se le encadenan y, al esperarse, responde según el escenario.
 const calls = vi.hoisted(() => [] as { table: string; filters: string[] }[])
-const scenario = vi.hoisted(() => ({ legacyOnly: false }))
+const scenario = vi.hoisted(() => ({ legacyOnly: false, noProfileCompleted: false }))
 
 vi.mock('../../services/supabase.service', () => ({
   supabase: {
@@ -18,6 +18,9 @@ vi.mock('../../services/supabase.service', () => ({
           q[name] = (...args: unknown[]) => { entry.filters.push(`${name}:${args.join(',')}`); return q }
         }
         q.then = (resolve: any, reject: any) => {
+          if (scenario.noProfileCompleted && entry.filters.some(f => /profile_completed/.test(f))) {
+            return Promise.resolve({ count: null, error: { message: 'column users.profile_completed does not exist' } }).then(resolve, reject)
+          }
           const usesNewColumns = entry.filters.some(f => /user_kind|is_test_account/.test(f))
           if (scenario.legacyOnly && usesNewColumns) {
             return Promise.resolve({ count: null, error: { message: 'column users.user_kind does not exist' } }).then(resolve, reject)
@@ -44,6 +47,7 @@ const app = () => {
 beforeEach(() => {
   calls.length = 0
   scenario.legacyOnly = false
+  scenario.noProfileCompleted = false
 })
 
 describe('GET /stats', () => {
@@ -63,6 +67,23 @@ describe('GET /stats', () => {
 
     const companies = calls.find(c => c.filters.includes('eq:user_kind,company'))!
     expect(companies.filters).toContain('eq:is_test_account,false')
+  })
+
+  it('counts as members only the people who completed their profile', async () => {
+    await request(app()).get('/api/community/stats').expect(200)
+
+    const people = calls.find(c => c.table === 'users' && c.filters.some(f => f.startsWith('in:user_kind')))!
+    expect(people.filters).toContain('eq:profile_completed,true')
+  })
+
+  it('still counts real members when profile_completed does not exist yet', async () => {
+    scenario.noProfileCompleted = true
+
+    const res = await request(app()).get('/api/community/stats').expect(200)
+
+    expect(res.body.members).toBe(3)
+    const lastPeople = calls.filter(c => c.table === 'users' && c.filters.some(f => f.startsWith('in:user_kind'))).pop()!
+    expect(lastPeople.filters).not.toContain('eq:profile_completed,true')
   })
 
   it('counts vacancies as published job posts', async () => {

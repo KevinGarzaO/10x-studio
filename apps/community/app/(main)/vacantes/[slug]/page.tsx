@@ -3,7 +3,7 @@
 import Link from 'next/link'
 import { useParams, useRouter } from 'next/navigation'
 import { useState, useEffect, useRef } from 'react'
-import { BadgeCheck, Building, Check, LockKeyhole, MapPin } from 'lucide-react'
+import { BadgeCheck, Bookmark, Building, Check, LockKeyhole, MapPin } from 'lucide-react'
 import { marked } from 'marked'
 import { useShell } from '../../../../lib/shell-context'
 import { getToken } from '../../../../lib/session'
@@ -139,6 +139,9 @@ interface PostData {
   modalidad?: string | null
   /** Qué tan bien encaja con quien la mira; solo con sesión y perfil completo. */
   match?: VacancyMatch | null
+  /** Si quien mira ya la guardó, y el id de ese registro para poder quitarla. */
+  isSaved?: boolean
+  historyId?: string | null
 }
 
 function buildApplyUrl(platform: string | null, sourceUrl: string | null): string | null {
@@ -169,6 +172,8 @@ export default function VacancyPage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [saved, setSaved] = useState(false)
+  const [historyId, setHistoryId] = useState<string | null>(null)
+  const [savingBusy, setSavingBusy] = useState(false)
   const [comments, setComments] = useState<DetailComment[]>([])
   const [sent, setSent] = useState(false)
   const [commentError, setCommentError] = useState<string | null>(null)
@@ -222,6 +227,8 @@ export default function VacancyPage() {
           window.history.replaceState({}, '', `/vacantes/${data.slug}`)
         }
         setPost(data)
+        setSaved(!!data.isSaved)
+        setHistoryId(data.historyId ?? null)
         setComments(commentsOf(data))
         setLoading(false)
 
@@ -322,6 +329,54 @@ export default function VacancyPage() {
   const shared = new Set((match?.sharedSkills ?? []).map(skill => skill.toLowerCase()))
   const validated = new Map((post.match?.validatedSkills ?? []).map(entry => [entry.skill.toLowerCase(), entry.level]))
 
+  /**
+   * Guarda o quita la vacante de /saved. Sin cuenta, pide registrarse (y vuelve a esta
+   * vacante al terminar). El guardado vive en el backend (user_vacancy_history), el mismo
+   * que usan las tarjetas del feed, así que aparece en /saved y se ve guardada en el feed.
+   */
+  const current = post
+  async function toggleSave() {
+    if (!user) {
+      requestAuth({ variant: 'vacancy', subject: `${current.title} — ${companyName}` })
+      return
+    }
+    if (savingBusy) return
+    const headers = { 'Content-Type': 'application/json', Authorization: `Bearer ${getToken()}` }
+    setSavingBusy(true)
+    try {
+      if (saved) {
+        if (!historyId) return
+        const res = await fetch(`${API_URL}/api/community/history/${historyId}`, { method: 'DELETE', headers })
+        if (res.ok) { setSaved(false); setHistoryId(null) }
+        return
+      }
+      const res = await fetch(`${API_URL}/api/community/history/save`, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({
+          sourceType: 'community',
+          sourceId: current.id,
+          title: current.title,
+          company: current.company ?? meta.company,
+          companyLogo: current.company_logo,
+          roleCategory: current.role_category,
+          seniorityLevel: current.seniority_level,
+          skills: Array.isArray(current.skills) ? current.skills : [],
+          url: `/vacantes/${current.slug || current.id}`,
+        }),
+      })
+      if (res.ok) {
+        const data = await res.json()
+        setSaved(true)
+        setHistoryId(data.item?.id ?? null)
+      }
+    } catch {
+      // sin conexión: el botón queda como estaba
+    } finally {
+      setSavingBusy(false)
+    }
+  }
+
   function handleApplyClick() {
     if (!applyUrl) return
     if (canEmbedApply) {
@@ -356,6 +411,16 @@ export default function VacancyPage() {
         <h1>{post.title}</h1>
 
         <div className="detail-chips">
+          <button
+            type="button"
+            className={`detail-save${saved ? ' is-saved' : ''}`}
+            onClick={toggleSave}
+            disabled={savingBusy}
+            aria-pressed={saved}
+            aria-label={saved ? 'Quitar de guardados' : 'Guardar vacante'}
+          >
+            <Bookmark size={15} fill={saved ? 'currentColor' : 'none'} /> {saved ? 'Guardada' : 'Guardar'}
+          </button>
           <span className="detail-chip"><Building size={14} /> {companyName}</span>
           {meta.location && <span className="detail-chip"><MapPin size={14} /> {meta.location}</span>}
           {roleLabel && <span className="detail-chip is-role">{roleLabel}</span>}
@@ -445,7 +510,7 @@ export default function VacancyPage() {
         <DetailFooter
           commentsCount={comments.length || post.commentsCount || 0}
           saved={saved}
-          onSave={() => (user ? setSaved(!saved) : requestAuth())}
+          onSave={toggleSave}
           conversationHref="#conversation"
         />
 

@@ -647,3 +647,12 @@ button { cursor: pointer; }
 .match-pill.is-validated { background: #12351f; color: #6ee7a8; }
 .auth-modal .auth-subject { margin: 0 0 8px; color: #e8e2d8; font-size: 13px; line-height: 1.4; }
 .auth-modal .auth-dismiss { display: block; width: 100%; margin-top: 10px; padding: 8px; background: transparent; border: 0; color: #b3aba1; font-size: 12px; cursor: pointer; text-decoration: underline; }
+.detail-save { display: inline-flex; align-items: center; gap: 6px; background: transparent; border: 1px solid #322f29; color: #c9c2b6; font-size: 13px; font-weight: 600; padding: 8px 14px; border-radius: 10px; cursor: pointer; transition: color .15s, border-color .15s, background .15s; }
+.detail-save:hover { color: #4fd39a; border-color: #2f5a46; }
+.detail-save.is-saved { background: rgba(0,168,107,.14); border-color: transparent; color: #4fd39a; }
+.detail-save:disabled { opacity: .6; cursor: default; }
+.saved-row { display: flex; align-items: stretch; gap: 10px; }
+.saved-row .saved-item { flex: 1; min-width: 0; }
+.saved-remove { display: inline-flex; align-items: center; gap: 6px; align-self: center; background: transparent; border: 1px solid #322f29; color: #b3aba1; font-size: 12px; padding: 8px 12px; border-radius: 8px; cursor: pointer; }
+.saved-remove:hover { color: #ef4444; border-color: #5a2f2f; }
+@media (max-width: 640px) { .saved-row { flex-direction: column; } .saved-remove { align-self: flex-end; } }

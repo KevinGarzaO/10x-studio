@@ -8,17 +8,22 @@ const router = Router()
 //
 // Solo cuentan cuentas REALES: las de prueba (is_test_account) no, y tampoco los
 // perfiles que crea el scraper. Se reparten en:
-//   members    personas: candidatos y superadmins
+//   members    personas con el perfil completo: candidatos y superadmins
 //   companies  empresas, con o sin dueño (las del scraper también son empresas
 //              reales que publican vacantes en el sitio)
 //   vacancies  vacantes publicadas
 // `posts` se conserva por compatibilidad con la versión anterior del frontend.
-async function countCommunity() {
+async function countCommunity(onlyCompleteProfiles = true) {
   const count = (table: string, build: (q: any) => any) =>
     build(supabase.from(table).select('*', { count: 'exact', head: true }))
 
   const [members, companies, vacancies, posts] = await Promise.all([
-    count('users', q => q.in('user_kind', ['user', 'superadmin']).eq('is_test_account', false).not('is_scraper_profile', 'is', true)),
+    // Un miembro cuenta cuando completó su perfil (users.profile_completed): quien se
+    // registró pero no terminó el onboarding todavía no es parte visible de la comunidad.
+    count('users', q => {
+      const real = q.in('user_kind', ['user', 'superadmin']).eq('is_test_account', false).not('is_scraper_profile', 'is', true)
+      return onlyCompleteProfiles ? real.eq('profile_completed', true) : real
+    }),
     count('users', q => q.eq('user_kind', 'company').eq('is_test_account', false)),
     count('community_posts', q => q.eq('type', 'job')),
     count('community_posts', q => q),
@@ -65,7 +70,14 @@ async function countCommunityLegacy() {
 router.get('/', async (req: Request, res: Response) => {
   try {
     try {
-      return res.json(await countCommunity())
+      try {
+        return res.json(await countCommunity())
+      } catch (error: any) {
+        // Sin profile_completed (migración sin aplicar) se cuenta a todos los miembros reales.
+        if (!/profile_completed/.test(String(error?.message))) throw error
+        console.warn('[Stats] Falta users.profile_completed: se cuentan todos los miembros reales')
+        return res.json(await countCommunity(false))
+      }
     } catch (error: any) {
       if (!/user_kind|is_test_account/.test(String(error?.message))) throw error
       console.warn('[Stats] Faltan user_kind / is_test_account: se cuenta sin separar pruebas')
