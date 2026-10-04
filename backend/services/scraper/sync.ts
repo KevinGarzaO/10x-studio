@@ -188,31 +188,44 @@ export async function syncVacancyToCommunity(
 
   const companyUserId = companyUser || SCRAPER_BOT_ID;
 
-  // Insert into community_posts
-  const { data: communityPost, error: insertError } = await supabase
+  // Insert into community_posts. La vacante publicada conserva todo lo que la liga
+  // con candidatos: rol, nivel, skills, modalidad y ubicación.
+  const row = {
+    title,
+    content: post.text,
+    type: "job",
+    budget,
+    modalidad,
+    author_id: companyUserId,
+    source_url: post.url,
+    platform: post.platform,
+    source_name: post.source,
+    original_text: post.text,
+    contacts: post.contacts,
+    scraped_at: post.created_at,
+    is_scraper_post: true,
+    company: companyName,
+    company_logo: companyLogo,
+    role_category: post.role_category ?? null,
+    seniority_level: post.seniority_level ?? null,
+    skills: post.skills ?? [],
+  };
+
+  let { data: communityPost, error: insertError } = await supabase
     .from("community_posts")
-    .insert({
-      title,
-      content: post.text,
-      type: "job",
-      budget,
-      modalidad,
-      author_id: companyUserId,
-      source_url: post.url,
-      platform: post.platform,
-      source_name: post.source,
-      original_text: post.text,
-      contacts: post.contacts,
-      scraped_at: post.created_at,
-      is_scraper_post: true,
-      company: companyName,
-      company_logo: companyLogo,
-      role_category: post.role_category ?? null,
-      seniority_level: post.seniority_level ?? null,
-      skills: post.skills ?? [],
-    })
+    .insert({ ...row, location: post.location ?? null })
     .select("id")
     .single();
+
+  // Mientras la migración que agrega community_posts.location no se haya aplicado,
+  // la vacante se publica igual (sin ubicación) en vez de dejar de sincronizarse.
+  if (insertError && /location/.test(insertError.message ?? "")) {
+    ({ data: communityPost, error: insertError } = await supabase
+      .from("community_posts")
+      .insert(row)
+      .select("id")
+      .single());
+  }
 
   if (insertError) {
     // 23505 on source_url means this exact job is already a community_posts
@@ -240,6 +253,8 @@ export async function syncVacancyToCommunity(
     log(`[Sync] Error insertando en community_posts: ${insertError.message}`);
     return null;
   }
+
+  if (!communityPost) return null;
 
   // Generate and save slug
   const slug = generateSlug(title, communityPost.id);

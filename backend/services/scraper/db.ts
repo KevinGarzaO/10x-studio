@@ -1,5 +1,7 @@
 import { supabase } from "../supabase.service";
 import type { Post } from "./types";
+import { enrichVacancy, type VacancyEnrichment } from "../vacancies/enrich";
+import { loadSkillMatchers } from "../vacancies/catalog";
 
 // ---------------------------------------------------------------------------
 // Sources
@@ -128,7 +130,25 @@ export async function insertPost(post: {
   forum_hint?: string | null;
   company?: string | null;
   company_logo?: string | null;
+  /** El texto completo de la vacante, solo para analizarla (no se guarda). */
+  analysis_text?: string | null;
 }): Promise<void> {
+  // Cada vacante nace ya ligada: rol, nivel, skills del catálogo y modalidad, sacados
+  // de su descripción COMPLETA. Si el análisis falla la vacante se guarda igual (sin
+  // esos campos, y el trigger de la base pone un rol de respaldo): perder una oferta
+  // por un error de análisis sería peor que guardarla sin enriquecer.
+  let enrichment: VacancyEnrichment | null = null;
+  if (post.post_type === "vacancy") {
+    try {
+      enrichment = enrichVacancy(
+        { text: post.analysis_text ?? post.text, location: post.location, work_modality: post.work_modality },
+        await loadSkillMatchers(),
+      );
+    } catch (err) {
+      console.warn(`[Enrich] No se pudo enriquecer ${post.source}/${post.post_id}: ${(err as Error).message}`);
+    }
+  }
+
   // Upsert on the (platform, source, post_id) unique constraint instead of a
   // plain insert — the earlier "check postExists, then insert" pattern had a
   // race: two overlapping scraper runs (or a source that lists the same job
@@ -153,7 +173,14 @@ export async function insertPost(post: {
     language: post.language ?? null,
     post_type: post.post_type ?? null,
     location: post.location ?? null,
-    work_modality: post.work_modality ?? null,
+    work_modality: enrichment?.work_modality ?? post.work_modality ?? null,
+    ...(enrichment
+      ? {
+          role_category: enrichment.role_category,
+          seniority_level: enrichment.seniority_level,
+          skills: enrichment.skills,
+        }
+      : {}),
     profile: post.profile ?? null,
     contacts: post.contacts,
     quality_score: post.quality_score ?? null,

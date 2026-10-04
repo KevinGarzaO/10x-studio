@@ -46,10 +46,13 @@ export async function fetchGreenhouse(
       const location = normalizeLocation(job.location?.name ?? null);
       const department = job.departments?.[0]?.name ?? null;
       const companyName = job.company_name || boardToken;
-      const text = [
+      const header = [
         `## ${job.title}`,
         department ? `**Departamento:** ${department}` : null,
         location ? `**Ubicación:** ${location}` : null,
+      ];
+      const text = [
+        ...header,
         job.content ? job.content.substring(0, 1000) : null,
         "",
         `### Contacto`,
@@ -78,6 +81,8 @@ export async function fetchGreenhouse(
         contacts,
         company: companyName,
         companyLogo: null,
+        // La descripción completa, solo para analizar (el texto guardado se recorta).
+        analysisText: [...header, job.content ?? null].filter(Boolean).join("\n"),
       });
     }
 

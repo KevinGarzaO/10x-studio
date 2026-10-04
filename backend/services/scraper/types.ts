@@ -43,6 +43,13 @@ export interface Post {
   possibleDuplicateOf?: string | null;
   company?: string | null;
   companyLogo?: string | null;
+  /**
+   * El texto COMPLETO de la vacante (título, departamento y la descripción entera),
+   * solo para analizarla: `text` se guarda recortado y ahí casi nunca aparece el
+   * stack ni los requisitos. No se almacena; de él salen rol, nivel, skills y
+   * modalidad (ver services/vacancies/enrich.ts).
+   */
+  analysisText?: string | null;
 }
 
 export interface SourceConfig {

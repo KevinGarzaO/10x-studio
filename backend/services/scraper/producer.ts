@@ -119,6 +119,7 @@ export async function runProduction(
           forum_hint: post.forumHint ?? null,
           company: post.company ?? null,
           company_logo: post.companyLogo ?? null,
+          analysis_text: post.analysisText ?? null,
         });
 
         postsInserted++;

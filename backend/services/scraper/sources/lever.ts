@@ -12,6 +12,9 @@ interface LeverPosting {
   createdAt: number;
   descriptionPlain: string | null;
   description: string | null;
+  /** Las listas de responsabilidades y requisitos, que es donde Lever pone el stack. */
+  lists?: { text?: string; content?: string }[] | null;
+  additionalPlain?: string | null;
   id: string;
 }
 
@@ -42,6 +45,13 @@ function extractDescription(posting: LeverPosting): string | null {
   return null;
 }
 
+/** La descripción completa de un puesto de Lever, con sus listas, para analizarla. */
+function fullDescription(posting: LeverPosting): string {
+  const body = posting.descriptionPlain?.trim() || (posting.description ? stripHtml(unescapeHtml(posting.description)) : "");
+  const lists = (posting.lists ?? []).map((list) => `${list.text ?? ""}\n${stripHtml(unescapeHtml(list.content ?? ""))}`);
+  return [body, ...lists, posting.additionalPlain ?? ""].filter((part) => part.trim() !== "").join("\n");
+}
+
 export async function fetchLever(
   company: string,
   log: (msg: string) => void = () => {}
@@ -68,11 +78,14 @@ export async function fetchLever(
         ? new Date(posting.createdAt).toISOString()
         : null;
       const description = extractDescription(posting);
-      const text = [
+      const header = [
         `## ${posting.text}`,
         `**Empresa:** ${company}`,
         team ? `**Equipo:** ${team}` : null,
         location ? `**Ubicación:** ${location}` : null,
+      ];
+      const text = [
+        ...header,
         "",
         description ? `### Descripción` : null,
         description,
@@ -101,6 +114,7 @@ export async function fetchLever(
         location: location,
         workModality: detectWorkModality(text),
         contacts,
+        analysisText: [...header, fullDescription(posting)].filter(Boolean).join("\n"),
       });
     }
 
