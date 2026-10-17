@@ -12,7 +12,7 @@ const AvocadoAlert = Swal.mixin({
   iconColor: '#10b981',
 })
 
-type LinkedInTab = 'post' | 'stats'
+type LinkedInTab = 'post' | 'stats' | 'report'
 
 export function LinkedInSection() {
   const router = useRouter()
@@ -28,6 +28,14 @@ export function LinkedInSection() {
   
   const [posts, setPosts] = useState<any[]>([])
   const [statsLoading, setStatsLoading] = useState(false)
+
+  // Medición por publicación (tab "Medición")
+  const [registry, setRegistry] = useState<any[]>([])
+  const [registryLoading, setRegistryLoading] = useState(false)
+  const [pendingMigration, setPendingMigration] = useState(false)
+  const [saving, setSaving] = useState(false)
+  const [lastLink, setLastLink] = useState<string | null>(null)
+  const [form, setForm] = useState({ label: '', destinationUrl: '', campaign: '', postUrl: '', publishedAt: '' })
 
   const handleChange = (val: string) => {
     if (val.length <= MAX_CHARS) {
@@ -138,6 +146,76 @@ export function LinkedInSection() {
       fetchStats()
     }
   }, [tab, isConnected])
+
+  async function fetchRegistry() {
+    setRegistryLoading(true)
+    try {
+      const data = await api<any>('/api/linkedin/registry')
+      setRegistry(data.posts || [])
+      setPendingMigration(!!data.pendingMigration)
+    } catch (e) {
+      console.error('Error fetching tracked posts:', e)
+    } finally {
+      setRegistryLoading(false)
+    }
+  }
+
+  useEffect(() => {
+    if (tab === 'report') fetchRegistry()
+  }, [tab])
+
+  async function handleRegister() {
+    if (!form.label.trim()) return AvocadoAlert.fire({ icon: 'warning', title: 'Falta el título', text: 'Ponle un nombre corto a la publicación para reconocerla en el reporte.' })
+    if (!form.destinationUrl.trim()) return AvocadoAlert.fire({ icon: 'warning', title: 'Falta la URL', text: 'Pega el link a donde apunta tu publicación (ej: una vacante o el registro).' })
+
+    setSaving(true)
+    try {
+      const data = await api<any>('/api/linkedin/registry', {
+        method: 'POST',
+        body: JSON.stringify({
+          label: form.label.trim(),
+          destinationUrl: form.destinationUrl.trim(),
+          campaign: form.campaign.trim(),
+          postUrl: form.postUrl.trim(),
+          publishedAt: form.publishedAt,
+        }),
+      })
+      setLastLink(data.post.tracked_url)
+      setForm({ label: '', destinationUrl: '', campaign: '', postUrl: '', publishedAt: '' })
+      await fetchRegistry()
+    } catch (e: any) {
+      AvocadoAlert.fire({ icon: 'error', title: 'No se pudo registrar', text: e.message })
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  async function copyLink(url: string) {
+    try {
+      await navigator.clipboard.writeText(url)
+      AvocadoAlert.fire({ icon: 'success', title: 'Link copiado', timer: 1400, showConfirmButton: false })
+    } catch {
+      AvocadoAlert.fire({ icon: 'info', title: 'Cópialo a mano', text: url })
+    }
+  }
+
+  async function handleDelete(id: string) {
+    const confirm = await AvocadoAlert.fire({
+      icon: 'question',
+      title: 'Quitar publicación',
+      text: 'Se borra del registro y de su fila del reporte.',
+      showCancelButton: true,
+      confirmButtonText: 'Quitar',
+      cancelButtonText: 'Cancelar',
+    })
+    if (!confirm.isConfirmed) return
+    try {
+      await api(`/api/linkedin/registry/${id}`, { method: 'DELETE' })
+      await fetchRegistry()
+    } catch (e: any) {
+      AvocadoAlert.fire({ icon: 'error', title: 'No se pudo quitar', text: e.message })
+    }
+  }
 
   // Not Connected State
   if (!isConnected) {
@@ -262,9 +340,10 @@ export function LinkedInSection() {
 
       {/* Tabs */}
       <div className="flex gap-1 mb-5 p-1 rounded-lg" style={{ background: '#f1f5f9', display: 'inline-flex' }}>
-        {([
+        {        ([
           ['post',     'Crear Post'],
           ['stats',    'Historial'],
+          ['report',   'Medición'],
         ] as [LinkedInTab, string][]).map(([t, label]) => (
           <button key={t} onClick={() => setTab(t)}
             className="px-5 py-2 rounded-lg capitalize transition-all border-none"
@@ -457,6 +536,124 @@ export function LinkedInSection() {
                     <p>Aún no hay publicaciones registradas en tu historial.</p>
                   </>
                 )}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {tab === 'report' && (
+        <div className="space-y-5">
+          <div className="flex items-start justify-between gap-4">
+            <div>
+              <h3 style={{ fontFamily: 'var(--font-heading)', fontSize: 18, fontWeight: 700, color: '#0d1117' }}>Medición por publicación</h3>
+              <p style={{ fontSize: 13, color: '#94a3b8', marginTop: 4, maxWidth: 640, lineHeight: 1.5 }}>
+                Registra cada publicación para obtener su link etiquetado: quien llegue con ese link queda asociado a la publicación y aquí ves sus visitas, registros y conversión.
+              </p>
+            </div>
+            <button onClick={fetchRegistry} disabled={registryLoading} className="btn btn-secondary btn-sm h-8 px-3 font-bold flex-shrink-0">
+              <i className={`pi pi-sync mr-1 ${registryLoading ? 'pi-spin' : ''}`}></i>
+              Actualizar
+            </button>
+          </div>
+
+          {pendingMigration && (
+            <div className="rounded-xl p-4" style={{ background: '#fef9c3', border: '1px solid #fde047', fontSize: 13, color: '#713f12', lineHeight: 1.5 }}>
+              Falta aplicar la migración en Supabase: ejecuta <b>backend/sql/linkedin-tracked-posts-migration.sql</b> en el SQL Editor y vuelve a cargar.
+            </div>
+          )}
+
+          <div className="rounded-xl p-5" style={{ background: '#fff', border: '1px solid var(--border)', boxShadow: '0 1px 3px rgba(0,0,0,0.04)' }}>
+            <div style={{ fontFamily: 'var(--font-heading)', fontWeight: 700, fontSize: 14, color: '#0d1117', marginBottom: 12 }}>
+              Registrar publicación
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <input className="input !h-10 px-3 border border-brand-border rounded-lg bg-white" placeholder="Título (ej: 5 tips para seniors)" value={form.label} onChange={e => setForm({ ...form, label: e.target.value })} />
+              <input className="input !h-10 px-3 border border-brand-border rounded-lg bg-white" placeholder="URL destino (https://avotalent.io/...)" value={form.destinationUrl} onChange={e => setForm({ ...form, destinationUrl: e.target.value })} />
+              <input className="input !h-10 px-3 border border-brand-border rounded-lg bg-white" placeholder="Campaña (opcional)" value={form.campaign} onChange={e => setForm({ ...form, campaign: e.target.value })} />
+              <input className="input !h-10 px-3 border border-brand-border rounded-lg bg-white" placeholder="URL del post en LinkedIn (opcional)" value={form.postUrl} onChange={e => setForm({ ...form, postUrl: e.target.value })} />
+              <input type="date" className="input !h-10 px-3 border border-brand-border rounded-lg bg-white" value={form.publishedAt} onChange={e => setForm({ ...form, publishedAt: e.target.value })} />
+            </div>
+            <div className="flex justify-end mt-4">
+              <button
+                onClick={handleRegister}
+                disabled={saving}
+                className="px-4 py-2 rounded-lg text-white border-none"
+                style={{ fontSize: 13, fontWeight: 600, background: 'linear-gradient(135deg,#0ea5e9,#0284c7)', cursor: saving ? 'not-allowed' : 'pointer', opacity: saving ? 0.7 : 1 }}
+              >
+                {saving ? 'Generando…' : 'Registrar y generar link'}
+              </button>
+            </div>
+          </div>
+
+          {lastLink && (
+            <div className="rounded-xl p-4 flex items-center gap-3" style={{ background: '#ecfdf5', border: '1px solid #a7f3d0' }}>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontSize: 11, fontWeight: 800, color: '#047857', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 6 }}>
+                  Link listo: pégalo en tu publicación
+                </div>
+                <input
+                  readOnly
+                  value={lastLink}
+                  onClick={e => e.currentTarget.select()}
+                  style={{ width: '100%', fontSize: 12, fontFamily: 'monospace', padding: '8px 10px', borderRadius: 8, border: '1px solid #d1fae5', background: '#fff', color: '#0d1117', outline: 'none', boxSizing: 'border-box' }}
+                />
+              </div>
+              <button onClick={() => copyLink(lastLink)} className="btn btn-primary btn-sm h-9 px-4 flex-shrink-0">Copiar</button>
+            </div>
+          )}
+
+          <div className="rounded-xl overflow-hidden" style={{ background: '#fff', border: '1px solid var(--border)', boxShadow: '0 1px 3px rgba(0,0,0,0.04)' }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
+              <thead>
+                <tr style={{ background: '#f8fafc' }}>
+                  {[
+                    { h: 'Publicación', left: true },
+                    { h: 'Publicado', left: false },
+                    { h: 'Visitas', left: false },
+                    { h: 'Registros', left: false },
+                    { h: 'Conversión', left: false },
+                    { h: '', left: true },
+                  ].map((c, i) => (
+                    <th key={i} style={{ textAlign: c.left ? 'left' : 'center', padding: '10px 14px', fontSize: 11, fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                      {c.h}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {registry.map(p => (
+                  <tr key={p.utm_content} style={{ borderTop: '1px solid #f1f5f9' }}>
+                    <td style={{ padding: '12px 14px' }}>
+                      <div style={{ fontWeight: 600, color: '#0d1117' }}>{p.label || p.utm_content}</div>
+                      <div style={{ fontSize: 11, color: '#94a3b8', fontFamily: 'monospace', marginTop: 2 }}>{p.utm_content}</div>
+                    </td>
+                    <td style={{ textAlign: 'center', color: '#64748b', whiteSpace: 'nowrap' }}>
+                      {p.published_at ? new Date(p.published_at).toLocaleDateString('es-ES', { day: '2-digit', month: 'short', year: 'numeric' }) : '—'}
+                    </td>
+                    <td style={{ textAlign: 'center', fontWeight: 700, color: '#0d1117' }}>{p.visitors ?? 0}</td>
+                    <td style={{ textAlign: 'center', fontWeight: 800, color: (p.signups ?? 0) > 0 ? '#10b981' : '#94a3b8' }}>{p.signups ?? 0}</td>
+                    <td style={{ textAlign: 'center', fontWeight: 700, color: '#0d1117' }}>
+                      {p.conversion_pct != null ? `${p.conversion_pct}%` : '—'}
+                    </td>
+                    <td style={{ padding: '12px 14px', textAlign: 'right', whiteSpace: 'nowrap' }}>
+                      {p.tracked_url && (
+                        <button title="Copiar link etiquetado" onClick={() => copyLink(p.tracked_url)} className="btn btn-secondary btn-sm h-7 px-2 mr-1" style={{ fontSize: 11 }}>🔗 Copiar</button>
+                      )}
+                      {p.post_url && (
+                        <a title="Ver en LinkedIn" href={p.post_url} target="_blank" rel="noreferrer" className="btn btn-secondary btn-sm h-7 px-2 mr-1" style={{ fontSize: 11 }}>Ver post</a>
+                      )}
+                      {p.id && (
+                        <button title="Quitar del registro" onClick={() => handleDelete(p.id)} className="btn btn-secondary btn-sm h-7 px-2" style={{ fontSize: 11, color: '#ef4444' }}>✕</button>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+            {registry.length === 0 && (
+              <div className="p-12 text-center" style={{ color: '#94a3b8', fontSize: 13 }}>
+                {pendingMigration ? 'Aplica la migración para ver el reporte.' : registryLoading ? 'Cargando…' : 'Aún no hay publicaciones registradas. Usa el formulario de arriba para crear la primera.'}
               </div>
             )}
           </div>

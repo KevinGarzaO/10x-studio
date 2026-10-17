@@ -1,5 +1,14 @@
 import { Router } from 'express'
-import { linkedinAuth, linkedinCallback, linkedinPost, linkedinProxyImage, getLinkedInPosts } from '../controllers/linkedin.controller'
+import {
+  linkedinAuth,
+  linkedinCallback,
+  linkedinPost,
+  linkedinProxyImage,
+  getLinkedInPosts,
+  getTrackedPosts,
+  createTrackedPost,
+  deleteTrackedPost,
+} from '../controllers/linkedin.controller'
 
 const router = Router()
 
@@ -8,5 +17,10 @@ router.get('/callback',    linkedinCallback)
 router.get('/proxy-image', linkedinProxyImage)
 router.get('/posts',       getLinkedInPosts)
 router.post('/post',       linkedinPost)
+
+// Registro de publicaciones con medición (reporte por utm_content)
+router.get('/registry',        getTrackedPosts)
+router.post('/registry',       createTrackedPost)
+router.delete('/registry/:id', deleteTrackedPost)
 
 export default router

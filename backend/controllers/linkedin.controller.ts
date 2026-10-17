@@ -1,5 +1,14 @@
 import { Request, Response } from 'express'
 import fetch from 'node-fetch'
+import {
+  TRACKED_CAMPAIGN_DEFAULT,
+  STUDIO_CAMPAIGN,
+  firstSiteUrl,
+  labelFromText,
+  makeUtmContent,
+  trackedUrl,
+} from '../services/linkedin/tracked-posts'
+import { supabase } from '../services/supabase.service'
 
 const CLIENT_ID     = process.env.LINKEDIN_CLIENT_ID!
 const CLIENT_SECRET = process.env.LINKEDIN_CLIENT_SECRET!
@@ -8,18 +17,23 @@ const SCOPE         = 'openid profile email w_member_social'
 
 const SITE_URL = process.env.SITE_URL || 'https://avotalent.io'
 
+/** Migración de medición sin aplicar: el mensaje ayuda a saberlo. */
+const MIGRATION_HINT = 'Falta la migración: aplica linkedin-tracked-posts-migration.sql en el SQL Editor de Supabase'
+
 /**
  * Agrega parámetros UTM a URLs del sitio en el texto del post.
+ * Una URL que ya trae utm_source (por ejemplo, un link ya etiquetado con el
+ * código de una publicación) se queda como está.
  */
 function addUtmToUrls(text: string): string {
   const utmParams = 'utm_source=linkedin&utm_medium=social&utm_campaign=release_1_0_0'
-  // Match URLs that point to our site but don't already have UTM
   return text.replace(
-    /(https?:\/\/(?:avotalent\.io|avocado(?:-studio)?\.vercel\.app|community\.avotalent\.io)[^\s)]*)(?![\s\S]*utm_source)/gi,
+    /(https?:\/\/(?:avotalent\.io|avocado(?:-studio)?\.vercel\.app|community\.avotalent\.io)[^\s)]*)/gi,
     (url) => {
+      if (/utm_source/i.test(url)) return url
       const separator = url.includes('?') ? '&' : '?'
       return `${url}${separator}${utmParams}`
-    }
+    },
   )
 }
 
@@ -74,7 +88,6 @@ export const linkedinCallback = async (req: Request, res: Response) => {
     const urn      = profile.sub ? `urn:li:person:${profile.sub}` : ''
 
     // Persistence to linkedin_profiles
-    const { supabase } = require('../services/supabase.service')
     const { data: userData } = await supabase.from('users').select('id').limit(1).single()
     const realUserId = userData?.id
 
@@ -143,7 +156,6 @@ export const linkedinPost = async (req: Request, res: Response) => {
   const postText = text || title || ''
   
   try {
-    const { supabase } = require('../services/supabase.service')
     const { data: userData } = await supabase.from('users').select('id').limit(1).single()
     const userId = userData?.id
     if (!userId) throw new Error('No user found in database')
@@ -185,11 +197,20 @@ export const linkedinPost = async (req: Request, res: Response) => {
     if (!authToken || !authorUrn) return res.status(400).json({ error: 'Falta token o URN de LinkedIn. Conecta tu cuenta de LinkedIn primero.' })
     if (!postText) return res.status(400).json({ error: 'El texto del post es requerido' })
 
+    // Medición: si el post lleva un link a nuestros sitios, se etiqueta con un
+    // código propio de esta publicación y queda registrada en el reporte.
+    const cleanText = postText.trim()
+    const destination = firstSiteUrl(cleanText)
+    const utmContent = destination ? makeUtmContent(labelFromText(cleanText)) : null
+    const taggedText = destination && utmContent
+      ? cleanText.replace(destination, trackedUrl(destination, STUDIO_CAMPAIGN, utmContent))
+      : cleanText
+
     const { LinkedInService } = require('../services/linkedin.service')
     const postId = await LinkedInService.publish({
       token: authToken,
       urn: authorUrn,
-      text: addUtmToUrls(postText.trim()),
+      text: addUtmToUrls(taggedText),
       imageBase64,
       imageUrl
     })
@@ -215,7 +236,24 @@ export const linkedinPost = async (req: Request, res: Response) => {
       console.warn('[LinkedIn] Error saving to internal history:', saveErr)
     }
 
-    res.json({ success: true, postId: postId })
+    // Dejar constancia en el registro de medición: nunca rompe la publicación.
+    if (destination && utmContent) {
+      try {
+        const { error: trackError } = await supabase.from('linkedin_tracked_posts').insert({
+          label: labelFromText(cleanText) || 'Publicación de LinkedIn',
+          destination_url: destination,
+          utm_campaign: STUDIO_CAMPAIGN,
+          utm_content: utmContent,
+          published_at: new Date().toISOString(),
+          source: 'studio',
+        })
+        if (trackError) console.warn('[LinkedIn] No se registró para medición:', trackError.message)
+      } catch (trackErr) {
+        console.warn('[LinkedIn] No se registró para medición:', (trackErr as Error).message)
+      }
+    }
+
+    res.json({ success: true, postId: postId, utmContent })
   } catch (e: any) {
     console.error('[LinkedIn] Error al crear post:', e)
     res.status(500).json({ error: e.message })
@@ -255,7 +293,6 @@ export const linkedinProxyImage = async (req: Request, res: Response) => {
 /** GET /api/linkedin/posts — Return internal post history from Supabase */
 export const getLinkedInPosts = async (req: Request, res: Response) => {
   try {
-    const { supabase } = require('../services/supabase.service')
     
     // 0. Get the real user ID
     const { data: userData } = await supabase.from('users').select('id').limit(1).single()
@@ -279,6 +316,127 @@ export const getLinkedInPosts = async (req: Request, res: Response) => {
 
   } catch (e: any) {
     console.error('[LinkedIn] Internal history fetch error:', e)
+    res.status(500).json({ error: e.message })
+  }
+}
+
+/** URL del reporte para copiar; nula si no hay destino válido. */
+function rowTrackedUrl(row: any): string | null {
+  if (!row?.destination_url || !row?.utm_content) return null
+  try {
+    return trackedUrl(row.destination_url, row.utm_campaign || TRACKED_CAMPAIGN_DEFAULT, row.utm_content)
+  } catch {
+    return null
+  }
+}
+
+function migrationMissing(message: unknown): boolean {
+  return /does not exist|schema cache/i.test(String(message))
+}
+
+/** GET /api/linkedin/registry — Publicaciones registradas con sus métricas (vista acquisition_by_post). */
+export const getTrackedPosts = async (_req: Request, res: Response) => {
+  try {
+    const { data, error } = await supabase.from('acquisition_by_post').select('*')
+
+    if (error) {
+      // Migración sin aplicar: la UI lo dice con calma en vez de un error rojo.
+      if (migrationMissing(error.message)) return res.json({ success: true, posts: [], pendingMigration: true })
+      throw error
+    }
+
+    const posts = (data || []).map((row: any) => ({ ...row, tracked_url: rowTrackedUrl(row) }))
+    res.json({ success: true, posts })
+  } catch (e: any) {
+    console.error('[LinkedIn] Registry fetch error:', e)
+    res.status(500).json({ error: e.message })
+  }
+}
+
+/** POST /api/linkedin/registry — Registra una publicación y devuelve su link etiquetado. */
+export const createTrackedPost = async (req: Request, res: Response) => {
+  try {
+
+    const label = String(req.body?.label ?? '').trim()
+    const destinationUrl = String(req.body?.destinationUrl ?? '').trim()
+    const campaign = String(req.body?.campaign ?? '').trim() || TRACKED_CAMPAIGN_DEFAULT
+    const postUrl = String(req.body?.postUrl ?? '').trim() || null
+    const publishedAtRaw = req.body?.publishedAt
+
+    if (!label) return res.status(400).json({ error: 'El título de la publicación es requerido' })
+
+    let destination: URL
+    try {
+      destination = new URL(destinationUrl)
+    } catch {
+      return res.status(400).json({ error: 'La URL destino no es válida' })
+    }
+    if (destination.protocol !== 'http:' && destination.protocol !== 'https:') {
+      return res.status(400).json({ error: 'La URL destino debe empezar con http:// o https://' })
+    }
+
+    let publishedAt: string | null = null
+    if (publishedAtRaw) {
+      const date = new Date(publishedAtRaw)
+      if (Number.isNaN(date.getTime())) return res.status(400).json({ error: 'La fecha de publicación no es válida' })
+      publishedAt = date.toISOString()
+    }
+
+    // El código lleva aleatorio: si chocara con uno existente, se reintenta con otro.
+    let row: any = null
+    let lastError: any = null
+    for (let attempt = 0; attempt < 3 && !row; attempt++) {
+      const { data, error } = await supabase.from('linkedin_tracked_posts').insert({
+        label,
+        destination_url: destination.toString(),
+        utm_campaign: campaign,
+        utm_content: makeUtmContent(label),
+        post_url: postUrl,
+        published_at: publishedAt,
+        source: 'manual',
+      }).select().single()
+
+      if (error) {
+        lastError = error
+        if (/duplicate|unique/i.test(error.message)) continue
+        break
+      }
+      row = data
+    }
+
+    if (!row) {
+      const message = String(lastError?.message ?? 'No se pudo registrar la publicación')
+      if (/linkedin_tracked_posts/.test(message) && migrationMissing(message)) {
+        return res.status(500).json({ error: MIGRATION_HINT })
+      }
+      throw lastError
+    }
+
+    res.status(201).json({ success: true, post: { ...row, tracked_url: rowTrackedUrl(row) } })
+  } catch (e: any) {
+    console.error('[LinkedIn] Registry create error:', e)
+    res.status(500).json({ error: e.message })
+  }
+}
+
+/** DELETE /api/linkedin/registry/:id — Quita una publicación del registro. */
+export const deleteTrackedPost = async (req: Request, res: Response) => {
+  try {
+    const id = String(req.params.id ?? '')
+    if (!/^[0-9a-f-]{36}$/i.test(id)) return res.status(400).json({ error: 'Id inválido' })
+
+    const { error } = await supabase.from('linkedin_tracked_posts').delete().eq('id', id)
+
+    if (error) {
+      if (/linkedin_tracked_posts/.test(error.message) && migrationMissing(error.message)) {
+        return res.status(500).json({ error: MIGRATION_HINT })
+      }
+      throw error
+    }
+
+    res.json({ success: true })
+  } catch (e: any) {
+    console.error('[LinkedIn] Registry delete error:', e)
     res.status(500).json({ error: e.message })
   }
 }
