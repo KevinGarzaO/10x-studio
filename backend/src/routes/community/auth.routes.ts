@@ -13,13 +13,15 @@ router.post('/signup', async (req: Request, res: Response) => {
       return res.status(400).json({ error: 'Email, password y username son requeridos' })
     }
 
-    const { data: existingUser } = await supabase
-      .from('users')
-      .select('id')
-      .or(`email.eq.${email},username.eq.${username}`)
-      .single()
+    // El username es único en toda la tabla; el correo solo lo reclama una
+    // cuenta de correo: entre email, GitHub y LinkedIn el mismo correo puede
+    // existir sin que sean la misma cuenta.
+    const [{ data: nameClash }, { data: emailClash }] = await Promise.all([
+      supabase.from('users').select('id').eq('username', username).maybeSingle(),
+      supabase.from('users').select('id').eq('email', email).eq('provider', 'email').maybeSingle(),
+    ])
 
-    if (existingUser) {
+    if (nameClash || emailClash) {
       return res.status(409).json({ error: 'El email o username ya está en uso' })
     }
 
@@ -38,7 +40,7 @@ router.post('/signup', async (req: Request, res: Response) => {
     }
 
     if (authData.user) {
-      const row = {
+      const baseRow = {
         id: authData.user.id,
         email,
         username,
@@ -58,10 +60,21 @@ router.post('/signup', async (req: Request, res: Response) => {
         signup_landing_path: attribution.landingPath,
       }
 
-      const { error: insertError } = await supabase.from('users').insert({ ...row, ...origin })
+      let { error: insertError } = await supabase
+        .from('users')
+        .insert({ ...baseRow, provider: 'email', ...origin })
+
+      // Migración user-provider aún no aplicada: la cuenta se crea igual, sin
+      // el proveedor (en cuanto corra user-provider-migration.sql ya no pasa).
+      if (insertError && /provider/.test(insertError.message)) {
+        console.warn('[Signup] Falta users.provider (aplica user-provider-migration.sql):', insertError.message)
+        const { provider, ...sinProveedor } = { ...baseRow, provider: 'email', ...origin }
+        ;({ error: insertError } = await supabase.from('users').insert(sinProveedor))
+      }
+
       if (insertError && origin) {
         console.warn('[Signup] No se guardó el origen del registro:', insertError.message)
-        await supabase.from('users').insert(row)
+        await supabase.from('users').insert(baseRow)
       }
     }
 
@@ -213,6 +226,15 @@ router.post('/sync-user', communityAuthMiddleware, async (req: AuthRequest, res:
     // perfil. Se guarda la URL tal cual (es un CDN público, no el storage propio).
     const providerPhoto = meta.avatar_url || meta.picture || meta.image_url || null
 
+    // De dónde se autentica la cuenta ('github' | 'linkedin' | 'email'), para
+    // saberlo en la tabla users y poder compartir correo entre proveedores sin
+    // confundir cuentas. Supabase trae la llave interna (linkedin_oidc, etc.).
+    const providerKey = String((authUser?.app_metadata as Record<string, string>)?.provider || 'email')
+    const authProvider =
+      providerKey === 'github' ? 'github'
+        : providerKey.startsWith('linkedin') ? 'linkedin'
+          : 'email'
+
     const { data: existing } = await supabase
       .from('users')
       .select('*')
@@ -264,20 +286,35 @@ router.post('/sync-user', communityAuthMiddleware, async (req: AuthRequest, res:
       username = `${base}_${Math.random().toString(36).slice(2, 6)}`
     }
 
-    const { data: created, error: insertError } = await supabase
+    const payload = {
+      id: req.userId, email, username, display_name: displayName,
+      photo_url: providerPhoto,
+      provider: authProvider,
+      signup_source: signupSource || null,
+      signup_medium: signupMedium || null,
+      signup_campaign: signupCampaign || null,
+      signup_content: signupContent || null,
+      signup_referrer: signupReferrer || null,
+      signup_landing_path: signupLandingPath || null,
+    }
+
+    let { data: created, error: insertError } = await supabase
       .from('users')
-      .insert({
-        id: req.userId, email, username, display_name: displayName,
-        photo_url: providerPhoto,
-        signup_source: signupSource || null,
-        signup_medium: signupMedium || null,
-        signup_campaign: signupCampaign || null,
-        signup_content: signupContent || null,
-        signup_referrer: signupReferrer || null,
-        signup_landing_path: signupLandingPath || null,
-      })
+      .insert(payload)
       .select('*')
       .single()
+
+    // Migración user-provider aún no aplicada: la cuenta se crea igual, sin el
+    // proveedor (en cuanto corra user-provider-migration.sql ya no pasa).
+    if (insertError && /provider/.test(insertError.message)) {
+      console.warn('[SyncUser] Falta users.provider (aplica user-provider-migration.sql):', insertError.message)
+      const { provider, ...sinProveedor } = payload
+      ;({ data: created, error: insertError } = await supabase
+        .from('users')
+        .insert(sinProveedor)
+        .select('*')
+        .single())
+    }
 
     if (insertError) throw insertError
 

@@ -12,9 +12,14 @@ ADD COLUMN IF NOT EXISTS website TEXT,
 ADD COLUMN IF NOT EXISTS github_url TEXT;
 
 -- Add unique constraints only if they don't exist
+-- (el correo es único POR PROVEEDOR desde user-provider-migration.sql: si esa
+--  migración ya corrió, aquí no se vuelve a crear users_email_unique)
 DO $$
 BEGIN
-  IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'users_email_unique') THEN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint
+    WHERE conname IN ('users_email_unique', 'users_email_provider_unique')
+  ) THEN
     ALTER TABLE users ADD CONSTRAINT users_email_unique UNIQUE (email);
   END IF;
   IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'users_username_unique') THEN
