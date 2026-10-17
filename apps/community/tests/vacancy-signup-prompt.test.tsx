@@ -73,15 +73,21 @@ describe('AuthModal for a vacancy', () => {
     expect(push).toHaveBeenCalledWith('/login')
   })
 
-  it('can be dismissed to keep reading', () => {
-    const onClose = vi.fn()
-    render(<AuthModal onClose={onClose} request={request} />)
+  it('shows LinkedIn and GitHub first, above the email buttons', () => {
+    render(<AuthModal onClose={vi.fn()} request={request} />)
 
-    fireEvent.click(screen.getByRole('button', { name: /seguir viendo la vacante/i }))
+    const linkedin = screen.getByRole('button', { name: /continuar con linkedin/i })
+    const github = screen.getByRole('button', { name: /continuar con github/i })
+    const signup = screen.getByRole('button', { name: /crear cuenta gratis/i })
+    const login = screen.getByRole('button', { name: /iniciar sesión/i })
+    const DOCUMENT_POSITION_FOLLOWING = 4
 
-    expect(onClose).toHaveBeenCalled()
-    expect(push).not.toHaveBeenCalled()
-    expect(peekReturnTo()).toBeNull()
+    expect(linkedin.compareDocumentPosition(signup) & DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+    expect(github.compareDocumentPosition(signup) & DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+    expect(linkedin.compareDocumentPosition(github) & DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+    expect(signup.compareDocumentPosition(login) & DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+    // El botón de seguir leyendo ya no existe: cerrar es la X o el fondo.
+    expect(screen.queryByRole('button', { name: /seguir viendo/i })).toBeNull()
   })
 
   it('keeps the general text when it was not asked for a vacancy', () => {

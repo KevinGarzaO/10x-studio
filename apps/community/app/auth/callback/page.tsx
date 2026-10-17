@@ -18,10 +18,23 @@ export default function AuthCallbackPage() {
 
   useEffect(() => {
     async function finish() {
-      const captured = captureSessionFromUrl()
+      // Si Supabase volvió con un error en el hash (p. ej. un `redirect_to` fuera
+      // de la lista blanca), se muestra tal cual: es la única pista de qué falló.
+      const hash = window.location.hash.startsWith('#') ? window.location.hash.slice(1) : ''
+      if (hash) {
+        const params = new URLSearchParams(hash)
+        const hashError = params.get('error_description') || params.get('error')
+        if (hashError && !params.get('access_token')) {
+          setError(hashError)
+          window.history.replaceState(null, '', window.location.pathname + window.location.search)
+          return
+        }
+      }
+
+      captureSessionFromUrl()
       const token = getToken()
 
-      if (!captured || !token) {
+      if (!token) {
         setError('No pudimos completar el inicio de sesión. Intenta de nuevo.')
         return
       }

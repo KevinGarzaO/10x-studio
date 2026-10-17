@@ -1,6 +1,7 @@
 import { Analytics } from '@vercel/analytics/next'
 import type { Metadata, Viewport } from 'next'
 import { AttributionCapture } from '@/components/attribution-capture'
+import { SessionCapture } from '@/components/session-capture'
 import './globals.css'
 
 const GA_MEASUREMENT_ID = process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID
@@ -33,6 +34,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
         )}
       </head>
       <body className="antialiased">
+        <SessionCapture />
         <AttributionCapture />
         {children}
         {process.env.NODE_ENV === 'production' && <Analytics />}
