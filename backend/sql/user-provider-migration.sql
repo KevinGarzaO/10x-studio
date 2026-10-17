@@ -27,20 +27,22 @@
 ALTER TABLE users ADD COLUMN IF NOT EXISTS provider TEXT NOT NULL DEFAULT 'email';
 
 -- Backfill desde auth: el proveedor real de cada cuenta. auth.users guarda en
--- app_metadata el proveedor por el que se autentica ('github', 'linkedin_oidc',
--- 'email'). Las filas sin cuenta de auth (huérfanas) no se tocan y quedan en
--- 'email', lo que deja convivir a la cuenta real del proveedor con ellas.
+-- raw_app_meta_data el proveedor por el que se autentica ('github',
+-- 'linkedin_oidc', 'email') — el API de Auth lo llama app_metadata, pero en
+-- SQL la columna es raw_app_meta_data. Las filas sin cuenta de auth (huérfanas)
+-- no se tocan y quedan en 'email', lo que deja convivir a la cuenta real del
+-- proveedor con ellas.
 UPDATE users u
 SET provider = CASE
-  WHEN a.app_metadata ->> 'provider' = 'github' THEN 'github'
-  WHEN a.app_metadata ->> 'provider' LIKE 'linkedin%' THEN 'linkedin'
+  WHEN a.raw_app_meta_data ->> 'provider' = 'github' THEN 'github'
+  WHEN a.raw_app_meta_data ->> 'provider' LIKE 'linkedin%' THEN 'linkedin'
   ELSE 'email'
 END
 FROM auth.users a
 WHERE a.id = u.id
   AND u.provider = 'email'
-  AND a.app_metadata ->> 'provider' IS NOT NULL
-  AND a.app_metadata ->> 'provider' <> 'email';
+  AND a.raw_app_meta_data ->> 'provider' IS NOT NULL
+  AND a.raw_app_meta_data ->> 'provider' <> 'email';
 
 -- ============================================
 -- BLOQUE 2 — correo único por proveedor
