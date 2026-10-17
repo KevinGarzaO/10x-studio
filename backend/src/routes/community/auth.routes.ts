@@ -164,6 +164,14 @@ router.get('/me', communityAuthMiddleware, async (req: AuthRequest, res: Respons
 // ya está habilitado.
 const OAUTH_PROVIDERS = ['github', 'linkedin'] as const
 
+// Llave interna del proveedor en Supabase: LinkedIn es la variante OIDC
+// (`linkedin_oidc`, scopes openid/email/profile). La llave `linkedin` es el
+// proveedor legacy (r_liteprofile), retirado por LinkedIn y apagado.
+const AUTHORIZE_KEYS: Record<string, string> = {
+  github: 'github',
+  linkedin: 'linkedin_oidc',
+}
+
 /**
  * Redirige al authorize de Supabase. Se usa el flujo implícito (tokens que
  * vuelven en el hash de la URL) para casar con captureSessionFromUrl() del
@@ -180,7 +188,7 @@ router.get('/oauth/:provider', (req: Request, res: Response) => {
   const communityAppUrl = process.env.COMMUNITY_APP_URL || 'http://localhost:3002'
   const authorizeUrl =
     `${process.env.SUPABASE_URL}/auth/v1/authorize` +
-    `?provider=${provider}` +
+    `?provider=${AUTHORIZE_KEYS[provider]}` +
     `&redirect_to=${encodeURIComponent(`${communityAppUrl}/auth/callback`)}`
 
   res.redirect(authorizeUrl)
