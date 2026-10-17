@@ -58,12 +58,14 @@ REVOKE ALL ON linkedin_tracked_posts FROM anon, authenticated;
 CREATE OR REPLACE VIEW acquisition_by_post AS
 WITH contents AS (
   -- Todo código que haya traído gente: los registrados y los que aparecen solos
-  -- (vacantes automáticas con utm_content=<slug>, links sueltos, etc.).
-  SELECT utm_content FROM linkedin_tracked_posts
+  -- (vacantes automáticas con utm_content=<slug>, links sueltos, etc.). Ojo: el
+  -- nombre de la columna del UNION es el del primer SELECT, por eso se nombra
+  -- content desde el principio.
+  SELECT utm_content AS content FROM linkedin_tracked_posts
   UNION
   SELECT content FROM landing_visits WHERE content IS NOT NULL
   UNION
-  SELECT signup_content FROM users WHERE signup_content IS NOT NULL
+  SELECT signup_content AS content FROM users WHERE signup_content IS NOT NULL
 ),
 visits AS (
   SELECT content,

@@ -178,6 +178,11 @@ describe('la migración', () => {
     expect(sql).toContain('FROM landing_visits')
     expect(sql).toContain('signup_content')
   })
+
+  it('nombra content desde el primer SELECT del UNION', () => {
+    expect(sql).toContain('SELECT utm_content AS content FROM linkedin_tracked_posts')
+    expect(sql).toContain('SELECT signup_content AS content FROM users')
+  })
 })
 
 describe('GET /api/linkedin/registry', () => {
