@@ -25,17 +25,25 @@ const EXISTING_USER = {
   work_modality: 'Remoto',
 }
 
-vi.mock('next/navigation', () => ({
-  useRouter: () => ({ replace: vi.fn(), push: vi.fn(), refresh: vi.fn() }),
+const mocks = vi.hoisted(() => ({
+  fetchCurrentUser: vi.fn(async () => null as unknown),
 }))
+
+vi.mock('next/navigation', () => {
+  // Router estable: si cada render devuelve un objeto nuevo, el efecto de
+  // precarga se re-dispara y regresa el asistente al paso inicial.
+  const router = { replace: vi.fn(), push: vi.fn(), refresh: vi.fn() }
+  return { useRouter: () => router }
+})
 
 vi.mock('@/lib/session', () => ({
   getToken: () => 'token',
   captureSessionFromUrl: () => false,
-  fetchCurrentUser: vi.fn(async () => EXISTING_USER),
+  fetchCurrentUser: () => mocks.fetchCurrentUser(),
 }))
 
 beforeEach(() => {
+  mocks.fetchCurrentUser.mockResolvedValue(EXISTING_USER)
   resetSkillCatalogCache()
   global.fetch = vi.fn().mockImplementation((url: string) => {
     if (String(url).includes('/api/community/skills')) {
@@ -51,28 +59,40 @@ afterEach(() => {
 })
 
 describe('OnboardingPage (T042)', () => {
-  it('preloads every field the account already has, not just the photo', async () => {
+  it('preloads every field the account already has and skips the photo step', async () => {
     const user = userEvent.setup()
     render(<OnboardingPage />)
 
-    // Paso 1: la foto existente se muestra sin pedirla de nuevo. El título ya
-    // no se captura: sale de la categoría elegida (el esquema lo descarta).
+    // La cuenta ya trae foto (la subió antes o vino de la red social): el
+    // formulario arranca directo en el puesto y solo tiene 2 pasos.
     await waitFor(() => {
       const photo = document.querySelector('img')
       expect(photo?.getAttribute('src')).toBe('https://example.com/foto.png')
     })
+    expect(screen.getByText('Paso 1 de 2')).toBeTruthy()
     expect(screen.queryByLabelText(/título profesional/i)).toBeNull()
 
-    // Paso 2: el puesto, el nivel y la modalidad quedan seleccionados.
-    await user.click(screen.getByRole('button', { name: 'Siguiente' }))
+    // Paso 1: el puesto, el nivel y la modalidad quedan seleccionados.
     expect(screen.getByLabelText(/puesto/i)).toHaveValue('backend')
     expect(screen.getByRole('button', { name: 'Senior' }).className).toContain('active')
     expect(screen.getByRole('button', { name: 'Remoto' }).className).toContain('active')
 
-    // Paso 3: el skill ya declarado sigue como chip y la ubicación capturada.
+    // Paso 2: el skill ya declarado sigue como chip y la ubicación capturada.
     await user.click(screen.getByRole('button', { name: 'Siguiente' }))
+    expect(screen.getByText('Paso 2 de 2')).toBeTruthy()
     expect(await screen.findByText('React')).toBeTruthy()
     expect(screen.getByLabelText(/ubicación/i)).toHaveValue('Monterrey, MX')
     expect(screen.queryByText(/fuera del catálogo/i)).toBeNull()
+  })
+
+  it('shows the full 3-step wizard when the account has no photo yet', async () => {
+    mocks.fetchCurrentUser.mockResolvedValue({ ...EXISTING_USER, photo_url: null })
+    render(<OnboardingPage />)
+
+    await waitFor(() => {
+      expect(screen.getByText('Paso 1 de 3')).toBeTruthy()
+    })
+    expect(screen.queryByLabelText(/puesto/i)).toBeNull()
+    expect(screen.getByRole('button', { name: 'Siguiente' })).toBeTruthy()
   })
 })

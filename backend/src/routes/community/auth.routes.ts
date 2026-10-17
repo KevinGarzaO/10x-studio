@@ -199,6 +199,12 @@ router.post('/sync-user', communityAuthMiddleware, async (req: AuthRequest, res:
     const { data: userData } = await supabase.auth.getUser(token)
     const authUser = userData?.user
 
+    const meta = (authUser?.user_metadata || {}) as Record<string, string>
+    // La foto de la red social (avatar de GitHub/LinkedIn): quien llega por OAuth
+    // no tiene que subir la suya, y de paso satisface la foto obligatoria del
+    // perfil. Se guarda la URL tal cual (es un CDN público, no el storage propio).
+    const providerPhoto = meta.avatar_url || meta.picture || meta.image_url || null
+
     const { data: existing } = await supabase
       .from('users')
       .select('*')
@@ -206,10 +212,20 @@ router.post('/sync-user', communityAuthMiddleware, async (req: AuthRequest, res:
       .maybeSingle()
 
     if (existing) {
+      // Cuentas creadas antes de traer la foto de la red social: se completa una
+      // sola vez y nunca se pisa una foto que la persona ya haya elegido.
+      if (!existing.photo_url && providerPhoto) {
+        const { data: healed } = await supabase
+          .from('users')
+          .update({ photo_url: providerPhoto })
+          .eq('id', req.userId)
+          .select('*')
+          .single()
+        if (healed) return res.json({ user: healed })
+      }
       return res.json({ user: existing })
     }
 
-    const meta = (authUser?.user_metadata || {}) as Record<string, string>
     const email = req.userEmail || authUser?.email || ''
     const displayName =
       meta.full_name || meta.name || email.split('@')[0] || 'Nuevo usuario'
@@ -244,6 +260,7 @@ router.post('/sync-user', communityAuthMiddleware, async (req: AuthRequest, res:
       .from('users')
       .insert({
         id: req.userId, email, username, display_name: displayName,
+        photo_url: providerPhoto,
         signup_source: signupSource || null,
         signup_medium: signupMedium || null,
         signup_campaign: signupCampaign || null,

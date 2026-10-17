@@ -1,7 +1,7 @@
 'use client'
 
 import { useRouter } from 'next/navigation'
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Loader2, MapPin, Tag } from 'lucide-react'
 import { getToken, fetchCurrentUser, captureSessionFromUrl } from '../lib/session'
 import { SENIORITY_OPTIONS, MODALITY_OPTIONS, ROLE_CATEGORY_OPTIONS } from '../lib/profile-options'
@@ -39,6 +39,9 @@ const styles = `
 .onboarding-progress i{flex:1;height:3px;border-radius:2px;background:#322f29}
 .onboarding-progress i.on{background:#00A86B}
 .onboarding-step-label{color:#58636f;font:10px monospace;text-transform:uppercase;letter-spacing:.1em;margin-bottom:8px}
+.onboarding-avatar-row{display:flex;align-items:center;gap:10px;margin-bottom:10px}
+.onboarding-avatar{width:48px;height:48px;border-radius:50%;object-fit:cover;border:2px solid #2f5a46}
+.onboarding-avatar-row span{color:#4fd39a;font:11px monospace}
 .onboarding-nav{display:flex;gap:10px;margin-top:6px}
 .onboarding-nav .back{background:transparent;color:#b3aba1;border:1px solid #322f29;padding:13px;border-radius:8px;font-size:14px;cursor:pointer;font-family:inherit}
 .onboarding-nav .back:hover{border-color:#b3aba1}
@@ -66,6 +69,9 @@ export function OnboardingPage() {
   const [error, setError] = useState('')
   const [checkingSession, setCheckingSession] = useState(true)
   const [step, setStep] = useState(0)
+  // true cuando la cuenta ya traía foto al entrar (subida antes o tomada de la
+  // red social): entonces el paso de foto no existe y el flujo tiene solo 2 pasos.
+  const [photoPrefilled, setPhotoPrefilled] = useState(false)
   const { catalog, failed: catalogFailed } = useSkillCatalog()
   const addSkill = (name: string) => setSkills(prev => (prev.includes(name) ? prev : [...prev, name]))
   const { proposals, message: proposalMessage, propose } = useSkillProposals(addSkill)
@@ -80,7 +86,14 @@ export function OnboardingPage() {
     if (intent === 'company' || intent === 'candidate') setAccountKind(intent)
   }, [])
 
+  // La precarga corre UNA sola vez aunque el efecto se vuelva a disparar (el
+  // router cambia de identidad en algunos entornos): si no, cada re-render
+  // devolvería el asistente al primer paso y navegar se volvería imposible.
+  const didPreload = useRef(false)
+
   useEffect(() => {
+    if (didPreload.current) return
+    didPreload.current = true
     // A user arriving here straight from the "confirm your email" link has
     // no session in this browser yet — Supabase appended one as a URL hash
     // fragment instead, which captureSessionFromUrl() picks up and saves.
@@ -93,7 +106,13 @@ export function OnboardingPage() {
       // Se precarga TODO lo que la cuenta ya tenga, no solo la foto (FR-026):
       // a quien vuelve aquí por un campo nuevo no se le vuelve a pedir lo que
       // ya había capturado.
-      if (user.photo_url) setPhotoPreview(user.photo_url)
+      if (user.photo_url) {
+        setPhotoPreview(user.photo_url)
+        // Ese paso ya está: se empieza en el puesto (quien vino de GitHub/LinkedIn
+        // llega aquí con su avatar y ni ve el paso de foto).
+        setPhotoPrefilled(true)
+        setStep(1)
+      }
       if (user.role_category) setRoleCategory(user.role_category)
       if (user.seniority) setSeniority(user.seniority)
       if (Array.isArray(user.skills)) setSkills(user.skills)
@@ -147,7 +166,7 @@ export function OnboardingPage() {
 
   function prevStep() {
     setError('')
-    setStep(s => Math.max(s - 1, 0))
+    setStep(s => Math.max(s - 1, photoPrefilled ? 1 : 0))
   }
 
   async function handleSubmit() {
@@ -264,6 +283,11 @@ export function OnboardingPage() {
     )
   }
 
+  // Con la foto ya presente (la subió antes o vino de la red social) el
+  // formulario arranca en el paso de puesto y solo tiene 2 pasos.
+  const firstStep = photoPrefilled ? 1 : 0
+  const stepCount = 3 - firstStep
+
   return (
     <div className="onboarding-page">
       <style>{styles}</style>
@@ -276,11 +300,18 @@ export function OnboardingPage() {
         {error && <div className="onboarding-error">{error}</div>}
 
         <div className="onboarding-progress" aria-hidden="true">
-          <i className={step >= 0 ? 'on' : ''} />
-          <i className={step >= 1 ? 'on' : ''} />
-          <i className={step >= 2 ? 'on' : ''} />
+          {Array.from({ length: stepCount }, (_, i) => (
+            <i key={i} className={step >= firstStep + i ? 'on' : ''} />
+          ))}
         </div>
-        <p className="onboarding-step-label">Paso {step + 1} de 3</p>
+        <p className="onboarding-step-label">Paso {step - firstStep + 1} de {stepCount}</p>
+
+        {photoPrefilled && photoPreview && step !== 0 && (
+          <div className="onboarding-avatar-row">
+            <img className="onboarding-avatar" src={photoPreview} alt="Tu foto de perfil" />
+            <span>Foto lista, no hace falta volver a subirla</span>
+          </div>
+        )}
 
         {step === 0 && (
           <PhotoPicker photoUrl={photoPreview} onPick={setPhotoPreview} onError={setError} />
@@ -326,7 +357,7 @@ export function OnboardingPage() {
 
         {step < 2 ? (
           <div className="onboarding-nav">
-            {step > 0 && (
+            {step > firstStep && (
               <button className="back" onClick={prevStep}>Atrás</button>
             )}
             <button className="onboarding-submit" style={{ flex: 1, marginTop: 0 }} onClick={nextStep}>
