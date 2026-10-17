@@ -31,7 +31,11 @@ describe('GET /api/community/skills (integration, T015)', () => {
     expect(Array.isArray(res.body.skills)).toBe(true)
     expect(res.body.skills.length).toBeGreaterThanOrEqual(37)
     expect(res.body.skills).toEqual(
-      expect.arrayContaining([{ name: 'react', label: 'React' }]),
+      // objectContaining: con la migración aplicada cada skill trae además
+      // roleCategories; sin ella, no. El skill debe existir en ambos casos.
+      expect.arrayContaining([
+        expect.objectContaining({ name: 'react', label: 'React' }),
+      ]),
     )
   })
 
