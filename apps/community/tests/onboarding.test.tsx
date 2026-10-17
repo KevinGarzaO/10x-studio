@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { render, screen, waitFor } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
 import { OnboardingPage } from '@/components/onboarding'
 import { resetSkillCatalogCache } from '@/lib/skill-catalog'
 
@@ -51,25 +52,26 @@ afterEach(() => {
 
 describe('OnboardingPage (T042)', () => {
   it('preloads every field the account already has, not just the photo', async () => {
+    const user = userEvent.setup()
     render(<OnboardingPage />)
 
-    // El título y la ubicación vuelven a aparecer capturados.
+    // Paso 1: el título capturado y la foto existente se muestran sin pedirlas.
     await waitFor(() => {
       expect(screen.getByLabelText(/título profesional/i)).toHaveValue('Backend Developer')
     })
-    expect(screen.getByLabelText(/ubicación/i)).toHaveValue('Monterrey, MX')
+    const photo = document.querySelector('img')
+    expect(photo?.getAttribute('src')).toBe('https://example.com/foto.png')
 
-    // La categoría, el nivel y la modalidad quedan seleccionados.
+    // Paso 2: la categoría, el nivel y la modalidad quedan seleccionados.
+    await user.click(screen.getByRole('button', { name: 'Siguiente' }))
     expect(screen.getByLabelText(/categoría de rol/i)).toHaveValue('backend')
     expect(screen.getByRole('button', { name: 'Senior' }).className).toContain('active')
     expect(screen.getByRole('button', { name: 'Remoto' }).className).toContain('active')
 
-    // Y el skill ya declarado sigue como chip, con su etiqueta del catálogo.
+    // Paso 3: el skill ya declarado sigue como chip y la ubicación capturada.
+    await user.click(screen.getByRole('button', { name: 'Siguiente' }))
     expect(await screen.findByText('React')).toBeTruthy()
+    expect(screen.getByLabelText(/ubicación/i)).toHaveValue('Monterrey, MX')
     expect(screen.queryByText(/fuera del catálogo/i)).toBeNull()
-
-    // La foto existente se muestra, sin pedir volver a subirla.
-    const photo = document.querySelector('img')
-    expect(photo?.getAttribute('src')).toBe('https://example.com/foto.png')
   })
 })

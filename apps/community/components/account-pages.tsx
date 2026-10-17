@@ -9,6 +9,7 @@ import {
   Eye, EyeOff, MessageCircle, Heart, Loader2, Tag
 } from 'lucide-react'
 import { saveSession, getToken, fetchCurrentUser } from '../lib/session'
+import { getAttribution } from '../lib/attribution'
 import { SENIORITY_OPTIONS, MODALITY_OPTIONS, ROLE_CATEGORY_OPTIONS } from '../lib/profile-options'
 import { PhotoPicker, SegmentedControl, SkillsInput, RoleCategorySelect } from './profile-form-fields'
 import { useSkillCatalog } from '../lib/skill-catalog'
@@ -131,6 +132,11 @@ const styles = `
 .auth-switch a:hover{text-decoration:underline}
 .auth-pw-toggle{position:absolute;right:12px;top:50%;transform:translateY(-50%);background:none;border:none;color:#b3aba1;cursor:pointer;padding:0}
 .auth-field{position:relative}
+.oauth-stack{display:flex;flex-direction:column;gap:9px;margin-bottom:18px}
+.oauth-btn{width:100%;display:flex;align-items:center;justify-content:center;gap:9px;background:#18161a;border:1px solid #322f29;border-radius:8px;padding:11px;color:#f3efe9;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;transition:border-color .15s}
+.oauth-btn:hover{border-color:#b3aba1}
+.oauth-divider{display:flex;align-items:center;gap:10px;color:#58636f;font-size:11px;margin:3px 0}
+.oauth-divider::before,.oauth-divider::after{content:'';flex:1;height:1px;background:#322f29}
 @media(max-width:768px){.auth-shell{grid-template-columns:1fr}.auth-aside{display:none}.auth-card{padding:28px 24px}}
 /* Celular: el menú lateral de 220px dejaba al formulario en ~100px. Pasa a una fila
    con scroll horizontal arriba del contenido y todo lo demás ocupa el ancho. */
@@ -378,6 +384,14 @@ export function AuthPage({ mode }: { mode: 'login' | 'signup' }) {
       if (signup) {
         body.username = username.trim()
         body.displayName = displayName.trim() || username.trim()
+        // Atribución del primer contacto (UTM/referrer), para saber qué trajo el alta.
+        const attr = getAttribution()
+        if (attr.source) body.signupSource = attr.source
+        if (attr.medium) body.signupMedium = attr.medium
+        if (attr.campaign) body.signupCampaign = attr.campaign
+        if (attr.content) body.signupContent = attr.content
+        if (attr.referrer) body.signupReferrer = attr.referrer
+        if (attr.landingPath) body.signupLandingPath = attr.landingPath
       }
 
       const res = await fetch(`${API_URL}${endpoint}`, {
@@ -445,6 +459,30 @@ export function AuthPage({ mode }: { mode: 'login' | 'signup' }) {
 
           {error && <div className="auth-error">{error}</div>}
           {success && <div className="auth-success">{success}</div>}
+
+          <div className="oauth-stack">
+            <button
+              type="button"
+              className="oauth-btn"
+              onClick={() => { window.location.href = `${API_URL}/api/community/auth/oauth/linkedin` }}
+            >
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="#0A66C2" aria-hidden="true">
+                <path d="M20.45 20.45h-3.56v-5.57c0-1.33-.02-3.04-1.85-3.04-1.85 0-2.13 1.45-2.13 2.94v5.67H9.35V9h3.41v1.56h.05c.47-.9 1.63-1.85 3.36-1.85 3.6 0 4.27 2.37 4.27 5.46v6.28zM5.34 7.43a2.06 2.06 0 1 1 0-4.12 2.06 2.06 0 0 1 0 4.12zM7.12 20.45H3.56V9h3.56v11.45z"/>
+              </svg>
+              Continuar con LinkedIn
+            </button>
+            <button
+              type="button"
+              className="oauth-btn"
+              onClick={() => { window.location.href = `${API_URL}/api/community/auth/oauth/github` }}
+            >
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="#f3efe9" aria-hidden="true">
+                <path d="M12 .3a12 12 0 0 0-3.8 23.4c.6.1.8-.3.8-.6v-2c-3.3.7-4-1.6-4-1.6-.5-1.4-1.3-1.8-1.3-1.8-1.1-.7.1-.7.1-.7 1.2 0 1.8 1.2 1.8 1.2 1.1 1.8 2.8 1.3 3.5 1 .1-.8.4-1.3.8-1.6-2.7-.3-5.5-1.3-5.5-5.9 0-1.3.5-2.4 1.2-3.2-.1-.3-.5-1.5.1-3.2 0 0 1-.3 3.3 1.2a11.5 11.5 0 0 1 6 0C17 4.6 18 4.9 18 4.9c.7 1.7.3 2.9.2 3.2.8.8 1.2 1.9 1.2 3.2 0 4.6-2.8 5.6-5.5 5.9.4.4.8 1.1.8 2.2v3.3c0 .3.2.7.8.6A12 12 0 0 0 12 .3z"/>
+              </svg>
+              Continuar con GitHub
+            </button>
+            <div className="oauth-divider"><span>o regístrate con tu correo</span></div>
+          </div>
 
           <form onSubmit={handleSubmit}>
             <div className="auth-field">

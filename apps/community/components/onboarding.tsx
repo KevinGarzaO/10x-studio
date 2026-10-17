@@ -34,6 +34,13 @@ const styles = `
 .onboarding-submit{width:100%;background:#00A86B;color:#18161a;border:none;padding:13px;border-radius:8px;font-size:14px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;margin-top:6px}
 .onboarding-submit:hover{background:#00c97b}
 .onboarding-submit:disabled{opacity:.55;cursor:not-allowed}
+.onboarding-progress{display:flex;gap:6px;margin-bottom:18px}
+.onboarding-progress i{flex:1;height:3px;border-radius:2px;background:#322f29}
+.onboarding-progress i.on{background:#00A86B}
+.onboarding-step-label{color:#58636f;font:10px monospace;text-transform:uppercase;letter-spacing:.1em;margin-bottom:8px}
+.onboarding-nav{display:flex;gap:10px;margin-top:6px}
+.onboarding-nav .back{background:transparent;color:#b3aba1;border:1px solid #322f29;padding:13px;border-radius:8px;font-size:14px;cursor:pointer;font-family:inherit}
+.onboarding-nav .back:hover{border-color:#b3aba1}
 @media(max-width:600px){
 .onboarding-page{padding:16px}
 .onboarding-card{padding:22px 18px}
@@ -58,6 +65,7 @@ export function OnboardingPage() {
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
   const [checkingSession, setCheckingSession] = useState(true)
+  const [step, setStep] = useState(0)
   const { catalog, failed: catalogFailed } = useSkillCatalog()
   const addSkill = (name: string) => setSkills(prev => (prev.includes(name) ? prev : [...prev, name]))
   const { proposals, message: proposalMessage, propose } = useSkillProposals(addSkill)
@@ -112,6 +120,38 @@ export function OnboardingPage() {
     workModality,
   }
   const validationError = validateCandidateProfile(payload, catalog)
+
+  // Validación por paso: quien falle ve el problema en el paso donde está, no
+  // al final de un formulario largo. El envío final sigue validando TODO con el
+  // schema real del backend.
+  function stepError(n: number): string {
+    if (n === 0) {
+      if (!photoPreview) return 'Tu foto de perfil es obligatoria'
+      if (!title.trim()) return 'Tu título profesional es obligatorio'
+    }
+    if (n === 1) {
+      if (!roleCategory) return 'Elige tu categoría de rol'
+      if (!seniority) return 'Elige tu nivel'
+      if (!workModality) return 'Elige tu modalidad'
+    }
+    if (n === 2) {
+      if (skills.length === 0) return 'Elige al menos un skill del catálogo'
+      if (!location.trim()) return 'Tu ubicación es obligatoria'
+    }
+    return ''
+  }
+
+  function nextStep() {
+    const msg = stepError(step)
+    if (msg) { setError(msg); return }
+    setError('')
+    setStep(s => Math.min(s + 1, 2))
+  }
+
+  function prevStep() {
+    setError('')
+    setStep(s => Math.max(s - 1, 0))
+  }
 
   async function handleSubmit() {
     if (!photoPreview) {
@@ -237,39 +277,54 @@ export function OnboardingPage() {
 
         {error && <div className="onboarding-error">{error}</div>}
 
-        <PhotoPicker photoUrl={photoPreview} onPick={setPhotoPreview} onError={setError} />
-
-        <div className="field">
-          <label htmlFor="onboarding-title">Título profesional</label>
-          <input id="onboarding-title" type="text" placeholder="Ej. Backend Developer" value={title} onChange={e => setTitle(e.target.value)} />
+        <div className="onboarding-progress" aria-hidden="true">
+          <i className={step >= 0 ? 'on' : ''} />
+          <i className={step >= 1 ? 'on' : ''} />
+          <i className={step >= 2 ? 'on' : ''} />
         </div>
+        <p className="onboarding-step-label">Paso {step + 1} de 3</p>
 
-        <div className="field">
-          <label htmlFor="onboarding-role-category">Categoría de rol</label>
-          <RoleCategorySelect id="onboarding-role-category" options={ROLE_CATEGORY_OPTIONS} value={roleCategory} onChange={setRoleCategory} />
-        </div>
+        {step === 0 && (
+          <>
+            <PhotoPicker photoUrl={photoPreview} onPick={setPhotoPreview} onError={setError} />
+            <div className="field">
+              <label htmlFor="onboarding-title">Título profesional</label>
+              <input id="onboarding-title" type="text" placeholder="Ej. Backend Developer" value={title} onChange={e => setTitle(e.target.value)} />
+            </div>
+          </>
+        )}
 
-        <div className="field">
-          <label>Nivel</label>
-          <SegmentedControl options={SENIORITY_OPTIONS} value={seniority} onChange={setSeniority} />
-        </div>
+        {step === 1 && (
+          <>
+            <div className="field">
+              <label htmlFor="onboarding-role-category">Categoría de rol</label>
+              <RoleCategorySelect id="onboarding-role-category" options={ROLE_CATEGORY_OPTIONS} value={roleCategory} onChange={setRoleCategory} />
+            </div>
+            <div className="field">
+              <label>Nivel</label>
+              <SegmentedControl options={SENIORITY_OPTIONS} value={seniority} onChange={setSeniority} />
+            </div>
+            <div className="field">
+              <label>Modalidad deseada</label>
+              <SegmentedControl options={MODALITY_OPTIONS} value={workModality} onChange={setWorkModality} />
+            </div>
+          </>
+        )}
 
-        <div className="field">
-          <label htmlFor="onboarding-skills"><Tag size={12} style={{ verticalAlign: -1, marginRight: 4 }} />Skills</label>
-          <SkillsInput skills={skills} onChange={setSkills} inputValue={skillInput} onInputChange={setSkillInput} onPropose={propose} />
-          {proposalMessage && <p className="skill-proposal-message">{proposalMessage}</p>}
-          <SkillProposalsList proposals={proposals} onAddSkill={addSkill} />
-        </div>
-
-        <div className="field">
-          <label htmlFor="onboarding-location"><MapPin size={12} style={{ verticalAlign: -1, marginRight: 4 }} />Ubicación</label>
-          <input id="onboarding-location" type="text" placeholder="Ciudad, país" value={location} onChange={e => setLocation(e.target.value)} />
-        </div>
-
-        <div className="field">
-          <label>Modalidad deseada</label>
-          <SegmentedControl options={MODALITY_OPTIONS} value={workModality} onChange={setWorkModality} />
-        </div>
+        {step === 2 && (
+          <>
+            <div className="field">
+              <label htmlFor="onboarding-skills"><Tag size={12} style={{ verticalAlign: -1, marginRight: 4 }} />Skills</label>
+              <SkillsInput skills={skills} onChange={setSkills} inputValue={skillInput} onInputChange={setSkillInput} onPropose={propose} />
+              {proposalMessage && <p className="skill-proposal-message">{proposalMessage}</p>}
+              <SkillProposalsList proposals={proposals} onAddSkill={addSkill} />
+            </div>
+            <div className="field">
+              <label htmlFor="onboarding-location"><MapPin size={12} style={{ verticalAlign: -1, marginRight: 4 }} />Ubicación</label>
+              <input id="onboarding-location" type="text" placeholder="Ciudad, país" value={location} onChange={e => setLocation(e.target.value)} />
+            </div>
+          </>
+        )}
 
         {catalogFailed && (
           <div className="onboarding-error" role="alert">
@@ -277,9 +332,20 @@ export function OnboardingPage() {
           </div>
         )}
 
-        <button className="onboarding-submit" onClick={handleSubmit} disabled={saving || catalogFailed}>
-          {saving ? <><Loader2 size={16} style={{ animation: 'spin 1s linear infinite' }} /> Guardando...</> : 'Continuar a AvoTalent'}
-        </button>
+        {step < 2 ? (
+          <div className="onboarding-nav">
+            {step > 0 && (
+              <button className="back" onClick={prevStep}>Atrás</button>
+            )}
+            <button className="onboarding-submit" style={{ flex: 1, marginTop: 0 }} onClick={nextStep}>
+              Siguiente
+            </button>
+          </div>
+        ) : (
+          <button className="onboarding-submit" onClick={handleSubmit} disabled={saving || catalogFailed}>
+            {saving ? <><Loader2 size={16} style={{ animation: 'spin 1s linear infinite' }} /> Guardando...</> : 'Continuar a AvoTalent'}
+          </button>
+        )}
       </div>
       <style>{`@keyframes spin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}`}</style>
     </div>
