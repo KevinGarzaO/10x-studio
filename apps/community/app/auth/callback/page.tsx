@@ -32,12 +32,12 @@ export default function AuthCallbackPage() {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
           body: JSON.stringify({
-            signupSource: attr.source || null,
-            signupMedium: attr.medium || null,
-            signupCampaign: attr.campaign || null,
-            signupContent: attr.content || null,
-            signupReferrer: attr.referrer || null,
-            signupLandingPath: attr.landingPath || null,
+            signupSource: attr?.source || null,
+            signupMedium: attr?.medium || null,
+            signupCampaign: attr?.campaign || null,
+            signupContent: attr?.content || null,
+            signupReferrer: attr?.referrer || null,
+            signupLandingPath: attr?.landingPath || null,
           }),
         })
 

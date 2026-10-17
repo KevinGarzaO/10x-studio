@@ -5,28 +5,12 @@
 // Los valores salen de @avocado/schemas, el mismo enum que valida el backend:
 // aquí solo viven sus etiquetas visibles.
 
-import { SENIORITY, ROLE_CATEGORY, WORK_MODALITY, type Seniority, type RoleCategory } from '@avocado/schemas'
+import { SENIORITY, ROLE_CATEGORY, ROLE_CATEGORY_LABEL, WORK_MODALITY, type Seniority } from '@avocado/schemas'
 
 const SENIORITY_LABEL: Record<Seniority, string> = {
   junior: 'Junior',
   semi_senior: 'Semi Senior',
   senior: 'Senior',
-}
-
-const ROLE_CATEGORY_LABEL: Record<RoleCategory, string> = {
-  frontend: 'Frontend',
-  backend: 'Backend',
-  fullstack: 'Fullstack',
-  mobile: 'Mobile',
-  devops: 'DevOps',
-  data_engineer: 'Data Engineer',
-  data_scientist: 'Data Scientist / ML',
-  qa: 'QA',
-  ux_ui: 'UX/UI Design',
-  marketing: 'Marketing',
-  customer_support: 'Customer Support',
-  product: 'Product',
-  otro: 'Otro',
 }
 
 export const SENIORITY_OPTIONS: { value: string; label: string }[] = SENIORITY.map(value => ({
@@ -43,9 +27,10 @@ export const SENIORITY_LABELS: Record<string, string> = Object.fromEntries(
   SENIORITY_OPTIONS.map(o => [o.value, o.label])
 )
 
-// Same enum used by the scraper's keyword-classification trigger
-// (backend/sql/scraper-classification-migration.sql) — kept in sync so a
-// candidate's chosen category always matches what job postings get tagged.
+// Mismo listado que usa el clasificador de vacantes (ver
+// backend/sql/role-categories-migration.sql), así lo que elige una persona coincide
+// siempre con cómo se etiquetan las vacantes. Los nombres, en español, vienen de
+// @avocado/schemas: también son el PUESTO de la persona.
 export const ROLE_CATEGORY_OPTIONS: { value: string; label: string }[] = ROLE_CATEGORY.map(
   value => ({ value, label: ROLE_CATEGORY_LABEL[value] })
 )

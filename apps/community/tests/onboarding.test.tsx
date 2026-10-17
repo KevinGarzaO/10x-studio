@@ -55,16 +55,17 @@ describe('OnboardingPage (T042)', () => {
     const user = userEvent.setup()
     render(<OnboardingPage />)
 
-    // Paso 1: el título capturado y la foto existente se muestran sin pedirlas.
+    // Paso 1: la foto existente se muestra sin pedirla de nuevo. El título ya
+    // no se captura: sale de la categoría elegida (el esquema lo descarta).
     await waitFor(() => {
-      expect(screen.getByLabelText(/título profesional/i)).toHaveValue('Backend Developer')
+      const photo = document.querySelector('img')
+      expect(photo?.getAttribute('src')).toBe('https://example.com/foto.png')
     })
-    const photo = document.querySelector('img')
-    expect(photo?.getAttribute('src')).toBe('https://example.com/foto.png')
+    expect(screen.queryByLabelText(/título profesional/i)).toBeNull()
 
-    // Paso 2: la categoría, el nivel y la modalidad quedan seleccionados.
+    // Paso 2: el puesto, el nivel y la modalidad quedan seleccionados.
     await user.click(screen.getByRole('button', { name: 'Siguiente' }))
-    expect(screen.getByLabelText(/categoría de rol/i)).toHaveValue('backend')
+    expect(screen.getByLabelText(/puesto/i)).toHaveValue('backend')
     expect(screen.getByRole('button', { name: 'Senior' }).className).toContain('active')
     expect(screen.getByRole('button', { name: 'Remoto' }).className).toContain('active')
 

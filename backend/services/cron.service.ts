@@ -74,6 +74,23 @@ export const initCron = () => {
     if (users) await AutoPublisherService.publishScheduledEnglishContent(users.id)
   })
 
+  // 3b. VACANTES EN LINKEDIN: 2 al día, de lunes a sábado, 8:30 AM y 1:30 PM Monterrey
+  //     (14:30 y 19:30 UTC). Una vacante del feed, texto de plantilla (sin IA). Está
+  //     apagado hasta que se active LINKEDIN_VACANCY_POSTS=on en el servidor: antes se
+  //     revisan los textos con `npm run linkedin-vacancy-preview`.
+  for (const expression of ['30 14 * * 1-6', '30 19 * * 1-6']) {
+    cron.schedule(expression, async () => {
+      if (process.env.LINKEDIN_VACANCY_POSTS !== 'on') return
+      try {
+        const { publishVacancyPost } = require('./linkedin/vacancy-publisher')
+        const result = await publishVacancyPost()
+        console.log(`[LinkedInVacancias] ${result.status}${result.reason ? `: ${result.reason}` : ''}${result.vacancy ? ` (${result.vacancy.company}: ${result.vacancy.title})` : ''}`)
+      } catch (error) {
+        console.error('[LinkedInVacancias] Error publicando:', error)
+      }
+    })
+  }
+
   // 4. Global Scheduler (Every 15 minutes for pending posts)
   const { SchedulerService } = require('./scheduler.service')
   cron.schedule('*/15 * * * *', async () => {

@@ -7,6 +7,7 @@ import { getToken, fetchCurrentUser, captureSessionFromUrl } from '../lib/sessio
 import { SENIORITY_OPTIONS, MODALITY_OPTIONS, ROLE_CATEGORY_OPTIONS } from '../lib/profile-options'
 import { PhotoPicker, SegmentedControl, SkillsInput, RoleCategorySelect } from './profile-form-fields'
 import { useSkillCatalog } from '../lib/skill-catalog'
+import { takeReturnTo } from '../lib/return-to'
 import { validateCandidateProfile, messageForField } from '../lib/profile-validation'
 import { useSkillProposals } from '../lib/skill-proposals'
 import { useMyCompanyClaim, SIGNUP_INTENT_KEY } from '../lib/company-claim'
@@ -55,7 +56,6 @@ export function OnboardingPage() {
   const router = useRouter()
 
   const [photoPreview, setPhotoPreview] = useState<string | null>(null)
-  const [title, setTitle] = useState('')
   const [roleCategory, setRoleCategory] = useState<string | null>(null)
   const [seniority, setSeniority] = useState<string | null>(null)
   const [skills, setSkills] = useState<string[]>([])
@@ -94,7 +94,6 @@ export function OnboardingPage() {
       // a quien vuelve aquí por un campo nuevo no se le vuelve a pedir lo que
       // ya había capturado.
       if (user.photo_url) setPhotoPreview(user.photo_url)
-      if (user.title) setTitle(user.title)
       if (user.role_category) setRoleCategory(user.role_category)
       if (user.seniority) setSeniority(user.seniority)
       if (Array.isArray(user.skills)) setSkills(user.skills)
@@ -102,7 +101,7 @@ export function OnboardingPage() {
       if (user.work_modality) setWorkModality(user.work_modality)
       // A quien ya capturó perfil de candidato no se le pregunta de nuevo si
       // es empresa: su respuesta ya está en la cuenta.
-      if (user.title || (Array.isArray(user.skills) && user.skills.length > 0)) {
+      if (user.role_category || (Array.isArray(user.skills) && user.skills.length > 0)) {
         setAccountKind(prev => prev ?? 'candidate')
       }
       setCheckingSession(false)
@@ -112,7 +111,6 @@ export function OnboardingPage() {
   // La foto es obligatoria para toda cuenta (FR-024); el resto lo valida el
   // schema compartido, el mismo que usa el backend.
   const payload = {
-    title: title.trim(),
     roleCategory,
     seniority,
     skills,
@@ -127,7 +125,6 @@ export function OnboardingPage() {
   function stepError(n: number): string {
     if (n === 0) {
       if (!photoPreview) return 'Tu foto de perfil es obligatoria'
-      if (!title.trim()) return 'Tu título profesional es obligatorio'
     }
     if (n === 1) {
       if (!roleCategory) return 'Elige tu categoría de rol'
@@ -190,7 +187,8 @@ export function OnboardingPage() {
         return
       }
       localStorage.setItem('avocado_user', JSON.stringify(data.user))
-      router.push('/')
+      // Termina el recorrido: si venía de una vacante, vuelve a ella.
+      router.push(takeReturnTo() ?? '/')
       router.refresh()
     } catch {
       setError('Error de conexión. Intenta de nuevo.')
@@ -285,19 +283,13 @@ export function OnboardingPage() {
         <p className="onboarding-step-label">Paso {step + 1} de 3</p>
 
         {step === 0 && (
-          <>
-            <PhotoPicker photoUrl={photoPreview} onPick={setPhotoPreview} onError={setError} />
-            <div className="field">
-              <label htmlFor="onboarding-title">Título profesional</label>
-              <input id="onboarding-title" type="text" placeholder="Ej. Backend Developer" value={title} onChange={e => setTitle(e.target.value)} />
-            </div>
-          </>
+          <PhotoPicker photoUrl={photoPreview} onPick={setPhotoPreview} onError={setError} />
         )}
 
         {step === 1 && (
           <>
             <div className="field">
-              <label htmlFor="onboarding-role-category">Categoría de rol</label>
+              <label htmlFor="onboarding-role-category">Puesto</label>
               <RoleCategorySelect id="onboarding-role-category" options={ROLE_CATEGORY_OPTIONS} value={roleCategory} onChange={setRoleCategory} />
             </div>
             <div className="field">
@@ -315,7 +307,7 @@ export function OnboardingPage() {
           <>
             <div className="field">
               <label htmlFor="onboarding-skills"><Tag size={12} style={{ verticalAlign: -1, marginRight: 4 }} />Skills</label>
-              <SkillsInput skills={skills} onChange={setSkills} inputValue={skillInput} onInputChange={setSkillInput} onPropose={propose} />
+              <SkillsInput skills={skills} onChange={setSkills} inputValue={skillInput} onInputChange={setSkillInput} onPropose={propose} roleCategory={roleCategory} />
               {proposalMessage && <p className="skill-proposal-message">{proposalMessage}</p>}
               <SkillProposalsList proposals={proposals} onAddSkill={addSkill} />
             </div>

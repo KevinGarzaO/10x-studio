@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { fetchCurrentUser, getToken } from '../lib/session'
 import { useSkillCatalog } from '../lib/skill-catalog'
 import { profileGateReason } from '../lib/profile-gate'
+import { clearReturnTo } from '../lib/return-to'
 
 /**
  * Manda a completar el perfil a quien tenga sesión y le falte algo obligatorio
@@ -38,6 +39,10 @@ export function ProfileGate() {
     if (!user || loading) return
     if (profileGateReason(user as never, catalog)) {
       router.replace('/onboarding')
+    } else {
+      // Perfil completo: ya no hay recorrido pendiente, y una ruta guardada vieja no debe
+      // mandarlo a una vacante en su próximo registro.
+      clearReturnTo()
     }
   }, [user, catalog, loading, router])
 

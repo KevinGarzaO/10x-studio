@@ -93,6 +93,24 @@ export function skillLabel(name: string, catalog: SkillCatalog): string {
   return catalog.skills.find(skill => skill.name === name)?.label ?? name
 }
 
+/**
+ * ¿El catálogo ya trae a qué roles pertenece cada skill? Si no (el backend es
+ * anterior o la migración de roles no se aplicó), no hay con qué filtrar y el
+ * selector ofrece todo, como antes.
+ */
+export function hasRoleData(catalog: SkillCatalog): boolean {
+  return catalog.skills.some(skill => (skill.roleCategories?.length ?? 0) > 0)
+}
+
+/**
+ * Los skills que tiene sentido ofrecer a quien eligió esa categoría de rol.
+ * "Otro" y quien aún no eligió ven el catálogo completo.
+ */
+export function skillsForRole(catalog: SkillCatalog, roleCategory: string | null | undefined) {
+  if (!roleCategory || roleCategory === 'otro' || !hasRoleData(catalog)) return catalog.skills
+  return catalog.skills.filter(skill => skill.roleCategories?.includes(roleCategory))
+}
+
 /** Los skills del perfil que no existen en el catálogo aprobado (FR-015). */
 export function unresolvedSkills(skills: string[], catalog: SkillCatalog): string[] {
   const approved = new Set(catalog.skills.map(skill => skill.name))

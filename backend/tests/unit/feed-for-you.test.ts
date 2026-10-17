@@ -39,30 +39,103 @@ beforeEach(() => {
 })
 
 describe('GET /for-you', () => {
+  const person = { id: 'user-1', role_category: 'backend', seniority: 'senior', skills: ['python', 'docker'], work_modality: 'Remoto' }
+
+  const scraper = (id: string, patch: Record<string, unknown> = {}) => ({
+    id, text: `## Vacante ${id}`, company: 'Acme', company_logo: null, role_category: 'backend', seniority_level: 'senior',
+    skills: ['python'], url: `https://x/${id}`, post_date: '2026-10-01', created_at: '2026-10-01', work_modality: 'remote', ...patch,
+  })
+  const community = (id: string, patch: Record<string, unknown> = {}) => ({
+    id, title: `Publicada ${id}`, company: 'Acme', company_logo: null, role_category: 'backend', seniority_level: 'senior',
+    skills: ['python'], slug: `publicada-${id}`, created_at: '2026-10-01', modalidad: 'Remoto', ...patch,
+  })
+
+  const load = async () => (await request(app()).get('/api/community/feed/for-you').expect(200)).body
+
+  beforeEach(() => {
+    tables.users = { data: person, error: null }
+    tables.user_vacancy_history = { data: [], error: null }
+  })
+
   it('only returns vacancies that share at least one skill with the person', async () => {
-    tables.users = { data: { id: 'user-1', role_category: 'backend', seniority: 'senior', skills: ['python'] }, error: null }
     tables.scraper_posts = {
       data: [
-        { id: 's1', text: 'Con python', company: 'A', skills: ['python', 'go'], url: 'https://a', post_date: '2026-10-01' },
-        { id: 's2', text: 'Sin match', company: 'B', skills: ['java'], url: 'https://b', post_date: '2026-10-02' },
-        { id: 's3', text: 'Sin skills', company: 'C', skills: [], url: 'https://c', post_date: '2026-10-03' },
+        scraper('s1', { skills: ['python', 'go'] }),
+        scraper('s2', { skills: ['java'] }),
+        scraper('s3', { skills: [] , role_category: 'marketing' }),
       ],
       error: null,
     }
+    tables.community_posts = { data: [community('c1', { skills: ['PYTHON'] }), community('c2', { skills: ['react'] })], error: null }
+
+    const body = await load()
+
+    expect(body.items.map((i: any) => i.id).sort()).toEqual(['c1', 's1'])
+    expect(body.items.every((i: any) => i.matchingSkills > 0)).toBe(true)
+    expect(body.total).toBe(2)
+  })
+
+  it('says how well each one fits and which skills are shared', async () => {
+    tables.scraper_posts = { data: [], error: null }
+    tables.community_posts = { data: [community('c1', { skills: ['python', 'docker', 'aws'] })], error: null }
+
+    const [item] = (await load()).items
+
+    expect(item.sharedSkills).toEqual(['python', 'docker'])
+    expect(item.matchingSkills).toBe(2)
+    expect(item.matchScore).toBeGreaterThan(80)
+    expect(item.matchScore).toBeLessThanOrEqual(100)
+  })
+
+  it('puts the better fit first, whatever its date', async () => {
+    tables.scraper_posts = { data: [], error: null }
     tables.community_posts = {
       data: [
-        { id: 'c1', title: 'Python dev', company: 'D', skills: ['PYTHON'], slug: 'python-dev', created_at: '2026-10-01' },
-        { id: 'c2', title: 'React dev', company: 'E', skills: ['react'], slug: 'react-dev', created_at: '2026-10-02' },
+        community('weak', { seniority_level: 'junior', modalidad: 'Presencial', created_at: '2026-10-03', skills: ['python', 'a', 'b', 'c'], role_category: 'devops' }),
+        community('strong', { skills: ['python', 'docker'], created_at: '2026-09-01' }),
       ],
       error: null,
     }
-    tables.user_vacancy_history = { data: [], error: null }
 
-    const res = await request(app()).get('/api/community/feed/for-you').expect(200)
+    const body = await load()
 
-    expect(res.body.items.map((i: any) => i.id).sort()).toEqual(['c1', 's1'])
-    expect(res.body.items.every((i: any) => i.matchingSkills > 0)).toBe(true)
-    expect(res.body.total).toBe(2)
+    expect(body.items[0].id).toBe('strong')
+  })
+
+  it('also offers a close role, which the old exact-role filter dropped', async () => {
+    tables.users = { data: { ...person, role_category: 'fullstack' }, error: null }
+    tables.scraper_posts = { data: [], error: null }
+    tables.community_posts = { data: [community('c1', { role_category: 'backend', skills: ['python'] })], error: null }
+
+    expect((await load()).items.map((i: any) => i.id)).toEqual(['c1'])
+  })
+
+  it('does not offer an unrelated role even if it shares a skill', async () => {
+    tables.scraper_posts = { data: [], error: null }
+    tables.community_posts = { data: [community('c1', { role_category: 'marketing', skills: ['python'] })], error: null }
+
+    expect((await load()).items).toEqual([])
+  })
+
+  it('keeps a vacancy whose level is unknown, instead of dropping it', async () => {
+    tables.scraper_posts = { data: [], error: null }
+    tables.community_posts = { data: [community('c1', { seniority_level: null, skills: ['python'] })], error: null }
+
+    expect((await load()).items.map((i: any) => i.id)).toEqual(['c1'])
+  })
+
+  it('asks for the role (not the level) before it can match', async () => {
+    tables.users = { data: { ...person, role_category: null }, error: null }
+
+    await request(app()).get('/api/community/feed/for-you').expect(400)
+  })
+
+  it('works for someone whose level is not set yet', async () => {
+    tables.users = { data: { ...person, seniority: null }, error: null }
+    tables.scraper_posts = { data: [], error: null }
+    tables.community_posts = { data: [community('c1')], error: null }
+
+    expect((await load()).items).toHaveLength(1)
   })
 })
 

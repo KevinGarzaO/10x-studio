@@ -42,6 +42,27 @@ describe('ForYouCard', () => {
     expect(screen.getByRole('article').className).toContain('is-for-you')
   })
 
+  it('shows how well the vacancy fits, when the backend says so', () => {
+    render(<ForYouCard item={{ ...community, matchScore: 82 }} />)
+
+    expect(screen.getByText('82% match')).toBeTruthy()
+  })
+
+  it('shows no percentage when the backend does not send one', () => {
+    render(<ForYouCard item={community} />)
+
+    expect(screen.queryByText(/% match/)).toBeNull()
+  })
+
+  it('puts the skills you have first and marks them', () => {
+    const item = { ...community, skills: ['aws', 'java', 'python', 'docker'], sharedSkills: ['python', 'docker'] }
+    const { container } = render(<ForYouCard item={item} />)
+
+    const badges = [...container.querySelectorAll('.stack-badge')]
+    expect(badges.map(b => b.textContent)).toEqual(['python', 'docker', 'aws', 'java'])
+    expect(badges.map(b => b.classList.contains('is-shared'))).toEqual([true, true, false, false])
+  })
+
   it('uses the singular for a single shared skill', () => {
     render(<ForYouCard item={scraper} />)
     expect(screen.getByText(/1 skill en común/)).toBeTruthy()

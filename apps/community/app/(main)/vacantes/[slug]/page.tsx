@@ -3,15 +3,32 @@
 import Link from 'next/link'
 import { useParams, useRouter } from 'next/navigation'
 import { useState, useEffect, useRef } from 'react'
-import { Building, Check, LockKeyhole, MapPin } from 'lucide-react'
+import { BadgeCheck, Bookmark, Building, Check, LockKeyhole, MapPin } from 'lucide-react'
 import { marked } from 'marked'
 import { useShell } from '../../../../lib/shell-context'
+import { getToken } from '../../../../lib/session'
 import { companySlug, formatCompanyName } from '../../../../lib/company'
 import { parseJobContent } from '../../../../components/community-hub'
 import { DetailHeader } from '../../../../components/post-detail/DetailHeader'
 import { DetailFooter } from '../../../../components/post-detail/DetailFooter'
 import { DetailConversation, type DetailComment } from '../../../../components/post-detail/DetailConversation'
 import { commentsOf, createComment } from '../../../../lib/post-comments'
+import { ROLE_CATEGORY_LABELS, SENIORITY_LABELS } from '../../../../lib/profile-options'
+
+interface VacancyMatch {
+  score: number
+  role: 'exact' | 'adjacent' | 'unknown' | 'none'
+  seniority: 'exact' | 'near' | 'unknown' | 'far'
+  modality: 'match' | 'compatible' | 'unknown' | 'mismatch'
+  sharedSkills: string[]
+  validatedSkills?: { skill: string; level: 'basico' | 'intermedio' | 'avanzado' }[]
+  vacancySkills: number
+  qualifies: boolean
+}
+
+const ROLE_FIT_TEXT = { exact: 'Es tu mismo puesto', adjacent: 'Puesto cercano al tuyo', unknown: 'No indica el puesto', none: 'Otro puesto' }
+const SENIORITY_FIT_TEXT = { exact: 'Tu nivel', near: 'Un nivel de diferencia', unknown: 'No indica nivel', far: 'Nivel muy distinto' }
+const MODALITY_FIT_TEXT = { match: 'Tu modalidad', compatible: 'Modalidad compatible', unknown: 'No indica modalidad', mismatch: 'Otra modalidad' }
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'
 
@@ -117,6 +134,14 @@ interface PostData {
   is_scraper_post?: boolean
   /** Lo escribe el clasificador del scraper; puede venir vacío. */
   seniority_level?: string | null
+  role_category?: string | null
+  skills?: string[] | null
+  modalidad?: string | null
+  /** Qué tan bien encaja con quien la mira; solo con sesión y perfil completo. */
+  match?: VacancyMatch | null
+  /** Si quien mira ya la guardó, y el id de ese registro para poder quitarla. */
+  isSaved?: boolean
+  historyId?: string | null
 }
 
 function buildApplyUrl(platform: string | null, sourceUrl: string | null): string | null {
@@ -139,7 +164,7 @@ function buildApplyUrl(platform: string | null, sourceUrl: string | null): strin
 export default function VacancyPage() {
   const { slug } = useParams<{ slug: string }>()
   const router = useRouter()
-  const { user, requestAuth } = useShell()
+  const { user, userLoaded, requestAuth } = useShell()
   // router.back() returns to whatever page the user actually came from
   // (feed, another post, a search) instead of a fixed guess at the tab.
   const goBack = () => router.back()
@@ -147,6 +172,8 @@ export default function VacancyPage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [saved, setSaved] = useState(false)
+  const [historyId, setHistoryId] = useState<string | null>(null)
+  const [savingBusy, setSavingBusy] = useState(false)
   const [comments, setComments] = useState<DetailComment[]>([])
   const [sent, setSent] = useState(false)
   const [commentError, setCommentError] = useState<string | null>(null)
@@ -190,7 +217,9 @@ export default function VacancyPage() {
   useEffect(() => {
     setLoading(true)
     setError(null)
-    fetch(`${API_URL}/api/community/posts/${slug}`)
+    // Con sesión, el backend agrega qué tan bien encaja la vacante contigo.
+    const token = getToken()
+    fetch(`${API_URL}/api/community/posts/${slug}`, token ? { headers: { Authorization: `Bearer ${token}` } } : undefined)
       .then(res => { if (!res.ok) throw new Error('Post no encontrado'); return res.json() })
       .then(data => {
         if (data.slug && data.slug !== slug && !redirecting) {
@@ -198,6 +227,8 @@ export default function VacancyPage() {
           window.history.replaceState({}, '', `/vacantes/${data.slug}`)
         }
         setPost(data)
+        setSaved(!!data.isSaved)
+        setHistoryId(data.historyId ?? null)
         setComments(commentsOf(data))
         setLoading(false)
 
@@ -247,6 +278,23 @@ export default function VacancyPage() {
     }
   }
 
+  // Quien llega sin cuenta (por ejemplo, desde LinkedIn) ve al entrar un aviso para
+  // registrarse: al terminar su perfil vuelve justo a esta vacante (ver AuthModal y
+  // lib/return-to.ts). Una vez por sesión y vacante, y cerrable: no estorba al que solo
+  // quiere leer. No aparece mientras se confirma la sesión, para no avisar a quien ya
+  // tiene cuenta.
+  useEffect(() => {
+    if (!post || !userLoaded || user) return
+    const key = `avo_vacancy_prompt_${slug}`
+    try {
+      if (sessionStorage.getItem(key)) return
+      sessionStorage.setItem(key, '1')
+    } catch {
+      // sin sessionStorage el aviso sale cada vez; es lo más seguro para el registro
+    }
+    requestAuth({ variant: 'vacancy', subject: [post.title, formatCompanyName(post.company)].filter(Boolean).join(' — ') })
+  }, [post, userLoaded, user, slug, requestAuth])
+
   if (loading || error || !post) {
     return (
       <div className="detail-page">
@@ -273,9 +321,61 @@ export default function VacancyPage() {
   // Y si el parseo no encontró nada, se cae al markdown: el peor caso es lo
   // que se veía antes, no una vacante en blanco.
   const hasStructured = !fullContent && (job.requirements.length > 0 || job.benefits.length > 0)
-  const levelAndType = [post.seniority_level, meta.modality]
-    .filter(value => value && !/no especificado/i.test(value))
-    .join(' · ')
+  const roleLabel = ROLE_CATEGORY_LABELS[post.role_category ?? ''] || null
+  const levelLabel = post.seniority_level ? (SENIORITY_LABELS[post.seniority_level] || post.seniority_level) : null
+  const modalityLabel = [post.modalidad, meta.modality].find(value => value && !/no especificado|unknown/i.test(value)) || null
+  const skills = Array.isArray(post.skills) ? post.skills : []
+  const match = post.match?.qualifies ? post.match : null
+  const shared = new Set((match?.sharedSkills ?? []).map(skill => skill.toLowerCase()))
+  const validated = new Map((post.match?.validatedSkills ?? []).map(entry => [entry.skill.toLowerCase(), entry.level]))
+
+  /**
+   * Guarda o quita la vacante de /saved. Sin cuenta, pide registrarse (y vuelve a esta
+   * vacante al terminar). El guardado vive en el backend (user_vacancy_history), el mismo
+   * que usan las tarjetas del feed, así que aparece en /saved y se ve guardada en el feed.
+   */
+  const current = post
+  async function toggleSave() {
+    if (!user) {
+      requestAuth({ variant: 'vacancy', subject: `${current.title} — ${companyName}` })
+      return
+    }
+    if (savingBusy) return
+    const headers = { 'Content-Type': 'application/json', Authorization: `Bearer ${getToken()}` }
+    setSavingBusy(true)
+    try {
+      if (saved) {
+        if (!historyId) return
+        const res = await fetch(`${API_URL}/api/community/history/${historyId}`, { method: 'DELETE', headers })
+        if (res.ok) { setSaved(false); setHistoryId(null) }
+        return
+      }
+      const res = await fetch(`${API_URL}/api/community/history/save`, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({
+          sourceType: 'community',
+          sourceId: current.id,
+          title: current.title,
+          company: current.company ?? meta.company,
+          companyLogo: current.company_logo,
+          roleCategory: current.role_category,
+          seniorityLevel: current.seniority_level,
+          skills: Array.isArray(current.skills) ? current.skills : [],
+          url: `/vacantes/${current.slug || current.id}`,
+        }),
+      })
+      if (res.ok) {
+        const data = await res.json()
+        setSaved(true)
+        setHistoryId(data.item?.id ?? null)
+      }
+    } catch {
+      // sin conexión: el botón queda como estaba
+    } finally {
+      setSavingBusy(false)
+    }
+  }
 
   function handleApplyClick() {
     if (!applyUrl) return
@@ -301,18 +401,62 @@ export default function VacancyPage() {
           action={
             applyUrl && user
               ? { label: 'Postularse', onClick: handleApplyClick }
-              : undefined
+              // Sin cuenta, "Postularse" lleva a registrarse y de vuelta a esta vacante.
+              : applyUrl
+                ? { label: 'Postularse', onClick: () => requestAuth({ variant: 'vacancy', subject: `${post.title} — ${companyName}` }) }
+                : undefined
           }
         />
 
         <h1>{post.title}</h1>
 
         <div className="detail-chips">
+          <button
+            type="button"
+            className={`detail-save${saved ? ' is-saved' : ''}`}
+            onClick={toggleSave}
+            disabled={savingBusy}
+            aria-pressed={saved}
+            aria-label={saved ? 'Quitar de guardados' : 'Guardar vacante'}
+          >
+            <Bookmark size={15} fill={saved ? 'currentColor' : 'none'} /> {saved ? 'Guardada' : 'Guardar'}
+          </button>
           <span className="detail-chip"><Building size={14} /> {companyName}</span>
           {meta.location && <span className="detail-chip"><MapPin size={14} /> {meta.location}</span>}
-          {levelAndType && <span className="detail-chip">{levelAndType}</span>}
+          {roleLabel && <span className="detail-chip is-role">{roleLabel}</span>}
+          {levelLabel && <span className="detail-chip">{levelLabel}</span>}
+          {modalityLabel && <span className="detail-chip">{modalityLabel}</span>}
           {meta.salary && <span className="detail-chip is-salary">{meta.salary}</span>}
         </div>
+
+        {match && (
+          <section className="detail-match" aria-label="Por qué es para ti">
+            <div className="detail-match-head">
+              <span className="post-type-badge is-for-you">PARA TI</span>
+              <strong>{match.score}% match contigo</strong>
+            </div>
+            <ul>
+              <li>{ROLE_FIT_TEXT[match.role]}{match.role === 'adjacent' && roleLabel ? ` (${roleLabel})` : ''}</li>
+              <li>{match.sharedSkills.length} de {match.vacancySkills || skills.length} skills que pide los tienes tú{validated.size > 0 ? `, ${validated.size} validados con examen` : ''}</li>
+              <li>{SENIORITY_FIT_TEXT[match.seniority]}</li>
+              <li>{MODALITY_FIT_TEXT[match.modality]}</li>
+            </ul>
+          </section>
+        )}
+
+        {skills.length > 0 && (
+          <>
+            <h2 className="detail-section-title">Skills que pide</h2>
+            <div className="stack-row">
+              {[...skills].sort((a, b) => Number(validated.has(b.toLowerCase())) - Number(validated.has(a.toLowerCase())) || Number(shared.has(b.toLowerCase())) - Number(shared.has(a.toLowerCase()))).map(skill => {
+                const level = validated.get(skill.toLowerCase())
+                return level
+                  ? <span key={skill} className="stack-badge is-validated" title="Lo validaste con examen"><BadgeCheck size={12} /> {skill} · {level === 'basico' ? 'básico' : level}</span>
+                  : <span key={skill} className={`stack-badge${shared.has(skill.toLowerCase()) ? ' is-shared' : ''}`}>{skill}</span>
+              })}
+            </div>
+          </>
+        )}
 
         {hasStructured ? (
           <>
@@ -366,7 +510,7 @@ export default function VacancyPage() {
         <DetailFooter
           commentsCount={comments.length || post.commentsCount || 0}
           saved={saved}
-          onSave={() => (user ? setSaved(!saved) : requestAuth())}
+          onSave={toggleSave}
           conversationHref="#conversation"
         />
 

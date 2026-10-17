@@ -1,3 +1,7 @@
+import { pickDailyVacancies } from "./daily-selection";
+import { evaluateVacancy, locationFromText, describeRejections, tallyRejections, type PublishVerdict } from "../vacancies/publish-rule";
+import { loadSkillMatchers } from "../vacancies/catalog";
+import { vacancyTitle } from "../vacancies/text";
 import { supabase } from "../supabase.service";
 import { generateSlug } from "../slug";
 import { companySlug, formatCompanyName } from "../company";
@@ -165,6 +169,30 @@ export async function syncVacancyToCommunity(
   // Extract company name
   const companyName = post.company ?? post.source ?? null;
 
+  // REGLA DE NEGOCIO (services/vacancies/publish-rule.ts): al feed solo llega una vacante
+  // ligada a los catálogos (rol y skills). Si esta no lo está —por ejemplo, entró antes de
+  // que existiera la regla— se elimina del área de paso en vez de publicarla; si sigue
+  // abierta en su fuente, el próximo ciclo del scraper la vuelve a traer ya analizada.
+  const catalog = new Set((await loadSkillMatchers()).map((matcher) => matcher.name));
+  const verdict = evaluateVacancy(
+    {
+      title,
+      company: companyName,
+      applyUrl: post.url ?? (contacts?.applyUrl as string | undefined) ?? null,
+      location: post.location ?? locationFromText(post.text),
+      roleCategory: post.role_category,
+      skills: Array.isArray(post.skills) ? post.skills : [],
+      seniority: post.seniority_level,
+      modality: post.work_modality,
+    },
+    catalog,
+  );
+  if (!verdict.valid) {
+    log(`[Sync] ${companyName ?? post.source}: no cumple la regla de vacantes (${describeRejections(tallyRejections([verdict]))}), se elimina del área de paso`);
+    await supabase.from("scraper_posts").delete().eq("id", scraperPostId);
+    return null;
+  }
+
   // Look up company logo from scraper_sources
   let companyLogo = post.company_logo ?? null;
   if (companyName && !companyLogo) {
@@ -187,31 +215,50 @@ export async function syncVacancyToCommunity(
 
   const companyUserId = companyUser || SCRAPER_BOT_ID;
 
-  // Insert into community_posts
-  const { data: communityPost, error: insertError } = await supabase
+  // Insert into community_posts. La vacante publicada conserva todo lo que la liga
+  // con candidatos: rol, nivel, skills, modalidad y ubicación.
+  const row = {
+    title,
+    content: post.text,
+    type: "job",
+    budget,
+    modalidad,
+    author_id: companyUserId,
+    source_url: post.url,
+    platform: post.platform,
+    source_name: post.source,
+    original_text: post.text,
+    contacts: post.contacts,
+    scraped_at: post.created_at,
+    is_scraper_post: true,
+    company: companyName,
+    company_logo: companyLogo,
+    role_category: post.role_category ?? null,
+    seniority_level: post.seniority_level ?? null,
+    skills: post.skills ?? [],
+  };
+
+  let { data: communityPost, error: insertError } = await supabase
     .from("community_posts")
-    .insert({
-      title,
-      content: post.text,
-      type: "job",
-      budget,
-      modalidad,
-      author_id: companyUserId,
-      source_url: post.url,
-      platform: post.platform,
-      source_name: post.source,
-      original_text: post.text,
-      contacts: post.contacts,
-      scraped_at: post.created_at,
-      is_scraper_post: true,
-      company: companyName,
-      company_logo: companyLogo,
-      role_category: post.role_category ?? null,
-      seniority_level: post.seniority_level ?? null,
-      skills: post.skills ?? [],
-    })
+    .insert({ ...row, location: post.location ?? null })
     .select("id")
     .single();
+
+  // Mientras la migración que agrega community_posts.location no se haya aplicado,
+  // la vacante se publica igual (sin ubicación) en vez de dejar de sincronizarse.
+  if (insertError && /location/.test(insertError.message ?? "")) {
+    ({ data: communityPost, error: insertError } = await supabase
+      .from("community_posts")
+      .insert(row)
+      .select("id")
+      .single());
+  }
+
+  if (insertError && /vacancy_not_linked/.test(insertError.message ?? "")) {
+    log(`[Sync] La base rechazó ${companyName}: ${insertError.message}. Se elimina del área de paso`);
+    await supabase.from("scraper_posts").delete().eq("id", scraperPostId);
+    return null;
+  }
 
   if (insertError) {
     // 23505 on source_url means this exact job is already a community_posts
@@ -239,6 +286,8 @@ export async function syncVacancyToCommunity(
     log(`[Sync] Error insertando en community_posts: ${insertError.message}`);
     return null;
   }
+
+  if (!communityPost) return null;
 
   // Generate and save slug
   const slug = generateSlug(title, communityPost.id);
@@ -366,11 +415,31 @@ async function getTodayScraperPostCount(): Promise<number> {
  * Sincroniza todos los posts nuevos (no sincronizados aún).
  * Respeta la regla de volumen diario: máximo 20 posts/día (nativas + scraper).
  */
+/**
+ * Cuántas personas reales hay por rol, para que el reparto del día siga a la comunidad.
+ * Si no se puede leer, el reparto es parejo entre roles: nunca bloquea la publicación.
+ */
+async function loadRoleDemand(): Promise<Record<string, number> | undefined> {
+  const { data, error } = await supabase
+    .from("users")
+    .select("role_category")
+    .eq("account_type", "candidate")
+    .eq("is_test_account", false)
+    .eq("is_scraper_profile", false)
+    .not("role_category", "is", null)
+    .limit(20000);
+  if (error || !data) return undefined;
+  const demand: Record<string, number> = {};
+  for (const row of data as { role_category: string }[]) demand[row.role_category] = (demand[row.role_category] || 0) + 1;
+  return demand;
+}
+
 export async function syncAllPending(
   log: (msg: string) => void = () => {}
 ): Promise<{ vacancies: number; profiles: number }> {
   const DAILY_LIMIT = 20;
-  const PER_COMBO_CAP = 2;
+  const PER_COMPANY_CAP = 2;
+  const PER_COMBO_CAP = 3;
 
   const nativeCount = await getTodayNativePostCount();
   const scraperCount = await getTodayScraperPostCount();
@@ -382,29 +451,28 @@ export async function syncAllPending(
     log("[Sync] Límite diario alcanzado, no se sincronizan más posts scraper");
     return { vacancies: 0, profiles: 0 };
   }
-  // Get unsynced vacancy posts that have at least one contact method and are
-  // ≤30 days old — checked against post_date (when the job was actually
-  // posted), not created_at (when we happened to scrape it); a job posted
-  // 40 days ago that we only just scraped yesterday is still stale.
-  // Ordered oldest-created-first (not fetched previously — an unordered
-  // query left Postgres free to return whichever rows it felt like, which
-  // in practice meant a handful of high-volume companies crowded out
-  // everyone else, day after day) and pulled from a wide candidate pool
-  // (not capped at remainingSlots) so the diversity cap below has enough
-  // rows to actually pick from.
+  // Candidatas: vacantes sin sincronizar, con algún medio de contacto y de ≤30
+  // días — contados desde post_date (cuándo se publicó el puesto), no desde
+  // created_at (cuándo lo scrapeamos): un puesto de hace 40 días que scrapeamos
+  // ayer sigue siendo viejo.
+  //
+  // Van de la más reciente a la más vieja, y se trae un grupo amplio. Antes eran
+  // las 500 MÁS ANTIGUAS por fecha de scraping, y ahí dominaban las empresas que
+  // se scrapearon primero: las más nuevas ni siquiera entraban al grupo, y 20
+  // vacantes al día salían de dos o tres empresas.
   const thirtyDaysAgo = new Date();
   thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
   const thirtyDaysAgoISO = thirtyDaysAgo.toISOString();
 
   const { data: vacancyPosts } = await supabase
     .from("scraper_posts")
-    .select("id, contacts, created_at, company, role_category, seniority_level")
+    .select("id, text, url, skills, work_modality, contacts, created_at, post_date, company, source, role_category, seniority_level, location")
     .eq("post_type", "vacancy")
     .eq("synced_to_community", false)
     .eq("is_spam", false)
     .gte("post_date", thirtyDaysAgoISO)
-    .order("created_at", { ascending: true })
-    .limit(500);
+    .order("post_date", { ascending: false })
+    .limit(1000);
 
   // Filter posts that have at least email or phone
   const postsWithContact = (vacancyPosts ?? []).filter((post) => {
@@ -416,22 +484,53 @@ export async function syncAllPending(
     return hasEmail || hasWhatsapp || hasTelegram || hasApplyUrl;
   });
 
-  // Diversity cap: at most PER_COMBO_CAP per (role_category, seniority_level)
-  // combo per day, so a high-volume company (SpaceX, Databricks, ...) can't
-  // eat the whole day's quota with jobs from a single category and starve
-  // every other role/level combination.
-  const perComboCount = new Map<string, number>();
-  const selected: typeof postsWithContact = [];
-  for (const post of postsWithContact) {
-    if (selected.length >= remainingSlots) break;
-    const key = `${post.role_category ?? "sin-categoria"}:${post.seniority_level ?? "sin-nivel"}`;
-    const count = perComboCount.get(key) || 0;
-    if (count >= PER_COMBO_CAP) continue;
-    perComboCount.set(key, count + 1);
-    selected.push(post);
+  // REGLA DE NEGOCIO (services/vacancies/publish-rule.ts): solo se reparten las que están
+  // ligadas a los catálogos. Las que no, se eliminan del área de paso ahora, para que no
+  // ocupen un cupo del día ni se queden esperando; si siguen abiertas en su fuente, el
+  // próximo ciclo del scraper las trae de nuevo ya analizadas.
+  const catalog = new Set((await loadSkillMatchers()).map((matcher) => matcher.name));
+  const verdicts: PublishVerdict[] = [];
+  const unlinked: string[] = [];
+  const publishable = postsWithContact.filter((post) => {
+    const verdict = evaluateVacancy(
+      {
+        title: vacancyTitle(post.text),
+        company: post.company ?? post.source,
+        applyUrl: post.url ?? ((post.contacts as Record<string, unknown> | null)?.applyUrl as string | undefined) ?? null,
+        location: post.location ?? locationFromText(post.text),
+        roleCategory: post.role_category,
+        skills: Array.isArray(post.skills) ? post.skills : [],
+        seniority: post.seniority_level,
+        modality: post.work_modality,
+      },
+      catalog,
+    );
+    if (!verdict.valid) {
+      verdicts.push(verdict);
+      unlinked.push(post.id);
+    }
+    return verdict.valid;
+  });
+
+  for (let i = 0; i < unlinked.length; i += 100) {
+    await supabase.from("scraper_posts").delete().in("id", unlinked.slice(i, i + 100));
+  }
+  if (unlinked.length > 0) {
+    log(`[Sync] ${unlinked.length} vacantes no cumplen la regla de vacantes y se eliminaron del área de paso (${describeRejections(tallyRejections(verdicts))})`);
   }
 
-  log(`[Sync] ${selected.length} vacantes seleccionadas de ${postsWithContact.length} con contacto (${vacancyPosts?.length ?? 0} candidatas, máx ${PER_COMBO_CAP}/combinación rol+nivel)`);
+  // Reparto del día: varias empresas distintas (máx PER_COMPANY_CAP cada una
+  // mientras alcance) y sin llenarlo de un solo tipo de puesto (PER_COMBO_CAP por
+  // rol+nivel). La empresa que abre el reparto cambia cada día.
+  const selected = pickDailyVacancies(publishable, remainingSlots, {
+    perCompanyCap: PER_COMPANY_CAP,
+    perComboCap: PER_COMBO_CAP,
+    roleDemand: await loadRoleDemand(),
+    rotation: Math.floor(Date.now() / 86400000),
+  });
+
+  const distinctCompanies = new Set(selected.map((post) => post.company ?? post.source ?? "")).size;
+  log(`[Sync] ${selected.length} vacantes seleccionadas de ${publishable.length} que cumplen la regla (${postsWithContact.length} con contacto, ${vacancyPosts?.length ?? 0} candidatas), de ${distinctCompanies} empresas distintas`);
 
   // Get unsynced profile posts
   const { data: profilePosts } = await supabase

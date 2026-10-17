@@ -28,7 +28,6 @@ let companyUserId: string
 let original: Record<string, unknown>
 
 const validBody = {
-  title: 'Backend Developer',
   roleCategory: 'backend',
   seniority: 'senior',
   skills: ['react', 'python'],
@@ -92,10 +91,11 @@ describe('PUT /api/community/users/:username (integration, T019)', () => {
     const res = await request(buildApp())
       .put(`/api/community/users/${TEST_USERNAME}`)
       .set('x-test-user-id', TEST_USER_ID)
-      .send({ ...validBody, title: '  Backend Developer  ', bio: '  hola  ' })
+      .send({ ...validBody, bio: '  hola  ' })
 
     expect(res.status).toBe(200)
-    expect(res.body.user.title).toBe('Backend Developer')
+    // El puesto sale del listado de roles, no de un título escrito.
+    expect(res.body.user.title).toBe('Desarrollo Backend')
     expect(res.body.user.bio).toBe('hola')
     expect(res.body.user.skills).toEqual(['react', 'python'])
   })
@@ -123,7 +123,6 @@ describe('PUT /api/community/users/:username (integration, T019)', () => {
   })
 
   it.each([
-    ['title', '   '],
     ['location', ''],
   ])('rejects a blank %s (FR-027)', async (field, value) => {
     const res = await request(buildApp())

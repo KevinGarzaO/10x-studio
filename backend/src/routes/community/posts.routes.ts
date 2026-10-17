@@ -3,6 +3,9 @@ import { supabase } from '../../../services/supabase.service'
 import { communityAuthMiddleware, AuthRequest } from '../../../middleware/community-auth.middleware'
 import { generateSlug } from '../../../services/slug'
 import { companySlug } from '../../../services/company'
+import { loadValidatedSkills } from '../../../services/matching/validated'
+import { scoreMatch } from '../../../services/matching/score'
+import { evaluateVacancy, MANUAL_PUBLISH_RULE, REJECT_REASON_LABEL } from '../../../services/vacancies/publish-rule'
 
 const router = Router()
 
@@ -120,6 +123,10 @@ router.get('/', async (req: Request, res: Response) => {
   try {
     const type = req.query.type as string | undefined
     const search = req.query.search as string | undefined
+    // `sort=recent`: lo más nuevo primero, paginado en la base. Es lo que usa el
+    // feed principal. Sin él se conserva el reparto por empresa, que usan las
+    // columnas laterales ("Oportunidades destacadas") para mostrar variedad.
+    const recent = (req.query.sort as string | undefined) === 'recent'
     const page = parseInt((req.query.page as string) || '1', 10)
     const limit = parseInt((req.query.limit as string) || '20', 10)
     const from = (page - 1) * limit
@@ -129,10 +136,17 @@ router.get('/', async (req: Request, res: Response) => {
       .from('community_posts')
       .select('*, author:users(id, username, display_name, name, handle, photo_url), community_post_tags(tag:community_tags(name))', { count: 'exact' })
 
-    // Order: nativas first (is_scraper_post=false), then by votes, then by date
-    query = query.order('is_scraper_post', { ascending: true })
-    query = query.order('votes_count', { ascending: false })
-    query = query.order('created_at', { ascending: false })
+    if (recent) {
+      // El id desempata las vacantes creadas en el mismo instante, para que dos
+      // páginas seguidas nunca repitan ni se salten una.
+      query = query.order('created_at', { ascending: false })
+      query = query.order('id', { ascending: false })
+    } else {
+      // Order: nativas first (is_scraper_post=false), then by votes, then by date
+      query = query.order('is_scraper_post', { ascending: true })
+      query = query.order('votes_count', { ascending: false })
+      query = query.order('created_at', { ascending: false })
+    }
 
     if (type) query = query.eq('type', type)
     // Only ATS platforms — exclude Telegram/old sources
@@ -141,8 +155,9 @@ router.get('/', async (req: Request, res: Response) => {
       query = query.or(`title.ilike.%${search}%,content.ilike.%${search}%`)
     }
 
-    // For job posts, fetch ALL to interleave by company
-    const isJobFeed = type === 'job'
+    // For job posts, fetch ALL to interleave by company (salvo en modo recent,
+    // que pagina directo en la base)
+    const isJobFeed = type === 'job' && !recent
     if (!isJobFeed) {
       query = query.range(from, to)
     }
@@ -279,8 +294,38 @@ router.get('/:id', async (req: Request, res: Response) => {
     if (!error && post) {
       const viewerId = await getOptionalUserId(req)
       const savedMap = await getSavedMap(viewerId, [(post as any).id])
+
+      // En una vacante, qué tan bien encaja con quien la mira (el mismo puntaje de "Para ti").
+      let match: ReturnType<typeof scoreMatch> | null = null
+      if (viewerId && (post as any).type === 'job') {
+        const { data: viewer } = await supabase
+          .from('users')
+          .select('role_category, seniority, skills, work_modality')
+          .eq('id', viewerId)
+          .maybeSingle()
+        if (viewer?.role_category) {
+          const vacancy = post as any
+          match = scoreMatch(
+            {
+              roleCategory: viewer.role_category,
+              seniority: viewer.seniority ?? null,
+              skills: ((viewer.skills || []) as string[]).map((skill) => skill.toLowerCase()),
+              workModality: viewer.work_modality ?? null,
+              validatedSkills: await loadValidatedSkills(viewerId),
+            },
+            {
+              roleCategory: vacancy.role_category ?? null,
+              seniority: vacancy.seniority_level ?? null,
+              skills: (Array.isArray(vacancy.skills) ? vacancy.skills : []).map((skill: string) => skill.toLowerCase()),
+              workModality: vacancy.modalidad ?? null,
+            },
+          )
+        }
+      }
+
       return res.json({
         ...post,
+        match,
         author: normalizeAuthor(post.author),
         community_comments: ((post as any).community_comments || []).map((c: any) => ({ ...c, author: normalizeAuthor(c.author) })),
         tags: (post as any).community_post_tags?.map((pt: any) => pt.tag?.name).filter(Boolean) || [],
@@ -332,10 +377,56 @@ router.get('/:id', async (req: Request, res: Response) => {
 
 router.post('/', communityAuthMiddleware, async (req: AuthRequest, res: Response) => {
   try {
-    const { title, content, type, budget, modalidad, tags } = req.body
+    const { title, content, type, budget, modalidad, tags, roleCategory, seniority, skills, applyUrl, company, location } = req.body
 
     if (!title || !content || !type) {
       return res.status(400).json({ error: 'Título, contenido y tipo son requeridos' })
+    }
+
+    // REGLA DE NEGOCIO (services/vacancies/publish-rule.ts): una vacante solo se publica si
+    // queda ligada a los catálogos. Es la misma regla que se le exige a las que trae el
+    // scraper; sin ella no se podría cruzar con candidatos ni medir.
+    const vacancy: Record<string, unknown> = {}
+    if (type === 'job') {
+      const requestedSkills: string[] = Array.isArray(skills) ? skills.filter((s: unknown): s is string => typeof s === 'string') : []
+
+      const [{ data: catalogRows }, { data: author }] = await Promise.all([
+        supabase.from('skills').select('name'),
+        supabase.from('users').select('display_name').eq('id', req.userId).maybeSingle(),
+      ])
+
+      const verdict = evaluateVacancy(
+        {
+          title,
+          company: company || author?.display_name,
+          applyUrl,
+          location,
+          roleCategory,
+          skills: requestedSkills,
+          seniority,
+          modality: modalidad,
+        },
+        new Set((catalogRows || []).map((row: { name: string }) => row.name)),
+        // Una vacante creada a mano exige además nivel y modalidad: quien publica los sabe.
+        MANUAL_PUBLISH_RULE,
+      )
+
+      if (!verdict.valid) {
+        return res.status(400).json({
+          error: 'vacancy_not_linked',
+          reasons: verdict.reasons,
+          message: `La vacante no se puede publicar: ${verdict.reasons.map((reason) => REJECT_REASON_LABEL[reason]).join(', ')}. Elige un rol, un nivel, una modalidad y al menos un skill del catálogo, e indica la ubicación y el enlace para postularse.`,
+        })
+      }
+
+      Object.assign(vacancy, {
+        role_category: roleCategory,
+        seniority_level: seniority,
+        location: String(location).trim(),
+        skills: requestedSkills,
+        source_url: applyUrl,
+        company: company || author?.display_name,
+      })
     }
 
     const { data: post, error } = await supabase
@@ -347,6 +438,7 @@ router.post('/', communityAuthMiddleware, async (req: AuthRequest, res: Response
         budget,
         modalidad,
         author_id: req.userId,
+        ...vacancy,
       })
       .select()
       .single()

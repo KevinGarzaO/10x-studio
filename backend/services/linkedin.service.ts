@@ -11,8 +11,10 @@ export class LinkedInService {
     text: string,
     imageBase64?: string | null,
     imageUrl?: string | null
+    /** Un enlace con tarjeta (título, descripción e imagen que LinkedIn lee de la página). */
+    article?: { url: string; title: string; description: string } | null
   }) {
-    const { token, urn, text, imageBase64, imageUrl } = params
+    const { token, urn, text, imageBase64, imageUrl, article } = params
     
     let mediaAsset: string | null = null
     let imgBuffer: Buffer | null = null
@@ -67,11 +69,16 @@ export class LinkedInService {
         'com.linkedin.ugc.ShareContent': {
           shareAppearance: 'DEFAULT',
           shareCommentary: { text },
-          shareMediaCategory: mediaAsset ? 'IMAGE' : 'NONE',
+          shareMediaCategory: mediaAsset ? 'IMAGE' : article ? 'ARTICLE' : 'NONE',
           media: mediaAsset ? [{
             status: 'READY',
             media: mediaAsset,
             title: { text: 'Post Image' }
+          }] : article ? [{
+            status: 'READY',
+            originalUrl: article.url,
+            title: { text: article.title.slice(0, 200) },
+            description: { text: article.description.slice(0, 250) }
           }] : []
         }
       },

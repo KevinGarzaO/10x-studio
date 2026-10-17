@@ -3,10 +3,27 @@ import { supabase } from '../../../services/supabase.service'
 import { communityAuthMiddleware, AuthRequest } from '../../../middleware/community-auth.middleware'
 import { uploadAvatar } from '../../../services/avatar'
 import { sameSkills } from '../../../lib/same-skills'
-import { buildCandidateProfileSchema, firstUnapprovedSkill } from '@avocado/schemas'
+import { buildCandidateProfileSchema, firstUnapprovedSkill, cvPayloadSchema, parseStoredCv } from '@avocado/schemas'
 import { requireAccountType } from '../../middleware/require-account-type.middleware'
 
 const router = Router()
+
+/**
+ * Columnas de `users` que NUNCA salen en un perfil público, aunque la consulta
+ * traiga la fila entera (select('*')): el correo de contacto, identificadores
+ * internos, marcas de administración y de prueba, y el CV, que es privado salvo
+ * que su dueño lo publique (se sirve aparte, en GET /:username/cv).
+ */
+export const PRIVATE_USER_FIELDS = [
+  'email',
+  'substack_user_id',
+  'is_superadmin',
+  'is_test_account',
+  'claimed_by',
+  'company_id',
+  'cv',
+  'cv_public',
+] as const
 
 /**
  * Carga un perfil público completo: la cuenta, sus publicaciones (de la
@@ -21,6 +38,8 @@ export async function loadPublicProfile(
 ): Promise<any | null> {
   const { data: user, error } = await find()
   if (error || !user) return null
+
+  for (const field of PRIVATE_USER_FIELDS) delete user[field]
 
   user.username = user.username || user.handle
   user.display_name = user.display_name || user.name
@@ -156,6 +175,103 @@ function translateProfileTriggerError(message: string): { status: number; body: 
 
   return null
 }
+
+
+/**
+ * Quién pregunta, si trae sesión. El CV público no la exige, pero el dueño ve el
+ * suyo aunque sea privado, así que se mira el token si viene.
+ */
+async function optionalViewerId(req: Request): Promise<string | null> {
+  const header = req.headers.authorization
+  if (!header?.startsWith('Bearer ')) return null
+  const { data, error } = await supabase.auth.getUser(header.split(' ')[1])
+  return error || !data?.user ? null : data.user.id
+}
+
+/** Lo del perfil que un CV muestra: nada de correo ni de marcas internas. */
+const CV_PROFILE_COLUMNS =
+  'id, username, display_name, photo_url, title, role_category, seniority, location, work_modality, skills, website, github_url, bio, account_type, cv, cv_public'
+
+/**
+ * GET /api/community/users/:username/cv
+ *
+ * El CV en línea. Es público solo si su dueño lo publicó; si no, solo lo ve él. A
+ * cualquier otra persona un CV privado le responde igual que uno que no existe,
+ * para no revelar que la cuenta tiene uno.
+ */
+router.get('/:username/cv', async (req: Request, res: Response) => {
+  try {
+    const { data: user } = await supabase
+      .from('users')
+      .select(CV_PROFILE_COLUMNS)
+      .eq('username', req.params.username as string)
+      .maybeSingle()
+
+    if (!user || user.account_type !== 'candidate') {
+      return res.status(404).json({ error: 'CV no encontrado' })
+    }
+
+    const isOwner = (await optionalViewerId(req)) === user.id
+    if (!user.cv_public && !isOwner) {
+      return res.status(404).json({ error: 'CV no encontrado' })
+    }
+
+    const { cv, cv_public, account_type, ...profile } = user
+    res.json({ profile, cv: parseStoredCv(cv), isPublic: !!cv_public, isOwner })
+  } catch (error) {
+    console.error('Community Get CV error:', error)
+    res.status(500).json({ error: 'Error al obtener el CV' })
+  }
+})
+
+/**
+ * PUT /api/community/users/:username/cv
+ *
+ * Guarda el CV y si es visible en línea. Va aparte del perfil a propósito: el
+ * perfil exige campos obligatorios en cada guardado, y un CV se llena de a poco.
+ * Un CV nuevo nace privado.
+ */
+router.put(
+  '/:username/cv',
+  communityAuthMiddleware,
+  requireAccountType('candidate'),
+  async (req: AuthRequest, res: Response) => {
+    try {
+      const { data: user } = await supabase
+        .from('users')
+        .select('id')
+        .eq('username', req.params.username as string)
+        .maybeSingle()
+
+      if (!user) return res.status(404).json({ error: 'Usuario no encontrado' })
+      if (user.id !== req.userId) {
+        return res.status(403).json({ error: 'No tienes permiso para editar este CV' })
+      }
+
+      const parsed = cvPayloadSchema.safeParse(req.body)
+      if (!parsed.success) {
+        const issue = parsed.error.issues[0]
+        return res.status(400).json({
+          error: 'validation_error',
+          field: issue.path.join('.') || null,
+          message: issue.message,
+        })
+      }
+
+      const { error } = await supabase
+        .from('users')
+        .update({ cv: parsed.data.cv, cv_public: parsed.data.public })
+        .eq('id', user.id)
+
+      if (error) throw error
+
+      res.json({ cv: parsed.data.cv, isPublic: parsed.data.public })
+    } catch (error) {
+      console.error('Community Update CV error:', error)
+      res.status(500).json({ error: 'Error al guardar el CV' })
+    }
+  },
+)
 
 router.put(
   '/:username',

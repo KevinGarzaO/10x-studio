@@ -56,7 +56,8 @@ export async function fetchWorkable(
     for (const job of (data.jobs ?? [])) {
       const applyUrl = `https://apply.workable.com/${shortcode}/j/${job.shortcode}/`;
       const location = normalizeLocation(job.location);
-      const description = job.description ? stripHtml(unescapeHtml(job.description)).substring(0, 1500) : null;
+      const fullDescription = job.description ? stripHtml(unescapeHtml(job.description)) : "";
+      const description = fullDescription ? fullDescription.substring(0, 1500) : null;
       const text = [
         `## ${job.title}`,
         `**Rol:** ${job.title}`,
@@ -92,6 +93,9 @@ export async function fetchWorkable(
         contacts,
         company: companyName,
         companyLogo: null,
+        analysisText: [`## ${job.title}`, job.department ? `**Departamento:** ${job.department}` : null, location ? `**Ubicación:** ${location}` : null, fullDescription]
+          .filter(Boolean)
+          .join("\n"),
       });
     }
 

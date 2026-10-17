@@ -9,15 +9,17 @@ import {
   Eye, EyeOff, MessageCircle, Heart, Loader2, Tag
 } from 'lucide-react'
 import { saveSession, getToken, fetchCurrentUser } from '../lib/session'
-import { getAttribution } from '../lib/attribution'
-import { SENIORITY_OPTIONS, MODALITY_OPTIONS, ROLE_CATEGORY_OPTIONS } from '../lib/profile-options'
+import { SENIORITY_OPTIONS, MODALITY_OPTIONS, ROLE_CATEGORY_OPTIONS, ROLE_CATEGORY_LABELS, SENIORITY_LABELS } from '../lib/profile-options'
 import { PhotoPicker, SegmentedControl, SkillsInput, RoleCategorySelect } from './profile-form-fields'
-import { useSkillCatalog } from '../lib/skill-catalog'
+import { useSkillCatalog, skillLabel } from '../lib/skill-catalog'
+import { CvSettings } from './cv/CvSettings'
 import { validateCandidateProfile, messageForField } from '../lib/profile-validation'
 import { useSkillProposals } from '../lib/skill-proposals'
 import { SkillProposalsList } from './skill-proposals-list'
 import { SIGNUP_INTENT_KEY } from '../lib/company-claim'
 import { ProfileGate } from './profile-gate'
+import { getAttribution } from '../lib/attribution'
+import { peekReturnTo } from '../lib/return-to'
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'
 
@@ -36,6 +38,9 @@ interface User {
   seniority?: string | null
   skills?: string[] | null
   work_modality?: string | null
+  /** El CV tal como lo guardó el servidor, y si es visible en línea. */
+  cv?: unknown
+  cv_public?: boolean
   created_at: string
 }
 
@@ -204,13 +209,13 @@ export function SettingsPage() {
   const [githubUrl, setGithubUrl] = useState('')
   const [photoUrl, setPhotoUrl] = useState<string | null>(null)
   const [photoBase64, setPhotoBase64] = useState<string | null>(null)
-  const [title, setTitle] = useState('')
   const [roleCategory, setRoleCategory] = useState<string | null>(null)
   const [seniority, setSeniority] = useState<string | null>(null)
   const [skills, setSkills] = useState<string[]>([])
   const [skillInput, setSkillInput] = useState('')
   const [location, setLocation] = useState('')
   const [workModality, setWorkModality] = useState<string | null>(null)
+  const [tab, setTab] = useState<'profile' | 'cv' | 'preview'>('profile')
   const { catalog, failed: catalogFailed } = useSkillCatalog()
   const addSkill = (name: string) => setSkills(prev => (prev.includes(name) ? prev : [...prev, name]))
   const { proposals, message: proposalMessage, propose } = useSkillProposals(addSkill)
@@ -226,7 +231,6 @@ export function SettingsPage() {
         setWebsite(u.website || '')
         setGithubUrl(u.github_url || '')
         setPhotoUrl(u.photo_url || null)
-        setTitle(u.title || '')
         setRoleCategory(u.role_category || null)
         setSeniority(u.seniority || null)
         setSkills(u.skills || [])
@@ -248,7 +252,6 @@ export function SettingsPage() {
     }
     const validationError = validateCandidateProfile(
       {
-        title: title.trim(),
         roleCategory,
         seniority,
         skills,
@@ -277,7 +280,7 @@ export function SettingsPage() {
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
         body: JSON.stringify({
           displayName, bio, website, githubUrl,
-          title: title.trim(), roleCategory, seniority, skills,
+          roleCategory, seniority, skills,
           location: location.trim(), workModality,
           ...(photoBase64 ? { photoBase64 } : {}),
         }),
@@ -313,7 +316,36 @@ export function SettingsPage() {
       <section className="account-card">
         <p className="page-kicker">Tu espacio</p>
         <h1 className="page-title">Configuración</h1>
-        <p className="muted page-description">Controla tu perfil público y preferencias.</p>
+        <p className="muted page-description">Controla tu perfil público, arma tu CV y míralo en línea.</p>
+        <div className="settings-tabs" role="tablist" aria-label="Secciones de configuración">
+          {([['profile', 'Perfil'], ['cv', 'Mi CV'], ['preview', 'Vista previa']] as const).map(([key, label]) => (
+            <button key={key} type="button" role="tab" aria-selected={tab === key} className={tab === key ? 'active' : ''} onClick={() => setTab(key)}>
+              {label}
+            </button>
+          ))}
+        </div>
+
+        {/* El CV se queda montado al cambiar de pestaña, para no perder lo que aún no se guarda. */}
+        <div hidden={tab === 'profile'}>
+          <CvSettings
+            view={tab === 'preview' ? 'preview' : 'form'}
+            username={user.username}
+            initialCv={user.cv}
+            initialPublic={!!user.cv_public}
+            profile={{
+              displayName: displayName || user.username,
+              headline: [roleCategory ? ROLE_CATEGORY_LABELS[roleCategory] : '', seniority ? SENIORITY_LABELS[seniority] : ''].filter(Boolean).join(' · '),
+              location,
+              workModality,
+              website,
+              githubUrl,
+              photoUrl: photoBase64 || photoUrl,
+              skills: skills.map(skill => skillLabel(skill, catalog)),
+            }}
+          />
+        </div>
+
+        <div hidden={tab !== 'profile'}>
         {error && <div className="auth-error">{error}</div>}
         {catalogFailed && (
           <div className="auth-error" role="alert">
@@ -325,12 +357,11 @@ export function SettingsPage() {
           <div className="field"><label>Foto de perfil</label><PhotoPicker photoUrl={photoBase64 || photoUrl} onPick={setPhotoBase64} onError={setError} /></div>
           <div className="field"><label>Nombre visible</label><input value={displayName} onChange={e => setDisplayName(e.target.value)} placeholder="Tu nombre" /></div>
           <div className="field"><label>Usuario</label><input value={`@${user.username}`} disabled style={{ opacity: 0.6 }} /></div>
-          <div className="field"><label>Título profesional</label><input value={title} onChange={e => setTitle(e.target.value)} placeholder="Ej. Backend Developer" /></div>
-          <div className="field"><label>Categoría de rol</label><RoleCategorySelect options={ROLE_CATEGORY_OPTIONS} value={roleCategory} onChange={setRoleCategory} /></div>
+          <div className="field"><label htmlFor="settings-role-category">Puesto</label><RoleCategorySelect id="settings-role-category" options={ROLE_CATEGORY_OPTIONS} value={roleCategory} onChange={setRoleCategory} /></div>
           <div className="field"><label>Nivel</label><SegmentedControl options={SENIORITY_OPTIONS} value={seniority} onChange={setSeniority} /></div>
           <div className="field">
             <label><Tag size={12} style={{ verticalAlign: -1, marginRight: 4 }} />Skills</label>
-            <SkillsInput skills={skills} onChange={setSkills} inputValue={skillInput} onInputChange={setSkillInput} onPropose={propose} />
+            <SkillsInput skills={skills} onChange={setSkills} inputValue={skillInput} onInputChange={setSkillInput} onPropose={propose} roleCategory={roleCategory} />
             {proposalMessage && <p className="skill-proposal-message">{proposalMessage}</p>}
             <SkillProposalsList proposals={proposals} onAddSkill={addSkill} />
             <Link href="/examenes" className="skills-validate-link">Validar mis skills con un examen →</Link>
@@ -345,6 +376,7 @@ export function SettingsPage() {
           <button className="primary-btn" onClick={handleSave} disabled={saving}>
             {saving ? <><Loader2 size={14} className="animate-spin" /> Guardando...</> : saved ? <><Check size={14} /> Guardado</> : <><Save size={14} /> Guardar cambios</>}
           </button>
+        </div>
         </div>
       </section>
     </AccountLayout>
@@ -380,18 +412,13 @@ export function AuthPage({ mode }: { mode: 'login' | 'signup' }) {
       }
 
       const endpoint = signup ? '/api/community/auth/signup' : '/api/community/auth/login'
-      const body: Record<string, string> = { email, password }
+      const body: Record<string, unknown> = { email, password }
       if (signup) {
         body.username = username.trim()
         body.displayName = displayName.trim() || username.trim()
-        // Atribución del primer contacto (UTM/referrer), para saber qué trajo el alta.
-        const attr = getAttribution()
-        if (attr.source) body.signupSource = attr.source
-        if (attr.medium) body.signupMedium = attr.medium
-        if (attr.campaign) body.signupCampaign = attr.campaign
-        if (attr.content) body.signupContent = attr.content
-        if (attr.referrer) body.signupReferrer = attr.referrer
-        if (attr.landingPath) body.signupLandingPath = attr.landingPath
+        // De dónde llegó (UTM), para saber qué trae registros.
+        const attribution = getAttribution()
+        if (attribution) body.attribution = attribution
       }
 
       const res = await fetch(`${API_URL}${endpoint}`, {
@@ -417,7 +444,8 @@ export function AuthPage({ mode }: { mode: 'login' | 'signup' }) {
             // Sin localStorage el onboarding simplemente vuelve a preguntar.
           }
         }
-        router.push(signup ? '/onboarding' : '/')
+        // Quien venía de una vacante vuelve a ella; el registro pasa primero por el onboarding.
+        router.push(signup ? '/onboarding' : (peekReturnTo() ?? '/'))
         router.refresh()
       } else if (signup) {
         setSuccess('Cuenta creada. Revisa tu correo para confirmar tu email y luego inicia sesión.')

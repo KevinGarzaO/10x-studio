@@ -1,5 +1,16 @@
 import { supabase } from "../supabase.service";
 import type { Post } from "./types";
+import { enrichVacancy, type VacancyEnrichment } from "../vacancies/enrich";
+import { loadSkillMatchers } from "../vacancies/catalog";
+import { evaluateVacancy, locationFromText, type RejectReason } from "../vacancies/publish-rule";
+import { vacancyTitle } from "../vacancies/text";
+
+/** Qué pasó con una vacante al intentar guardarla. */
+export interface InsertResult {
+  stored: boolean;
+  /** Por qué NO se guardó (vacío si se guardó, o si el análisis falló y se reintentará). */
+  reasons: RejectReason[];
+}
 
 // ---------------------------------------------------------------------------
 // Sources
@@ -128,7 +139,50 @@ export async function insertPost(post: {
   forum_hint?: string | null;
   company?: string | null;
   company_logo?: string | null;
-}): Promise<void> {
+  /** El texto completo de la vacante, solo para analizarla (no se guarda). */
+  analysis_text?: string | null;
+}): Promise<InsertResult> {
+  // REGLA DE NEGOCIO (services/vacancies/publish-rule.ts): una vacante solo se guarda si
+  // queda ligada a los catálogos: un rol y al menos un skill del catálogo, además de
+  // título, empresa y enlace. Cada vacante se analiza sobre su descripción COMPLETA.
+  // La que no cumple NO se guarda, y si ya estaba guardada se elimina del área de paso:
+  // sin esos datos no se puede cruzar con nadie, y solo ensucia la información.
+  let enrichment: VacancyEnrichment | null = null;
+  if (post.post_type === "vacancy") {
+    let matchers;
+    try {
+      matchers = await loadSkillMatchers();
+      enrichment = enrichVacancy(
+        { text: post.analysis_text ?? post.text, location: post.location, work_modality: post.work_modality },
+        matchers,
+      );
+    } catch (err) {
+      // Un fallo del análisis (por ejemplo, el catálogo no se pudo leer) es pasajero: no se
+      // guarda esta vez, pero tampoco se borra nada; la próxima corrida lo reintenta.
+      console.warn(`[Enrich] No se pudo analizar ${post.source}/${post.post_id}: ${(err as Error).message}`);
+      return { stored: false, reasons: [] };
+    }
+
+    const verdict = evaluateVacancy(
+      {
+        title: vacancyTitle(post.text),
+        company: post.company,
+        applyUrl: post.url ?? ((post.contacts as { applyUrl?: string } | null)?.applyUrl ?? null),
+        location: post.location ?? locationFromText(post.analysis_text ?? post.text),
+        roleCategory: enrichment.role_category,
+        skills: enrichment.skills,
+        seniority: enrichment.seniority_level,
+        modality: enrichment.work_modality,
+      },
+      new Set(matchers.map((matcher) => matcher.name)),
+    );
+
+    if (!verdict.valid) {
+      await removeStaged(post.platform, post.source, post.post_id);
+      return { stored: false, reasons: verdict.reasons };
+    }
+  }
+
   // Upsert on the (platform, source, post_id) unique constraint instead of a
   // plain insert — the earlier "check postExists, then insert" pattern had a
   // race: two overlapping scraper runs (or a source that lists the same job
@@ -153,7 +207,14 @@ export async function insertPost(post: {
     language: post.language ?? null,
     post_type: post.post_type ?? null,
     location: post.location ?? null,
-    work_modality: post.work_modality ?? null,
+    work_modality: enrichment?.work_modality ?? post.work_modality ?? null,
+    ...(enrichment
+      ? {
+          role_category: enrichment.role_category,
+          seniority_level: enrichment.seniority_level,
+          skills: enrichment.skills,
+        }
+      : {}),
     profile: post.profile ?? null,
     contacts: post.contacts,
     quality_score: post.quality_score ?? null,
@@ -165,6 +226,22 @@ export async function insertPost(post: {
     company_logo: post.company_logo ?? null,
   }, { onConflict: "platform,source,post_id" });
   if (error) throw error;
+  return { stored: true, reasons: [] };
+}
+
+/**
+ * Elimina del área de paso una vacante que dejó de cumplir la regla (por ejemplo, su
+ * descripción se editó), para que no se quede esperando a ser publicada.
+ */
+async function removeStaged(platform: string, source: string, postId: string | null): Promise<void> {
+  if (!postId) return;
+  const { error } = await supabase
+    .from("scraper_posts")
+    .delete()
+    .eq("platform", platform)
+    .eq("source", source)
+    .eq("post_id", postId);
+  if (error) console.warn(`[Enrich] No se pudo quitar ${source}/${postId} del área de paso: ${error.message}`);
 }
 
 // ---------------------------------------------------------------------------
