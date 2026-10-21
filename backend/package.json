@@ -18,6 +18,7 @@
     "clean-vacancies": "tsx scripts/clean-vacancies.ts",
     "linkedin-vacancy-preview": "tsx scripts/linkedin-vacancy-preview.ts",
     "signup-sources": "tsx scripts/signup-sources.ts",
+    "weekly-report": "tsx scripts/weekly-acquisition.ts",
     "linkedin-avatar-metadata": "tsx scripts/linkedin-avatar-metadata.ts"
   },
   "dependencies": {
