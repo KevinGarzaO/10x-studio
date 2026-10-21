@@ -20,6 +20,8 @@ const state = vi.hoisted(() => ({
   inserted: [] as any[],
   deleteError: null as any,
   deletedIds: [] as any[],
+  vacancyTitles: [] as any[],
+  vacancyLogs: [] as any[],
 }))
 
 vi.mock('../../services/supabase.service', () => ({
@@ -30,6 +32,8 @@ vi.mock('../../services/supabase.service', () => ({
       q.insert = (row: any) => { q._op = 'insert'; state.inserted.push(row); return q }
       q.delete = () => { q._op = 'delete'; return q }
       q.eq = (_col: string, val: any) => { q._id = val; return q }
+      q.in = () => q
+      q.order = () => q
       q.single = () => q
       q.then = (resolve: any, reject: any) => {
         let result: any
@@ -41,6 +45,10 @@ vi.mock('../../services/supabase.service', () => ({
         } else if (q._op === 'delete') {
           state.deletedIds.push(q._id)
           result = { data: null, error: state.deleteError }
+        } else if (table === 'community_posts') {
+          result = { data: state.vacancyTitles, error: null }
+        } else if (table === 'linkedin_vacancy_posts') {
+          result = { data: state.vacancyLogs, error: null }
         } else {
           result = { data: null, error: null }
         }
@@ -67,6 +75,8 @@ beforeEach(() => {
   state.inserted.length = 0
   state.deleteError = null
   state.deletedIds.length = 0
+  state.vacancyTitles.length = 0
+  state.vacancyLogs.length = 0
 })
 
 describe('slugify', () => {
@@ -224,6 +234,70 @@ describe('GET /api/linkedin/registry', () => {
     const res = await request(app()).get('/api/linkedin/registry').expect(200)
 
     expect(res.body).toEqual({ success: true, posts: [], pendingMigration: true })
+  })
+
+  it('a las vacantes automáticas les agrega título, fecha y link al post', async () => {
+    state.viewRows = [{
+      label: null,
+      utm_content: 'backend-engineer-abc12345',
+      destination_url: null,
+      post_url: null,
+      published_at: null,
+      visitors: 9,
+      signups: 1,
+    }]
+    state.vacancyTitles = [{ slug: 'backend-engineer-abc12345', title: 'Backend Engineer' }]
+    state.vacancyLogs = [{
+      vacancy_slug: 'backend-engineer-abc12345',
+      published_at: '2026-10-19T19:30:00.000Z',
+      linkedin_post_id: 'urn:li:share:777888999',
+    }]
+    process.env.COMMUNITY_APP_URL = 'https://avotalent.vercel.app'
+
+    try {
+      const res = await request(app()).get('/api/linkedin/registry').expect(200)
+
+      expect(res.body.posts[0]).toMatchObject({
+        label: 'Backend Engineer',
+        published_at: '2026-10-19T19:30:00.000Z',
+        post_url: 'https://www.linkedin.com/feed/update/urn:li:share:777888999/',
+        tracked_url: 'https://avotalent.vercel.app/vacantes/backend-engineer-abc12345?utm_source=linkedin&utm_medium=social&utm_campaign=vacante-auto&utm_content=backend-engineer-abc12345',
+      })
+    } finally {
+      delete process.env.COMMUNITY_APP_URL
+    }
+  })
+
+  it('envuelve el id del post sin urn en urn:li:share', async () => {
+    state.viewRows = [{ label: null, utm_content: 'x-1', destination_url: null, visitors: 1, signups: 0 }]
+    state.vacancyLogs = [{ vacancy_slug: 'x-1', published_at: '2026-10-20T14:30:00.000Z', linkedin_post_id: '456' }]
+
+    const res = await request(app()).get('/api/linkedin/registry').expect(200)
+
+    expect(res.body.posts[0].post_url).toBe('https://www.linkedin.com/feed/update/urn:li:share:456/')
+  })
+
+  it('no pisa los datos de una fila registrada a mano', async () => {
+    state.viewRows = [{
+      label: '5 tips',
+      utm_content: '5-tips-261017-ab12',
+      destination_url: 'https://avotalent.io/x',
+      utm_campaign: 'linkedin-manual',
+      post_url: 'https://www.linkedin.com/posts/manual',
+      published_at: '2026-10-17T10:00:00.000Z',
+      visitors: 3,
+      signups: 1,
+    }]
+    state.vacancyTitles = [{ slug: '5-tips-261017-ab12', title: 'Otra cosa' }]
+    state.vacancyLogs = [{ vacancy_slug: '5-tips-261017-ab12', published_at: '2026-10-01T00:00:00.000Z', linkedin_post_id: '999' }]
+
+    const res = await request(app()).get('/api/linkedin/registry').expect(200)
+
+    expect(res.body.posts[0]).toMatchObject({
+      label: '5 tips',
+      post_url: 'https://www.linkedin.com/posts/manual',
+      published_at: '2026-10-17T10:00:00.000Z',
+    })
   })
 })
 

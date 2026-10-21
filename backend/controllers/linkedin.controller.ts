@@ -9,6 +9,8 @@ import {
   trackedUrl,
 } from '../services/linkedin/tracked-posts'
 import { supabase } from '../services/supabase.service'
+import { vacancyUrl } from '../services/linkedin/vacancy-post'
+import { siteUrl } from '../services/linkedin/vacancy-publisher'
 
 const CLIENT_ID     = process.env.LINKEDIN_CLIENT_ID!
 const CLIENT_SECRET = process.env.LINKEDIN_CLIENT_SECRET!
@@ -334,6 +336,57 @@ function migrationMissing(message: unknown): boolean {
   return /does not exist|schema cache/i.test(String(message))
 }
 
+/** URL pública del post en LinkedIn a partir del id que devuelve la API (urn:li:share:…). */
+function linkedinPostUrl(id: string): string {
+  const urn = id.startsWith('urn:') ? id : `urn:li:share:${id}`
+  return `https://www.linkedin.com/feed/update/${urn}/`
+}
+
+/**
+ * Las filas automáticas (vacantes que el publisher publica solo) no tienen fila en
+ * linkedin_tracked_posts: aquí se les agrega el título real de la vacante, la fecha
+ * en que se publicó, el link al post de LinkedIn y el link etiquetado de la vacante.
+ */
+async function enrichAutoRows(rows: any[]): Promise<any[]> {
+  const auto = rows.filter((row) => !row.label && row.utm_content)
+  if (auto.length === 0) return rows
+
+  const slugs = auto.map((row) => row.utm_content)
+  const [postsRes, logRes] = await Promise.all([
+    supabase.from('community_posts').select('slug, title').eq('type', 'job').in('slug', slugs),
+    supabase
+      .from('linkedin_vacancy_posts')
+      .select('vacancy_slug, published_at, linkedin_post_id')
+      .eq('status', 'published')
+      .in('vacancy_slug', slugs)
+      .order('published_at', { ascending: false }),
+  ])
+
+  const titles = new Map<string, string>(
+    ((postsRes.data || []) as { slug: string; title: string }[]).map((post) => [post.slug, post.title])
+  )
+  const latest = new Map<string, { published_at: string | null; linkedin_post_id: string | null }>()
+  for (const entry of (logRes.data || []) as { vacancy_slug: string; published_at: string | null; linkedin_post_id: string | null }[]) {
+    if (!latest.has(entry.vacancy_slug)) latest.set(entry.vacancy_slug, entry)
+  }
+
+  const base = siteUrl()
+  for (const row of auto) {
+    const entry = latest.get(row.utm_content)
+    row.label = titles.get(row.utm_content) || null
+    if (entry?.published_at) row.published_at = entry.published_at
+    if (entry?.linkedin_post_id) row.post_url = linkedinPostUrl(entry.linkedin_post_id)
+    if (base && !row.tracked_url) {
+      try {
+        row.tracked_url = vacancyUrl(base, row.utm_content)
+      } catch {
+        // slug que no arma URL: se queda sin link copiable
+      }
+    }
+  }
+  return rows
+}
+
 /** GET /api/linkedin/registry — Publicaciones registradas con sus métricas (vista acquisition_by_post). */
 export const getTrackedPosts = async (_req: Request, res: Response) => {
   try {
@@ -345,7 +398,15 @@ export const getTrackedPosts = async (_req: Request, res: Response) => {
       throw error
     }
 
-    const posts = (data || []).map((row: any) => ({ ...row, tracked_url: rowTrackedUrl(row) }))
+    let rows = (data || []).map((row: any) => ({ ...row }))
+    try {
+      rows = await enrichAutoRows(rows)
+    } catch (e) {
+      // Cosmético: el reporte se sirve igual aunque falle el cruce con vacantes.
+      console.warn('[LinkedIn] No se pudieron enriquecer las filas automáticas:', e)
+    }
+
+    const posts = rows.map((row: any) => ({ ...row, tracked_url: rowTrackedUrl(row) || row.tracked_url || null }))
     res.json({ success: true, posts })
   } catch (e: any) {
     console.error('[LinkedIn] Registry fetch error:', e)
