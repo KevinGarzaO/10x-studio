@@ -13,6 +13,7 @@ const db = vi.hoisted(() => ({
   insertError: null as any,
   providerColumnMissing: false,
   authUser: null as any,
+  adminUpdates: [] as any[],
 }))
 
 vi.mock('../../services/supabase.service', () => {
@@ -61,7 +62,15 @@ vi.mock('../../services/supabase.service', () => {
 
   return {
     supabase: {
-      auth: { getUser: async () => ({ data: { user: db.authUser }, error: null }) },
+      auth: {
+        getUser: async () => ({ data: { user: db.authUser }, error: null }),
+        admin: {
+          updateUserById: async (id: string, payload: any) => {
+            db.adminUpdates.push({ id, ...payload })
+            return { data: {}, error: null }
+          },
+        },
+      },
       from: () => builder(),
     },
     createAuthClient: () => ({
@@ -97,6 +106,7 @@ beforeEach(() => {
   db.insertError = null
   db.providerColumnMissing = false
   db.authUser = null
+  db.adminUpdates = []
 })
 
 describe('users.provider', () => {
@@ -184,5 +194,43 @@ describe('users.provider', () => {
     expect(res.status).toBe(200)
     expect(db.inserts).toHaveLength(2)
     expect(db.inserts[1]).not.toHaveProperty('provider')
+  })
+
+  it('sync-user copies the LinkedIn picture into avatar_url for the Supabase dashboard', async () => {
+    // LinkedIn OIDC trae la foto en `picture`; el dashboard de Auth solo dibuja
+    // `avatar_url`, así que sync-user la copia (y la usa para photo_url).
+    const picture = 'https://media.licdn.com/dms/photo.jpg'
+    db.authUser = {
+      email: 'li@correo.com',
+      app_metadata: { provider: 'linkedin_oidc' },
+      user_metadata: { picture, name: 'Li' },
+    }
+
+    const res = await request(app())
+      .post('/api/community/auth/sync-user')
+      .set('Authorization', 'Bearer t')
+
+    expect(res.status).toBe(200)
+    expect(db.inserts[0]).toMatchObject({ photo_url: picture })
+    expect(db.adminUpdates).toHaveLength(1)
+    expect(db.adminUpdates[0]).toMatchObject({
+      id: 'auth-1',
+      user_metadata: { picture, name: 'Li', avatar_url: picture },
+    })
+  })
+
+  it('sync-user does not touch auth metadata when avatar_url already exists', async () => {
+    db.authUser = {
+      email: 'gh@correo.com',
+      app_metadata: { provider: 'github' },
+      user_metadata: { avatar_url: 'https://avatars.example/gh.png' },
+    }
+
+    await request(app())
+      .post('/api/community/auth/sync-user')
+      .set('Authorization', 'Bearer t')
+      .expect(200)
+
+    expect(db.adminUpdates).toHaveLength(0)
   })
 })

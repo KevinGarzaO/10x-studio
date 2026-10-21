@@ -226,6 +226,20 @@ router.post('/sync-user', communityAuthMiddleware, async (req: AuthRequest, res:
     // perfil. Se guarda la URL tal cual (es un CDN público, no el storage propio).
     const providerPhoto = meta.avatar_url || meta.picture || meta.image_url || null
 
+    // LinkedIn entrega la foto en `picture` (GitHub en `avatar_url`). El
+    // dashboard de Supabase solo dibuja `avatar_url`, así que se copia para
+    // que la lista de Auth muestre la cara en vez del silueta. Un solo intento
+    // por cuenta y nunca fatal: es cosmético.
+    if (req.userId && meta.picture && !meta.avatar_url) {
+      try {
+        await supabase.auth.admin.updateUserById(req.userId, {
+          user_metadata: { ...meta, avatar_url: meta.picture },
+        })
+      } catch (e) {
+        console.warn('[SyncUser] No se pudo copiar picture a avatar_url:', e)
+      }
+    }
+
     // De dónde se autentica la cuenta ('github' | 'linkedin' | 'email'), para
     // saberlo en la tabla users y poder compartir correo entre proveedores sin
     // confundir cuentas. Supabase trae la llave interna (linkedin_oidc, etc.).
