@@ -19,30 +19,30 @@ export default async function EmpleosPage() {
   const [skills, latest] = await Promise.all([getSeoSkills(), getSeoVacancies({ limit: 20 })])
 
   return (
-    <div className="mx-auto w-full max-w-4xl px-4 py-8 text-[#f3efe9]">
-      <nav aria-label="Migas de pan" className="mb-4 flex items-center gap-2 text-xs text-[#7d766c]">
-        <Link href="/" className="hover:text-[#b3aba1]">Inicio</Link>
+    <div className="mx-auto w-full max-w-4xl px-4 py-8 text-[color:var(--text)]">
+      <nav aria-label="Migas de pan" className="mb-4 flex items-center gap-2 text-xs text-[color:var(--text-faint)]">
+        <Link href="/" className="hover:text-[color:var(--text-muted)]">Inicio</Link>
         <ChevronRight size={12} />
-        <span className="font-medium text-[#00A86B]">Empleos</span>
+        <span className="font-medium text-[color:var(--brand)]">Empleos</span>
       </nav>
 
       <h1 className="text-3xl font-extrabold tracking-tight">Empleos por skill</h1>
-      <p className="mt-3 max-w-2xl text-[#b3aba1]">
+      <p className="mt-3 max-w-2xl text-[color:var(--text-muted)]">
         Elige un skill y mira las vacantes abiertas que lo piden. Regístrate gratis para ver qué tan bien encajas con cada una.
       </p>
 
       {skills.length > 0 && (
         <section className="mt-8">
-          <h2 className="mb-4 text-sm font-bold uppercase tracking-wider text-[#b3aba1]">Skills con vacantes abiertas</h2>
+          <h2 className="mb-4 text-sm font-bold uppercase tracking-wider text-[color:var(--text-muted)]">Skills con vacantes abiertas</h2>
           <ul className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4">
             {skills.map(skill => (
               <li key={skill.name}>
                 <Link
                   href={`/empleos/${encodeURIComponent(skill.name)}`}
-                  className="flex items-center justify-between rounded-xl border border-[#322f29] bg-[#221f1b] p-3.5 text-xs transition-colors hover:border-[#00A86B]"
+                  className="flex items-center justify-between rounded-xl border border-[color:var(--line)] bg-[color:var(--surface)] p-3.5 text-xs transition-colors hover:border-[color:var(--brand)]"
                 >
                   <span className="font-semibold">{skill.label}</span>
-                  <span className="text-[#7d766c]">{skill.vacancies}</span>
+                  <span className="text-[color:var(--text-faint)]">{skill.vacancies}</span>
                 </Link>
               </li>
             ))}
@@ -52,7 +52,7 @@ export default async function EmpleosPage() {
 
       {latest.length > 0 && (
         <section className="mt-10">
-          <h2 className="mb-4 text-sm font-bold uppercase tracking-wider text-[#b3aba1]">Últimas vacantes</h2>
+          <h2 className="mb-4 text-sm font-bold uppercase tracking-wider text-[color:var(--text-muted)]">Últimas vacantes</h2>
           <VacancyList vacancies={latest} />
         </section>
       )}

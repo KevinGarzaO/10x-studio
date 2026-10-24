@@ -8,6 +8,7 @@ import { fetchCurrentUser, getCachedUser } from '../lib/session'
 import { ShellContext, type AuthRequest } from '../lib/shell-context'
 import { LeftSidebar, RightSidebar, ProfileMenu, AuthModal } from './community-hub'
 import { ProfileGate } from './profile-gate'
+import { ThemeToggle } from './theme-toggle'
 
 export function CommunityShell({ children }: { children: ReactNode }) {
   const pathname = usePathname()
@@ -63,6 +64,7 @@ export function CommunityShell({ children }: { children: ReactNode }) {
             <kbd>⌘ K</kbd>
           </div>
           <div className="top-actions">
+            <ThemeToggle />
             <Link href="/notifications" className="icon-button notification" aria-label="Notificaciones"><Bell size={18} /></Link>
             <ProfileMenu user={user} />
           </div>

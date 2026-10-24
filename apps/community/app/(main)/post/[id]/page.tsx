@@ -56,9 +56,9 @@ function maskContact(content: string): string {
     '',
     '### Contacto',
     '',
-    '<div style="padding:16px;background:#2a2723;border-radius:10px;text-align:center;border:1px dashed #322f29">',
-    '<p style="color:#b3aba1;margin:0 0 8px">🔒 Regístrate para ver los datos de contacto</p>',
-    '<p style="color:#b3aba1;margin:0;font-size:13px">Email, teléfono, WhatsApp y enlace de aplicación</p>',
+    '<div style="padding:16px;background:var(--surface-2);border-radius:10px;text-align:center;border:1px dashed var(--line)">',
+    '<p style="color:var(--text-muted);margin:0 0 8px">🔒 Regístrate para ver los datos de contacto</p>',
+    '<p style="color:var(--text-muted);margin:0;font-size:13px">Email, teléfono, WhatsApp y enlace de aplicación</p>',
     '</div>',
   ].join('\n')
 
@@ -122,7 +122,7 @@ export default function PostPage() {
     return (
       <div className="detail-page">
         <button onClick={goBack} className="detail-back">Volver al feed</button>
-        <p style={{ color: '#b3aba1' }}>
+        <p style={{ color: 'var(--text-muted)' }}>
           {loading ? 'Cargando publicación...' : 'Publicación no encontrada'}
         </p>
       </div>

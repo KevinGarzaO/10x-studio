@@ -288,9 +288,9 @@ export function CompanyAvatar({ company, logoUrl, size = 40 }: { company: string
 
   const showLogo = resolvedLogo && !logoFailed
   return (
-    <div style={{ width: size, height: size, minWidth: size, borderRadius: '50%', background: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', border: '2px solid #322f29', flexShrink: 0, position: 'relative' }}>
+    <div style={{ width: size, height: size, minWidth: size, borderRadius: '50%', background: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', border: '2px solid var(--line)', flexShrink: 0, position: 'relative' }}>
       {showLogo && <img src={resolvedLogo!} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', position: 'absolute' }} onError={() => setLogoFailed(true)} />}
-      <div style={{ width: '100%', height: '100%', borderRadius: '50%', background: '#00A86B', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#18161a', fontWeight: 800, fontSize: size * 0.35, position: 'relative', zIndex: showLogo ? -1 : 0 }}>{initials}</div>
+      <div style={{ width: '100%', height: '100%', borderRadius: '50%', background: 'var(--brand)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--bg)', fontWeight: 800, fontSize: size * 0.35, position: 'relative', zIndex: showLogo ? -1 : 0 }}>{initials}</div>
     </div>
   )
 }
@@ -395,7 +395,7 @@ export function PostCard({ post, onAuthRequired }: { post: FeedPost; onAuthRequi
       {user ? (
         <>
           {applyUrl && <button className="job-apply-button" onClick={e => { e.stopPropagation(); openPost() }}>Postularse ahora →</button>}
-          {!applyUrl && job?.emails && job.emails.length > 0 && <div style={{ fontSize: 12, color: '#b3aba1', margin: '6px 0', display: 'inline-flex', alignItems: 'center', gap: 4 }}><Mail size={12} /> {job.emails[0]}</div>}
+          {!applyUrl && job?.emails && job.emails.length > 0 && <div style={{ fontSize: 12, color: 'var(--text-muted)', margin: '6px 0', display: 'inline-flex', alignItems: 'center', gap: 4 }}><Mail size={12} /> {job.emails[0]}</div>}
         </>
       ) : (
         <button className="job-unlock-button" onClick={e => { e.stopPropagation(); onAuthRequired?.() }}>
@@ -489,7 +489,7 @@ export function RightSidebar({ onUnlock }: { onUnlock: () => void }) {
           <span><strong>{post.title}</strong><small>{post.commentsCount} respuestas</small></span>
         </Link>
       )) : (
-        <p style={{ color: '#b3aba1', fontSize: 13, padding: '8px 0' }}>Sé el primero en iniciar una conversación</p>
+        <p style={{ color: 'var(--text-muted)', fontSize: 13, padding: '8px 0' }}>Sé el primero en iniciar una conversación</p>
       )}
     </section>
 
@@ -517,7 +517,7 @@ export function RightSidebar({ onUnlock }: { onUnlock: () => void }) {
             </Link>
           )
         }) : (
-          <p style={{ color: '#b3aba1', fontSize: 13, padding: '8px 0' }}>Próximamente verás aquí las mejores oportunidades</p>
+          <p style={{ color: 'var(--text-muted)', fontSize: 13, padding: '8px 0' }}>Próximamente verás aquí las mejores oportunidades</p>
         )}
       </section>
     )}
@@ -558,7 +558,7 @@ export function AuthModal({ onClose, request }: { onClose: () => void; request?:
     window.location.href = `${API_URL}/api/community/auth/oauth/${provider}`
   }
 
-  return <div className="modal-backdrop" role="presentation" onMouseDown={e => e.target === e.currentTarget && onClose()}><section className="auth-modal" role="dialog" aria-modal="true" aria-labelledby="auth-title"><button className="modal-close icon-button" onClick={onClose} aria-label="Cerrar"><X size={19} /></button><div className="lock-orb"><LockKeyhole size={20} /></div><p className="eyebrow">{eyebrow}</p><h2 id="auth-title">{title}</h2>{vacancy && request?.subject && <p className="auth-subject"><strong>{request.subject}</strong></p>}<p>{text}</p><div className="oauth-stack"><button type="button" className="oauth-btn" onClick={() => oauth('linkedin')}><svg width="16" height="16" viewBox="0 0 24 24" fill="#0A66C2" aria-hidden="true"><path d="M20.45 20.45h-3.56v-5.57c0-1.33-.02-3.04-1.85-3.04-1.85 0-2.13 1.45-2.13 2.94v5.67H9.35V9h3.41v1.56h.05c.47-.9 1.63-1.85 3.36-1.85 3.6 0 4.27 2.37 4.27 5.46v6.28zM5.34 7.43a2.06 2.06 0 1 1 0-4.12 2.06 2.06 0 0 1 0 4.12zM7.12 20.45H3.56V9h3.56v11.45z"/></svg>Continuar con LinkedIn</button><button type="button" className="oauth-btn" onClick={() => oauth('github')}><svg width="16" height="16" viewBox="0 0 24 24" fill="#f3efe9" aria-hidden="true"><path d="M12 .3a12 12 0 0 0-3.8 23.4c.6.1.8-.3.8-.6v-2c-3.3.7-4-1.6-4-1.6-.5-1.4-1.3-1.8-1.3-1.8-1.1-.7.1-.7.1-.7 1.2 0 1.8 1.2 1.8 1.2 1.1 1.8 2.8 1.3 3.5 1 .1-.8.4-1.3.8-1.6-2.7-.3-5.5-1.3-5.5-5.9 0-1.3.5-2.4 1.2-3.2-.1-.3-.5-1.5.1-3.2 0 0 1-.3 3.3 1.2a11.5 11.5 0 0 1 6 0C17 4.6 18 4.9 18 4.9c.7 1.7.3 2.9.2 3.2.8.8 1.2 1.9 1.2 3.2 0 4.6-2.8 5.6-5.5 5.9.4.4.8 1.1.8 2.2v3.3c0 .3.2.7.8.6A12 12 0 0 0 12 .3z"/></svg>Continuar con GitHub</button><div className="oauth-divider"><span>o continúa con tu correo</span></div></div><button className="oauth-button" style={{ width: '100%', marginBottom: 10, background: '#00A86B', color: '#18161a', border: 'none', padding: '12px 16px', borderRadius: 8, fontWeight: 700, fontSize: 14, cursor: 'pointer' }} onClick={() => go('/signup')}>Crear cuenta gratis</button><button className="oauth-button" style={{ width: '100%', background: 'transparent', color: '#e8e2d8', border: '1px solid #322f29', padding: '12px 16px', borderRadius: 8, fontSize: 14, cursor: 'pointer' }} onClick={() => go('/login')}>Iniciar sesión</button><small style={{ display: 'block', textAlign: 'center', marginTop: 12, color: '#b3aba1', fontSize: 11 }}>Al continuar aceptas nuestras reglas de comunidad.</small></section></div>
+  return <div className="modal-backdrop" role="presentation" onMouseDown={e => e.target === e.currentTarget && onClose()}><section className="auth-modal" role="dialog" aria-modal="true" aria-labelledby="auth-title"><button className="modal-close icon-button" onClick={onClose} aria-label="Cerrar"><X size={19} /></button><div className="lock-orb"><LockKeyhole size={20} /></div><p className="eyebrow">{eyebrow}</p><h2 id="auth-title">{title}</h2>{vacancy && request?.subject && <p className="auth-subject"><strong>{request.subject}</strong></p>}<p>{text}</p><div className="oauth-stack"><button type="button" className="oauth-btn" onClick={() => oauth('linkedin')}><svg width="16" height="16" viewBox="0 0 24 24" fill="#0A66C2" aria-hidden="true"><path d="M20.45 20.45h-3.56v-5.57c0-1.33-.02-3.04-1.85-3.04-1.85 0-2.13 1.45-2.13 2.94v5.67H9.35V9h3.41v1.56h.05c.47-.9 1.63-1.85 3.36-1.85 3.6 0 4.27 2.37 4.27 5.46v6.28zM5.34 7.43a2.06 2.06 0 1 1 0-4.12 2.06 2.06 0 0 1 0 4.12zM7.12 20.45H3.56V9h3.56v11.45z"/></svg>Continuar con LinkedIn</button><button type="button" className="oauth-btn" onClick={() => oauth('github')}><svg width="16" height="16" viewBox="0 0 24 24" fill="var(--text)" aria-hidden="true"><path d="M12 .3a12 12 0 0 0-3.8 23.4c.6.1.8-.3.8-.6v-2c-3.3.7-4-1.6-4-1.6-.5-1.4-1.3-1.8-1.3-1.8-1.1-.7.1-.7.1-.7 1.2 0 1.8 1.2 1.8 1.2 1.1 1.8 2.8 1.3 3.5 1 .1-.8.4-1.3.8-1.6-2.7-.3-5.5-1.3-5.5-5.9 0-1.3.5-2.4 1.2-3.2-.1-.3-.5-1.5.1-3.2 0 0 1-.3 3.3 1.2a11.5 11.5 0 0 1 6 0C17 4.6 18 4.9 18 4.9c.7 1.7.3 2.9.2 3.2.8.8 1.2 1.9 1.2 3.2 0 4.6-2.8 5.6-5.5 5.9.4.4.8 1.1.8 2.2v3.3c0 .3.2.7.8.6A12 12 0 0 0 12 .3z"/></svg>Continuar con GitHub</button><div className="oauth-divider"><span>o continúa con tu correo</span></div></div><button className="oauth-button" style={{ width: '100%', marginBottom: 10, background: 'var(--brand)', color: 'var(--bg)', border: 'none', padding: '12px 16px', borderRadius: 8, fontWeight: 700, fontSize: 14, cursor: 'pointer' }} onClick={() => go('/signup')}>Crear cuenta gratis</button><button className="oauth-button" style={{ width: '100%', background: 'transparent', color: 'var(--text-2)', border: '1px solid var(--line)', padding: '12px 16px', borderRadius: 8, fontSize: 14, cursor: 'pointer' }} onClick={() => go('/login')}>Iniciar sesión</button><small style={{ display: 'block', textAlign: 'center', marginTop: 12, color: 'var(--text-muted)', fontSize: 11 }}>Al continuar aceptas nuestras reglas de comunidad.</small></section></div>
 }
 
 // The feed's content column — rendered as {children} inside the shared
@@ -742,8 +742,8 @@ export function Feed() {
         ? <ForYouCard key={entry.key} item={entry.item} />
         : <PostCard key={entry.key} post={entry.post} onAuthRequired={requestAuth} />)}
     </div>
-    {loading && <div style={{ textAlign: 'center', padding: 20, color: '#b3aba1' }}><Sparkles size={16} className="spin" /> Cargando más posts...</div>}
-    {!loading && entries.length === 0 && <div style={{ textAlign: 'center', padding: 40, color: '#b3aba1' }}><PenLine size={32} style={{ marginBottom: 12, opacity: 0.5 }} /><p>No hay posts disponibles</p></div>}
-    {!loading && !hasMore && entries.length > 0 && <div style={{ textAlign: 'center', padding: 20, color: '#b3aba1' }}>No hay más posts</div>}
+    {loading && <div style={{ textAlign: 'center', padding: 20, color: 'var(--text-muted)' }}><Sparkles size={16} className="spin" /> Cargando más posts...</div>}
+    {!loading && entries.length === 0 && <div style={{ textAlign: 'center', padding: 40, color: 'var(--text-muted)' }}><PenLine size={32} style={{ marginBottom: 12, opacity: 0.5 }} /><p>No hay posts disponibles</p></div>}
+    {!loading && !hasMore && entries.length > 0 && <div style={{ textAlign: 'center', padding: 20, color: 'var(--text-muted)' }}>No hay más posts</div>}
   </main>
 }

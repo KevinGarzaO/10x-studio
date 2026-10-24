@@ -73,14 +73,14 @@ export default function AuthCallbackPage() {
   }, [router])
 
   return (
-    <div style={{ minHeight: '100vh', background: '#18161a', display: 'grid', placeItems: 'center', color: '#f3efe9' }}>
+    <div style={{ minHeight: '100vh', background: 'var(--bg)', display: 'grid', placeItems: 'center', color: 'var(--text)' }}>
       <div style={{ textAlign: 'center' }}>
         {error ? (
-          <p style={{ color: '#f87171', fontSize: 13 }}>{error}</p>
+          <p style={{ color: 'var(--danger)', fontSize: 13 }}>{error}</p>
         ) : (
           <>
-            <Loader2 size={22} style={{ animation: 'spin 1s linear infinite', color: '#00A86B' }} />
-            <p style={{ marginTop: 12, color: '#b3aba1', fontSize: 13 }}>Completando tu registro...</p>
+            <Loader2 size={22} style={{ animation: 'spin 1s linear infinite', color: 'var(--brand)' }} />
+            <p style={{ marginTop: 12, color: 'var(--text-muted)', fontSize: 13 }}>Completando tu registro...</p>
           </>
         )}
         <style>{`@keyframes spin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}`}</style>

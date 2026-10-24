@@ -30,19 +30,19 @@ export function VacancyList({ vacancies }: { vacancies: SeoVacancy[] }) {
           <li key={vacancy.id}>
             <Link
               href={`/vacantes/${vacancy.slug}`}
-              className="block rounded-2xl border border-[#322f29] bg-[#221f1b] p-5 transition-colors hover:border-[#00A86B]/60"
+              className="block rounded-2xl border border-[color:var(--line)] bg-[color:var(--surface)] p-5 transition-colors hover:border-[color:var(--brand)]/60"
             >
-              <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-[#b3aba1]">
+              <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-[color:var(--text-muted)]">
                 {company && <span className="inline-flex items-center gap-1 font-semibold"><Building size={13} /> {company}</span>}
                 {known(vacancy.location) && <span className="inline-flex items-center gap-1"><MapPin size={13} /> {vacancy.location!.split(/[•;|]/)[0].trim()}</span>}
                 <span>{postedAgo(vacancy.created_at)}</span>
               </div>
-              <h3 className="mt-2 text-base font-bold text-[#f3efe9]">{vacancy.title}</h3>
-              {facts.length > 0 && <p className="mt-1 text-xs text-[#b3aba1]">{facts.join(' · ')}</p>}
+              <h3 className="mt-2 text-base font-bold text-[color:var(--text)]">{vacancy.title}</h3>
+              {facts.length > 0 && <p className="mt-1 text-xs text-[color:var(--text-muted)]">{facts.join(' · ')}</p>}
               {vacancy.skills.length > 0 && (
                 <div className="mt-3 flex flex-wrap gap-2">
                   {vacancy.skills.slice(0, 5).map(skill => (
-                    <span key={skill} className="rounded-lg bg-[#2a2723] px-2.5 py-1 text-[11px] text-[#b3aba1]">{skill}</span>
+                    <span key={skill} className="rounded-lg bg-[color:var(--surface-2)] px-2.5 py-1 text-[11px] text-[color:var(--text-muted)]">{skill}</span>
                   ))}
                 </div>
               )}

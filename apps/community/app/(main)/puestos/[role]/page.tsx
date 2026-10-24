@@ -59,19 +59,19 @@ export default async function RolePage({ params }: PageProps) {
   }
 
   return (
-    <div className="mx-auto w-full max-w-4xl px-4 py-8 text-[#f3efe9]">
+    <div className="mx-auto w-full max-w-4xl px-4 py-8 text-[color:var(--text)]">
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLdString(breadcrumb) }} />
 
-      <nav aria-label="Migas de pan" className="mb-4 flex items-center gap-2 text-xs text-[#7d766c]">
-        <Link href="/" className="hover:text-[#b3aba1]">Inicio</Link>
+      <nav aria-label="Migas de pan" className="mb-4 flex items-center gap-2 text-xs text-[color:var(--text-faint)]">
+        <Link href="/" className="hover:text-[color:var(--text-muted)]">Inicio</Link>
         <ChevronRight size={12} />
-        <Link href="/puestos" className="hover:text-[#b3aba1]">Puestos</Link>
+        <Link href="/puestos" className="hover:text-[color:var(--text-muted)]">Puestos</Link>
         <ChevronRight size={12} />
-        <span className="font-medium text-[#00A86B]">{role.label}</span>
+        <span className="font-medium text-[color:var(--brand)]">{role.label}</span>
       </nav>
 
       <h1 className="text-3xl font-extrabold tracking-tight">Vacantes de {role.label}</h1>
-      <p className="mt-3 max-w-2xl text-[#b3aba1]">
+      <p className="mt-3 max-w-2xl text-[color:var(--text-muted)]">
         {vacancies.length > 0
           ? `${vacancies.length} ${vacancies.length === 1 ? 'vacante abierta' : 'vacantes abiertas'} de ${role.label}. Regístrate gratis para ver qué tan bien encajas con cada una.`
           : `Por ahora no hay vacantes abiertas de ${role.label}. Estas son las más recientes.`}
@@ -83,13 +83,13 @@ export default async function RolePage({ params }: PageProps) {
 
       {others.length > 0 && (
         <section className="mt-10">
-          <h2 className="mb-4 text-sm font-bold uppercase tracking-wider text-[#b3aba1]">Otros puestos</h2>
+          <h2 className="mb-4 text-sm font-bold uppercase tracking-wider text-[color:var(--text-muted)]">Otros puestos</h2>
           <ul className="flex flex-wrap gap-2">
             {others.map(other => (
               <li key={other.slug}>
                 <Link
                   href={`/puestos/${other.slug}`}
-                  className="inline-block rounded-lg border border-[#322f29] bg-[#221f1b] px-3 py-1.5 text-xs transition-colors hover:border-[#00A86B]"
+                  className="inline-block rounded-lg border border-[color:var(--line)] bg-[color:var(--surface)] px-3 py-1.5 text-xs transition-colors hover:border-[color:var(--brand)]"
                 >
                   {other.label}
                 </Link>

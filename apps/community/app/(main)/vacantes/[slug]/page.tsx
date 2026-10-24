@@ -331,7 +331,7 @@ export default function VacancyPage() {
     return (
       <div className="detail-page">
         <button onClick={goBack} className="detail-back">Volver al feed</button>
-        <p style={{ color: '#b3aba1' }}>{loading ? 'Cargando vacante...' : 'Vacante no encontrada'}</p>
+        <p style={{ color: 'var(--text-muted)' }}>{loading ? 'Cargando vacante...' : 'Vacante no encontrada'}</p>
       </div>
     )
   }
@@ -590,27 +590,27 @@ export default function VacancyPage() {
           onMouseDown={e => e.target === e.currentTarget && setApplyOpen(false)}
         >
           {applySuccess ? (
-            <div style={{ width: '100%', maxWidth: 400, background: '#221f1b', borderRadius: 12, border: '1px solid #322f29', padding: '40px 24px', textAlign: 'center' }}>
+            <div style={{ width: '100%', maxWidth: 400, background: 'var(--surface)', borderRadius: 12, border: '1px solid var(--line)', padding: '40px 24px', textAlign: 'center' }}>
               <div style={{ fontSize: 48, marginBottom: 16 }}>✅</div>
-              <h3 style={{ color: '#e8e2d8', fontSize: 18, marginBottom: 8 }}>¡Aplicación enviada!</h3>
-              <p style={{ color: '#b3aba1', fontSize: 14, marginBottom: 20 }}>Tu postulación a <strong style={{ color: '#e8e2d8' }}>{companyName}</strong> fue enviada exitosamente.</p>
-              <button onClick={() => setApplyOpen(false)} style={{ background: '#00A86B', color: '#18161a', border: 'none', padding: '10px 24px', borderRadius: 6, fontWeight: 600, fontSize: 14, cursor: 'pointer' }}>Cerrar</button>
+              <h3 style={{ color: 'var(--text-2)', fontSize: 18, marginBottom: 8 }}>¡Aplicación enviada!</h3>
+              <p style={{ color: 'var(--text-muted)', fontSize: 14, marginBottom: 20 }}>Tu postulación a <strong style={{ color: 'var(--text-2)' }}>{companyName}</strong> fue enviada exitosamente.</p>
+              <button onClick={() => setApplyOpen(false)} style={{ background: 'var(--brand)', color: 'var(--bg)', border: 'none', padding: '10px 24px', borderRadius: 6, fontWeight: 600, fontSize: 14, cursor: 'pointer' }}>Cerrar</button>
             </div>
           ) : (
-            <div style={{ width: '100%', maxWidth: 750, height: window.innerWidth < 640 ? '95vh' : '90vh', background: '#221f1b', borderRadius: window.innerWidth < 640 ? 8 : 12, border: '1px solid #322f29', overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 14px', borderBottom: '1px solid #322f29', background: '#18161a' }}>
-                <span style={{ color: '#e8e2d8', fontSize: 13, fontWeight: 600 }}>Postularse — {companyName}</span>
+            <div style={{ width: '100%', maxWidth: 750, height: window.innerWidth < 640 ? '95vh' : '90vh', background: 'var(--surface)', borderRadius: window.innerWidth < 640 ? 8 : 12, border: '1px solid var(--line)', overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 14px', borderBottom: '1px solid var(--line)', background: 'var(--bg)' }}>
+                <span style={{ color: 'var(--text-2)', fontSize: 13, fontWeight: 600 }}>Postularse — {companyName}</span>
                 <button
                   onClick={() => setApplyOpen(false)}
-                  style={{ background: 'none', border: 'none', color: '#b3aba1', cursor: 'pointer', fontSize: 20, padding: 4 }}
+                  style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', fontSize: 20, padding: 4 }}
                   aria-label="Cerrar"
                 >
                   ×
                 </button>
               </div>
               {post.platform === 'greenhouse' && (
-                <div style={{ padding: '6px 14px', background: '#2a2723', borderBottom: '1px solid #322f29', fontSize: 11, color: '#b3aba1' }}>
-                  Haz clic en <strong style={{ color: '#00A86B' }}>Apply</strong> dentro del formulario para completar tu postulación
+                <div style={{ padding: '6px 14px', background: 'var(--surface-2)', borderBottom: '1px solid var(--line)', fontSize: 11, color: 'var(--text-muted)' }}>
+                  Haz clic en <strong style={{ color: 'var(--brand)' }}>Apply</strong> dentro del formulario para completar tu postulación
                 </div>
               )}
               <iframe

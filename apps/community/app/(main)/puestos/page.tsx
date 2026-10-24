@@ -19,30 +19,30 @@ export default async function PuestosPage() {
   const [roles, latest] = await Promise.all([getSeoRoles(), getSeoVacancies({ limit: 20 })])
 
   return (
-    <div className="mx-auto w-full max-w-4xl px-4 py-8 text-[#f3efe9]">
-      <nav aria-label="Migas de pan" className="mb-4 flex items-center gap-2 text-xs text-[#7d766c]">
-        <Link href="/" className="hover:text-[#b3aba1]">Inicio</Link>
+    <div className="mx-auto w-full max-w-4xl px-4 py-8 text-[color:var(--text)]">
+      <nav aria-label="Migas de pan" className="mb-4 flex items-center gap-2 text-xs text-[color:var(--text-faint)]">
+        <Link href="/" className="hover:text-[color:var(--text-muted)]">Inicio</Link>
         <ChevronRight size={12} />
-        <span className="font-medium text-[#00A86B]">Puestos</span>
+        <span className="font-medium text-[color:var(--brand)]">Puestos</span>
       </nav>
 
       <h1 className="text-3xl font-extrabold tracking-tight">Empleos por puesto</h1>
-      <p className="mt-3 max-w-2xl text-[#b3aba1]">
+      <p className="mt-3 max-w-2xl text-[color:var(--text-muted)]">
         Elige un puesto y mira las vacantes abiertas. Regístrate gratis para ver qué tan bien encajas con cada una.
       </p>
 
       {roles.length > 0 && (
         <section className="mt-8">
-          <h2 className="mb-4 text-sm font-bold uppercase tracking-wider text-[#b3aba1]">Puestos con vacantes abiertas</h2>
+          <h2 className="mb-4 text-sm font-bold uppercase tracking-wider text-[color:var(--text-muted)]">Puestos con vacantes abiertas</h2>
           <ul className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4">
             {roles.map(role => (
               <li key={role.slug}>
                 <Link
                   href={`/puestos/${role.slug}`}
-                  className="flex items-center justify-between rounded-xl border border-[#322f29] bg-[#221f1b] p-3.5 text-xs transition-colors hover:border-[#00A86B]"
+                  className="flex items-center justify-between rounded-xl border border-[color:var(--line)] bg-[color:var(--surface)] p-3.5 text-xs transition-colors hover:border-[color:var(--brand)]"
                 >
                   <span className="font-semibold">{role.label}</span>
-                  <span className="text-[#7d766c]">{role.vacancies}</span>
+                  <span className="text-[color:var(--text-faint)]">{role.vacancies}</span>
                 </Link>
               </li>
             ))}
@@ -52,7 +52,7 @@ export default async function PuestosPage() {
 
       {latest.length > 0 && (
         <section className="mt-10">
-          <h2 className="mb-4 text-sm font-bold uppercase tracking-wider text-[#b3aba1]">Últimas vacantes</h2>
+          <h2 className="mb-4 text-sm font-bold uppercase tracking-wider text-[color:var(--text-muted)]">Últimas vacantes</h2>
           <VacancyList vacancies={latest} />
         </section>
       )}

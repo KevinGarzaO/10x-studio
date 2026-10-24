@@ -17,34 +17,34 @@ import { SkillProposalsList } from './skill-proposals-list'
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'
 
 const styles = `
-.onboarding-page{min-height:100vh;background:#18161a;color:#f3efe9;display:grid;place-items:center;padding:40px 20px;background-image:linear-gradient(#322f2916 1px,transparent 1px),linear-gradient(90deg,#322f2916 1px,transparent 1px);background-size:48px 48px}
-.onboarding-card{width:min(100%,560px);background:#221f1b;border:1px solid #322f29;border-radius:14px;padding:38px;box-shadow:0 26px 90px #00000055;box-sizing:border-box}
+.onboarding-page{min-height:100vh;background:var(--bg);color:var(--text);display:grid;place-items:center;padding:40px 20px;background-image:linear-gradient(#322f2916 1px,transparent 1px),linear-gradient(90deg,#322f2916 1px,transparent 1px);background-size:48px 48px}
+.onboarding-card{width:min(100%,560px);background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:38px;box-shadow:0 26px 90px #00000055;box-sizing:border-box}
 .onboarding-brand{display:flex;align-items:center;gap:8px;font-weight:800;letter-spacing:-.04em;font-size:19px;margin-bottom:22px}
-.onboarding-brand .brand-mark{display:grid;place-items:center;width:30px;height:30px;border-radius:9px;background:#00A86B;color:#0d1f16;font-weight:800}
-.onboarding-brand .brand-avo{color:#f3efe9}
-.onboarding-brand .brand-accent{color:#00A86B}
-.onboarding-kicker{color:#00A86B;font:11px monospace;text-transform:uppercase;letter-spacing:.08em;margin:0 0 8px}
+.onboarding-brand .brand-mark{display:grid;place-items:center;width:30px;height:30px;border-radius:9px;background:var(--brand);color:var(--on-accent);font-weight:800}
+.onboarding-brand .brand-avo{color:var(--text)}
+.onboarding-brand .brand-accent{color:var(--brand)}
+.onboarding-kicker{color:var(--brand);font:11px monospace;text-transform:uppercase;letter-spacing:.08em;margin:0 0 8px}
 .onboarding-card h1{font-size:26px;letter-spacing:-.03em;margin:0 0 8px}
-.onboarding-card > p.muted{margin:0 0 26px;color:#b3aba1;font-size:13px;line-height:1.6}
+.onboarding-card > p.muted{margin:0 0 26px;color:var(--text-muted);font-size:13px;line-height:1.6}
 .onboarding-card .field{display:flex;flex-direction:column;gap:6px;margin-bottom:18px}
-.onboarding-card .field label{font-size:12px;color:#b3aba1;font-weight:500}
-.onboarding-card .field input{background:#18161a;border:1px solid #322f29;border-radius:8px;padding:10px 14px;color:#f3efe9;font-size:13px;font-family:inherit;box-sizing:border-box}
-.onboarding-card .field input:focus{outline:none;border-color:#00A86B}
+.onboarding-card .field label{font-size:12px;color:var(--text-muted);font-weight:500}
+.onboarding-card .field input{background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:10px 14px;color:var(--text);font-size:13px;font-family:inherit;box-sizing:border-box}
+.onboarding-card .field input:focus{outline:none;border-color:var(--brand)}
 .onboarding-card .photo-picker-row{margin-bottom:22px}
-.onboarding-error{background:#3d1214;border:1px solid #5c2225;border-radius:8px;padding:10px 14px;color:#f87171;font-size:12px;margin-bottom:16px}
-.onboarding-submit{width:100%;background:#00A86B;color:#18161a;border:none;padding:13px;border-radius:8px;font-size:14px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;margin-top:6px}
-.onboarding-submit:hover{background:#00c97b}
+.onboarding-error{background:var(--danger-soft);border:1px solid var(--danger-line);border-radius:8px;padding:10px 14px;color:var(--danger);font-size:12px;margin-bottom:16px}
+.onboarding-submit{width:100%;background:var(--brand);color:var(--bg);border:none;padding:13px;border-radius:8px;font-size:14px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;margin-top:6px}
+.onboarding-submit:hover{background:var(--accent-hover)}
 .onboarding-submit:disabled{opacity:.55;cursor:not-allowed}
 .onboarding-progress{display:flex;gap:6px;margin-bottom:18px}
-.onboarding-progress i{flex:1;height:3px;border-radius:2px;background:#322f29}
-.onboarding-progress i.on{background:#00A86B}
+.onboarding-progress i{flex:1;height:3px;border-radius:2px;background:var(--line)}
+.onboarding-progress i.on{background:var(--brand)}
 .onboarding-step-label{color:#58636f;font:10px monospace;text-transform:uppercase;letter-spacing:.1em;margin-bottom:8px}
 .onboarding-avatar-row{display:flex;align-items:center;gap:10px;margin-bottom:10px}
-.onboarding-avatar{width:48px;height:48px;border-radius:50%;object-fit:cover;border:2px solid #2f5a46}
-.onboarding-avatar-row span{color:#4fd39a;font:11px monospace}
+.onboarding-avatar{width:48px;height:48px;border-radius:50%;object-fit:cover;border:2px solid var(--accent-line)}
+.onboarding-avatar-row span{color:var(--accent-text);font:11px monospace}
 .onboarding-nav{display:flex;gap:10px;margin-top:6px}
-.onboarding-nav .back{background:transparent;color:#b3aba1;border:1px solid #322f29;padding:13px;border-radius:8px;font-size:14px;cursor:pointer;font-family:inherit}
-.onboarding-nav .back:hover{border-color:#b3aba1}
+.onboarding-nav .back{background:transparent;color:var(--text-muted);border:1px solid var(--line);padding:13px;border-radius:8px;font-size:14px;cursor:pointer;font-family:inherit}
+.onboarding-nav .back:hover{border-color:var(--text-muted)}
 @media(max-width:600px){
 .onboarding-page{padding:16px}
 .onboarding-card{padding:22px 18px}
@@ -220,7 +220,7 @@ export function OnboardingPage() {
       <div className="onboarding-page">
         <style>{styles}</style>
         <div className="onboarding-card" style={{ textAlign: 'center', padding: '60px 38px' }}>
-          <Loader2 size={22} style={{ animation: 'spin 1s linear infinite', color: '#00A86B' }} />
+          <Loader2 size={22} style={{ animation: 'spin 1s linear infinite', color: 'var(--brand)' }} />
           <p className="muted" style={{ marginTop: 12 }}>Verificando tu sesión...</p>
         </div>
         <style>{`@keyframes spin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}`}</style>
