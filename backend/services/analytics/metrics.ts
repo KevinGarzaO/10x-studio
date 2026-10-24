@@ -338,6 +338,8 @@ export interface RetentionResult {
   stickinessPct: number | null
   /** Primer día del que hay datos de actividad: antes de él no se puede medir. */
   trackingSince: string | null
+  /** Cuántos días distintos tienen datos de actividad. Con pocos, activos hoy / semana / mes coinciden. */
+  trackingDays: number
   cohorts: { week: string; size: number; retained: (number | null)[] }[]
 }
 
@@ -363,6 +365,7 @@ export function retention(input: { activity: { user_id: string; day: string }[];
 
   const days = input.activity.map((row) => row.day).sort()
   const trackingSince = days[0] ?? null
+  const trackingDays = new Set(days).size
 
   const activeWeeks = new Map<string, Set<string>>()
   for (const row of input.activity) {
@@ -393,5 +396,72 @@ export function retention(input: { activity: { user_id: string; day: string }[];
       }),
     }))
 
-  return { dau, wau: activeIn(daysBack(6)), mau, stickinessPct: pct(dau, mau), trackingSince, cohorts }
+  return { dau, wau: activeIn(daysBack(6)), mau, stickinessPct: pct(dau, mau), trackingSince, trackingDays, cohorts }
+}
+
+export interface PersonRow {
+  id: string
+  username: string | null
+  display_name: string | null
+  photo_url: string | null
+  user_kind: string
+  created_at: string
+  profile_completed: boolean | null
+  is_test_account?: boolean | null
+  is_scraper_profile?: boolean | null
+}
+
+/**
+ * Quién cuenta como "persona" en la retención: ni cuentas de prueba, ni perfiles del scraper, ni el
+ * equipo (administradores). Quien mira el panel todos los días no es un usuario que "vuelve".
+ */
+export const countsAsPerson = (person: Pick<PersonRow, 'user_kind' | 'is_test_account' | 'is_scraper_profile'>): boolean =>
+  !person.is_test_account && !person.is_scraper_profile && person.user_kind !== 'superadmin'
+
+export interface ActivePerson {
+  id: string
+  username: string | null
+  display_name: string | null
+  photo_url: string | null
+  kind: string
+  createdAt: string
+  profileCompleted: boolean | null
+  /** Si entra en las cifras (false para el equipo, las pruebas y el scraper). */
+  counted: boolean
+  /** Días distintos activos en la ventana. */
+  daysActive: number
+  lastActive: string
+  activeToday: boolean
+}
+
+/** Las personas con actividad en los últimos `days` días: la lista detrás de "activos hoy / 7 / 30 días". */
+export function activePeople(input: { activity: { user_id: string; day: string }[]; people: PersonRow[]; today?: string; days?: number }): ActivePerson[] {
+  const today = input.today ?? dayKey(new Date().toISOString())
+  const from = new Date(Date.parse(`${today}T00:00:00Z`) - ((input.days ?? 30) - 1) * DAY_MS).toISOString().slice(0, 10)
+  const byUser = new Map<string, Set<string>>()
+  for (const row of input.activity) {
+    if (row.day < from || row.day > today) continue
+    if (!byUser.has(row.user_id)) byUser.set(row.user_id, new Set())
+    byUser.get(row.user_id)!.add(row.day)
+  }
+
+  return input.people
+    .filter((person) => byUser.has(person.id))
+    .map((person) => {
+      const days = [...byUser.get(person.id)!].sort()
+      return {
+        id: person.id,
+        username: person.username,
+        display_name: person.display_name,
+        photo_url: person.photo_url,
+        kind: person.user_kind,
+        createdAt: person.created_at,
+        profileCompleted: person.profile_completed,
+        counted: countsAsPerson(person),
+        daysActive: days.length,
+        lastActive: days[days.length - 1],
+        activeToday: days[days.length - 1] === today,
+      }
+    })
+    .sort((a, b) => b.lastActive.localeCompare(a.lastActive) || b.daysActive - a.daysActive)
 }

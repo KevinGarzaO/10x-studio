@@ -9,6 +9,8 @@ import {
   pct,
   postPerformance,
   retention,
+  activePeople,
+  countsAsPerson,
   topLandingPages,
   uniqueVisitors,
   windowStart,
@@ -260,8 +262,54 @@ describe('retention', () => {
     expect(first.retained[0]).toBeNull()
   })
 
+  it('says how many days of data there are: with two days, today, week and month are the same people', () => {
+    const result = retention({
+      activity: [{ user_id: 'u1', day: '2026-10-23' }, { user_id: 'u1', day: '2026-10-24' }, { user_id: 'u2', day: '2026-10-24' }],
+      users,
+      today: '2026-10-24',
+    })
+
+    expect(result.trackingDays).toBe(2)
+    expect([result.dau, result.wau, result.mau]).toEqual([2, 2, 2])
+  })
+
   it('works with no activity at all', () => {
     const result = retention({ activity: [], users: [], today: '2026-10-24' })
     expect(result).toMatchObject({ dau: 0, wau: 0, mau: 0, stickinessPct: null, trackingSince: null, cohorts: [] })
+  })
+})
+
+describe('who counts as a person in retention', () => {
+  it('leaves out the team, test accounts and scraper profiles', () => {
+    expect(countsAsPerson({ user_kind: 'user' })).toBe(true)
+    expect(countsAsPerson({ user_kind: 'company' })).toBe(true)
+    expect(countsAsPerson({ user_kind: 'superadmin' })).toBe(false)
+    expect(countsAsPerson({ user_kind: 'user', is_test_account: true })).toBe(false)
+    expect(countsAsPerson({ user_kind: 'user', is_scraper_profile: true })).toBe(false)
+  })
+})
+
+describe('activePeople', () => {
+  const person = (id: string, patch = {}) => ({ id, username: id, display_name: null, photo_url: null, user_kind: 'user', created_at: '2026-10-01T00:00:00Z', profile_completed: true, ...patch })
+  const people = [person('ana'), person('beto'), person('admin', { user_kind: 'superadmin' }), person('lejos')]
+  const activity = [
+    { user_id: 'ana', day: '2026-10-23' }, { user_id: 'ana', day: '2026-10-24' },
+    { user_id: 'beto', day: '2026-10-22' },
+    { user_id: 'admin', day: '2026-10-24' },
+    { user_id: 'lejos', day: '2026-08-01' }, // fuera de la ventana de 30 días
+  ]
+
+  it('lists who was active in the window, most recent first, with their days', () => {
+    const list = activePeople({ activity, people, today: '2026-10-24' })
+
+    expect(list.map(row => row.id)).toEqual(['ana', 'admin', 'beto'])
+    expect(list[0]).toMatchObject({ daysActive: 2, lastActive: '2026-10-24', activeToday: true })
+    expect(list[2]).toMatchObject({ activeToday: false, lastActive: '2026-10-22' })
+  })
+
+  it('marks the team as not counted, so the table explains why the numbers do not include them', () => {
+    const list = activePeople({ activity, people, today: '2026-10-24' })
+    expect(list.find(row => row.id === 'admin')!.counted).toBe(false)
+    expect(list.find(row => row.id === 'ana')!.counted).toBe(true)
   })
 })

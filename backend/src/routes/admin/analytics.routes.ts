@@ -14,6 +14,9 @@ import {
   pct,
   postPerformance,
   retention,
+  activePeople,
+  countsAsPerson,
+  type PersonRow,
   topLandingPages,
   uniqueVisitors,
   vacancyEngagement,
@@ -285,8 +288,22 @@ router.get('/retention', handle('retención', async (_req, res) => {
   // La tabla aún no existe: se dice en lugar de mostrar ceros que parecerían reales.
   if (activity.error) return res.json({ ready: false })
 
-  const users = await realUsers(since.toISOString())
-  res.json({ ready: true, ...retention({ activity: activity.data ?? [], users }) })
+  const rows = (activity.data ?? []) as { user_id: string; day: string }[]
+  const ids = [...new Set(rows.map((row) => row.user_id))]
+  const found = ids.length
+    ? await supabase.from('users').select('id, username, display_name, photo_url, user_kind, created_at, profile_completed, is_test_account, is_scraper_profile').in('id', ids).limit(1000)
+    : { data: [] as PersonRow[], error: null }
+  const people = (found.data ?? []) as PersonRow[]
+
+  // Las cifras cuentan solo personas reales: ni pruebas, ni scraper, ni el equipo que mira este panel.
+  const counted = new Set(people.filter(countsAsPerson).map((person) => person.id))
+  const users = (await realUsers(since.toISOString())).filter((user) => user.user_kind !== 'superadmin')
+
+  res.json({
+    ready: true,
+    ...retention({ activity: rows.filter((row) => counted.has(row.user_id)), users }),
+    people: activePeople({ activity: rows, people }),
+  })
 }))
 
 export default router

@@ -223,6 +223,22 @@ describe('GET /analytics/retention', () => {
     expect(res.body).toHaveProperty('dau')
     expect(res.body).toHaveProperty('cohorts')
   })
+
+  it('does not count the team in the active numbers, but lists them in the table', async () => {
+    const today = new Date().toISOString().slice(0, 10)
+    data.tables.users = [
+      ...data.tables.users,
+      { id: 'adm', username: 'admin', display_name: 'Admin', photo_url: null, user_kind: 'superadmin', created_at: hoursAgo(900), profile_completed: true },
+    ]
+    data.tables.user_activity_daily = [{ user_id: 'u1', day: today }, { user_id: 'adm', day: today }]
+
+    const res = await request(app()).get('/analytics/retention').expect(200)
+
+    expect(res.body.dau).toBe(1)
+    expect(res.body.people.map((person: { id: string }) => person.id).sort()).toEqual(['adm', 'u1'])
+    expect(res.body.people.find((person: { id: string }) => person.id === 'adm').counted).toBe(false)
+    expect(JSON.stringify(res.body.people)).not.toContain('@')
+  })
 })
 
 describe('GET /analytics/overview: companies', () => {
