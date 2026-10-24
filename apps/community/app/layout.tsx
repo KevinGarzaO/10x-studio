@@ -10,6 +10,9 @@ export const metadata: Metadata = {
   title: 'AvoTalent — Comunidad Global de Talento',
   description: 'La comunidad en español donde las conversaciones técnicas encuentran nuevas oportunidades laborales.',
   generator: 'v0.app',
+  verification: {
+    google: '0KPyMJnNqQnPBXL5edh_9YiU6IFy4iLkjt52TnAGol4',
+  },
 }
 
 export const viewport: Viewport = {
