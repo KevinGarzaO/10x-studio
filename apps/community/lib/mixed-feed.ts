@@ -1,5 +1,7 @@
 /** Una vacante del scraper o de la comunidad que coincide con los skills de la persona. */
 export interface MatchedItem {
+  /** Cuánta gente abrió, guardó y se postuló a la vacante. */
+  stats?: { views: number; saves: number; applies: number }
   sourceType: 'scraper' | 'community'
   id: string
   title: string

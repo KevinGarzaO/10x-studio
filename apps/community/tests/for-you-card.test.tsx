@@ -63,6 +63,11 @@ describe('ForYouCard', () => {
     expect(badges.map(b => b.classList.contains('is-shared'))).toEqual([true, true, false, false])
   })
 
+  it('shows views, saves and applies, zeros included, like the vacancy card', () => {
+    const { container } = render(<ForYouCard item={{ ...community, stats: { views: 12, saves: 0, applies: 3 } }} />)
+    expect([...container.querySelectorAll('.vacancy-stats li')].map(li => li.getAttribute('title'))).toEqual(['12 vistas', '0 guardados', '3 postulaciones'])
+  })
+
   it('uses the singular for a single shared skill', () => {
     render(<ForYouCard item={scraper} />)
     expect(screen.getByText(/1 skill en común/)).toBeTruthy()

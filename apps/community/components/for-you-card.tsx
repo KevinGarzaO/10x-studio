@@ -9,6 +9,7 @@ import { formatCompanyName, companySlug } from '../lib/company'
 import { ROLE_CATEGORY_LABELS, SENIORITY_LABELS } from '../lib/profile-options'
 import type { MatchedItem } from '../lib/mixed-feed'
 import { CompanyAvatar } from './community-hub'
+import { VacancyStats } from './vacancy-stats'
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'
 
@@ -141,9 +142,10 @@ export function ForYouCard({ item }: { item: MatchedItem }) {
           })}
         </div>
       )}
-      <div className="jc-foot">
+      <div className="jc-meta">
+        <VacancyStats stats={item.stats} />
         <span className="footer-spacer" />
-        <button className="jc-cta" onClick={open} disabled={opening}>
+        <button className="jc-more jc-more-button" onClick={open} disabled={opening}>
           {opening ? 'Abriendo...' : 'Ver vacante →'}
         </button>
       </div>

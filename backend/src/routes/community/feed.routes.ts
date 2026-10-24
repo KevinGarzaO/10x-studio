@@ -4,6 +4,7 @@ import { communityAuthMiddleware, AuthRequest } from '../../../middleware/commun
 import { syncVacancyToCommunity } from '../../../services/scraper/sync'
 import { scoreMatch, type ValidationLevel } from '../../../services/matching/score'
 import { loadValidatedSkills } from '../../../services/matching/validated'
+import { loadVacancyStats } from '../../../services/vacancies/popularity'
 
 const router = Router()
 
@@ -183,7 +184,14 @@ router.get('/for-you', communityAuthMiddleware, async (req: AuthRequest, res: Re
       })
     }
 
-    res.json({ items: itemsWithHistory, total: matched.length })
+    // Cuánta gente abrió, guardó y se postuló a cada vacante (las de la comunidad; las del scraper aún no tienen página).
+    const statsOf = await loadVacancyStats()
+    const withStats = itemsWithHistory.map(item => {
+      const slug = item.sourceType === 'community' ? /^\/vacantes\/([^/?#]+)/.exec(item.url ?? '')?.[1] ?? null : null
+      return { ...item, stats: statsOf({ id: item.id, slug }) }
+    })
+
+    res.json({ items: withStats, total: matched.length })
   } catch (error) {
     console.error('Community for-you feed error:', error)
     res.status(500).json({ error: 'Error al obtener tu feed personalizado' })
