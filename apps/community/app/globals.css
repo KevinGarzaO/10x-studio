@@ -802,3 +802,17 @@ button { cursor: pointer; }
 .tags-section .tag-link:hover { background: var(--surface); color: var(--text); filter: none; }
 .tags-section .tag-link.active { background: var(--surface); color: var(--text); font-weight: 700; border: 0; }
 .tags-section .section-heading { padding: 0 10px 6px; }
+
+/* Cabecera para quien no tiene cuenta, y widgets sin adornos. */
+.topbar-auth { display: flex; align-items: center; gap: 8px; }
+.topbar-login { padding: 8px 14px; border-radius: 8px; font-size: 14px; font-weight: 600; color: var(--text-2); text-decoration: none; }
+.topbar-login:hover { background: var(--surface-2); color: var(--text); }
+.topbar-signup { padding: 8px 14px; border-radius: 8px; border: 1px solid var(--brand); font-size: 14px; font-weight: 700; color: var(--accent-text); text-decoration: none; }
+.topbar-signup:hover { background: var(--brand); color: var(--on-accent); }
+.widget-title { font-size: 14px; font-weight: 700; padding-bottom: 10px; margin-bottom: 4px; border-bottom: 1px solid var(--line); }
+.trend-item { display: block; padding: 10px 0; border-bottom: 1px solid var(--line); color: var(--text); text-decoration: none; }
+.trend-item:last-child { border-bottom: 0; }
+.trend-item strong { display: block; font-size: 14px; font-weight: 500; line-height: 1.4; }
+.trend-item:hover strong { color: var(--accent-text); }
+.trend-item small { display: block; margin-top: 2px; font-size: 12px; color: var(--text-faint); }
+.hero-banner { max-width: 760px; margin: 0 auto; padding: 56px 24px; }

@@ -10,10 +10,10 @@ import {
   ArrowBigUp, LockKeyhole, CheckCircle2, Building, MapPin, Home as HomeIcon, Mail, Clock, Check
 } from 'lucide-react'
 import { companySlug, formatCompanyName } from '../lib/company'
+import { SENIORITY_LABELS } from '../lib/profile-options'
 import { useShell, type AuthRequest } from '../lib/shell-context'
 import { saveReturnTo } from '../lib/return-to'
 import { DEFAULT_ROLES, DEFAULT_TAGS, assignHues, tagHref, type SidebarRole, type SidebarTag } from '../lib/tag-colors'
-import { HeroBanner } from './hero-banner'
 import { getToken, clearSession } from '../lib/session'
 import { buildFeed, type MatchedItem } from '../lib/mixed-feed'
 import { ForYouCard } from './for-you-card'
@@ -91,7 +91,12 @@ export function ProfileMenu({ user }: { user: any }) {
   }, [open])
 
   if (!user) {
-    return <Link href="/login" className="topbar-profile-link" aria-label="Acceder"><Avatar initials="?" tone="blue" /></Link>
+    return (
+      <div className="topbar-auth">
+        <Link href="/login" className="topbar-login">Iniciar sesión</Link>
+        <Link href="/signup" className="topbar-signup">Crear cuenta</Link>
+      </div>
+    )
   }
 
   const initials = (user.display_name || user.username || 'U').slice(0, 2).toUpperCase()
@@ -378,7 +383,8 @@ export function PostCard({ post, onAuthRequired }: { post: FeedPost; onAuthRequi
     // "No especificado" es el relleno del scraper cuando no detectó modalidad: no dice nada.
     const modality = [job?.modality, post.modalidad].find(m => m && !/no especificado/i.test(m))
     const where = (job?.location || post.location || '').split(/[•;|]/)[0].trim()
-    const facts = [where, modality, post.seniority_level].filter(Boolean) as string[]
+    const facts = [where, modality, SENIORITY_LABELS[post.seniority_level ?? ''] || post.seniority_level]
+      .filter((fact, i, all): fact is string => !!fact && all.findIndex(other => other?.toLowerCase() === fact.toLowerCase()) === i)
     const tags = (post.tags || []).filter(Boolean).slice(0, 5)
     return <article className="post-card job-card" onClick={openPost}>
       <div className="jc-head">
@@ -493,11 +499,10 @@ export function RightSidebar({ onUnlock }: { onUnlock: () => void }) {
 
   return <aside className="right-sidebar">
     <section className="widget">
-      <div className="widget-title"><span>Conversaciones en fuego</span><Flame size={16} /></div>
-      {trending.length > 0 ? trending.map((post, i) => (
+      <div className="widget-title"><span>Conversaciones</span></div>
+      {trending.length > 0 ? trending.map(post => (
         <Link href={`/post/${post.id}`} className="trend-item" key={post.id}>
-          <span className="trend-number">0{i + 1}</span>
-          <span><strong>{post.title}</strong><small>{post.commentsCount} respuestas</small></span>
+          <span><strong>{post.title.replace(/^[^\p{L}\p{N}]+/u, '')}</strong>{post.commentsCount > 0 && <small>{post.commentsCount} {post.commentsCount === 1 ? 'respuesta' : 'respuestas'}</small>}</span>
         </Link>
       )) : (
         <p style={{ color: 'var(--text-muted)', fontSize: 13, padding: '8px 0' }}>Sé el primero en iniciar una conversación</p>
@@ -506,7 +511,7 @@ export function RightSidebar({ onUnlock }: { onUnlock: () => void }) {
 
     {featured.length > 0 && (
       <section className="widget opportunities">
-        <div className="widget-title"><span>Oportunidades destacadas</span><BriefcaseBusiness size={16} /></div>
+        <div className="widget-title"><span>Oportunidades destacadas</span></div>
         {featured.length > 0 ? featured.map(post => {
           const job = parseMiniJob(post.content || post.original_text || '')
           const company = formatCompanyName(post.company || job?.company) || null
@@ -534,7 +539,7 @@ export function RightSidebar({ onUnlock }: { onUnlock: () => void }) {
     )}
 
     <section className="widget community-widget">
-      <div className="widget-title"><span>La comunidad</span><Users size={16} /></div>
+      <div className="widget-title"><span>La comunidad</span></div>
       <div className="community-stats">
         <div><strong>{stats?.members != null ? formatCount(stats.members) : '—'}</strong><small>miembros</small></div>
         <div><strong>{stats?.companies != null ? formatCount(stats.companies) : '—'}</strong><small>empresas</small></div>
@@ -544,7 +549,7 @@ export function RightSidebar({ onUnlock }: { onUnlock: () => void }) {
   </aside>
 }
 
-export function AuthModal({ onClose, request }: { onClose: () => void; request?: AuthRequest | null }) {
+export function AuthModal({ onClose, request, locked = false, gate = false }: { onClose: () => void; request?: AuthRequest | null; locked?: boolean; gate?: boolean }) {
   const router = useRouter()
   const vacancy = request?.variant === 'vacancy'
 
@@ -556,9 +561,11 @@ export function AuthModal({ onClose, request }: { onClose: () => void; request?:
     router.push(path)
   }
 
-  const eyebrow = vacancy ? 'Vacante' : 'Contacto directo'
-  const title = vacancy ? '¿Te interesa esta vacante?' : 'Desbloquea esta oportunidad'
-  const text = vacancy
+  const eyebrow = gate ? 'Solo para miembros' : vacancy ? 'Vacante' : 'Contacto directo'
+  const title = gate ? 'Crea tu cuenta para entrar' : vacancy ? '¿Te interesa esta vacante?' : 'Desbloquea esta oportunidad'
+  const text = gate
+    ? 'Las vacantes y la comunidad de AvoTalent son para miembros. Crea tu cuenta gratis o inicia sesión para verlas.'
+    : vacancy
     ? 'Regístrate gratis para postularte, guardarla y ver qué tan bien encajas con tus skills. Al terminar tu perfil volverás a esta vacante.'
     : 'Regístrate para acceder a los datos de contacto y unirte a la conversación.'
 
@@ -569,7 +576,7 @@ export function AuthModal({ onClose, request }: { onClose: () => void; request?:
     window.location.href = `${API_URL}/api/community/auth/oauth/${provider}`
   }
 
-  return <div className="modal-backdrop" role="presentation" onMouseDown={e => e.target === e.currentTarget && onClose()}><section className="auth-modal" role="dialog" aria-modal="true" aria-labelledby="auth-title"><button className="modal-close icon-button" onClick={onClose} aria-label="Cerrar"><X size={19} /></button><div className="lock-orb"><LockKeyhole size={20} /></div><p className="eyebrow">{eyebrow}</p><h2 id="auth-title">{title}</h2>{vacancy && request?.subject && <p className="auth-subject"><strong>{request.subject}</strong></p>}<p>{text}</p><div className="oauth-stack"><button type="button" className="oauth-btn" onClick={() => oauth('linkedin')}><svg width="16" height="16" viewBox="0 0 24 24" fill="#0A66C2" aria-hidden="true"><path d="M20.45 20.45h-3.56v-5.57c0-1.33-.02-3.04-1.85-3.04-1.85 0-2.13 1.45-2.13 2.94v5.67H9.35V9h3.41v1.56h.05c.47-.9 1.63-1.85 3.36-1.85 3.6 0 4.27 2.37 4.27 5.46v6.28zM5.34 7.43a2.06 2.06 0 1 1 0-4.12 2.06 2.06 0 0 1 0 4.12zM7.12 20.45H3.56V9h3.56v11.45z"/></svg>Continuar con LinkedIn</button><button type="button" className="oauth-btn" onClick={() => oauth('github')}><svg width="16" height="16" viewBox="0 0 24 24" fill="var(--text)" aria-hidden="true"><path d="M12 .3a12 12 0 0 0-3.8 23.4c.6.1.8-.3.8-.6v-2c-3.3.7-4-1.6-4-1.6-.5-1.4-1.3-1.8-1.3-1.8-1.1-.7.1-.7.1-.7 1.2 0 1.8 1.2 1.8 1.2 1.1 1.8 2.8 1.3 3.5 1 .1-.8.4-1.3.8-1.6-2.7-.3-5.5-1.3-5.5-5.9 0-1.3.5-2.4 1.2-3.2-.1-.3-.5-1.5.1-3.2 0 0 1-.3 3.3 1.2a11.5 11.5 0 0 1 6 0C17 4.6 18 4.9 18 4.9c.7 1.7.3 2.9.2 3.2.8.8 1.2 1.9 1.2 3.2 0 4.6-2.8 5.6-5.5 5.9.4.4.8 1.1.8 2.2v3.3c0 .3.2.7.8.6A12 12 0 0 0 12 .3z"/></svg>Continuar con GitHub</button><div className="oauth-divider"><span>o continúa con tu correo</span></div></div><button className="oauth-button" style={{ width: '100%', marginBottom: 10, background: 'var(--brand)', color: 'var(--bg)', border: 'none', padding: '12px 16px', borderRadius: 8, fontWeight: 700, fontSize: 14, cursor: 'pointer' }} onClick={() => go('/signup')}>Crear cuenta gratis</button><button className="oauth-button" style={{ width: '100%', background: 'transparent', color: 'var(--text-2)', border: '1px solid var(--line)', padding: '12px 16px', borderRadius: 8, fontSize: 14, cursor: 'pointer' }} onClick={() => go('/login')}>Iniciar sesión</button><small style={{ display: 'block', textAlign: 'center', marginTop: 12, color: 'var(--text-muted)', fontSize: 11 }}>Al continuar aceptas nuestras reglas de comunidad.</small></section></div>
+  return <div className="modal-backdrop" role="presentation" onMouseDown={e => !locked && e.target === e.currentTarget && onClose()}><section className="auth-modal" role="dialog" aria-modal="true" aria-labelledby="auth-title">{!locked && <button className="modal-close icon-button" onClick={onClose} aria-label="Cerrar"><X size={19} /></button>}<div className="lock-orb"><LockKeyhole size={20} /></div><p className="eyebrow">{eyebrow}</p><h2 id="auth-title">{title}</h2>{vacancy && request?.subject && <p className="auth-subject"><strong>{request.subject}</strong></p>}<p>{text}</p><div className="oauth-stack"><button type="button" className="oauth-btn" onClick={() => oauth('linkedin')}><svg width="16" height="16" viewBox="0 0 24 24" fill="#0A66C2" aria-hidden="true"><path d="M20.45 20.45h-3.56v-5.57c0-1.33-.02-3.04-1.85-3.04-1.85 0-2.13 1.45-2.13 2.94v5.67H9.35V9h3.41v1.56h.05c.47-.9 1.63-1.85 3.36-1.85 3.6 0 4.27 2.37 4.27 5.46v6.28zM5.34 7.43a2.06 2.06 0 1 1 0-4.12 2.06 2.06 0 0 1 0 4.12zM7.12 20.45H3.56V9h3.56v11.45z"/></svg>Continuar con LinkedIn</button><button type="button" className="oauth-btn" onClick={() => oauth('github')}><svg width="16" height="16" viewBox="0 0 24 24" fill="var(--text)" aria-hidden="true"><path d="M12 .3a12 12 0 0 0-3.8 23.4c.6.1.8-.3.8-.6v-2c-3.3.7-4-1.6-4-1.6-.5-1.4-1.3-1.8-1.3-1.8-1.1-.7.1-.7.1-.7 1.2 0 1.8 1.2 1.8 1.2 1.1 1.8 2.8 1.3 3.5 1 .1-.8.4-1.3.8-1.6-2.7-.3-5.5-1.3-5.5-5.9 0-1.3.5-2.4 1.2-3.2-.1-.3-.5-1.5.1-3.2 0 0 1-.3 3.3 1.2a11.5 11.5 0 0 1 6 0C17 4.6 18 4.9 18 4.9c.7 1.7.3 2.9.2 3.2.8.8 1.2 1.9 1.2 3.2 0 4.6-2.8 5.6-5.5 5.9.4.4.8 1.1.8 2.2v3.3c0 .3.2.7.8.6A12 12 0 0 0 12 .3z"/></svg>Continuar con GitHub</button><div className="oauth-divider"><span>o continúa con tu correo</span></div></div><button className="oauth-button" style={{ width: '100%', marginBottom: 10, background: 'var(--brand)', color: 'var(--bg)', border: 'none', padding: '12px 16px', borderRadius: 8, fontWeight: 700, fontSize: 14, cursor: 'pointer' }} onClick={() => go('/signup')}>Crear cuenta gratis</button><button className="oauth-button" style={{ width: '100%', background: 'transparent', color: 'var(--text-2)', border: '1px solid var(--line)', padding: '12px 16px', borderRadius: 8, fontSize: 14, cursor: 'pointer' }} onClick={() => go('/login')}>Iniciar sesión</button><small style={{ display: 'block', textAlign: 'center', marginTop: 12, color: 'var(--text-muted)', fontSize: 11 }}>Al continuar aceptas nuestras reglas de comunidad.</small></section></div>
 }
 
 // The feed's content column — rendered as {children} inside the shared
@@ -731,7 +738,6 @@ export function Feed() {
   const hasMore = !!snapshot && (snapshot.moreArticles || snapshot.moreJobs)
 
   return <main className="feed">
-    {!user && <HeroBanner onViewJobs={() => document.querySelector('.post-card.job-card')?.scrollIntoView({ behavior: 'smooth' })} />}
     <div className="feed-heading">
       <div>
         <p className="eyebrow">{todayLabel}</p>

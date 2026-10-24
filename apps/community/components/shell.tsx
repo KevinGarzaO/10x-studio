@@ -9,6 +9,7 @@ import { ShellContext, type AuthRequest } from '../lib/shell-context'
 import { LeftSidebar, RightSidebar, ProfileMenu, AuthModal } from './community-hub'
 import { ProfileGate } from './profile-gate'
 import { ThemeToggle } from './theme-toggle'
+import { HeroBanner } from './hero-banner'
 
 export function CommunityShell({ children }: { children: ReactNode }) {
   const pathname = usePathname()
@@ -36,6 +37,11 @@ export function CommunityShell({ children }: { children: ReactNode }) {
   // sidebars para no competir con el contenido.
   const isFocusedRoute = ['/post/', '/vacantes/', '/users/', '/empresas/', '/empleos', '/puestos'].some(prefix => pathname.startsWith(prefix))
     || pathname === '/profile'
+
+  // Sin cuenta solo se ve lo que Google indexa (los directorios de empleos y la ficha de cada vacante, esta
+  // última detrás del aviso para registrarse). Todo lo demás exige cuenta.
+  const isPublicRoute = ['/empleos', '/puestos', '/vacantes/'].some(prefix => pathname.startsWith(prefix))
+  const gated = !user && !isPublicRoute
 
   // Un tema filtra el feed; desde cualquier otra pantalla primero se vuelve a él.
   const onTagClick = useCallback((tag: string) => {
@@ -75,7 +81,9 @@ export function CommunityShell({ children }: { children: ReactNode }) {
           <LeftSidebar activeTag={activeTag} onTagClick={onTagClick} />
         </div>
 
-        {isFocusedRoute ? (
+        {gated ? (
+          <div className="layout-focused">{userLoaded && <HeroBanner />}</div>
+        ) : isFocusedRoute ? (
           // El detalle de una publicación se lee en una sola columna: el diseño
           // quita los sidebars para no competir con el contenido.
           <div className="layout-focused">{children}</div>
@@ -87,7 +95,8 @@ export function CommunityShell({ children }: { children: ReactNode }) {
           </div>
         )}
 
-        {authOpen && <AuthModal onClose={() => setAuthOpen(false)} request={authRequest} />}
+        {gated && userLoaded && <AuthModal gate locked onClose={() => {}} request={null} />}
+        {!gated && authOpen && <AuthModal onClose={() => setAuthOpen(false)} request={authRequest} locked={!user} />}
       </div>
     </ShellContext.Provider>
   )

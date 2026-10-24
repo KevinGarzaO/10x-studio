@@ -140,6 +140,6 @@ describe('PostCard (rediseño del feed)', () => {
   it('shows the seniority level in the chip once the data exists', () => {
     const { container } = render(<PostCard post={{ ...job, seniority_level: 'senior' }} />)
 
-    expect(container.querySelector('.jc-facts')?.textContent).toContain('senior')
+    expect(container.querySelector('.jc-facts')?.textContent).toContain('Senior')
   })
 })
