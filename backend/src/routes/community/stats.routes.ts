@@ -1,5 +1,7 @@
 import { Router, Request, Response } from 'express'
 import { supabase } from '../../../services/supabase.service'
+import { FOCUS_ROLES } from '../../../services/audience/role-focus'
+import { PUBLIC_ROLES, roleLabel, roleSlug } from '../../../services/seo/role-slug'
 
 const router = Router()
 
@@ -113,13 +115,16 @@ router.get('/tags', async (req: Request, res: Response) => {
     }
 
     // Sin temas escritos a mano, los temas en tendencia son los skills que más piden las
-    // vacantes abiertas (las de los últimos 45 días: las mismas que lista /empleos/<skill>).
+    // vacantes abiertas (las de los últimos 45 días: las mismas que lista /empleos/<skill>), contando
+    // solo las de los roles del foco (services/audience/role-focus.ts). Sin esto, las 68 vacantes de
+    // ventas del scraper dejaban "Ventas" como segundo tema de una comunidad de desarrolladores.
     if (counts.size === 0) {
       const since = new Date(Date.now() - 45 * 86400000).toISOString()
       const { data: postsData } = await supabase
         .from('community_posts')
         .select('skills')
         .eq('type', 'job')
+        .in('role_category', FOCUS_ROLES)
         .gte('created_at', since)
         .not('skills', 'is', null)
         .limit(2000)
@@ -142,6 +147,43 @@ router.get('/tags', async (req: Request, res: Response) => {
   } catch (error) {
     console.error('Community Get trending tags error:', error)
     res.status(500).json({ error: 'Error al obtener los temas' })
+  }
+})
+
+/**
+ * Los puestos en tendencia del menú lateral: los del foco con más vacantes abiertas (45 días). Cada uno
+ * lleva a su página, /puestos/<puesto>. `all=1` los trae todos, sin el foco.
+ */
+router.get('/roles', async (req: Request, res: Response) => {
+  try {
+    const limit = Math.min(Math.max(parseInt((req.query.limit as string) || '6', 10) || 6, 1), 30)
+    const allowed = req.query.all === '1' ? PUBLIC_ROLES : PUBLIC_ROLES.filter((role) => FOCUS_ROLES.includes(role))
+    const since = new Date(Date.now() - 45 * 86400000).toISOString()
+
+    const { data, error } = await supabase
+      .from('community_posts')
+      .select('role_category')
+      .eq('type', 'job')
+      .in('role_category', allowed)
+      .gte('created_at', since)
+      .limit(5000)
+    if (error) throw error
+
+    const counts = new Map<string, number>()
+    for (const row of data || []) {
+      const role = (row as { role_category: string | null }).role_category
+      if (role) counts.set(role, (counts.get(role) || 0) + 1)
+    }
+
+    res.json({
+      roles: [...counts.entries()]
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, limit)
+        .map(([role, count]) => ({ role, slug: roleSlug(role), label: roleLabel(role), count })),
+    })
+  } catch (error) {
+    console.error('Community Get trending roles error:', error)
+    res.status(500).json({ error: 'Error al obtener los puestos' })
   }
 })
 

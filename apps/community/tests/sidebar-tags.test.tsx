@@ -16,9 +16,17 @@ const tags = [
   { name: 'tema-libre', label: 'tema-libre', skill: false, count: 3 },
 ]
 
+const roles = [
+  { role: 'backend', slug: 'backend', label: 'Backend', count: 40 },
+  { role: 'ux_ui', slug: 'ux-ui', label: 'UX / UI', count: 12 },
+]
+
 beforeEach(() => {
   pathname = '/'
-  global.fetch = vi.fn(async () => ({ ok: true, json: async () => ({ tags }) })) as unknown as typeof fetch
+  global.fetch = vi.fn(async (url: string) => ({
+    ok: true,
+    json: async () => (String(url).includes('/stats/roles') ? { roles } : { tags }),
+  })) as unknown as typeof fetch
 })
 
 describe('tagHue', () => {
@@ -96,9 +104,20 @@ describe('the trending topics in the sidebar', () => {
     const { container } = render(<LeftSidebar activeTag={null} onTagClick={vi.fn()} />)
     await screen.findByText('IA / Machine Learning')
 
-    const colors = [...container.querySelectorAll('.tags-section .tag-link')].map(link => /tag-hue-(\d)/.exec(link.className)![1])
+    const colors = [...container.querySelectorAll('.tags-section')[1].querySelectorAll('.tag-link')].map(link => /tag-hue-(\d)/.exec(link.className)![1])
     expect(colors).toHaveLength(3)
     expect(new Set(colors).size).toBe(3)
+  })
+
+  it('list the trending roles, each linking to its page with its own color', async () => {
+    const { container } = render(<LeftSidebar activeTag={null} onTagClick={vi.fn()} />)
+
+    await screen.findByText('UX / UI')
+    expect(container.querySelector('a[href="/puestos/backend"]')).toBeTruthy()
+    expect(container.querySelector('a[href="/puestos/ux-ui"]')).toBeTruthy()
+
+    const colors = [...container.querySelectorAll('.tags-section')[0].querySelectorAll('.tag-link')].map(link => /tag-hue-(\d)/.exec(link.className)![1])
+    expect(new Set(colors).size).toBe(colors.length)
   })
 
   it('mark the page you are on', async () => {

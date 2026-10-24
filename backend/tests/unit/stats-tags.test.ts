@@ -5,7 +5,7 @@ import request from 'supertest'
 const state = vi.hoisted(() => ({
   catalog: [] as { name: string; label: string }[],
   handTags: [] as { tag: { name: string } }[],
-  posts: [] as { skills: unknown }[],
+  posts: [] as { skills?: unknown; role_category?: string }[],
 }))
 const filters = vi.hoisted(() => [] as string[])
 
@@ -14,7 +14,7 @@ vi.mock('../../services/supabase.service', () => ({
     from: (table: string) => ({
       select: () => {
         const q: any = {}
-        for (const name of ['eq', 'gte', 'not', 'limit']) q[name] = (...args: unknown[]) => { filters.push(`${table}:${name}:${args.join(',')}`); return q }
+        for (const name of ['eq', 'in', 'gte', 'not', 'limit']) q[name] = (...args: unknown[]) => { filters.push(`${table}:${name}:${args.join(',')}`); return q }
         q.then = (resolve: any, reject: any) => {
           const data = table === 'skills' ? state.catalog : table === 'community_post_tags' ? state.handTags : state.posts
           return Promise.resolve({ data, error: null }).then(resolve, reject)
@@ -93,5 +93,44 @@ describe('GET /stats/tags', () => {
     const res = await request(app()).get('/stats/tags?limit=999').expect(200)
 
     expect(res.body.tags).toHaveLength(30)
+  })
+
+  it('only counts vacancies of the focus roles, so sales jobs never become a trending topic', async () => {
+    await request(app()).get('/stats/tags')
+
+    const filter = filters.find(f => f.startsWith('community_posts:in:role_category,'))!
+    expect(filter).toContain('backend')
+    expect(filter).toContain('frontend')
+    expect(filter).not.toContain('ventas')
+  })
+})
+
+describe('GET /stats/roles', () => {
+  it('ranks the focus roles by open vacancies, with the address of their page', async () => {
+    state.posts = [
+      { role_category: 'backend' }, { role_category: 'backend' }, { role_category: 'ux_ui' },
+    ]
+
+    const res = await request(app()).get('/stats/roles').expect(200)
+
+    expect(res.body.roles).toEqual([
+      expect.objectContaining({ role: 'backend', slug: 'backend', count: 2 }),
+      expect.objectContaining({ role: 'ux_ui', slug: 'ux-ui', count: 1 }),
+    ])
+    expect(res.body.roles[0].label).toBeTruthy()
+  })
+
+  it('asks only for focus roles, unless all of them are requested', async () => {
+    await request(app()).get('/stats/roles')
+    expect(filters.find(f => f.startsWith('community_posts:in:role_category,'))).not.toContain('ventas')
+
+    filters.length = 0
+    await request(app()).get('/stats/roles?all=1')
+    expect(filters.find(f => f.startsWith('community_posts:in:role_category,'))).toContain('ventas')
+  })
+
+  it('never returns "otro": it is not a role anyone can open', async () => {
+    await request(app()).get('/stats/roles?all=1')
+    expect(filters.find(f => f.startsWith('community_posts:in:role_category,'))).not.toContain('otro')
   })
 })

@@ -12,7 +12,7 @@ import {
 import { companySlug, formatCompanyName } from '../lib/company'
 import { useShell, type AuthRequest } from '../lib/shell-context'
 import { saveReturnTo } from '../lib/return-to'
-import { DEFAULT_TAGS, assignHues, tagHref, type SidebarTag } from '../lib/tag-colors'
+import { DEFAULT_ROLES, DEFAULT_TAGS, assignHues, tagHref, type SidebarRole, type SidebarTag } from '../lib/tag-colors'
 import { HeroBanner } from './hero-banner'
 import { getToken, clearSession } from '../lib/session'
 import { buildFeed, type MatchedItem } from '../lib/mixed-feed'
@@ -125,8 +125,10 @@ export function ProfileMenu({ user }: { user: any }) {
 
 export function LeftSidebar({ activeTag, onTagClick }: { activeTag: string | null; onTagClick: (tag: string) => void }) {
   const [tags, setTags] = useState<SidebarTag[]>(DEFAULT_TAGS)
+  const [roles, setRoles] = useState<SidebarRole[]>(DEFAULT_ROLES)
   const pathname = usePathname()
   const hues = useMemo(() => assignHues(tags.map(tag => tag.name)), [tags])
+  const roleHues = useMemo(() => assignHues(roles.map(role => role.slug)), [roles])
 
   useEffect(() => {
     fetch(`${API_URL}/api/community/stats/tags?limit=6`)
@@ -140,9 +142,33 @@ export function LeftSidebar({ activeTag, onTagClick }: { activeTag: string | nul
         if (fetched.length > 0) setTags(fetched)
       })
       .catch(() => {})
+
+    fetch(`${API_URL}/api/community/stats/roles?limit=6`)
+      .then(r => r.ok ? r.json() : null)
+      .then(d => {
+        const fetched: SidebarRole[] = (d?.roles || []).map((r: { slug: string; label?: string }) => ({ slug: r.slug, label: r.label || r.slug }))
+        if (fetched.length > 0) setRoles(fetched)
+      })
+      .catch(() => {})
   }, [])
 
   return <aside className="left-sidebar">
+    <div className="sidebar-section tags-section">
+      <div className="section-heading"><p className="eyebrow">Puestos en tendencia</p></div>
+      {roles.map(role => {
+        const href = `/puestos/${role.slug}`
+        return (
+          <Link
+            key={role.slug}
+            href={href}
+            className={`tag-link tag-hue-${roleHues[role.slug]} ${pathname === href ? 'active' : ''}`}
+            aria-current={pathname === href ? 'page' : undefined}
+          >
+            <Hash size={14} />{role.label}
+          </Link>
+        )
+      })}
+    </div>
     <div className="sidebar-section tags-section">
       <div className="section-heading"><p className="eyebrow">Temas en tendencia</p></div>
       {tags.map(tag => {

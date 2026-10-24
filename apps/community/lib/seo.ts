@@ -21,6 +21,16 @@ export interface SeoSkill {
   vacancies: number
 }
 
+export interface SeoRole {
+  /** La clave del puesto (`ux_ui`). */
+  role: string
+  /** Lo que va en la dirección (`ux-ui`). */
+  slug: string
+  label: string
+  /** Vacantes activas de ese puesto. */
+  vacancies: number
+}
+
 export interface SeoVacancy {
   id: string
   slug: string
@@ -57,9 +67,18 @@ export async function getSeoSkill(name: string): Promise<{ name: string; label: 
   return (await get<{ skill: { name: string; label: string } }>(`skills/${encodeURIComponent(name)}`))?.skill ?? null
 }
 
-export async function getSeoVacancies(options: { skill?: string; exclude?: string; limit?: number } = {}): Promise<SeoVacancy[]> {
+export async function getSeoRoles(): Promise<SeoRole[]> {
+  return (await get<{ roles: SeoRole[] }>('roles'))?.roles ?? []
+}
+
+export async function getSeoRole(slug: string): Promise<{ role: string; slug: string; label: string } | null> {
+  return (await get<{ role: { role: string; slug: string; label: string } }>(`roles/${encodeURIComponent(slug)}`))?.role ?? null
+}
+
+export async function getSeoVacancies(options: { skill?: string; role?: string; exclude?: string; limit?: number } = {}): Promise<SeoVacancy[]> {
   const params = new URLSearchParams()
   if (options.skill) params.set('skill', options.skill)
+  if (options.role) params.set('role', options.role)
   if (options.exclude) params.set('exclude', options.exclude)
   if (options.limit) params.set('limit', String(options.limit))
   return (await get<{ vacancies: SeoVacancy[] }>(`vacancies?${params}`))?.vacancies ?? []
@@ -69,6 +88,11 @@ export async function getSeoVacancy(slug: string): Promise<SeoVacancy | null> {
   return (await get<{ vacancy: SeoVacancy }>(`vacancy/${encodeURIComponent(slug)}`))?.vacancy ?? null
 }
 
-export async function getSeoSitemap(): Promise<{ skills: { name: string; lastModified: string }[]; vacancies: { slug: string; lastModified: string }[] }> {
-  return (await get('sitemap')) ?? { skills: [], vacancies: [] }
+export async function getSeoSitemap(): Promise<{
+  skills: { name: string; lastModified: string }[]
+  roles: { slug: string; lastModified: string }[]
+  vacancies: { slug: string; lastModified: string }[]
+}> {
+  const sitemap = await get<{ skills?: any[]; roles?: any[]; vacancies?: any[] }>('sitemap')
+  return { skills: sitemap?.skills ?? [], roles: sitemap?.roles ?? [], vacancies: sitemap?.vacancies ?? [] }
 }

@@ -92,7 +92,7 @@ describe('the pages and the sitemap read from the backend', () => {
       'skills/python': { skill: { name: 'python', label: 'Python' } },
       'skills/cobol': { skill: { name: 'cobol', label: 'COBOL' } },
       'vacancies': { vacancies: [vacancy(), vacancy({ id: 'v2', slug: 'otra', title: 'Data Engineer' })] },
-      'sitemap': { skills: [{ name: 'python', lastModified: '2026-10-20T00:00:00Z' }], vacancies: [{ slug: 'backend-engineer-1', lastModified: '2026-10-21T00:00:00Z' }] },
+      'sitemap': { skills: [{ name: 'python', lastModified: '2026-10-20T00:00:00Z' }], roles: [{ slug: 'ux-ui', lastModified: '2026-10-20T00:00:00Z' }], vacancies: [{ slug: 'backend-engineer-1', lastModified: '2026-10-21T00:00:00Z' }] },
       ...overrides,
     }
     global.fetch = vi.fn(async (url: string) => {
@@ -107,13 +107,15 @@ describe('the pages and the sitemap read from the backend', () => {
   beforeEach(() => { calls.length = 0 })
   afterEach(() => { vi.unstubAllGlobals() })
 
-  it('the sitemap lists the home, the directory, the skills with vacancies and every vacancy', async () => {
+  it('the sitemap lists the home, both directories, the roles and skills with vacancies and every vacancy', async () => {
     backend()
     const urls = (await sitemap()).map(entry => entry.url)
 
     expect(urls).toEqual([
       'https://avotalent.app',
       'https://avotalent.app/empleos',
+      'https://avotalent.app/puestos',
+      'https://avotalent.app/puestos/ux-ui',
       'https://avotalent.app/empleos/python',
       'https://avotalent.app/vacantes/backend-engineer-1',
     ])
@@ -122,7 +124,7 @@ describe('the pages and the sitemap read from the backend', () => {
   it('the sitemap still answers when the backend is down', async () => {
     global.fetch = vi.fn(async () => { throw new Error('offline') }) as unknown as typeof fetch
     const urls = (await sitemap()).map(entry => entry.url)
-    expect(urls).toEqual(['https://avotalent.app', 'https://avotalent.app/empleos'])
+    expect(urls).toEqual(['https://avotalent.app', 'https://avotalent.app/empleos', 'https://avotalent.app/puestos'])
   })
 
   it('the directory lists skills and vacancies as plain links a crawler can follow', async () => {

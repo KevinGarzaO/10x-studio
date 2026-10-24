@@ -1,6 +1,7 @@
 import { Router, Request, Response } from 'express'
 import { supabase } from '../../../services/supabase.service'
 import { seoDescription } from '../../../services/seo/vacancy-description'
+import { PUBLIC_ROLES, roleFromSlug, roleLabel, roleSlug } from '../../../services/seo/role-slug'
 
 const router = Router()
 
@@ -85,6 +86,36 @@ router.get('/skills', async (_req: Request, res: Response) => {
   }
 })
 
+/** Los puestos con vacantes abiertas y cuántas tiene cada uno. */
+router.get('/roles', async (_req: Request, res: Response) => {
+  try {
+    const roles = await cached('roles', async () => {
+      const { data, error } = await supabase.from('community_posts').select('role_category').eq('type', 'job').gte('created_at', activeSince()).limit(5000)
+      if (error) throw error
+
+      const counts = new Map<string, number>()
+      for (const row of data || []) {
+        const role = (row as { role_category: string | null }).role_category
+        if (role && (PUBLIC_ROLES as string[]).includes(role)) counts.set(role, (counts.get(role) ?? 0) + 1)
+      }
+      return [...counts.entries()]
+        .map(([role, vacancies]) => ({ role, slug: roleSlug(role), label: roleLabel(role), vacancies }))
+        .sort((a, b) => b.vacancies - a.vacancies || a.label.localeCompare(b.label))
+    })
+    res.json({ roles })
+  } catch (error) {
+    console.error('SEO roles error:', error)
+    res.status(500).json({ error: 'No se pudieron leer los puestos' })
+  }
+})
+
+/** Un puesto (exista o no con vacantes), para su página. Acepta `ux-ui` o `ux_ui`. */
+router.get('/roles/:slug', (req: Request, res: Response) => {
+  const role = roleFromSlug(String(req.params.slug))
+  if (!role) return res.status(404).json({ error: 'Puesto no encontrado' })
+  res.json({ role: { role, slug: roleSlug(role), label: roleLabel(role) } })
+})
+
 /** Un skill del catálogo (exista o no con vacantes), para su página. */
 router.get('/skills/:name', async (req: Request, res: Response) => {
   try {
@@ -107,6 +138,7 @@ router.get('/vacancies', async (req: Request, res: Response) => {
   try {
     const skill = typeof req.query.skill === 'string' ? req.query.skill.toLowerCase().trim() : ''
     const exclude = typeof req.query.exclude === 'string' ? req.query.exclude : ''
+    const role = typeof req.query.role === 'string' ? roleFromSlug(req.query.role) : null
     const limit = Math.min(Math.max(parseInt(String(req.query.limit ?? '30'), 10) || 30, 1), 100)
 
     let query = supabase
@@ -119,6 +151,7 @@ router.get('/vacancies', async (req: Request, res: Response) => {
       .limit(limit)
 
     if (skill) query = query.contains('skills', JSON.stringify([skill]))
+    if (role) query = query.eq('role_category', role)
     if (exclude) query = query.neq('slug', exclude)
 
     const { data, error } = await query
@@ -162,7 +195,7 @@ router.get('/sitemap', async (_req: Request, res: Response) => {
     const value = await cached('sitemap', async () => {
       const { data, error } = await supabase
         .from('community_posts')
-        .select('slug, created_at, skills')
+        .select('slug, created_at, skills, role_category')
         .eq('type', 'job')
         .not('slug', 'is', null)
         .order('created_at', { ascending: false })
@@ -171,13 +204,17 @@ router.get('/sitemap', async (_req: Request, res: Response) => {
 
       const since = Date.parse(activeSince())
       const skillDates = new Map<string, string>()
+      const roleDates = new Map<string, string>()
       for (const post of data || []) {
         if (Date.parse(post.created_at) < since) continue
         for (const skill of toSkills(post.skills)) if (!skillDates.has(skill)) skillDates.set(skill, post.created_at)
+        const role = (post as { role_category?: string | null }).role_category
+        if (role && (PUBLIC_ROLES as string[]).includes(role) && !roleDates.has(role)) roleDates.set(role, post.created_at)
       }
 
       return {
         skills: [...skillDates.entries()].map(([name, lastModified]) => ({ name, lastModified })),
+        roles: [...roleDates.entries()].map(([role, lastModified]) => ({ slug: roleSlug(role), lastModified })),
         vacancies: (data || []).map((post: any) => ({ slug: post.slug as string, lastModified: post.created_at as string })),
       }
     })

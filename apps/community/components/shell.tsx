@@ -33,7 +33,7 @@ export function CommunityShell({ children }: { children: ReactNode }) {
 
   // Detalle y perfiles se leen en una sola columna: el diseño quita los
   // sidebars para no competir con el contenido.
-  const isFocusedRoute = ['/post/', '/vacantes/', '/users/', '/empresas/', '/empleos'].some(prefix => pathname.startsWith(prefix))
+  const isFocusedRoute = ['/post/', '/vacantes/', '/users/', '/empresas/', '/empleos', '/puestos'].some(prefix => pathname.startsWith(prefix))
     || pathname === '/profile'
 
   // Un tema filtra el feed; desde cualquier otra pantalla primero se vuelve a él.

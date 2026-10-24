@@ -1,5 +1,6 @@
 import { ROLE_CATEGORY_LABEL, type RoleCategory } from '@avocado/schemas'
 import { modalityFromLabel } from '../vacancies/modality'
+import { ROLE_FOCUS } from '../audience/role-focus'
 
 /**
  * Las publicaciones de vacantes en LinkedIn: qué vacante se elige y cómo se escribe.
@@ -62,27 +63,8 @@ export function completeness(vacancy: LinkedInVacancy): number {
   return points
 }
 
-/**
- * Qué roles se publican en LinkedIn y cuánto pesan. Sale de lo que mostró el rendimiento real de
- * las primeras 35 publicaciones: quienes se registran son, en su gran mayoría, desarrolladores
- * senior que buscan trabajo remoto. Las vacantes de marketing, finanzas, administración, recursos
- * humanos, ventas, legal y atención al cliente trajeron 1 o 2 visitantes y ningún registro.
- *
- * Un rol que no está aquí NO se publica (la vacante sigue en el feed de la comunidad). Cuando
- * AvoTalent tenga audiencia para esas áreas, se agregan aquí: es el único lugar que lo decide.
- */
-export const ROLE_FOCUS: Record<string, number> = {
-  fullstack: 3,
-  frontend: 3,
-  backend: 3,
-  devops: 3,
-  ux_ui: 3,
-  mobile: 2,
-  qa: 2,
-  data_engineer: 2,
-  product: 2,
-  data_scientist: 1,
-}
+// El foco de roles vive en services/audience/role-focus.ts: lo comparten LinkedIn y los temas en tendencia.
+export { ROLE_FOCUS }
 
 /**
  * Qué tan buena candidata es una vacante para publicarse: su completitud, más lo que sabemos que

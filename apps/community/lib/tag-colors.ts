@@ -41,6 +41,20 @@ export interface SidebarTag {
 /** Los temas que se muestran mientras llegan los reales (o si el backend no responde). */
 export const DEFAULT_TAGS: SidebarTag[] = ['python', 'sql', 'aws', 'react', 'ia', 'git'].map(name => ({ name, label: name, skill: true }))
 
+/** Un puesto en tendencia del sidebar, con su página en /puestos/<slug>. */
+export interface SidebarRole {
+  slug: string
+  label: string
+}
+
+/** Los puestos que se muestran mientras llegan los reales. */
+export const DEFAULT_ROLES: SidebarRole[] = [
+  { slug: 'fullstack', label: 'Full Stack' },
+  { slug: 'backend', label: 'Backend' },
+  { slug: 'frontend', label: 'Frontend' },
+  { slug: 'devops', label: 'DevOps' },
+]
+
 /** A dónde lleva un tema: su página de empleos si es un skill, y si no, filtra el feed. */
 export function tagHref(tag: SidebarTag): string | null {
   return tag.skill ? `/empleos/${encodeURIComponent(tag.name)}` : null
