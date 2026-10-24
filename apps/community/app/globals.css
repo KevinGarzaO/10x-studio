@@ -22,8 +22,9 @@
   --warn: #946b00; --warn-soft: #fff7e0; --warn-line: #ecd48a;
   --danger: #dc2626; --danger-strong: #dc2626; --danger-soft: #fdecec; --danger-line: #f3b4b4;
   /* "purple" e "indigo" ya no son morado ni índigo: son el azul marino de la barra (misma identidad que el admin). */
-  --purple-text: #0f172a; --purple-soft: #e2e8f0; --purple-line: #94a3b8;
-  --indigo-text: #0f172a; --indigo-soft: #e2e8f0; --indigo-line: #94a3b8;
+  --navy: #0f172a; --on-navy: #ffffff;
+  --purple-text: #0f172a; --purple-soft: #dbe5f6; --purple-line: #8ea6cf;
+  --indigo-text: #0f172a; --indigo-soft: #dbe5f6; --indigo-line: #8ea6cf;
   --sky-text: #0369a1;
   --shadow: 0 1px 2px rgba(0,0,0,.06);
   --radius: .5rem;
@@ -37,8 +38,9 @@
   --accent-soft: #1e3328; --accent-line: #2f5a46;
   --warn: #d4b85a; --warn-soft: #3a3320; --warn-line: #4a4026;
   --danger: #f87171; --danger-strong: #ef4444; --danger-soft: #3d1214; --danger-line: #5c2225;
-  --purple-text: #cbd5e1; --purple-soft: #1e293b; --purple-line: #475569;
-  --indigo-text: #cbd5e1; --indigo-soft: #1e293b; --indigo-line: #475569;
+  --navy: #0f172a; --on-navy: #ffffff;
+  --purple-text: #bcd0f2; --purple-soft: #1a2a4a; --purple-line: #3b5486;
+  --indigo-text: #bcd0f2; --indigo-soft: #1a2a4a; --indigo-line: #3b5486;
   --sky-text: #7dd3fc;
   --shadow: none;
 }
@@ -904,3 +906,10 @@ button { cursor: pointer; }
 .person-info small { font-size: 12px; color: var(--text-muted); }
 .person-validated { display: inline-flex; align-items: center; gap: 4px; font-size: 11px; font-weight: 600; color: var(--accent-text); }
 .mini-job-views { display: inline-flex; align-items: center; gap: 4px; margin-top: 2px; font-size: 11px; color: var(--text-faint); }
+
+/* "Para ti" y todo lo destacado: el azul marino de la barra superior, no un gris. */
+.post-type-badge.is-for-you, .jc-forme .post-type-badge.is-for-you { background: var(--navy); color: var(--on-navy); }
+.post-card.is-for-you { border-color: var(--navy); box-shadow: inset 3px 0 0 var(--navy); }
+:root[data-theme='dark'] .post-card.is-for-you { border-color: var(--purple-line); box-shadow: inset 3px 0 0 var(--purple-text); }
+.jc-forme { border-bottom-color: var(--purple-line); }
+.match-pill:not(.is-validated) { background: var(--purple-soft); color: var(--purple-text); }
