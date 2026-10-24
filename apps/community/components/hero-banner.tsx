@@ -16,7 +16,6 @@ export function HeroBanner() {
         </p>
         <div className="hero-actions">
           <Link href="/signup" className="hero-btn-primary">Crear cuenta gratis</Link>
-          <Link href="/login" className="hero-btn-secondary">Iniciar sesión</Link>
         </div>
       </div>
     </section>
