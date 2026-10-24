@@ -3,10 +3,10 @@
 import { useState, useEffect, useCallback, useMemo, type ReactNode } from 'react'
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
-import { Bell, Menu, Plus, Search, X } from 'lucide-react'
+import { Bell, Menu, Search, X } from 'lucide-react'
 import { fetchCurrentUser, getCachedUser } from '../lib/session'
 import { ShellContext, type AuthRequest } from '../lib/shell-context'
-import { LeftSidebar, RightSidebar, ProfileMenu, PublishModal, AuthModal } from './community-hub'
+import { LeftSidebar, RightSidebar, ProfileMenu, AuthModal } from './community-hub'
 import { ProfileGate } from './profile-gate'
 
 export function CommunityShell({ children }: { children: ReactNode }) {
@@ -17,7 +17,6 @@ export function CommunityShell({ children }: { children: ReactNode }) {
   const [search, setSearch] = useState('')
   const [activeTag, setActiveTag] = useState<string | null>(null)
   const [mobileMenu, setMobileMenu] = useState(false)
-  const [publishOpen, setPublishOpen] = useState(false)
   const [authOpen, setAuthOpen] = useState(false)
   const [authRequest, setAuthRequest] = useState<AuthRequest | null>(null)
   const [userLoaded, setUserLoaded] = useState(false)
@@ -65,14 +64,13 @@ export function CommunityShell({ children }: { children: ReactNode }) {
           </div>
           <div className="top-actions">
             <Link href="/notifications" className="icon-button notification" aria-label="Notificaciones"><Bell size={18} /></Link>
-            <button className="publish-button top-publish" onClick={() => window.location.href = '/create'}><Plus size={16} /> Publicar</button>
             <ProfileMenu user={user} />
           </div>
         </header>
 
         <div className={`mobile-drawer ${mobileMenu ? 'open' : ''}`}>
           <div className="drawer-head"><strong>Menú</strong><button className="icon-button" onClick={() => setMobileMenu(false)} aria-label="Cerrar menú"><X size={18} /></button></div>
-          <LeftSidebar onPublish={() => setPublishOpen(true)} activeTag={activeTag} onTagClick={onTagClick} />
+          <LeftSidebar activeTag={activeTag} onTagClick={onTagClick} />
         </div>
 
         {isFocusedRoute ? (
@@ -81,13 +79,12 @@ export function CommunityShell({ children }: { children: ReactNode }) {
           <div className="layout-focused">{children}</div>
         ) : (
           <div className="layout">
-            <LeftSidebar onPublish={() => setPublishOpen(true)} activeTag={activeTag} onTagClick={onTagClick} />
+            <LeftSidebar activeTag={activeTag} onTagClick={onTagClick} />
             {children}
             <RightSidebar onUnlock={requestAuth} />
           </div>
         )}
 
-        {publishOpen && <PublishModal onClose={() => setPublishOpen(false)} />}
         {authOpen && <AuthModal onClose={() => setAuthOpen(false)} request={authRequest} />}
       </div>
     </ShellContext.Provider>

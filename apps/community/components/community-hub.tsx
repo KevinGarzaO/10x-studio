@@ -5,7 +5,7 @@ import Link from 'next/link'
 import { usePathname, useRouter, useSearchParams } from 'next/navigation'
 import {
   Bell, Bookmark, BriefcaseBusiness, Flame,
-  Hash, Menu, MessageCircle, PenLine, Plus, Search,
+  Hash, Menu, MessageCircle, PenLine, Search,
   LogOut, Send, Settings, Share2, ShieldCheck, Sparkles, Tag, Target, TrendingUp, Users, X,
   ArrowBigUp, LockKeyhole, CheckCircle2, Building, MapPin, Home as HomeIcon, Mail, Clock, Check
 } from 'lucide-react'
@@ -123,7 +123,7 @@ export function ProfileMenu({ user }: { user: any }) {
   )
 }
 
-export function LeftSidebar({ onPublish, activeTag, onTagClick }: { onPublish: () => void; activeTag: string | null; onTagClick: (tag: string) => void }) {
+export function LeftSidebar({ activeTag, onTagClick }: { activeTag: string | null; onTagClick: (tag: string) => void }) {
   const [tags, setTags] = useState<SidebarTag[]>(DEFAULT_TAGS)
   const pathname = usePathname()
   const hues = useMemo(() => assignHues(tags.map(tag => tag.name)), [tags])
@@ -172,7 +172,6 @@ export function LeftSidebar({ onPublish, activeTag, onTagClick }: { onPublish: (
         )
       })}
     </div>
-    <div className="sidebar-cta"><div className="cta-icon"><PenLine size={16} /></div><strong>Comparte lo que sabes</strong><p>Tu experiencia puede desbloquear la de alguien más.</p><button className="text-button" onClick={() => window.location.href = '/create'}>Crear publicación <Send size={14} /></button></div>
     <div className="sidebar-footer">© 2026 AvoTalent <span>·</span> Reglas <span>·</span> Privacidad</div>
   </aside>
 }
@@ -505,11 +504,6 @@ export function RightSidebar({ onUnlock }: { onUnlock: () => void }) {
       </div>
     </section>
   </aside>
-}
-
-export function PublishModal({ onClose }: { onClose: () => void }) {
-  const [mode, setMode] = useState('Post Normal'); const [preview, setPreview] = useState(false)
-  return <div className="modal-backdrop" role="presentation" onMouseDown={e => e.target === e.currentTarget && onClose()}><section className="publish-modal" role="dialog" aria-modal="true" aria-labelledby="publish-title"><div className="modal-header"><div><p className="eyebrow">Nueva publicación</p><h2 id="publish-title">¿Qué quieres compartir?</h2></div><button className="icon-button" onClick={onClose} aria-label="Cerrar"><X size={20} /></button></div><div className="publish-tabs">{['Post Normal', 'Publicar Vacante / Proyecto', 'Mostrar Proyecto'].map(item => <button key={item} className={mode === item ? 'selected' : ''} onClick={() => setMode(item)}>{item}</button>)}</div><div className="editor-toolbar"><span className="mono-label">MARKDOWN</span><button className={preview ? 'tool-active' : ''} onClick={() => setPreview(!preview)}>{preview ? 'Editar' : 'Vista previa'}</button></div>{preview ? <div className="preview-pane"><p className="eyebrow">Vista previa</p><h3>Comparte algo que valga la pena leer</h3><p>Tu publicación aparecerá aquí con formato Markdown.</p></div> : <textarea className="editor" placeholder={mode === 'Publicar Vacante / Proyecto' ? 'Describe el proyecto, stack, presupuesto y modalidad...' : 'Escribe algo que la comunidad quiera conversar...'} aria-label="Contenido de la publicación" /> }<div className="modal-bottom"><div className="stack-picker"><Tag size={15} /><span>Añadir tags</span><span className="stack-badge">React</span><span className="stack-badge">+</span></div><button className="publish-button" onClick={onClose}>Publicar <Send size={15} /></button></div></section></div>
 }
 
 export function AuthModal({ onClose, request }: { onClose: () => void; request?: AuthRequest | null }) {

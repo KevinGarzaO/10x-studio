@@ -81,19 +81,19 @@ describe('tagHref', () => {
 
 describe('the trending topics in the sidebar', () => {
   it('link to their jobs page, so a click on "python" opens /empleos/python', async () => {
-    const { container } = render(<LeftSidebar onPublish={vi.fn()} activeTag={null} onTagClick={vi.fn()} />)
+    const { container } = render(<LeftSidebar activeTag={null} onTagClick={vi.fn()} />)
 
     await waitFor(() => expect(container.querySelector('a[href="/empleos/ia"]')).toBeTruthy())
     expect(container.querySelector('a[href="/empleos/python"]')).toBeTruthy()
   })
 
   it('show the readable name of the skill', async () => {
-    render(<LeftSidebar onPublish={vi.fn()} activeTag={null} onTagClick={vi.fn()} />)
+    render(<LeftSidebar activeTag={null} onTagClick={vi.fn()} />)
     expect(await screen.findByText('IA / Machine Learning')).toBeTruthy()
   })
 
   it('each carries its own color, none repeated', async () => {
-    const { container } = render(<LeftSidebar onPublish={vi.fn()} activeTag={null} onTagClick={vi.fn()} />)
+    const { container } = render(<LeftSidebar activeTag={null} onTagClick={vi.fn()} />)
     await screen.findByText('IA / Machine Learning')
 
     const colors = [...container.querySelectorAll('.tags-section .tag-link')].map(link => /tag-hue-(\d)/.exec(link.className)![1])
@@ -103,7 +103,7 @@ describe('the trending topics in the sidebar', () => {
 
   it('mark the page you are on', async () => {
     pathname = '/empleos/python'
-    const { container } = render(<LeftSidebar onPublish={vi.fn()} activeTag={null} onTagClick={vi.fn()} />)
+    const { container } = render(<LeftSidebar activeTag={null} onTagClick={vi.fn()} />)
     await screen.findByText('IA / Machine Learning')
 
     expect(container.querySelector('a[href="/empleos/python"]')!.getAttribute('aria-current')).toBe('page')
@@ -112,16 +112,24 @@ describe('the trending topics in the sidebar', () => {
 
   it('keep filtering the feed when the topic is not a skill', async () => {
     const onTagClick = vi.fn()
-    render(<LeftSidebar onPublish={vi.fn()} activeTag={null} onTagClick={onTagClick} />)
+    render(<LeftSidebar activeTag={null} onTagClick={onTagClick} />)
 
     fireEvent.click(await screen.findByRole('button', { name: /tema-libre/ }))
 
     expect(onTagClick).toHaveBeenCalledWith('tema-libre')
   })
 
+  it('offer no way to publish: that feature is not working yet, so the sidebar leaves it out', async () => {
+    render(<LeftSidebar activeTag={null} onTagClick={vi.fn()} />)
+    await screen.findByText('IA / Machine Learning')
+
+    expect(screen.queryByText(/crear publicación/i)).toBeNull()
+    expect(screen.queryByText(/comparte lo que sabes/i)).toBeNull()
+  })
+
   it('still show links while the topics load, and if the backend does not answer', async () => {
     global.fetch = vi.fn(async () => { throw new Error('offline') }) as unknown as typeof fetch
-    const { container } = render(<LeftSidebar onPublish={vi.fn()} activeTag={null} onTagClick={vi.fn()} />)
+    const { container } = render(<LeftSidebar activeTag={null} onTagClick={vi.fn()} />)
 
     expect(container.querySelector('a[href="/empleos/python"]')).toBeTruthy()
   })
