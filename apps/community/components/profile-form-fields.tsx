@@ -3,6 +3,7 @@
 import { useRef, useState, KeyboardEvent } from 'react'
 import { Sparkles, UploadCloud, X } from 'lucide-react'
 import { resolveSkill } from '@avocado/schemas'
+import { skillsMissing, skillsRecommendation } from '../lib/skills-recommendation'
 import { useSkillCatalog, skillLabel, unresolvedSkills, skillsForRole, hasRoleData } from '../lib/skill-catalog'
 import { ROLE_CATEGORY_LABELS } from '../lib/profile-options'
 
@@ -194,6 +195,10 @@ export function SkillsInput({ skills, onChange, inputValue, onInputChange, onPro
           )}
         </div>
       )}
+
+      <p className={`skills-recommendation ${skillsMissing(skills.length) === 0 ? 'is-met' : ''}`} data-testid="skills-recommendation">
+        {skillsRecommendation(skills.length)}
+      </p>
 
       {skills.length > 0 && (
         <div className="skills-chips">

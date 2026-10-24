@@ -547,6 +547,12 @@ button { cursor: pointer; }
 .post-card:not(.job-card) { box-shadow: inset 3px 0 0 #6366f1; }
 
 .skills-role-hint { margin: 6px 0 0; font-size: 11px; color: #b3aba1; line-height: 1.5; }
+.skills-recommendation { margin: 8px 0 0; font-size: 12px; color: #d9b45a; line-height: 1.5; }
+.skills-recommendation.is-met { color: #4fd39a; }
+.skills-nudge { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin: 0 0 12px; padding: 12px 14px; border: 1px solid #322f29; border-radius: 12px; background: #221f1b; font-size: 13px; color: #b3aba1; }
+.skills-nudge strong { color: #f3efe9; }
+.skills-nudge a { flex-shrink: 0; color: #4fd39a; font-weight: 600; text-decoration: none; }
+.skills-nudge a:hover { text-decoration: underline; }
 .skills-role-hint strong { color: #e8e2d8; font-weight: 600; }
 .skills-role-hint button { background: none; border: 0; padding: 0; color: #4fd39a; cursor: pointer; text-decoration: underline; font: inherit; }
 

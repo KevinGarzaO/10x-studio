@@ -17,6 +17,7 @@ import { HeroBanner } from './hero-banner'
 import { getToken, clearSession } from '../lib/session'
 import { buildFeed, type MatchedItem } from '../lib/mixed-feed'
 import { ForYouCard } from './for-you-card'
+import { RECOMMENDED_SKILLS, shouldNudgeSkills } from '../lib/skills-recommendation'
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'
 
@@ -727,6 +728,15 @@ export function Feed() {
         {activeTag && <span className="active-filter-chip"><Hash size={12} />{activeTag}<button onClick={() => setActiveTag(null)} aria-label="Quitar filtro de tema"><X size={12} /></button></span>}
       </div>
     </div>
+    {shouldNudgeSkills(user) && (
+      <div className="skills-nudge" role="note">
+        <span>
+          <strong>Con más skills te llegan más vacantes.</strong>{' '}
+          Te recomendamos tener al menos {RECOMMENDED_SKILLS}; ahora tienes {Array.isArray(user.skills) ? user.skills.length : 0}. No es obligatorio.
+        </span>
+        <Link href="/settings">Agregar skills</Link>
+      </div>
+    )}
     <div className="post-list">
       {entries.map(entry => entry.kind === 'forYou'
         ? <ForYouCard key={entry.key} item={entry.item} />
