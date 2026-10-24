@@ -31,9 +31,10 @@ async function main() {
   )
 
   const visitas = visitasRes.data || []
-  const registros = (registrosRes.data || []).filter(
-    (r: any) => r.signup_content && !r.is_test_account && !r.is_scraper_profile
+  const registrosTotales = (registrosRes.data || []).filter(
+    (r: any) => !r.is_test_account && !r.is_scraper_profile
   )
+  const registrosAtribuidos = registrosTotales.filter((r: any) => r.signup_content)
 
   const porCodigo = new Map<string, { visitantes: Set<string>; visitas: number; registros: number }>()
   const fila = (codigo: string) => {
@@ -47,7 +48,7 @@ async function main() {
     f.visitantes.add(v.visitor_id)
     f.visitas++
   }
-  for (const r of registros) fila(r.signup_content).registros++
+  for (const r of registrosAtribuidos) fila(r.signup_content).registros++
 
   const filas = [...porCodigo.entries()]
     .map(([codigo, f]) => ({
@@ -76,7 +77,7 @@ async function main() {
     f.visitas++
     porDia.set(d, f)
   }
-  for (const r of registros) {
+  for (const r of registrosTotales) {
     const d = r.created_at.slice(0, 10)
     const f = porDia.get(d) || { visitas: 0, registros: 0 }
     f.registros++
@@ -90,10 +91,11 @@ async function main() {
       .map(([dia, f]) => ({ dia, visitas: f.visitas, registros: f.registros }))
   )
 
-  const totalRegistros = registros.length
-  const sinTag = registros.filter((r: any) => !r.signup_content).length
+  const totalRegistros = registrosTotales.length
+  const conCodigo = registrosAtribuidos.length
+  const sinTag = totalRegistros - conCodigo
   console.log(
-    `Registros totales: ${totalRegistros} · con código: ${totalRegistros - sinTag} · sin-tag: ${sinTag}`
+    `Registros totales: ${totalRegistros} · con código: ${conCodigo} · sin-tag: ${sinTag}`
   )
 }
 

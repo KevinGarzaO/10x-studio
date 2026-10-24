@@ -638,7 +638,7 @@ export function LinkedInSection() {
                     <td style={{ textAlign: 'center', color: '#64748b', whiteSpace: 'nowrap' }}>
                       {p.published_at ? new Date(p.published_at).toLocaleDateString('es-ES', { day: '2-digit', month: 'short', year: 'numeric' }) : '—'}
                     </td>
-                    <td style={{ textAlign: 'center', fontWeight: 700, color: '#0d1117' }}>{p.visitors ?? 0}</td>
+                    <td style={{ textAlign: 'center', fontWeight: 700, color: '#0d1117' }}>{p.visits ?? 0}</td>
                     <td style={{ textAlign: 'center', fontWeight: 800, color: (p.signups ?? 0) > 0 ? '#10b981' : '#94a3b8' }}>{p.signups ?? 0}</td>
                     <td style={{ textAlign: 'center', fontWeight: 700, color: '#0d1117' }}>
                       {p.conversion_pct != null ? `${p.conversion_pct}%` : '—'}
