@@ -122,19 +122,34 @@ export function ProfileMenu({ user }: { user: any }) {
   )
 }
 
+const DEFAULT_TAGS = ['react', 'python', 'typescript', 'ia', 'aws', 'sql']
+
 export function LeftSidebar({ onPublish, activeTag, onTagClick }: { onPublish: () => void; activeTag: string | null; onTagClick: (tag: string) => void }) {
-  const [tags, setTags] = useState<string[]>([])
+  const [tags, setTags] = useState<string[]>(DEFAULT_TAGS)
   useEffect(() => {
     fetch(`${API_URL}/api/community/stats/tags?limit=6`)
       .then(r => r.ok ? r.json() : null)
-      .then(d => setTags((d?.tags || []).map((t: { name: string }) => t.name)))
+      .then(d => {
+        const fetched = (d?.tags || []).map((t: { name: string }) => t.name)
+        if (fetched && fetched.length > 0) setTags(fetched)
+      })
       .catch(() => {})
   }, [])
 
   return <aside className="left-sidebar">
-    {tags.length > 0 && (
-      <div className="sidebar-section tags-section"><div className="section-heading"><p className="eyebrow">Temas en tendencia</p></div>{tags.map(tag => <button key={tag} className={`tag-link ${activeTag === tag ? 'active' : ''}`} aria-pressed={activeTag === tag} onClick={() => onTagClick(tag)}><Hash size={14} />{tag}</button>)}</div>
-    )}
+    <div className="sidebar-section tags-section">
+      <div className="section-heading"><p className="eyebrow">Temas en tendencia</p></div>
+      {tags.map(tag => (
+        <button
+          key={tag}
+          className={`tag-link ${activeTag === tag ? 'active' : ''}`}
+          aria-pressed={activeTag === tag}
+          onClick={() => onTagClick(tag)}
+        >
+          <Hash size={14} />{tag}
+        </button>
+      ))}
+    </div>
     <div className="sidebar-cta"><div className="cta-icon"><PenLine size={16} /></div><strong>Comparte lo que sabes</strong><p>Tu experiencia puede desbloquear la de alguien más.</p><button className="text-button" onClick={() => window.location.href = '/create'}>Crear publicación <Send size={14} /></button></div>
     <div className="sidebar-footer">© 2026 AvoTalent <span>·</span> Reglas <span>·</span> Privacidad</div>
   </aside>

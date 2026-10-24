@@ -108,6 +108,29 @@ router.get('/tags', async (req: Request, res: Response) => {
       counts.set(name, (counts.get(name) || 0) + 1)
     }
 
+    // Si community_post_tags está vacío, agregar desde el campo skills de community_posts
+    if (counts.size === 0) {
+      const { data: postsData } = await supabase
+        .from('community_posts')
+        .select('skills')
+        .not('skills', 'is', null)
+        .limit(200)
+
+      for (const p of postsData || []) {
+        const skillsArr = Array.isArray(p.skills) ? p.skills : []
+        for (const s of skillsArr) {
+          if (typeof s === 'string' && s.trim()) {
+            counts.set(s.trim(), (counts.get(s.trim()) || 0) + 1)
+          }
+        }
+      }
+    }
+
+    // Si aún está vacío, usar los skills más populares por defecto
+    if (counts.size === 0) {
+      ['react', 'python', 'typescript', 'ia', 'aws', 'sql'].forEach(t => counts.set(t, 1))
+    }
+
     const tags = [...counts.entries()]
       .sort((a, b) => b[1] - a[1])
       .slice(0, limit)

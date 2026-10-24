@@ -197,7 +197,25 @@ router.get('/oauth/:provider', (req: Request, res: Response) => {
     return res.status(400).json({ error: 'Proveedor no soportado' })
   }
 
-  const communityAppUrl = process.env.COMMUNITY_APP_URL || 'http://localhost:3002'
+  // Detectar la URL del frontend de forma dinámica según el origen de la petición
+  const originHeader = req.get('origin') || req.get('referer')
+  let communityAppUrl = process.env.COMMUNITY_APP_URL || 'https://avotalent.app'
+
+  if (originHeader) {
+    try {
+      const parsed = new URL(originHeader)
+      if (
+        parsed.hostname === 'avotalent.app' ||
+        parsed.hostname.endsWith('.avotalent.app') ||
+        parsed.hostname.endsWith('.vercel.app') ||
+        parsed.hostname === 'localhost' ||
+        parsed.hostname === '127.0.0.1'
+      ) {
+        communityAppUrl = parsed.origin
+      }
+    } catch {}
+  }
+
   const authorizeUrl =
     `${process.env.SUPABASE_URL}/auth/v1/authorize` +
     `?provider=${AUTHORIZE_KEYS[provider]}` +
