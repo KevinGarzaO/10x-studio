@@ -12,7 +12,7 @@ import {
 import { companySlug, formatCompanyName } from '../lib/company'
 import { useShell, type AuthRequest } from '../lib/shell-context'
 import { saveReturnTo } from '../lib/return-to'
-import { DEFAULT_TAGS, tagHref, tagHue, type SidebarTag } from '../lib/tag-colors'
+import { DEFAULT_TAGS, assignHues, tagHref, type SidebarTag } from '../lib/tag-colors'
 import { HeroBanner } from './hero-banner'
 import { getToken, clearSession } from '../lib/session'
 import { buildFeed, type MatchedItem } from '../lib/mixed-feed'
@@ -126,6 +126,7 @@ export function ProfileMenu({ user }: { user: any }) {
 export function LeftSidebar({ onPublish, activeTag, onTagClick }: { onPublish: () => void; activeTag: string | null; onTagClick: (tag: string) => void }) {
   const [tags, setTags] = useState<SidebarTag[]>(DEFAULT_TAGS)
   const pathname = usePathname()
+  const hues = useMemo(() => assignHues(tags.map(tag => tag.name)), [tags])
 
   useEffect(() => {
     fetch(`${API_URL}/api/community/stats/tags?limit=6`)
@@ -146,7 +147,7 @@ export function LeftSidebar({ onPublish, activeTag, onTagClick }: { onPublish: (
       <div className="section-heading"><p className="eyebrow">Temas en tendencia</p></div>
       {tags.map(tag => {
         const href = tagHref(tag)
-        const hue = `tag-hue-${tagHue(tag.name)}`
+        const hue = `tag-hue-${hues[tag.name]}`
 
         // Un skill lleva a su página de empleos (/empleos/python). Un tema que no es skill sigue
         // filtrando el feed, como antes.

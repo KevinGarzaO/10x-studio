@@ -11,6 +11,24 @@ export function tagHue(name: string): number {
   return hash % TAG_HUES
 }
 
+/**
+ * El color de cada tema de una lista, sin repetir mientras alcancen los colores. Cada tema parte
+ * del color que le toca por su nombre y, si ya lo tiene otro tema de la lista, toma el siguiente
+ * libre: así "python" y "ventas" nunca salen del mismo color. Con más temas que colores, se repiten.
+ */
+export function assignHues(names: string[]): Record<string, number> {
+  const taken = new Set<number>()
+  const hues: Record<string, number> = {}
+
+  for (const name of names) {
+    let hue = tagHue(name)
+    if (taken.size < TAG_HUES) while (taken.has(hue)) hue = (hue + 1) % TAG_HUES
+    taken.add(hue)
+    hues[name] = hue
+  }
+  return hues
+}
+
 /** Una etiqueta del sidebar tal como la manda el backend. */
 export interface SidebarTag {
   name: string
