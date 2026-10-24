@@ -74,11 +74,12 @@ export const initCron = () => {
     if (users) await AutoPublisherService.publishScheduledEnglishContent(users.id)
   })
 
-  // 3b. VACANTES EN LINKEDIN: 2 al día, de lunes a sábado, 8:30 AM y 1:30 PM Monterrey
+  // 3b. VACANTES EN LINKEDIN: 2 al día, de lunes a viernes, 8:30 AM y 1:30 PM Monterrey
+  //     (el sábado rindió 2.3 visitantes por publicación y ningún registro: se quitó)
   //     (14:30 y 19:30 UTC). Una vacante del feed, texto de plantilla (sin IA). Está
   //     apagado hasta que se active LINKEDIN_VACANCY_POSTS=on en el servidor: antes se
   //     revisan los textos con `npm run linkedin-vacancy-preview`.
-  for (const expression of ['30 14 * * 1-6', '30 19 * * 1-6']) {
+  for (const expression of ['30 14 * * 1-5', '30 19 * * 1-5']) {
     cron.schedule(expression, async () => {
       if (process.env.LINKEDIN_VACANCY_POSTS !== 'on') return
       try {

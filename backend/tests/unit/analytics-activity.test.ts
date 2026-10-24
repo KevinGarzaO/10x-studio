@@ -79,17 +79,21 @@ describe('recordActivity', () => {
 })
 
 describe('nextPublication', () => {
-  // 24 de octubre de 2026 es sábado.
+  // 23 de octubre de 2026 es viernes; el 24, sábado; el 26, lunes. Se publica de lunes a viernes.
   it('on a publishing day before 8:30 it is 8:30 the same day', () => {
-    expect(nextPublication(new Date('2026-10-24T12:00:00Z')).toISOString()).toBe('2026-10-24T14:30:00.000Z') // 6:00 am Monterrey -> 8:30
+    expect(nextPublication(new Date('2026-10-23T12:00:00Z')).toISOString()).toBe('2026-10-23T14:30:00.000Z') // 6:00 am Monterrey -> 8:30
   })
 
   it('between the two it is 1:30 pm', () => {
-    expect(nextPublication(new Date('2026-10-24T16:00:00Z')).toISOString()).toBe('2026-10-24T19:30:00.000Z') // 10:00 am -> 1:30 pm
+    expect(nextPublication(new Date('2026-10-23T16:00:00Z')).toISOString()).toBe('2026-10-23T19:30:00.000Z') // 10:00 am -> 1:30 pm
   })
 
-  it('after the last one on Saturday it skips Sunday and goes to Monday 8:30', () => {
-    expect(nextPublication(new Date('2026-10-25T02:00:00Z')).toISOString()).toBe('2026-10-26T14:30:00.000Z')
+  it('after the last one on Friday it skips the weekend and goes to Monday 8:30', () => {
+    expect(nextPublication(new Date('2026-10-24T02:00:00Z')).toISOString()).toBe('2026-10-26T14:30:00.000Z')
+  })
+
+  it('does not publish on Saturday', () => {
+    expect(nextPublication(new Date('2026-10-24T12:00:00Z')).toISOString()).toBe('2026-10-26T14:30:00.000Z')
   })
 
   it('on Sunday it is Monday 8:30', () => {

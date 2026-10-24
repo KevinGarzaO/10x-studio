@@ -62,6 +62,38 @@ export function completeness(vacancy: LinkedInVacancy): number {
   return points
 }
 
+/**
+ * Qué roles se publican en LinkedIn y cuánto pesan. Sale de lo que mostró el rendimiento real de
+ * las primeras 35 publicaciones: quienes se registran son, en su gran mayoría, desarrolladores
+ * senior que buscan trabajo remoto. Las vacantes de marketing, finanzas, administración, recursos
+ * humanos, ventas, legal y atención al cliente trajeron 1 o 2 visitantes y ningún registro.
+ *
+ * Un rol que no está aquí NO se publica (la vacante sigue en el feed de la comunidad). Cuando
+ * AvoTalent tenga audiencia para esas áreas, se agregan aquí: es el único lugar que lo decide.
+ */
+export const ROLE_FOCUS: Record<string, number> = {
+  fullstack: 3,
+  frontend: 3,
+  backend: 3,
+  devops: 3,
+  ux_ui: 3,
+  mobile: 2,
+  qa: 2,
+  data_engineer: 2,
+  product: 2,
+  data_scientist: 1,
+}
+
+/**
+ * Qué tan buena candidata es una vacante para publicarse: su completitud, más lo que sabemos que
+ * atrae a esta audiencia (el rol del foco, nivel senior o semi senior, y trabajo remoto).
+ */
+export function publishScore(vacancy: LinkedInVacancy, focus: Record<string, number> = ROLE_FOCUS): number {
+  const level = vacancy.seniority_level === 'senior' || vacancy.seniority_level === 'semi_senior' ? 2 : 0
+  const remote = modalityFromLabel(vacancy.modalidad) === 'remote' ? 2 : 0
+  return completeness(vacancy) + (focus[vacancy.role_category ?? ''] ?? 0) * 2 + level + remote
+}
+
 const companyKey = (company: string | null) => (company ?? '').trim().toLowerCase()
 
 /**
@@ -72,14 +104,17 @@ const companyKey = (company: string | null) => (company ?? '').trim().toLowerCas
  *     se relaja: es mejor publicar que quedarse callado).
  *  2. Se evita el rol de las últimas ROLE_MEMORY publicaciones, para que el perfil no
  *     parezca un canal de un solo tipo de puesto (también se relaja si no hay opción).
- *  3. Gana la más completa; a igual completitud, la más reciente.
+ *  3. Gana la de mayor `publishScore`; a igual puntaje, la más reciente.
+ *
+ * Y antes de todo: solo entran las vacantes de los roles del foco (`ROLE_FOCUS`).
  */
 export function pickVacancy(
   candidates: LinkedInVacancy[],
   history: PostedVacancy[],
   now: Date = new Date(),
+  focus: Record<string, number> = ROLE_FOCUS,
 ): LinkedInVacancy | null {
-  const usable = candidates.filter((vacancy) => vacancy.slug && known(vacancy.company))
+  const usable = candidates.filter((vacancy) => vacancy.slug && known(vacancy.company) && vacancy.role_category && vacancy.role_category in focus)
   if (usable.length === 0) return null
 
   const ordered = [...history].sort((a, b) => Date.parse(b.published_at) - Date.parse(a.published_at))
@@ -95,7 +130,7 @@ export function pickVacancy(
   const pool = byRole.length > 0 ? byRole : pool1
 
   return [...pool].sort(
-    (a, b) => completeness(b) - completeness(a) || Date.parse(b.created_at ?? '') - Date.parse(a.created_at ?? ''),
+    (a, b) => publishScore(b, focus) - publishScore(a, focus) || Date.parse(b.created_at ?? '') - Date.parse(a.created_at ?? ''),
   )[0]
 }
 

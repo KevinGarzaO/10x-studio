@@ -9,6 +9,8 @@ import {
   placeOf,
   vacancyUrl,
   COMPANY_COOLDOWN_DAYS,
+  ROLE_FOCUS,
+  publishScore,
   type LinkedInVacancy,
   type PostedVacancy,
 } from '../../services/linkedin/vacancy-post'
@@ -145,10 +147,10 @@ describe('pickVacancy', () => {
   })
 
   it('avoids the role of the last posts, so the profile is not one kind of job', () => {
-    const history: PostedVacancy[] = ['ventas', 'ventas', 'ventas'].map((role, i) => ({ company: `X${i}`, role_category: role, published_at: daysAgo(i + 10) }))
-    const sales = vacancy({ role_category: 'ventas', budget: 'USD 1', skills: ['a', 'b', 'c'] })
-    const dev = vacancy({ role_category: 'backend' })
-    expect(pickVacancy([sales, dev], history, NOW)).toBe(dev)
+    const history: PostedVacancy[] = ['backend', 'backend', 'backend'].map((role, i) => ({ company: `X${i}`, role_category: role, published_at: daysAgo(i + 10) }))
+    const another = vacancy({ role_category: 'backend', budget: 'USD 1', skills: ['a', 'b', 'c'] })
+    const different = vacancy({ role_category: 'frontend' })
+    expect(pickVacancy([another, different], history, NOW)).toBe(different)
   })
 
   it('relaxes the rules rather than staying silent', () => {
@@ -160,6 +162,40 @@ describe('pickVacancy', () => {
   it('skips vacancies without a company or a page', () => {
     expect(pickVacancy([vacancy({ company: null }), vacancy({ slug: null })], [], NOW)).toBeNull()
     expect(pickVacancy([], [], NOW)).toBeNull()
+  })
+})
+
+describe('the role focus', () => {
+  it('only publishes the roles that bring this audience', () => {
+    for (const role of ['marketing', 'finanzas', 'administracion', 'recursos_humanos', 'ventas', 'legal', 'customer_support', 'otro']) {
+      expect(pickVacancy([vacancy({ role_category: role })], [], NOW)).toBeNull()
+    }
+    for (const role of Object.keys(ROLE_FOCUS)) {
+      expect(pickVacancy([vacancy({ role_category: role })], [], NOW)).not.toBeNull()
+    }
+  })
+
+  it('ignores a complete vacancy of a role outside the focus in favor of a plainer one inside it', () => {
+    const marketing = vacancy({ role_category: 'marketing', budget: 'USD 100k', skills: ['a', 'b', 'c', 'd', 'e'] })
+    const backend = vacancy({ role_category: 'backend', skills: [] })
+    expect(pickVacancy([marketing, backend], [], NOW)).toBe(backend)
+  })
+
+  it('prefers the roles that convert most, senior level and remote work', () => {
+    const base = { skills: ['a', 'b'], budget: null }
+    const strong = vacancy({ ...base, role_category: 'fullstack', seniority_level: 'senior', modalidad: 'Remoto' })
+    const weakRole = vacancy({ ...base, role_category: 'data_scientist', seniority_level: 'senior', modalidad: 'Remoto' })
+    const junior = vacancy({ ...base, role_category: 'fullstack', seniority_level: 'junior', modalidad: 'Remoto' })
+    const onsite = vacancy({ ...base, role_category: 'fullstack', seniority_level: 'senior', modalidad: 'Presencial' })
+
+    expect(publishScore(strong)).toBeGreaterThan(publishScore(weakRole))
+    expect(publishScore(strong)).toBeGreaterThan(publishScore(junior))
+    expect(publishScore(strong)).toBeGreaterThan(publishScore(onsite))
+    expect(pickVacancy([weakRole, onsite, junior, strong], [], NOW)).toBe(strong)
+  })
+
+  it('says nothing is available rather than falling back to a role outside the focus', () => {
+    expect(pickVacancy([vacancy({ role_category: 'marketing' }), vacancy({ role_category: 'ventas' })], [], NOW)).toBeNull()
   })
 })
 
