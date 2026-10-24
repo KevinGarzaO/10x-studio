@@ -9,6 +9,7 @@ import {
   trackedUrl,
   labelFromText,
   firstSiteUrl,
+  monterreyWeekStart,
 } from '../../services/linkedin/tracked-posts'
 
 // El controller llama a supabase por dentro; el mock registra lo que entra y
@@ -22,6 +23,9 @@ const state = vi.hoisted(() => ({
   deletedIds: [] as any[],
   vacancyTitles: [] as any[],
   vacancyLogs: [] as any[],
+  weeklyTrackedPosts: [] as any[],
+  weeklyVisits: [] as any[],
+  weeklySignups: [] as any[],
 }))
 
 vi.mock('../../services/supabase.service', () => ({
@@ -34,11 +38,19 @@ vi.mock('../../services/supabase.service', () => ({
       q.eq = (_col: string, val: any) => { q._id = val; return q }
       q.in = () => q
       q.order = () => q
+      q.gte = () => q
+      q.range = () => q
       q.single = () => q
       q.then = (resolve: any, reject: any) => {
         let result: any
         if (table === 'acquisition_by_post') {
           result = { data: state.viewRows, error: state.viewError }
+        } else if (table === 'linkedin_tracked_posts' && q._op === 'select') {
+          result = { data: state.weeklyTrackedPosts, error: null }
+        } else if (table === 'landing_visits' && q._op === 'select') {
+          result = { data: state.weeklyVisits, error: null }
+        } else if (table === 'users' && q._op === 'select') {
+          result = { data: state.weeklySignups, error: null }
         } else if (q._op === 'insert') {
           const error = state.insertQueue.length > 0 ? state.insertQueue.shift() : null
           result = { data: error ? null : state.inserted[state.inserted.length - 1], error }
@@ -77,6 +89,58 @@ beforeEach(() => {
   state.deletedIds.length = 0
   state.vacancyTitles.length = 0
   state.vacancyLogs.length = 0
+  state.weeklyTrackedPosts.length = 0
+  state.weeklyVisits.length = 0
+  state.weeklySignups.length = 0
+})
+
+describe('monterreyWeekStart', () => {
+  it('returns Monday at midnight in Monterrey, including the UTC offset', () => {
+    expect(monterreyWeekStart(new Date('2026-11-04T18:30:00.000Z'))).toBe('2026-11-02T06:00:00.000Z')
+  })
+
+  it('uses the previous Monday before local midnight on Monday', () => {
+    expect(monterreyWeekStart(new Date('2026-11-02T05:59:59.000Z'))).toBe('2026-10-26T06:00:00.000Z')
+  })
+})
+
+describe('GET /registry?period=week', () => {
+  it('returns this week totals and counts visits separately from unique visitors', async () => {
+    state.weeklyTrackedPosts.push({
+      id: 'post-id',
+      utm_content: 'post-1',
+      label: 'Post uno',
+      destination_url: 'https://avotalent.io/',
+      utm_campaign: 'linkedin-manual',
+      published_at: new Date().toISOString(),
+    })
+    state.weeklyVisits.push(
+      { visitor_id: 'visitor-1', content: 'post-1' },
+      { visitor_id: 'visitor-1', content: 'post-1' },
+      { visitor_id: 'visitor-2', content: 'post-1' },
+    )
+    state.weeklySignups.push(
+      { signup_content: 'post-1' },
+      { signup_content: null },
+      { signup_content: 'post-1', is_test_account: true },
+    )
+
+    const res = await request(app()).get('/api/linkedin/registry?period=week')
+
+    expect(res.status).toBe(200)
+    expect(res.body.report).toMatchObject({
+      totalSignups: 2,
+      attributedSignups: 1,
+      unattributedSignups: 1,
+    })
+    expect(res.body.posts[0]).toMatchObject({
+      utm_content: 'post-1',
+      visits: 3,
+      visitors: 2,
+      signups: 1,
+      conversion_pct: 50,
+    })
+  })
 })
 
 describe('slugify', () => {

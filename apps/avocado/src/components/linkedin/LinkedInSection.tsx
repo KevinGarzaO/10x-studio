@@ -32,6 +32,12 @@ export function LinkedInSection() {
   // Medición por publicación (tab "Medición")
   const [registry, setRegistry] = useState<any[]>([])
   const [registryLoading, setRegistryLoading] = useState(false)
+  const [registryReport, setRegistryReport] = useState<{
+    periodStart: string
+    totalSignups: number
+    attributedSignups: number
+    unattributedSignups: number
+  } | null>(null)
   const sortedRegistry = [...registry].sort((a, b) => {
     const dateA = Date.parse(a.published_at || '')
     const dateB = Date.parse(b.published_at || '')
@@ -157,8 +163,9 @@ export function LinkedInSection() {
   async function fetchRegistry() {
     setRegistryLoading(true)
     try {
-      const data = await api<any>('/api/linkedin/registry')
+      const data = await api<any>('/api/linkedin/registry?period=week')
       setRegistry(data.posts || [])
+      setRegistryReport(data.report || null)
       setPendingMigration(!!data.pendingMigration)
     } catch (e) {
       console.error('Error fetching tracked posts:', e)
@@ -555,7 +562,7 @@ export function LinkedInSection() {
             <div>
               <h3 style={{ fontFamily: 'var(--font-heading)', fontSize: 18, fontWeight: 700, color: '#0d1117' }}>Medición por publicación</h3>
               <p style={{ fontSize: 13, color: '#94a3b8', marginTop: 4, maxWidth: 640, lineHeight: 1.5 }}>
-                Registra cada publicación para obtener su link etiquetado: quien llegue con ese link queda asociado a la publicación y aquí ves sus visitas, registros y conversión.
+                Semana actual desde el lunes a las 00:00 (hora de Monterrey). Las visitas son cargas del enlace etiquetado, no clics de LinkedIn; la conversión usa visitantes únicos.
               </p>
             </div>
             <button onClick={fetchRegistry} disabled={registryLoading} className="btn btn-secondary btn-sm h-8 px-3 font-bold flex-shrink-0">
@@ -567,6 +574,21 @@ export function LinkedInSection() {
           {pendingMigration && (
             <div className="rounded-xl p-4" style={{ background: '#fef9c3', border: '1px solid #fde047', fontSize: 13, color: '#713f12', lineHeight: 1.5 }}>
               Falta aplicar la migración en Supabase: ejecuta <b>backend/sql/linkedin-tracked-posts-migration.sql</b> en el SQL Editor y vuelve a cargar.
+            </div>
+          )}
+
+          {registryReport && (
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              {[
+                { label: 'Registros esta semana', value: registryReport.totalSignups },
+                { label: 'Atribuidos a un enlace', value: registryReport.attributedSignups },
+                { label: 'Sin código de atribución', value: registryReport.unattributedSignups },
+              ].map((item) => (
+                <div key={item.label} className="rounded-xl p-4" style={{ background: '#fff', border: '1px solid var(--border)' }}>
+                  <div style={{ fontSize: 11, fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{item.label}</div>
+                  <div style={{ fontSize: 24, fontWeight: 800, color: '#0d1117', marginTop: 4 }}>{item.value}</div>
+                </div>
+              ))}
             </div>
           )}
 

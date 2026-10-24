@@ -13,6 +13,48 @@ export const TRACKED_CAMPAIGN_DEFAULT = 'linkedin-manual'
 /** Campaña que ya usan los links que etiqueta el panel al publicar. */
 export const STUDIO_CAMPAIGN = 'release_1_0_0'
 
+/** Start of the current calendar week, Monday 00:00 in Monterrey. */
+export function monterreyWeekStart(now: Date = new Date()): string {
+  const timeZone = 'America/Monterrey'
+  const parts = new Intl.DateTimeFormat('en-US', {
+    timeZone,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).formatToParts(now)
+  const values = Object.fromEntries(parts.map(({ type, value }) => [type, value]))
+  const localDate = new Date(Date.UTC(Number(values.year), Number(values.month) - 1, Number(values.day)))
+  const daysSinceMonday = (localDate.getUTCDay() + 6) % 7
+  localDate.setUTCDate(localDate.getUTCDate() - daysSinceMonday)
+
+  const localMidnight = Date.UTC(localDate.getUTCFullYear(), localDate.getUTCMonth(), localDate.getUTCDate())
+  const offsetAt = (timestamp: number) => {
+    const zonedParts = new Intl.DateTimeFormat('en-US', {
+      timeZone,
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
+      hourCycle: 'h23',
+    }).formatToParts(new Date(timestamp))
+    const zoned = Object.fromEntries(zonedParts.map(({ type, value }) => [type, value]))
+    return Date.UTC(
+      Number(zoned.year),
+      Number(zoned.month) - 1,
+      Number(zoned.day),
+      Number(zoned.hour),
+      Number(zoned.minute),
+      Number(zoned.second),
+    ) - timestamp
+  }
+
+  let start = localMidnight
+  for (let attempt = 0; attempt < 2; attempt++) start = localMidnight - offsetAt(start)
+  return new Date(start).toISOString()
+}
+
 /** Texto plano usable en un código: "5 Tips Seniors" -> "5-tips-seniors". */
 export function slugify(label: string): string {
   return label

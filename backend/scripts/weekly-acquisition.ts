@@ -9,11 +9,10 @@
  * está registrado en Medición (label) o es automático (vacante publicada sola).
  */
 import { supabase } from '../services/supabase.service'
-
-const DIAS = 7
+import { monterreyWeekStart } from '../services/linkedin/tracked-posts'
 
 async function main() {
-  const desde = new Date(Date.now() - DIAS * 24 * 60 * 60 * 1000).toISOString()
+  const desde = monterreyWeekStart()
 
   const [visitasRes, registrosRes, trackedRes] = await Promise.all([
     supabase.from('landing_visits').select('created_at, content, visitor_id').gte('created_at', desde),
@@ -63,7 +62,7 @@ async function main() {
     }))
     .sort((a, b) => b.registros - a.registros || b.visitantes - a.visitantes)
 
-  console.log(`\nÚltimos ${DIAS} días (desde ${desde.slice(0, 10)})\n`)
+  console.log(`\nSemana actual en Monterrey (desde ${desde})\n`)
   if (filas.length === 0) {
     console.log('Sin visitas ni registros con código en el periodo.')
   } else {

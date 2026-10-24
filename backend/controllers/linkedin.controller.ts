@@ -6,6 +6,7 @@ import {
   firstSiteUrl,
   labelFromText,
   makeUtmContent,
+  monterreyWeekStart,
   trackedUrl,
 } from '../services/linkedin/tracked-posts'
 import { supabase } from '../services/supabase.service'
@@ -434,8 +435,91 @@ async function enrichAutoRows(rows: any[]): Promise<any[]> {
 }
 
 /** GET /api/linkedin/registry — Publicaciones registradas con sus métricas (vista acquisition_by_post). */
-export const getTrackedPosts = async (_req: Request, res: Response) => {
+async function fetchRowsSince(table: string, columns: string, since: string): Promise<any[]> {
+  const rows: any[] = []
+  for (let offset = 0; ; offset += 1000) {
+    const { data, error } = await supabase
+      .from(table)
+      .select(columns)
+      .gte('created_at', since)
+      .order('created_at', { ascending: true })
+      .range(offset, offset + 999)
+    if (error) throw error
+    rows.push(...(data || []))
+    if (!data || data.length < 1000) return rows
+  }
+}
+
+async function getWeeklyTrackedPosts(res: Response) {
+  const periodStart = monterreyWeekStart()
+  const [trackedRes, visits, signups] = await Promise.all([
+    supabase.from('linkedin_tracked_posts').select('*'),
+    fetchRowsSince('landing_visits', 'visitor_id, content, created_at', periodStart),
+    fetchRowsSince('users', 'signup_content, is_test_account, is_scraper_profile, created_at', periodStart),
+  ])
+  if (trackedRes.error) throw trackedRes.error
+
+  const trackedPosts = (trackedRes.data || []) as any[]
+  const trackedByContent = new Map(trackedPosts.map((post) => [post.utm_content, post]))
+  const visitorsByContent = new Map<string, Set<string>>()
+  const visitsByContent = new Map<string, number>()
+  for (const visit of visits) {
+    if (!visit.content) continue
+    if (!visitorsByContent.has(visit.content)) visitorsByContent.set(visit.content, new Set())
+    visitorsByContent.get(visit.content)!.add(visit.visitor_id)
+    visitsByContent.set(visit.content, (visitsByContent.get(visit.content) || 0) + 1)
+  }
+
+  const validSignups = signups.filter((user) => !user.is_test_account && !user.is_scraper_profile)
+  const signupsByContent = new Map<string, number>()
+  for (const signup of validSignups) {
+    if (signup.signup_content) {
+      signupsByContent.set(signup.signup_content, (signupsByContent.get(signup.signup_content) || 0) + 1)
+    }
+  }
+
+  const contents = new Set<string>([
+    ...visitsByContent.keys(),
+    ...signupsByContent.keys(),
+    ...trackedPosts
+      .filter((post) => (post.published_at || post.created_at) >= periodStart)
+      .map((post) => post.utm_content),
+  ])
+  let rows = [...contents].map((content) => {
+    const post = trackedByContent.get(content)
+    const visitors = visitorsByContent.get(content)?.size || 0
+    const postSignups = signupsByContent.get(content) || 0
+    return {
+      ...(post || {}),
+      label: post?.label || null,
+      utm_content: content,
+      visitors,
+      visits: visitsByContent.get(content) || 0,
+      signups: postSignups,
+      conversion_pct: visitors > 0 ? Math.round((1000 * postSignups) / visitors) / 10 : null,
+    }
+  })
+
+  rows = await enrichAutoRows(rows)
+  const posts = rows.map((row) => ({ ...row, tracked_url: rowTrackedUrl(row) || row.tracked_url || null }))
+  const attributedSignups = validSignups.filter((user) => user.signup_content).length
+  res.json({
+    success: true,
+    posts,
+    report: {
+      periodStart,
+      totalSignups: validSignups.length,
+      attributedSignups,
+      unattributedSignups: validSignups.length - attributedSignups,
+    },
+  })
+}
+
+/** GET /api/linkedin/registry — Publicaciones registradas con sus métricas. */
+export const getTrackedPosts = async (req: Request, res: Response) => {
   try {
+    if (req.query.period === 'week') return await getWeeklyTrackedPosts(res)
+
     const { data, error } = await supabase.from('acquisition_by_post').select('*')
 
     if (error) {
@@ -455,6 +539,9 @@ export const getTrackedPosts = async (_req: Request, res: Response) => {
     const posts = rows.map((row: any) => ({ ...row, tracked_url: rowTrackedUrl(row) || row.tracked_url || null }))
     res.json({ success: true, posts })
   } catch (e: any) {
+    if (req.query.period === 'week' && migrationMissing(e.message)) {
+      return res.json({ success: true, posts: [], pendingMigration: true })
+    }
     console.error('[LinkedIn] Registry fetch error:', e)
     res.status(500).json({ error: e.message })
   }
