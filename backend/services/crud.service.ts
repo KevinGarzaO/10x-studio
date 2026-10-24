@@ -32,12 +32,13 @@ export class CrudService {
   }
 
   static async getSingular(table: string, fallback: any) {
-    const { data, error } = await supabase.from(table).select('data').eq('id', 1).single()
-    if (error || !data) return fallback
-    return data.data
+    const { data, error } = await supabase.from(table).select('data').eq('id', 1).maybeSingle()
+    if (error) throw error
+    return data?.data ?? fallback
   }
 
   static async saveSingular(table: string, data: any) {
-    await supabase.from(table).upsert({ id: 1, data, updated_at: new Date().toISOString() })
+    const { error } = await supabase.from(table).upsert({ id: 1, data, updated_at: new Date().toISOString() })
+    if (error) throw error
   }
 }

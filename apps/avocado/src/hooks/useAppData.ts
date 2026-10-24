@@ -36,6 +36,12 @@ export interface DashboardStats {
   analytics_by_type: Record<string, { views: number; visitors: number; shares: number; likes: number; open_rate: number; content_count: number }>
 }
 
+function settledValue<T>(result: PromiseSettledResult<T>, resource: string): T | undefined {
+  if (result.status === 'fulfilled') return result.value
+  console.error(`[AppData] Could not load ${resource}:`, result.reason)
+  return undefined
+}
+
 export function useAppData() {
   const [topics,     setTopics]     = useState<Topic[]>([])
   const [history,    setHistory]    = useState<HistoryEntry[]>([])
@@ -56,7 +62,7 @@ export function useAppData() {
     const now = new Date()
     const y = now.getFullYear()
     const m = now.getMonth() + 1
-    Promise.all([
+    Promise.allSettled([
       api<Topic[]>('/api/topics'),
       api<HistoryEntry[]>('/api/history'),
       api<CalendarEvent[]>('/api/calendar'),
@@ -67,10 +73,44 @@ export function useAppData() {
       api<any>(`/api/blog/content-stats?year=${y}&month=${m}`),
       api<ContentItem[]>('/api/blog/content-items'),
       api<DashboardStats>(`/api/blog/dashboard-stats?year=${y}&month=${m}`),
-    ]).then(([t, h, c, s, tmpl, camp, sub, cs, ci, ds]) => {
-      setTopics(t); setHistory(h); setCalendar(c)
-      setSettingsState(s); setTemplates(tmpl); setCampaigns(camp)
-      setContentStats(cs); setContentItems(ci); setDashboardStats(ds)
+      api<AppSettings | null>('/api/linkedin/profile'),
+    ]).then(([topicsResult, historyResult, calendarResult, settingsResult, templatesResult, campaignsResult, substackResult, statsResult, itemsResult, dashboardResult, linkedinResult]) => {
+      const t = settledValue(topicsResult, 'topics')
+      const h = settledValue(historyResult, 'history')
+      const c = settledValue(calendarResult, 'calendar')
+      const s = settledValue(settingsResult, 'settings')
+      const tmpl = settledValue(templatesResult, 'templates')
+      const camp = settledValue(campaignsResult, 'campaigns')
+      const sub = settledValue(substackResult, 'Substack profile')
+      const cs = settledValue(statsResult, 'content stats')
+      const ci = settledValue(itemsResult, 'content items')
+      const ds = settledValue(dashboardResult, 'dashboard stats')
+      const linkedin = settledValue(linkedinResult, 'LinkedIn profile')
+      if (t) setTopics(t)
+      if (h) setHistory(h)
+      if (c) setCalendar(c)
+      if (s || linkedinResult.status === 'fulfilled') {
+        const linkedInSettings = linkedin || {
+          linkedinToken: '',
+          linkedinUrn: '',
+          linkedinName: '',
+          linkedinPhoto: '',
+          linkedinEmail: '',
+          linkedinExpiresAt: '',
+        }
+        setSettingsState({
+          apiKey: '',
+          niche: '',
+          audience: '',
+          ...s,
+          ...linkedInSettings,
+        })
+      }
+      if (tmpl) setTemplates(tmpl)
+      if (camp) setCampaigns(camp)
+      if (cs) setContentStats(cs)
+      if (ci) setContentItems(ci)
+      if (ds) setDashboardStats(ds)
       setSubstackConnected(!!sub && !sub.error)
       setSubstackPublication(sub?.subdomain || sub?.publication_name || sub?.substack_slug || '')
     }).finally(() => setLoading(false))

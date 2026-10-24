@@ -64,6 +64,24 @@ export function SettingsSection() {
     })
   }
 
+  const disconnectLinkedIn = async () => {
+    try {
+      await api('/api/linkedin/profile', { method: 'DELETE' })
+      await saveSettings({
+        ...settings,
+        linkedinToken: '',
+        linkedinUrn: '',
+        linkedinName: '',
+        linkedinPhoto: '',
+        linkedinEmail: '',
+        linkedinExpiresAt: '',
+      })
+    } catch (error) {
+      console.error('[Settings] Could not disconnect LinkedIn:', error)
+      window.alert('No se pudo desconectar LinkedIn. Intenta de nuevo.')
+    }
+  }
+
   const blurKey = () => handleSave(localSettings)
 
   return (
@@ -233,7 +251,7 @@ export function SettingsSection() {
                 <button
                   className="px-4 py-2 rounded-lg transition-all"
                   style={{ fontSize: 12.5, fontWeight: 600, color: '#ef4444', border: '1px solid rgba(239,68,68,0.3)', background: 'rgba(239,68,68,0.05)', cursor: 'pointer' }}
-                  onClick={async () => { await saveSettings({ ...settings, linkedinToken: '', linkedinUrn: '', linkedinName: '', linkedinPhoto: '', linkedinEmail: '', linkedinExpiresAt: '' }) }}
+                  onClick={disconnectLinkedIn}
                 >
                   Desconectar
                 </button>

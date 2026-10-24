@@ -2,6 +2,8 @@ import { Router } from 'express'
 import {
   linkedinAuth,
   linkedinCallback,
+  getLinkedInProfile,
+  deleteLinkedInProfile,
   linkedinPost,
   linkedinProxyImage,
   getLinkedInPosts,
@@ -14,6 +16,8 @@ const router = Router()
 
 router.get('/auth',        linkedinAuth)
 router.get('/callback',    linkedinCallback)
+router.get('/profile',     getLinkedInProfile)
+router.delete('/profile',  deleteLinkedInProfile)
 router.get('/proxy-image', linkedinProxyImage)
 router.get('/posts',       getLinkedInPosts)
 router.post('/post',       linkedinPost)

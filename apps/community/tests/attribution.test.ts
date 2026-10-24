@@ -51,11 +51,10 @@ describe('captureAttribution / getAttribution', () => {
     expect(getAttribution()).toMatchObject({ source: 'linkedin', medium: 'social' })
   })
 
-  it('keeps the FIRST origin: a later visit with another one does not replace it', () => {
-    visit('?utm_source=linkedin')
-    sessionStorage.clear()
-    visit('?utm_source=twitter')
-    expect(getAttribution()?.source).toBe('linkedin')
+  it('attributes signup to the latest tracked post', () => {
+    visit('?utm_source=linkedin&utm_content=post-1')
+    visit('?utm_source=linkedin&utm_content=post-2')
+    expect(getAttribution()?.content).toBe('post-2')
   })
 
   it('a direct visit later does not erase the origin', () => {
@@ -82,6 +81,15 @@ describe('captureAttribution / getAttribution', () => {
     expect(sent.visitorId).toMatch(/^[A-Za-z0-9_-]{8,64}$/)
     expect(sent.source).toBe('linkedin')
     expect(Object.keys(sent).sort()).toEqual(['campaign', 'content', 'landingPath', 'medium', 'referrer', 'source', 'visitorId'])
+  })
+
+  it('records distinct tracked posts visited in the same browser session', () => {
+    visit('?utm_source=linkedin&utm_content=post-1')
+    visit('?utm_source=linkedin&utm_content=post-2')
+
+    expect(fetchMock).toHaveBeenCalledTimes(2)
+    expect(JSON.parse((fetchMock.mock.calls[0] as unknown as [string, { body: string }])[1].body).content).toBe('post-1')
+    expect(JSON.parse((fetchMock.mock.calls[1] as unknown as [string, { body: string }])[1].body).content).toBe('post-2')
   })
 
   it('reports a direct visit too, so the visitors count is complete', () => {

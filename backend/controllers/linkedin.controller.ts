@@ -98,6 +98,7 @@ export const linkedinCallback = async (req: Request, res: Response) => {
       throw new Error('No user found in database')
     }
 
+    const expiresAt = new Date(Date.now() + Number(tokenData.expires_in || 60 * 24 * 60 * 60) * 1000).toISOString()
     const profileRecord = {
       user_id: realUserId,
       linkedin_id: profile.sub || '',
@@ -107,19 +108,17 @@ export const linkedinCallback = async (req: Request, res: Response) => {
       photo_url: photoUrl,
       access_token: accessToken, // Store for background sync
       connected_at: new Date().toISOString(),
-      expires_at: new Date(Date.now() + 60 * 24 * 60 * 60 * 1000).toISOString(), // 60 days
+      expires_at: expiresAt,
       updated_at: new Date().toISOString()
     }
 
-    try {
-      await supabase.from('linkedin_profiles').upsert(profileRecord, { onConflict: 'user_id' })
-    } catch (dbError) {
-      console.warn('[LinkedIn] Save to linkedin_profiles failed:', dbError)
-    }
+    const { error: profileSaveError } = await supabase
+      .from('linkedin_profiles')
+      .upsert(profileRecord, { onConflict: 'user_id' })
+    if (profileSaveError) throw profileSaveError
 
     // Settings Sync
     const connectedAt = new Date().toISOString()
-    const expiresAt = new Date(Date.now() + 60 * 24 * 60 * 60 * 1000).toISOString() // 60 days
     const postMsgData = { 
       type: 'LINKEDIN_AUTH', 
       token: accessToken, 
@@ -149,6 +148,53 @@ export const linkedinCallback = async (req: Request, res: Response) => {
   } catch (e: any) {
     console.error('[LinkedIn] Callback error:', e)
     res.status(500).send(`Error: ${e.message}`)
+  }
+}
+
+/** GET /api/linkedin/profile — Restore the persisted connection after a reload. */
+export const getLinkedInProfile = async (_req: Request, res: Response) => {
+  try {
+    const { data: userData, error: userError } = await supabase.from('users').select('id').limit(1).single()
+    if (userError) throw userError
+    if (!userData?.id) return res.json(null)
+
+    const { data: profile, error } = await supabase
+      .from('linkedin_profiles')
+      .select('access_token, linkedin_id, first_name, last_name, headline, photo_url, expires_at')
+      .eq('user_id', userData.id)
+      .maybeSingle()
+
+    if (error) throw error
+    if (!profile) return res.json(null)
+
+    res.json({
+      linkedinToken: profile.access_token,
+      linkedinUrn: profile.linkedin_id ? `urn:li:person:${profile.linkedin_id}` : '',
+      linkedinName: [profile.first_name, profile.last_name].filter(Boolean).join(' '),
+      linkedinPhoto: profile.photo_url || '',
+      linkedinHeadline: profile.headline || '',
+      linkedinExpiresAt: profile.expires_at || '',
+    })
+  } catch (error: any) {
+    console.error('[LinkedIn] Profile fetch error:', error)
+    res.status(500).json({ error: error.message || 'No se pudo recuperar la conexión de LinkedIn' })
+  }
+}
+
+/** DELETE /api/linkedin/profile — Remove the persisted LinkedIn connection. */
+export const deleteLinkedInProfile = async (_req: Request, res: Response) => {
+  try {
+    const { data: userData, error: userError } = await supabase.from('users').select('id').limit(1).single()
+    if (userError) throw userError
+    if (!userData?.id) return res.status(404).json({ error: 'No se encontró un usuario en el sistema' })
+
+    const { error } = await supabase.from('linkedin_profiles').delete().eq('user_id', userData.id)
+    if (error) throw error
+
+    res.json({ success: true })
+  } catch (error: any) {
+    console.error('[LinkedIn] Profile delete error:', error)
+    res.status(500).json({ error: error.message || 'No se pudo desconectar LinkedIn' })
   }
 }
 

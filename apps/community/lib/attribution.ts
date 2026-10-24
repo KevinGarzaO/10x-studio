@@ -2,9 +2,8 @@
  * De dónde llega la gente (UTM), para saber qué trae registros.
  *
  * Cuando alguien entra con un enlace marcado (`?utm_source=linkedin&...`) se guarda su
- * origen en el navegador. Si después se registra, ese origen viaja con el registro. Mide
- * el PRIMER origen: quien llegó por LinkedIn y se registró días después entrando directo
- * sigue contando como de LinkedIn. Dura 30 días.
+ * origen en el navegador. Si visita otro enlace marcado antes de registrarse, se conserva
+ * el último origen para atribuir el registro al post que lo convirtió. Dura 30 días.
  *
  * No guarda nada personal: solo de qué enlace o sitio llegó. Todo está en try/catch: sin
  * almacenamiento (ventana privada, bloqueado) la app funciona igual, solo sin medir.
@@ -69,7 +68,7 @@ function visitorId(): string {
   }
 }
 
-/** El origen guardado, si sigue vigente. Es el que se manda al registrarse. */
+/** El último origen guardado, si sigue vigente. Es el que se manda al registrarse. */
 export function getAttribution(now: number = Date.now()): Attribution | null {
   try {
     const raw = localStorage.getItem(ATTRIBUTION_KEY)
@@ -87,8 +86,8 @@ export function getAttribution(now: number = Date.now()): Attribution | null {
 }
 
 /**
- * Se llama al entrar al sitio: guarda el origen (si es el primero que se ve) y avisa al
- * backend de la visita, una vez por sesión del navegador.
+ * Se llama al entrar al sitio: guarda el origen más reciente y avisa al backend una vez
+ * por origen marcado durante la sesión del navegador.
  */
 export function captureAttribution(): void {
   if (typeof window === 'undefined') return
@@ -96,8 +95,8 @@ export function captureAttribution(): void {
   const current = readAttribution(window.location.search, document.referrer, window.location.hostname, window.location.pathname)
 
   try {
-    // El primer origen manda: uno vigente no se pisa. Una visita directa nunca borra nada.
-    if (current && !getAttribution()) {
+    // Un origen nuevo reemplaza al anterior; una visita directa nunca lo borra.
+    if (current) {
       localStorage.setItem(ATTRIBUTION_KEY, JSON.stringify({ ...current, capturedAt: Date.now() } satisfies Stored))
     }
   } catch {
@@ -105,8 +104,15 @@ export function captureAttribution(): void {
   }
 
   try {
-    if (sessionStorage.getItem(VISIT_SENT_KEY)) return
-    sessionStorage.setItem(VISIT_SENT_KEY, '1')
+    const visitKey = [
+      current?.source,
+      current?.medium,
+      current?.campaign,
+      current?.content,
+    ].map(value => encodeURIComponent(value || '')).join(':')
+    const sessionKey = `${VISIT_SENT_KEY}:${visitKey}`
+    if (sessionStorage.getItem(sessionKey)) return
+    sessionStorage.setItem(sessionKey, '1')
   } catch {
     // sin sessionStorage se avisaría en cada página; mejor no avisar que inflar la cuenta
     return

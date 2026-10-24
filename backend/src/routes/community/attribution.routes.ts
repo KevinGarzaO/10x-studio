@@ -40,15 +40,20 @@ router.post('/visit', async (req: Request, res: Response) => {
     if (!visitorId || !allowed(req)) return res.status(204).end()
 
     const since = new Date(Date.now() - SESSION_WINDOW_MS).toISOString()
-    const { data: recent } = await supabase
+    let recentQuery = supabase
       .from('landing_visits')
       .select('id')
       .eq('visitor_id', visitorId)
       .gte('created_at', since)
-      .limit(1)
+    for (const field of ['source', 'medium', 'campaign', 'content'] as const) {
+      const value = attribution?.[field] ?? null
+      recentQuery = value === null ? recentQuery.is(field, null) : recentQuery.eq(field, value)
+    }
+    const { data: recent, error: recentError } = await recentQuery.limit(1)
+    if (recentError) throw recentError
     if (recent && recent.length > 0) return res.status(204).end()
 
-    await supabase.from('landing_visits').insert({
+    const { error: insertError } = await supabase.from('landing_visits').insert({
       visitor_id: visitorId,
       source: attribution?.source ?? null,
       medium: attribution?.medium ?? null,
@@ -57,6 +62,7 @@ router.post('/visit', async (req: Request, res: Response) => {
       referrer: attribution?.referrer ?? null,
       landing_path: attribution?.landingPath ?? null,
     })
+    if (insertError) throw insertError
   } catch (error) {
     // Medir no debe romper nada: se registra y se sigue.
     console.warn('[Attribution] No se pudo guardar la visita:', (error as Error).message)

@@ -47,9 +47,8 @@ router.post('/signup', async (req: Request, res: Response) => {
         display_name: displayName || username,
       }
 
-      // De dónde llegó (UTM): el navegador lo manda al registrarse. Si falla guardarlo
-      // (por ejemplo, la migración aún no se aplicó) la cuenta se crea igual: medir el
-      // origen nunca debe impedir un registro.
+      // El último origen UTM se manda al registrarse para atribuir la conversión
+      // al enlace que llevó a la persona a crear su cuenta.
       const attribution = sanitizeAttribution(req.body.attribution)
       const origin = attribution && {
         signup_source: attribution.source,
@@ -274,7 +273,7 @@ router.post('/sync-user', communityAuthMiddleware, async (req: AuthRequest, res:
     const displayName =
       meta.full_name || meta.name || email.split('@')[0] || 'Nuevo usuario'
 
-    // Atribución del primer contacto, enviada por el frontend en el callback.
+    // Última atribución enviada por el frontend al volver del proveedor OAuth.
     const {
       signupSource, signupMedium, signupCampaign,
       signupContent, signupReferrer, signupLandingPath,

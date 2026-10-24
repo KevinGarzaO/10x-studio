@@ -9,7 +9,7 @@
 --   1. linkedin_vacancy_posts: qué vacantes se publicaron en tu LinkedIn, para no
 --      repetirlas y poder ver el historial (texto, enlace, estado).
 --   2. Origen de los registros (UTM): de dónde llegó cada persona.
---        - users.signup_*      el primer origen con el que llegó quien se registró.
+--        - users.signup_*      el último origen marcado antes del registro.
 --        - landing_visits      una fila por sesión de visita, para medir cuánta gente
 --                              llega (no solo cuánta se registra) y la conversión.
 --        - acquisition_by_source  la vista que cruza ambas: visitantes, registros y

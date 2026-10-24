@@ -3,15 +3,22 @@ import express from 'express'
 import request from 'supertest'
 
 const inserted = vi.hoisted(() => [] as Record<string, unknown>[])
-const state = vi.hoisted(() => ({ recent: false }))
+const state = vi.hoisted(() => ({ recentContent: undefined as string | null | undefined }))
 
 vi.mock('../../services/supabase.service', () => ({
   supabase: {
     from: () => ({
       select: () => {
         const q: any = {}
-        for (const name of ['eq', 'gte', 'limit']) q[name] = () => q
-        q.then = (resolve: any) => Promise.resolve({ data: state.recent ? [{ id: 'x' }] : [] }).then(resolve)
+        const filters: Record<string, unknown> = {}
+        q.eq = (field: string, value: unknown) => { filters[field] = value; return q }
+        q.is = (field: string, value: unknown) => { filters[field] = value; return q }
+        q.gte = () => q
+        q.limit = () => q
+        q.then = (resolve: any) => {
+          const isRecent = state.recentContent !== undefined && filters.content === state.recentContent
+          return Promise.resolve({ data: isRecent ? [{ id: 'x' }] : [], error: null }).then(resolve)
+        }
         return q
       },
       insert: (row: Record<string, unknown>) => {
@@ -72,7 +79,7 @@ describe('sanitizeVisitorId', () => {
 describe('POST /attribution/visit', () => {
   beforeEach(() => {
     inserted.length = 0
-    state.recent = false
+    state.recentContent = undefined
   })
 
   it('stores the visit and always answers 204', async () => {
@@ -95,10 +102,19 @@ describe('POST /attribution/visit', () => {
     expect(inserted).toEqual([])
   })
 
-  it('does not count the same visitor twice in the same session', async () => {
-    state.recent = true
-    const res = await request(app()).post('/attribution/visit').send({ visitorId: 'visitor-0003', source: 'linkedin' })
+  it('does not count the same visitor twice for the same post in the same session', async () => {
+    state.recentContent = 'post-1'
+    const res = await request(app()).post('/attribution/visit').send({ visitorId: 'visitor-0003', source: 'linkedin', content: 'post-1' })
     expect(res.status).toBe(204)
     expect(inserted).toEqual([])
+  })
+
+  it('counts a different post for a visitor with another recent post visit', async () => {
+    state.recentContent = 'post-1'
+    const res = await request(app()).post('/attribution/visit').send({ visitorId: 'visitor-0003', source: 'linkedin', content: 'post-2' })
+    expect(res.status).toBe(204)
+    expect(inserted).toEqual([
+      expect.objectContaining({ visitor_id: 'visitor-0003', content: 'post-2' }),
+    ])
   })
 })
