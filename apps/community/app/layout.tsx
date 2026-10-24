@@ -4,7 +4,7 @@ import { AttributionCapture } from '@/components/attribution-capture'
 import { SessionCapture } from '@/components/session-capture'
 import './globals.css'
 
-const GA_MEASUREMENT_ID = process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID
+const GA_MEASUREMENT_ID = process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID || 'G-B5F7C83ERC'
 
 export const metadata: Metadata = {
   title: 'AvoTalent — Comunidad Global de Talento',
