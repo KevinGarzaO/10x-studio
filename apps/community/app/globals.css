@@ -667,3 +667,18 @@ button { cursor: pointer; }
 .detail-expired li { display: flex; flex-direction: column; gap: 2px; font-size: 13px; }
 .detail-expired li a, .detail-expired .detail-expired-more { color: #4fd39a; font-weight: 600; text-decoration: none; }
 .detail-expired li span { color: #b3aba1; font-size: 12px; }
+
+/* Temas en tendencia: cada uno con su color, fijo por nombre (lib/tag-colors.ts). */
+.tags-section { display: flex; flex-wrap: wrap; gap: 8px; }
+.tags-section .section-heading { flex-basis: 100%; }
+.tags-section .tag-link { display: inline-flex; align-items: center; gap: 4px; padding: 6px 12px; border-radius: 10px; border: 1px solid transparent; font-size: 13px; font-weight: 600; text-decoration: none; background: var(--tag-bg); color: var(--tag-fg); border-color: var(--tag-border); transition: filter .15s ease, transform .15s ease; }
+.tags-section .tag-link:hover { background: var(--tag-bg); color: var(--tag-fg); filter: brightness(1.25); }
+.tags-section .tag-link.active { background: var(--tag-fg); color: #18161a; border-color: var(--tag-fg); }
+.tag-hue-0 { --tag-bg: rgba(79,211,154,.12);  --tag-fg: #4fd39a; --tag-border: rgba(79,211,154,.35); }
+.tag-hue-1 { --tag-bg: rgba(96,165,250,.12);  --tag-fg: #7db8fb; --tag-border: rgba(96,165,250,.35); }
+.tag-hue-2 { --tag-bg: rgba(192,132,252,.12); --tag-fg: #c99bfd; --tag-border: rgba(192,132,252,.35); }
+.tag-hue-3 { --tag-bg: rgba(251,191,36,.12);  --tag-fg: #f5c542; --tag-border: rgba(251,191,36,.35); }
+.tag-hue-4 { --tag-bg: rgba(244,114,182,.12); --tag-fg: #f58fc2; --tag-border: rgba(244,114,182,.35); }
+.tag-hue-5 { --tag-bg: rgba(34,211,238,.12);  --tag-fg: #4ddbf0; --tag-border: rgba(34,211,238,.35); }
+.tag-hue-6 { --tag-bg: rgba(251,146,60,.12);  --tag-fg: #fb9d5c; --tag-border: rgba(251,146,60,.35); }
+.tag-hue-7 { --tag-bg: rgba(129,140,248,.12); --tag-fg: #98a0fa; --tag-border: rgba(129,140,248,.35); }

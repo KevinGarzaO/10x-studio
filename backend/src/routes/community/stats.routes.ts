@@ -93,7 +93,11 @@ router.get('/', async (req: Request, res: Response) => {
 // section — replaces the fixed javascript/react/nextjs/... list.
 router.get('/tags', async (req: Request, res: Response) => {
   try {
-    const limit = parseInt((req.query.limit as string) || '6', 10)
+    const limit = Math.min(Math.max(parseInt((req.query.limit as string) || '6', 10) || 6, 1), 30)
+
+    // Los skills del catálogo: cada tema que coincide con uno tiene su página en /empleos/<skill>.
+    const { data: catalog } = await supabase.from('skills').select('name, label')
+    const labels = new Map<string, string>((catalog || []).map((skill: { name: string; label: string }) => [skill.name, skill.label]))
 
     const { data, error } = await supabase
       .from('community_post_tags')
@@ -108,33 +112,31 @@ router.get('/tags', async (req: Request, res: Response) => {
       counts.set(name, (counts.get(name) || 0) + 1)
     }
 
-    // Si community_post_tags está vacío, agregar desde el campo skills de community_posts
+    // Sin temas escritos a mano, los temas en tendencia son los skills que más piden las
+    // vacantes abiertas (las de los últimos 45 días: las mismas que lista /empleos/<skill>).
     if (counts.size === 0) {
+      const since = new Date(Date.now() - 45 * 86400000).toISOString()
       const { data: postsData } = await supabase
         .from('community_posts')
         .select('skills')
+        .eq('type', 'job')
+        .gte('created_at', since)
         .not('skills', 'is', null)
-        .limit(200)
+        .limit(2000)
 
-      for (const p of postsData || []) {
-        const skillsArr = Array.isArray(p.skills) ? p.skills : []
-        for (const s of skillsArr) {
-          if (typeof s === 'string' && s.trim()) {
-            counts.set(s.trim(), (counts.get(s.trim()) || 0) + 1)
-          }
+      for (const post of postsData || []) {
+        const skills = Array.isArray(post.skills) ? post.skills : []
+        for (const skill of new Set(skills)) {
+          if (typeof skill === 'string' && labels.has(skill)) counts.set(skill, (counts.get(skill) || 0) + 1)
         }
       }
-    }
-
-    // Si aún está vacío, usar los skills más populares por defecto
-    if (counts.size === 0) {
-      ['react', 'python', 'typescript', 'ia', 'aws', 'sql'].forEach(t => counts.set(t, 1))
     }
 
     const tags = [...counts.entries()]
       .sort((a, b) => b[1] - a[1])
       .slice(0, limit)
-      .map(([name, count]) => ({ name, count }))
+      // `skill` dice si el tema tiene página de empleos; `label` es su nombre para mostrar.
+      .map(([name, count]) => ({ name, label: labels.get(name) ?? name, skill: labels.has(name), count }))
 
     res.json({ tags })
   } catch (error) {

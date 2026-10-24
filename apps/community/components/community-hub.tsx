@@ -2,7 +2,7 @@
 
 import { useMemo, useState, useEffect, useCallback, useRef } from 'react'
 import Link from 'next/link'
-import { useRouter, useSearchParams } from 'next/navigation'
+import { usePathname, useRouter, useSearchParams } from 'next/navigation'
 import {
   Bell, Bookmark, BriefcaseBusiness, Flame,
   Hash, Menu, MessageCircle, PenLine, Plus, Search,
@@ -12,6 +12,7 @@ import {
 import { companySlug, formatCompanyName } from '../lib/company'
 import { useShell, type AuthRequest } from '../lib/shell-context'
 import { saveReturnTo } from '../lib/return-to'
+import { DEFAULT_TAGS, tagHref, tagHue, type SidebarTag } from '../lib/tag-colors'
 import { HeroBanner } from './hero-banner'
 import { getToken, clearSession } from '../lib/session'
 import { buildFeed, type MatchedItem } from '../lib/mixed-feed'
@@ -122,16 +123,20 @@ export function ProfileMenu({ user }: { user: any }) {
   )
 }
 
-const DEFAULT_TAGS = ['react', 'python', 'typescript', 'ia', 'aws', 'sql']
-
 export function LeftSidebar({ onPublish, activeTag, onTagClick }: { onPublish: () => void; activeTag: string | null; onTagClick: (tag: string) => void }) {
-  const [tags, setTags] = useState<string[]>(DEFAULT_TAGS)
+  const [tags, setTags] = useState<SidebarTag[]>(DEFAULT_TAGS)
+  const pathname = usePathname()
+
   useEffect(() => {
     fetch(`${API_URL}/api/community/stats/tags?limit=6`)
       .then(r => r.ok ? r.json() : null)
       .then(d => {
-        const fetched = (d?.tags || []).map((t: { name: string }) => t.name)
-        if (fetched && fetched.length > 0) setTags(fetched)
+        const fetched: SidebarTag[] = (d?.tags || []).map((t: { name: string; label?: string; skill?: boolean }) => ({
+          name: t.name,
+          label: t.label || t.name,
+          skill: t.skill === true,
+        }))
+        if (fetched.length > 0) setTags(fetched)
       })
       .catch(() => {})
   }, [])
@@ -139,16 +144,32 @@ export function LeftSidebar({ onPublish, activeTag, onTagClick }: { onPublish: (
   return <aside className="left-sidebar">
     <div className="sidebar-section tags-section">
       <div className="section-heading"><p className="eyebrow">Temas en tendencia</p></div>
-      {tags.map(tag => (
-        <button
-          key={tag}
-          className={`tag-link ${activeTag === tag ? 'active' : ''}`}
-          aria-pressed={activeTag === tag}
-          onClick={() => onTagClick(tag)}
-        >
-          <Hash size={14} />{tag}
-        </button>
-      ))}
+      {tags.map(tag => {
+        const href = tagHref(tag)
+        const hue = `tag-hue-${tagHue(tag.name)}`
+
+        // Un skill lleva a su página de empleos (/empleos/python). Un tema que no es skill sigue
+        // filtrando el feed, como antes.
+        return href ? (
+          <Link
+            key={tag.name}
+            href={href}
+            className={`tag-link ${hue} ${pathname === href ? 'active' : ''}`}
+            aria-current={pathname === href ? 'page' : undefined}
+          >
+            <Hash size={14} />{tag.label}
+          </Link>
+        ) : (
+          <button
+            key={tag.name}
+            className={`tag-link ${hue} ${activeTag === tag.name ? 'active' : ''}`}
+            aria-pressed={activeTag === tag.name}
+            onClick={() => onTagClick(tag.name)}
+          >
+            <Hash size={14} />{tag.label}
+          </button>
+        )
+      })}
     </div>
     <div className="sidebar-cta"><div className="cta-icon"><PenLine size={16} /></div><strong>Comparte lo que sabes</strong><p>Tu experiencia puede desbloquear la de alguien más.</p><button className="text-button" onClick={() => window.location.href = '/create'}>Crear publicación <Send size={14} /></button></div>
     <div className="sidebar-footer">© 2026 AvoTalent <span>·</span> Reglas <span>·</span> Privacidad</div>
