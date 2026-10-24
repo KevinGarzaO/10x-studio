@@ -77,8 +77,14 @@ function formatTime(dateStr: string) {
   return `hace ${days}d`
 }
 
+// Si la foto no carga (un enlace de LinkedIn que venció, por ejemplo) se muestran las iniciales: una foto rota
+// no deja un hueco en blanco.
 function Avatar({ initials, tone = 'cyan', avatar }: { initials: string; tone?: string; avatar?: string }) {
-  return avatar ? <img className="avatar avatar-photo" src={avatar} alt="" aria-hidden="true" /> : <div className={`avatar avatar-${tone}`} aria-hidden="true">{initials}</div>
+  const [failed, setFailed] = useState(false)
+  useEffect(() => setFailed(false), [avatar])
+  return avatar && !failed
+    ? <img className="avatar avatar-photo" src={avatar} alt="" aria-hidden="true" referrerPolicy="no-referrer" onError={() => setFailed(true)} />
+    : <div className={`avatar avatar-${tone}`} aria-hidden="true">{initials}</div>
 }
 
 export function ProfileMenu({ user }: { user: any }) {

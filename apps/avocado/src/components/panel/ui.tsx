@@ -180,10 +180,13 @@ export function InlineBar({ value, max, color = '#10b981' }: { value: number; ma
 }
 
 /** La foto de la persona; si no tiene, sus iniciales. */
+/** La foto de la persona; si no hay o no carga (un enlace de LinkedIn vencido), sus iniciales. */
 export function Avatar({ name, photo }: { name: string; photo: string | null }) {
+  const [failed, setFailed] = useState(false)
+  useEffect(() => setFailed(false), [photo])
   const initials = name.split(/\s+/).filter(Boolean).slice(0, 2).map(part => part[0]?.toUpperCase()).join('') || '?'
-  return photo
+  return photo && !failed
     // eslint-disable-next-line @next/next/no-img-element
-    ? <img className="panel-avatar" src={photo} alt="" width={36} height={36} loading="lazy" referrerPolicy="no-referrer" />
+    ? <img className="panel-avatar" src={photo} alt="" width={36} height={36} loading="lazy" referrerPolicy="no-referrer" onError={() => setFailed(true)} />
     : <span className="panel-avatar panel-avatar-fallback" aria-hidden="true">{initials}</span>
 }
