@@ -102,47 +102,49 @@ export function ForYouCard({ item }: { item: MatchedItem }) {
     }
   }
 
+  const facts = [role, level, item.modalidad && !/no especificado|unknown/i.test(item.modalidad) ? item.modalidad : null].filter(Boolean) as string[]
+  const sortedSkills = [...item.skills].sort((a, b) => Number(validated.has(b.toLowerCase())) - Number(validated.has(a.toLowerCase())) || Number(shared.has(b)) - Number(shared.has(a))).slice(0, 6)
+
   return (
     <article
       className="post-card job-card is-for-you"
       onClick={e => { if (e.target instanceof HTMLElement && e.target.closest('button, a')) return; open() }}
     >
-      <div className="post-top">
-        <Link href={company ? `/empresas/${companySlug(company)}` : '#'} className="author-row author-link" onClick={e => !company && e.preventDefault()}>
-          <CompanyAvatar company={company} logoUrl={item.companyLogo} size={44} />
-          <div><div className="author-name">{company || 'AvoTalent'}</div><div className="post-meta">{formatTime(item.postDate)}</div></div>
-        </Link>
+      <div className="jc-forme">
         <span className="post-type-badge is-for-you"><Target size={11} /> PARA TI</span>
-      </div>
-      <h2>{item.title}</h2>
-      <div className="job-chips">
-        {company && <span className="job-chip"><Building size={12} /> {company}</span>}
-        {role && <span className="job-chip">{role}</span>}
-        {item.roleFit === 'adjacent' && <span className="job-chip is-adjacent" title="No es exactamente tu puesto, pero es cercano y pide skills que tienes">Rol cercano al tuyo</span>}
-        {level && <span className="job-chip">{level}</span>}
-        {item.modalidad && !/no especificado|unknown/i.test(item.modalidad) && <span className="job-chip">{item.modalidad}</span>}
         {typeof item.matchScore === 'number' && <span className="match-score" title={matchExplanation(item)}>{item.matchScore}% match</span>}
-        <span className="match-pill"><Target size={11} /> {item.matchingSkills} {item.matchingSkills === 1 ? 'skill' : 'skills'} en común</span>
+        <span className="match-pill">{item.matchingSkills} {item.matchingSkills === 1 ? 'skill' : 'skills'} en común</span>
         {validated.size > 0 && <span className="match-pill is-validated" title="Skills que pide la vacante y aprobaste con examen"><BadgeCheck size={11} /> {validated.size} {validated.size === 1 ? 'validado' : 'validados'} con examen</span>}
+        {item.roleFit === 'adjacent' && <span className="match-pill" title="No es exactamente tu puesto, pero es cercano y pide skills que tienes">Rol cercano al tuyo</span>}
       </div>
-      {item.skills.length > 0 && (
-        <div className="stack-row">
-          {/* Los skills que tú tienes van primero y resaltados. */}
-          {[...item.skills].sort((a, b) => Number(validated.has(b.toLowerCase())) - Number(validated.has(a.toLowerCase())) || Number(shared.has(b)) - Number(shared.has(a))).slice(0, 6).map(skill => {
-            const level = validated.get(skill.toLowerCase())
-            return level
-              ? <span key={skill} className="stack-badge is-validated" title={`Validado con examen: ${LEVEL_NAME[level]}`}><BadgeCheck size={12} /> {skill} · {LEVEL_NAME[level]}</span>
-              : <span key={skill} className={`stack-badge${shared.has(skill) ? ' is-shared' : ''}`}>{skill}</span>
-          })}
-        </div>
-      )}
-      <button className="job-apply-button" onClick={open} disabled={opening}>
-        {opening ? 'Abriendo...' : 'Ver vacante →'}
-      </button>
-      <div className="post-footer">
+      <div className="jc-head">
+        <Link href={company ? `/empresas/${companySlug(company)}` : '#'} className="jc-company" onClick={e => !company && e.preventDefault()}>
+          <CompanyAvatar company={company} logoUrl={item.companyLogo} size={32} />
+          <span className="jc-company-name">{company || 'AvoTalent'}</span>
+        </Link>
+        <span className="jc-time">{formatTime(item.postDate)}</span>
         <span className="footer-spacer" />
         <button className={`icon-button ${saved ? 'saved' : ''}`} onClick={toggleSave} aria-label="Guardar">
           <Bookmark size={17} fill={saved ? 'currentColor' : 'none'} />
+        </button>
+      </div>
+      <h2 className="jc-title">{item.title}</h2>
+      {facts.length > 0 && <p className="jc-facts">{facts.join(' · ')}</p>}
+      {sortedSkills.length > 0 && (
+        <div className="jc-tags">
+          {/* Los skills que tú tienes van primero y resaltados. */}
+          {sortedSkills.map(skill => {
+            const level = validated.get(skill.toLowerCase())
+            return level
+              ? <span key={skill} className="jc-tag stack-badge is-validated" title={`Validado con examen: ${LEVEL_NAME[level]}`}><BadgeCheck size={12} /> {skill} · {LEVEL_NAME[level]}</span>
+              : <span key={skill} className={`jc-tag stack-badge${shared.has(skill) ? ' is-shared' : ''}`}><i>#</i>{skill}</span>
+          })}
+        </div>
+      )}
+      <div className="jc-foot">
+        <span className="footer-spacer" />
+        <button className="jc-cta" onClick={open} disabled={opening}>
+          {opening ? 'Abriendo...' : 'Ver vacante →'}
         </button>
       </div>
     </article>

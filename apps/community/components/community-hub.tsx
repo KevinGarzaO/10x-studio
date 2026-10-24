@@ -154,6 +154,18 @@ export function LeftSidebar({ activeTag, onTagClick }: { activeTag: string | nul
   }, [])
 
   return <aside className="left-sidebar">
+    <nav className="side-nav" aria-label="Navegación principal">
+      {[
+        { href: '/', label: 'Inicio', icon: <HomeIcon size={18} /> },
+        { href: '/empleos', label: 'Empleos por skill', icon: <BriefcaseBusiness size={18} /> },
+        { href: '/puestos', label: 'Empleos por puesto', icon: <Target size={18} /> },
+        { href: '/saved', label: 'Guardadas', icon: <Bookmark size={18} /> },
+      ].map(item => (
+        <Link key={item.href} href={item.href} className={`side-nav-link ${pathname === item.href ? 'active' : ''}`} aria-current={pathname === item.href ? 'page' : undefined}>
+          {item.icon}{item.label}
+        </Link>
+      ))}
+    </nav>
     <div className="sidebar-section tags-section">
       <div className="section-heading"><p className="eyebrow">Puestos en tendencia</p></div>
       {roles.map(role => {
@@ -363,50 +375,42 @@ export function PostCard({ post, onAuthRequired }: { post: FeedPost; onAuthRequi
   const openPost = (e?: React.MouseEvent<HTMLElement>) => { if (e?.target instanceof HTMLElement && e.target.closest('button, a, input, textarea, select')) return; const isJob = post.type === 'job'; const slug = post.slug || post.id; const basePath = isJob ? (slug.startsWith('/vacantes/') ? slug : `/vacantes/${slug}`) : `/post/${post.id}`; router.push(basePath) }
 
   if (isJob) {
-    // Chips con icono en vez del bloque de texto denso: empresa, ubicación,
-    // nivel · modalidad y salario destacado en verde.
-    // "No especificado" es el relleno del scraper cuando no detectó modalidad:
-    // como chip solo ocupa espacio sin decir nada.
+    // "No especificado" es el relleno del scraper cuando no detectó modalidad: no dice nada.
     const modality = [job?.modality, post.modalidad].find(m => m && !/no especificado/i.test(m))
-    const levelAndType = [post.seniority_level, modality].filter(Boolean).join(' · ')
-    return <article className={`post-card job-card`} onClick={openPost}>
-      <div className="post-top">
-        <Link href={company ? `/empresas/${companySlug(company)}` : '#'} className="author-row author-link" onClick={e => !company && e.preventDefault()}>
-          <CompanyAvatar company={company} logoUrl={post.company_logo} size={44} />
-          <div><div className="author-name">{company || 'AvoTalent'}</div><div className="post-meta">{time}</div></div>
+    const where = (job?.location || post.location || '').split(/[•;|]/)[0].trim()
+    const facts = [where, modality, post.seniority_level].filter(Boolean) as string[]
+    const tags = (post.tags || []).filter(Boolean).slice(0, 5)
+    return <article className="post-card job-card" onClick={openPost}>
+      <div className="jc-head">
+        <Link href={company ? `/empresas/${companySlug(company)}` : '#'} className="jc-company" onClick={e => !company && e.preventDefault()}>
+          <CompanyAvatar company={company} logoUrl={post.company_logo} size={32} />
+          <span className="jc-company-name">{company || 'AvoTalent'}</span>
         </Link>
+        <span className="jc-time">{time}</span>
         <span className="post-type-badge">VACANTE</span>
-      </div>
-      <h2>{job?.role || post.title}</h2>
-      <div className="job-chips">
-        {company && <span className="job-chip"><Building size={12} /> {company}</span>}
-        {(job?.location || post.location) && <span className="job-chip"><MapPin size={12} /> {job?.location || post.location}</span>}
-        {levelAndType && <span className="job-chip">{levelAndType}</span>}
-        {job?.salary && <span className="job-chip is-salary">{job.salary}</span>}
-      </div>
-      {job?.description && <p className="post-excerpt">{job.description}</p>}
-      {job?.benefits && job.benefits.length > 0 && (
-        <div className="job-perks">
-          {job.benefits.slice(0, 4).map(perk => (
-            <span key={perk} className="job-perk"><Check size={11} strokeWidth={2.5} /> {perk}</span>
-          ))}
-        </div>
-      )}
-      {user ? (
-        <>
-          {applyUrl && <button className="job-apply-button" onClick={e => { e.stopPropagation(); openPost() }}>Postularse ahora →</button>}
-          {!applyUrl && job?.emails && job.emails.length > 0 && <div style={{ fontSize: 12, color: 'var(--text-muted)', margin: '6px 0', display: 'inline-flex', alignItems: 'center', gap: 4 }}><Mail size={12} /> {job.emails[0]}</div>}
-        </>
-      ) : (
-        <button className="job-unlock-button" onClick={e => { e.stopPropagation(); onAuthRequired?.() }}>
-          <LockKeyhole size={14} /> Desbloquear contacto
-        </button>
-      )}
-      <div className="post-footer">
-        <button className="engagement"><MessageCircle size={16} />{post.commentsCount}</button>
         <span className="footer-spacer" />
         <button className={`icon-button ${saved ? 'saved' : ''}`} onClick={handleSaveClick} aria-label="Guardar"><Bookmark size={17} fill={saved ? 'currentColor' : 'none'} /></button>
-        <button className="icon-button" aria-label="Compartir"><Share2 size={16} /></button>
+      </div>
+      <h2 className="jc-title">{job?.role || post.title}</h2>
+      {(facts.length > 0 || job?.salary) && (
+        <p className="jc-facts">
+          {facts.join(' · ')}
+          {job?.salary && <strong className="jc-salary">{facts.length > 0 ? ' · ' : ''}{job.salary}</strong>}
+        </p>
+      )}
+      {tags.length > 0 && <div className="jc-tags">{tags.map(tag => <span key={tag} className="jc-tag"><i>#</i>{tag}</span>)}</div>}
+      <div className="jc-foot">
+        <button className="engagement" aria-label="Comentarios"><MessageCircle size={16} />{post.commentsCount}</button>
+        <span className="footer-spacer" />
+        {user ? (
+          applyUrl
+            ? <button className="jc-cta" onClick={e => { e.stopPropagation(); openPost() }}>Postularse ahora →</button>
+            : job?.emails && job.emails.length > 0 && <span className="jc-email"><Mail size={12} /> {job.emails[0]}</span>
+        ) : (
+          <button className="jc-cta is-locked" onClick={e => { e.stopPropagation(); onAuthRequired?.() }}>
+            <LockKeyhole size={14} /> Desbloquear contacto
+          </button>
+        )}
       </div>
     </article>
   }
@@ -428,20 +432,27 @@ export function PostCard({ post, onAuthRequired }: { post: FeedPost; onAuthRequi
   const showsMedia = post.type === 'showcase' || post.type === 'editorial'
 
   return <article className="post-card" onClick={openPost}>
-    <div className="post-top">
-      <Link href={authorUsername ? `/users/${authorUsername}` : '#'} className="author-row author-link" onClick={e => (!hasRealAuthor || !authorUsername) && e.preventDefault()}>
+    <div className="jc-head">
+      <Link href={authorUsername ? `/users/${authorUsername}` : '#'} className="jc-company" onClick={e => (!hasRealAuthor || !authorUsername) && e.preventDefault()}>
         <Avatar initials={authorInitials} tone="cyan" avatar={authorPhoto || undefined} />
-        <div><div className="author-name">{authorName} {!hasRealAuthor && <ShieldCheck size={13} className="verified" />}</div><div className="post-meta">{!hasRealAuthor ? <>Staff AvoTalent <span>·</span> </> : null}{time}</div></div>
+        <span className="jc-company-name">{authorName} {!hasRealAuthor && <ShieldCheck size={13} className="verified" />}</span>
       </Link>
+      <span className="jc-time">{time}</span>
       <span className={`post-type-badge ${badgeTone}`}>{typeLabel}</span>
+      <span className="footer-spacer" />
+      <button className={`icon-button ${saved ? 'saved' : ''}`} onClick={() => setSaved(!saved)} aria-label="Guardar"><Bookmark size={17} fill={saved ? 'currentColor' : 'none'} /></button>
     </div>
-    <h2>{post.title}</h2>
+    <h2 className="jc-title">{post.title}</h2>
     {image
       ? <div className="post-media"><img src={image} alt="" /></div>
       : showsMedia && <div className="post-media is-placeholder"><span>{typeLabel}</span></div>}
     <p className="post-excerpt">{(post.content || '').substring(0, 200)}{(post.content || '').length > 200 ? '...' : ''}</p>
-    {post.word_count ? <div className="post-readtime"><Clock size={12} /> {Math.max(1, Math.round(post.word_count / 200))} min de lectura</div> : null}
-    <div className="post-footer"><button className={`vote-button ${voted ? 'voted' : ''}`} onClick={() => setVoted(!voted)}><ArrowBigUp size={17} fill={voted ? 'currentColor' : 'none'} />{post.votesCount + (voted ? 1 : 0)}</button><button className="engagement"><MessageCircle size={16} />{post.commentsCount} comentarios</button><span className="footer-spacer" /><button className={`icon-button ${saved ? 'saved' : ''}`} onClick={() => setSaved(!saved)} aria-label="Guardar"><Bookmark size={17} fill={saved ? 'currentColor' : 'none'} /></button><button className="icon-button" aria-label="Compartir"><Share2 size={16} /></button></div>
+    <div className="jc-foot">
+      <button className={`vote-button ${voted ? 'voted' : ''}`} onClick={() => setVoted(!voted)}><ArrowBigUp size={17} fill={voted ? 'currentColor' : 'none'} />{post.votesCount + (voted ? 1 : 0)}</button>
+      <button className="engagement"><MessageCircle size={16} />{post.commentsCount} comentarios</button>
+      <span className="footer-spacer" />
+      {post.word_count ? <span className="jc-read"><Clock size={12} /> {Math.max(1, Math.round(post.word_count / 200))} min de lectura</span> : null}
+    </div>
   </article>
 }
 

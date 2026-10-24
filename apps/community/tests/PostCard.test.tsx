@@ -104,23 +104,27 @@ describe('PostCard (rediseño del feed)', () => {
     expect(container.querySelector('.post-media')).toBeNull()
   })
 
-  it('shows a vacancy as chips with company, location, modality and salary', () => {
+  it('shows a vacancy in one line of key facts: who, where, modality and salary', () => {
     const { container } = render(<PostCard post={job} />)
 
     expect(screen.getByText('VACANTE').className).toContain('post-type-badge')
-    const chips = Array.from(container.querySelectorAll('.job-chip')).map(c => c.textContent?.trim())
-    expect(chips).toContain('Stripe')
-    expect(chips).toContain('Remoto')
-    expect(chips.some(c => c?.includes('$8,000 USD'))).toBe(true)
-    expect(container.querySelector('.job-chip.is-salary')).toBeTruthy()
+    expect(container.querySelector('.jc-company-name')?.textContent).toBe('Stripe')
+    const facts = container.querySelector('.jc-facts')?.textContent ?? ''
+    expect(facts).toContain('Remoto')
+    expect(facts).toContain('$8,000 USD')
+    expect(container.querySelector('.jc-salary')).toBeTruthy()
   })
 
-  it('lists the vacancy benefits with a check', () => {
+  it('keeps the card short: no benefits list or description, those live in the detail', () => {
     const { container } = render(<PostCard post={job} />)
 
-    const perks = Array.from(container.querySelectorAll('.job-perk')).map(p => p.textContent?.trim())
-    expect(perks).toContain('Seguro de gastos médicos')
-    expect(container.querySelector('.job-perk svg')).toBeTruthy()
+    expect(container.querySelector('.job-perk')).toBeNull()
+    expect(container.querySelector('.post-excerpt')).toBeNull()
+  })
+
+  it('has at most one action: apply, or unlock the contact when there is no session', () => {
+    const { container } = render(<PostCard post={job} />)
+    expect(container.querySelectorAll('.jc-cta').length).toBeLessThanOrEqual(1)
   })
 
   // Los votos no aplican a una vacante: el diseño quita ese botón de la tarjeta.
@@ -136,7 +140,6 @@ describe('PostCard (rediseño del feed)', () => {
   it('shows the seniority level in the chip once the data exists', () => {
     const { container } = render(<PostCard post={{ ...job, seniority_level: 'senior' }} />)
 
-    const chips = Array.from(container.querySelectorAll('.job-chip')).map(c => c.textContent?.trim())
-    expect(chips).toContain('senior · Remoto')
+    expect(container.querySelector('.jc-facts')?.textContent).toContain('senior')
   })
 })

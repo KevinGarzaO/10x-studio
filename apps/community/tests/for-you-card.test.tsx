@@ -59,7 +59,7 @@ describe('ForYouCard', () => {
     const { container } = render(<ForYouCard item={item} />)
 
     const badges = [...container.querySelectorAll('.stack-badge')]
-    expect(badges.map(b => b.textContent)).toEqual(['python', 'docker', 'aws', 'java'])
+    expect(badges.map(b => b.textContent?.replace('#', ''))).toEqual(['python', 'docker', 'aws', 'java'])
     expect(badges.map(b => b.classList.contains('is-shared'))).toEqual([true, true, false, false])
   })
 
