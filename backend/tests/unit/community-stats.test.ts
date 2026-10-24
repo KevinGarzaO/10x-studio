@@ -26,7 +26,7 @@ vi.mock('../../services/supabase.service', () => ({
             return Promise.resolve({ count: null, error: { message: 'column users.user_kind does not exist' } }).then(resolve, reject)
           }
           const count = table === 'users'
-            ? (entry.filters.some(f => f.startsWith('in:user_kind')) ? 3 : entry.filters.some(f => f.includes('user_kind,company')) ? 15 : entry.filters.some(f => f.includes('neq:account_type')) ? 6 : 15)
+            ? (entry.filters.includes('eq:user_kind,user') ? 3 : entry.filters.some(f => f.includes('user_kind,company')) ? 15 : entry.filters.some(f => f.includes('neq:account_type')) ? 6 : 15)
             : (entry.filters.some(f => f.includes('type,job')) ? 40 : 495)
           return Promise.resolve({ count, error: null }).then(resolve, reject)
         }
@@ -60,8 +60,8 @@ describe('GET /stats', () => {
   it('counts only real accounts: no test accounts and no scraper profiles', async () => {
     await request(app()).get('/api/community/stats').expect(200)
 
-    const people = calls.find(c => c.table === 'users' && c.filters.some(f => f.startsWith('in:user_kind')))!
-    expect(people.filters).toContain('in:user_kind,user,superadmin')
+    const people = calls.find(c => c.table === 'users' && c.filters.includes('eq:user_kind,user'))!
+    expect(people.filters).toContain('eq:user_kind,user') // el equipo (superadmin) no es un miembro
     expect(people.filters).toContain('eq:is_test_account,false')
     expect(people.filters).toContain('not:is_scraper_profile,is,true')
 
@@ -72,7 +72,7 @@ describe('GET /stats', () => {
   it('counts as members only the people who completed their profile', async () => {
     await request(app()).get('/api/community/stats').expect(200)
 
-    const people = calls.find(c => c.table === 'users' && c.filters.some(f => f.startsWith('in:user_kind')))!
+    const people = calls.find(c => c.table === 'users' && c.filters.includes('eq:user_kind,user'))!
     expect(people.filters).toContain('eq:profile_completed,true')
   })
 
@@ -82,7 +82,7 @@ describe('GET /stats', () => {
     const res = await request(app()).get('/api/community/stats').expect(200)
 
     expect(res.body.members).toBe(3)
-    const lastPeople = calls.filter(c => c.table === 'users' && c.filters.some(f => f.startsWith('in:user_kind'))).pop()!
+    const lastPeople = calls.filter(c => c.table === 'users' && c.filters.includes('eq:user_kind,user')).pop()!
     expect(lastPeople.filters).not.toContain('eq:profile_completed,true')
   })
 

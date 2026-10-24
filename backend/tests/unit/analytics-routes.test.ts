@@ -224,7 +224,7 @@ describe('GET /analytics/retention', () => {
     expect(res.body).toHaveProperty('cohorts')
   })
 
-  it('does not count the team in the active numbers, but lists them in the table', async () => {
+  it('does not count or list the team: only real people', async () => {
     const today = new Date().toISOString().slice(0, 10)
     data.tables.users = [
       ...data.tables.users,
@@ -235,8 +235,7 @@ describe('GET /analytics/retention', () => {
     const res = await request(app()).get('/analytics/retention').expect(200)
 
     expect(res.body.dau).toBe(1)
-    expect(res.body.people.map((person: { id: string }) => person.id).sort()).toEqual(['adm', 'u1'])
-    expect(res.body.people.find((person: { id: string }) => person.id === 'adm').counted).toBe(false)
+    expect(res.body.people.map((person: { id: string }) => person.id)).toEqual(['u1'])
     expect(JSON.stringify(res.body.people)).not.toContain('@')
   })
 })

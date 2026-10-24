@@ -26,7 +26,7 @@ export async function loadAlerts(now: Date = new Date()): Promise<Alert[]> {
         .select('created_at')
         .eq('is_test_account', false)
         .not('is_scraper_profile', 'is', true)
-        .in('user_kind', ['user', 'company', 'superadmin'])
+        .in('user_kind', ['user', 'company'])
         .gte('created_at', since.toISOString())
         .range(from, to),
     ),

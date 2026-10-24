@@ -50,7 +50,7 @@ const realUsers = (since: string) =>
       .select('id, created_at, profile_completed, user_kind, signup_source, signup_medium, signup_campaign, signup_content')
       .eq('is_test_account', false)
       .not('is_scraper_profile', 'is', true)
-      .in('user_kind', ['user', 'company', 'superadmin'])
+      .in('user_kind', ['user', 'company'])
       .gte('created_at', since)
       .order('created_at', { ascending: false })
       .range(from, to),
@@ -154,7 +154,7 @@ router.get('/overview', handle('resumen', async (req, res) => {
 
   const activeSince = new Date(Date.now() - 45 * 86400000).toISOString()
   const [{ count: totalUsers }, { count: activeVacancies }, { count: queued }, { data: lastIngested }, claims] = await Promise.all([
-    supabase.from('users').select('*', { count: 'exact', head: true }).eq('is_test_account', false).not('is_scraper_profile', 'is', true).in('user_kind', ['user', 'company', 'superadmin']),
+    supabase.from('users').select('*', { count: 'exact', head: true }).eq('is_test_account', false).not('is_scraper_profile', 'is', true).in('user_kind', ['user', 'company']),
     supabase.from('community_posts').select('*', { count: 'exact', head: true }).eq('type', 'job').gte('created_at', activeSince),
     supabase.from('scraper_posts').select('*', { count: 'exact', head: true }).eq('post_type', 'vacancy').eq('synced_to_community', false),
     supabase.from('scraper_posts').select('created_at').eq('post_type', 'vacancy').order('created_at', { ascending: false }).limit(1),
@@ -255,7 +255,7 @@ router.get('/users', handle('usuarios', async (req, res) => {
     .select('id, username, display_name, email, photo_url, user_kind, profile_completed, role_category, seniority, location, signup_source, signup_content, created_at')
     .eq('is_test_account', false)
     .not('is_scraper_profile', 'is', true)
-    .in('user_kind', ['user', 'company', 'superadmin'])
+    .in('user_kind', ['user', 'company'])
     .order('created_at', { ascending: false })
     .limit(limit)
   if (error) throw new Error(error.message)
@@ -301,12 +301,13 @@ router.get('/retention', handle('retención', async (_req, res) => {
 
   // Las cifras cuentan solo personas reales: ni pruebas, ni scraper, ni el equipo que mira este panel.
   const counted = new Set(people.filter(countsAsPerson).map((person) => person.id))
-  const users = (await realUsers(since.toISOString())).filter((user) => user.user_kind !== 'superadmin')
+  const users = await realUsers(since.toISOString())
 
   res.json({
     ready: true,
     ...retention({ activity: rows.filter((row) => counted.has(row.user_id)), users }),
-    people: activePeople({ activity: rows, people }),
+    // La tabla muestra solo personas reales: ni el equipo, ni las pruebas, ni el scraper.
+    people: activePeople({ activity: rows.filter((row) => counted.has(row.user_id)), people: people.filter(countsAsPerson) }),
   })
 }))
 

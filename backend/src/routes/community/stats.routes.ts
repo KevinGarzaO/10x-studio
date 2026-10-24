@@ -10,7 +10,7 @@ const router = Router()
 //
 // Solo cuentan cuentas REALES: las de prueba (is_test_account) no, y tampoco los
 // perfiles que crea el scraper. Se reparten en:
-//   members    personas con el perfil completo: candidatos y superadmins
+//   members    personas con el perfil completo: candidatos (no el equipo)
 //   companies  empresas, con o sin dueño (las del scraper también son empresas
 //              reales que publican vacantes en el sitio)
 //   vacancies  vacantes publicadas
@@ -23,7 +23,7 @@ async function countCommunity(onlyCompleteProfiles = true) {
     // Un miembro cuenta cuando completó su perfil (users.profile_completed): quien se
     // registró pero no terminó el onboarding todavía no es parte visible de la comunidad.
     count('users', q => {
-      const real = q.in('user_kind', ['user', 'superadmin']).eq('is_test_account', false).not('is_scraper_profile', 'is', true)
+      const real = q.eq('user_kind', 'user').eq('is_test_account', false).not('is_scraper_profile', 'is', true)
       return onlyCompleteProfiles ? real.eq('profile_completed', true) : real
     }),
     count('users', q => q.eq('user_kind', 'company').eq('is_test_account', false)),
