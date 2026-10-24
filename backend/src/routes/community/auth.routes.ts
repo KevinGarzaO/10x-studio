@@ -1,6 +1,7 @@
 import { Router, Request, Response } from 'express'
 import { supabase, createAuthClient } from '../../../services/supabase.service'
 import { sanitizeAttribution } from '../../../services/attribution'
+import { isProviderPhoto, mirrorProviderPhoto } from '../../../services/avatar'
 import { communityAuthMiddleware, AuthRequest } from '../../../middleware/community-auth.middleware'
 
 const router = Router()
@@ -240,8 +241,11 @@ router.post('/sync-user', communityAuthMiddleware, async (req: AuthRequest, res:
     const meta = (authUser?.user_metadata || {}) as Record<string, string>
     // La foto de la red social (avatar de GitHub/LinkedIn): quien llega por OAuth
     // no tiene que subir la suya, y de paso satisface la foto obligatoria del
-    // perfil. Se guarda la URL tal cual (es un CDN público, no el storage propio).
-    const providerPhoto = meta.avatar_url || meta.picture || meta.image_url || null
+    // perfil. Ese enlace VENCE (el de LinkedIn a las ~3 semanas), así que se copia a nuestro
+    // almacenamiento y se guarda el enlace propio; si la copia falla se conserva el original.
+    const providerPhotoUrl = meta.avatar_url || meta.picture || meta.image_url || null
+    const mirroredPhoto = req.userId ? await mirrorProviderPhoto(providerPhotoUrl, req.userId) : null
+    const providerPhoto = mirroredPhoto ?? providerPhotoUrl
 
     // LinkedIn entrega la foto en `picture` (GitHub en `avatar_url`). El
     // dashboard de Supabase solo dibuja `avatar_url`, así que se copia para
@@ -275,7 +279,10 @@ router.post('/sync-user', communityAuthMiddleware, async (req: AuthRequest, res:
     if (existing) {
       // Cuentas creadas antes de traer la foto de la red social: se completa una
       // sola vez y nunca se pisa una foto que la persona ya haya elegido.
-      if (!existing.photo_url && providerPhoto) {
+      // Y una foto de red social que ya estaba guardada (y vence) se reemplaza por la copia: en cada entrada la
+      // red social manda un enlace fresco, que es el momento de copiarlo.
+      const replaceExpiring = isProviderPhoto(existing.photo_url) && !!mirroredPhoto
+      if ((!existing.photo_url && providerPhoto) || replaceExpiring) {
         const { data: healed } = await supabase
           .from('users')
           .update({ photo_url: providerPhoto })

@@ -13,6 +13,7 @@
     "sync-to-community": "tsx scripts/sync-to-community.ts",
     "purge-claim-docs": "tsx scripts/purge-claim-documents.ts",
     "user-stats": "tsx scripts/user-stats.ts",
+    "mirror-avatars": "tsx scripts/mirror-avatars.ts",
     "match-report": "tsx scripts/match-report.ts",
     "backfill-vacancies": "tsx scripts/backfill-vacancy-enrichment.ts",
     "clean-vacancies": "tsx scripts/clean-vacancies.ts",
