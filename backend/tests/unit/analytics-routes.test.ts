@@ -53,7 +53,7 @@ beforeEach(() => {
       { visitor_id: 'c', source: null, medium: null, campaign: null, content: null, landing_path: '/', created_at: hoursAgo(2) },
     ],
     users: [
-      { id: 'u1', username: 'ana', display_name: 'Ana', email: 'ana@x.com', user_kind: 'user', profile_completed: true, role_category: 'backend', seniority: 'senior', location: 'MX', signup_source: 'linkedin', signup_medium: 'social', signup_campaign: 'vacante-auto', signup_content: 'vac-1', created_at: hoursAgo(1) },
+      { id: 'u1', username: 'ana', display_name: 'Ana', email: 'ana@x.com', photo_url: 'https://cdn.test/ana.jpg', user_kind: 'user', profile_completed: true, role_category: 'backend', seniority: 'senior', location: 'MX', signup_source: 'linkedin', signup_medium: 'social', signup_campaign: 'vacante-auto', signup_content: 'vac-1', created_at: hoursAgo(1) },
     ],
     linkedin_vacancy_posts: [
       { vacancy_slug: 'vac-1', company: 'Stripe', role_category: 'backend', linkedin_post_id: 'urn:li:share:1', status: 'published', published_at: hoursAgo(6), created_at: hoursAgo(6) },
@@ -189,7 +189,7 @@ describe('GET /analytics/users', () => {
     const res = await request(app()).get('/analytics/users').expect(200)
 
     expect(res.body.total).toBe(1)
-    expect(res.body.users[0]).toMatchObject({ username: 'ana', signup_source: 'linkedin', profile_completed: true })
+    expect(res.body.users[0]).toMatchObject({ username: 'ana', signup_source: 'linkedin', profile_completed: true, photo_url: 'https://cdn.test/ana.jpg' })
     expect(res.body.byRole).toEqual([{ name: 'backend', total: 1 }])
     expect(res.body.bySource).toEqual([{ name: 'linkedin', total: 1 }])
   })

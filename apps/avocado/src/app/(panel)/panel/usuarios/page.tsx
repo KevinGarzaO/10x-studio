@@ -9,10 +9,19 @@ interface UsersData {
   byRole: { name: string; total: number }[]
   bySource: { name: string; total: number }[]
   users: {
-    id: string; username: string | null; display_name: string | null; email: string | null; user_kind: string
+    id: string; username: string | null; display_name: string | null; email: string | null; photo_url: string | null; user_kind: string
     profile_completed: boolean | null; role_category: string | null; seniority: string | null; location: string | null
     signup_source: string | null; created_at: string; lastActive: string | null
   }[]
+}
+
+/** La foto de la persona; si no tiene, sus iniciales. */
+function Avatar({ name, photo }: { name: string; photo: string | null }) {
+  const initials = name.split(/\s+/).filter(Boolean).slice(0, 2).map(part => part[0]?.toUpperCase()).join('') || '?'
+  return photo
+    // eslint-disable-next-line @next/next/no-img-element
+    ? <img className="panel-avatar" src={photo} alt="" width={36} height={36} loading="lazy" referrerPolicy="no-referrer" />
+    : <span className="panel-avatar panel-avatar-fallback" aria-hidden="true">{initials}</span>
 }
 
 const KIND: Record<string, string> = { user: 'Candidato', company: 'Empresa', superadmin: 'Administrador' }
@@ -69,8 +78,13 @@ export default function UsuariosPage() {
                     {data.users.map(user => (
                       <tr key={user.id}>
                         <td>
-                          <b>{user.display_name || user.username || '—'}</b>
-                          <div className="panel-muted" style={{ fontSize: 12 }}>{user.email}</div>
+                          <div className="panel-person">
+                            <Avatar name={user.display_name || user.username || ''} photo={user.photo_url} />
+                            <div>
+                              <b>{user.display_name || user.username || '—'}</b>
+                              <div className="panel-muted" style={{ fontSize: 12 }}>{user.email}</div>
+                            </div>
+                          </div>
                         </td>
                         <td>{KIND[user.user_kind] ?? user.user_kind}</td>
                         <td>{roleLabel(user.role_category)}</td>

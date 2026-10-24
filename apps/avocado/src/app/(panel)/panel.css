@@ -108,3 +108,7 @@
   .panel-funnel-row { grid-template-columns: 1fr; gap: 4px; }
 }
 @media (max-width: 520px) { .panel-grid.cols-4, .panel-grid.cols-3 { grid-template-columns: 1fr; } }
+
+.panel-person { display: flex; align-items: center; gap: 10px; min-width: 210px; }
+.panel-avatar { width: 36px; height: 36px; border-radius: 50%; object-fit: cover; flex: none; background: #e2e8f0; }
+.panel-avatar-fallback { display: grid; place-items: center; font-size: 13px; font-weight: 700; color: #475569; }

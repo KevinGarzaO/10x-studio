@@ -196,7 +196,7 @@ router.get('/users', handle('usuarios', async (req, res) => {
   const limit = Math.min(Math.max(parseInt(String(req.query.limit ?? '200'), 10) || 200, 1), 500)
   const { data, error } = await supabase
     .from('users')
-    .select('id, username, display_name, email, user_kind, profile_completed, role_category, seniority, location, signup_source, signup_content, created_at')
+    .select('id, username, display_name, email, photo_url, user_kind, profile_completed, role_category, seniority, location, signup_source, signup_content, created_at')
     .eq('is_test_account', false)
     .not('is_scraper_profile', 'is', true)
     .in('user_kind', ['user', 'company', 'superadmin'])
