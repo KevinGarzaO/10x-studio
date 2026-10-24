@@ -4,24 +4,29 @@ import { sanitizeAttribution, sanitizeVisitorId } from '../../../services/attrib
 
 const router = Router()
 
-/** Tope por dirección: es un endpoint público que escribe en la base. */
-const MAX_VISITS_PER_HOUR = 60
-const hits = new Map<string, { count: number; resetAt: number }>()
+/** Tope por dirección: son endpoints públicos que escriben en la base. */
+function makeLimiter(maxPerHour: number) {
+  const hits = new Map<string, { count: number; resetAt: number }>()
 
-function allowed(req: Request): boolean {
-  const forwarded = String(req.headers['x-forwarded-for'] ?? '').split(',')[0].trim()
-  const key = forwarded || req.ip || 'desconocida'
-  const now = Date.now()
-  if (hits.size > 5000) for (const [k, v] of hits) if (v.resetAt < now) hits.delete(k)
+  return (req: Request): boolean => {
+    const forwarded = String(req.headers['x-forwarded-for'] ?? '').split(',')[0].trim()
+    const key = forwarded || req.ip || 'desconocida'
+    const now = Date.now()
+    if (hits.size > 5000) for (const [k, v] of hits) if (v.resetAt < now) hits.delete(k)
 
-  const entry = hits.get(key)
-  if (!entry || entry.resetAt < now) {
-    hits.set(key, { count: 1, resetAt: now + 3600000 })
-    return true
+    const entry = hits.get(key)
+    if (!entry || entry.resetAt < now) {
+      hits.set(key, { count: 1, resetAt: now + 3600000 })
+      return true
+    }
+    entry.count += 1
+    return entry.count <= maxPerHour
   }
-  entry.count += 1
-  return entry.count <= MAX_VISITS_PER_HOUR
 }
+
+const allowedVisit = makeLimiter(60)
+// Quien recorre vacantes genera un evento por página: el tope es mayor que el de las visitas.
+const allowedEvent = makeLimiter(400)
 
 /** Misma persona, misma visita: dentro de esta ventana no se vuelve a contar. */
 const SESSION_WINDOW_MS = 30 * 60 * 1000
@@ -37,7 +42,7 @@ router.post('/visit', async (req: Request, res: Response) => {
   try {
     const visitorId = sanitizeVisitorId(req.body?.visitorId)
     const attribution = sanitizeAttribution(req.body)
-    if (!visitorId || !allowed(req)) return res.status(204).end()
+    if (!visitorId || !allowedVisit(req)) return res.status(204).end()
 
     const since = new Date(Date.now() - SESSION_WINDOW_MS).toISOString()
     let recentQuery = supabase
@@ -66,6 +71,59 @@ router.post('/visit', async (req: Request, res: Response) => {
   } catch (error) {
     // Medir no debe romper nada: se registra y se sigue.
     console.warn('[Attribution] No se pudo guardar la visita:', (error as Error).message)
+  }
+  res.status(204).end()
+})
+
+const VACANCY_EVENTS = ['view', 'apply'] as const
+const SLUG = /^[a-z0-9][a-z0-9-]{0,199}$/i
+
+/**
+ * Alguien abrió una vacante ('view') o pulsó "Postularse" ('apply'). Pública por la misma razón
+ * que las visitas: quien mira una vacante todavía puede no tener cuenta. Siempre responde 204.
+ * Si trae sesión, se anota quién fue; si no, queda anónimo.
+ */
+router.post('/event', async (req: Request, res: Response) => {
+  try {
+    const visitorId = sanitizeVisitorId(req.body?.visitorId)
+    const slug = typeof req.body?.slug === 'string' ? req.body.slug.trim() : ''
+    const event = req.body?.event
+    if (!visitorId || !SLUG.test(slug) || !(VACANCY_EVENTS as readonly unknown[]).includes(event) || !allowedEvent(req)) {
+      return res.status(204).end()
+    }
+
+    // Lo mismo dos veces seguidas es la misma acción (recargar la página, doble clic).
+    const since = new Date(Date.now() - SESSION_WINDOW_MS).toISOString()
+    const { data: recent, error: recentError } = await supabase
+      .from('vacancy_events')
+      .select('id')
+      .eq('visitor_id', visitorId)
+      .eq('vacancy_slug', slug)
+      .eq('event', event)
+      .gte('created_at', since)
+      .limit(1)
+    if (recentError) throw recentError
+    if (recent && recent.length > 0) return res.status(204).end()
+
+    // La persona, si trae sesión. Si el token no sirve, el evento se guarda igual, sin persona.
+    let userId: string | null = null
+    const token = String(req.headers.authorization ?? '').replace(/^Bearer /, '')
+    if (token) {
+      const { data } = await supabase.auth.getUser(token)
+      userId = data.user?.id ?? null
+    }
+
+    const attribution = sanitizeAttribution(req.body)
+    const { error: insertError } = await supabase.from('vacancy_events').insert({
+      vacancy_slug: slug,
+      event,
+      visitor_id: visitorId,
+      user_id: userId,
+      source: attribution?.source ?? null,
+    })
+    if (insertError) throw insertError
+  } catch (error) {
+    console.warn('[Attribution] No se pudo guardar el evento de vacante:', (error as Error).message)
   }
   res.status(204).end()
 })

@@ -2,6 +2,8 @@ import { Router, Request, Response } from 'express'
 import { supabase } from '../../../services/supabase.service'
 import { siteUrl } from '../../../services/linkedin/vacancy-publisher'
 import { nextPublication } from '../../../services/analytics/schedule'
+import { readAll } from '../../../services/analytics/read'
+import { loadAlerts } from '../../../services/analytics/alerts-data'
 import {
   acquisitionBySource,
   buildOverview,
@@ -13,9 +15,11 @@ import {
   retention,
   topLandingPages,
   uniqueVisitors,
+  vacancyEngagement,
   windowStart,
   type LinkedInPostRow,
   type UserRow,
+  type VacancyEventRow,
   type VisitRow,
 } from '../../../services/analytics/metrics'
 
@@ -33,18 +37,6 @@ const PERIODS = [7, 30, 90]
 const periodOf = (req: Request) => {
   const days = parseInt(String(req.query.days ?? '30'), 10)
   return PERIODS.includes(days) ? days : 30
-}
-
-/** Lee todas las filas, de mil en mil (la base entrega a lo más mil por consulta). */
-async function readAll<T>(build: (from: number, to: number) => PromiseLike<{ data: T[] | null; error: { message: string } | null }>, max = 20000): Promise<T[]> {
-  const rows: T[] = []
-  for (let from = 0; from < max; from += 1000) {
-    const { data, error } = await build(from, from + 999)
-    if (error) throw new Error(error.message)
-    rows.push(...(data ?? []))
-    if (!data || data.length < 1000) break
-  }
-  return rows
 }
 
 const realUsers = (since: string) =>
@@ -94,6 +86,51 @@ router.get('/me', (_req, res) => {
   res.json({ ok: true })
 })
 
+/** Las alarmas: lo que se rompió o está por romperse y conviene enterarse hoy. */
+router.get('/alerts', handle('alarmas', async (_req, res) => {
+  res.json({ alerts: await loadAlerts() })
+}))
+
+/** Vacantes: cuánta gente abre cada una, cuánta pulsa "Postularse" y cuánta la guarda. */
+router.get('/vacancies', handle('vacantes', async (req, res) => {
+  const days = periodOf(req)
+  const since = windowStart(days).toISOString()
+
+  const events = await readAll<VacancyEventRow>((from, to) =>
+    supabase.from('vacancy_events').select('vacancy_slug, event, visitor_id').gte('created_at', since).range(from, to),
+  ).catch((error: Error) => {
+    // La tabla aún no existe: se dice, en lugar de mostrar ceros que parecerían reales.
+    if (/vacancy_events/.test(error.message)) return null
+    throw error
+  })
+  if (events === null) return res.json({ ready: false })
+
+  const saved = await readAll<{ source_id: string }>((from, to) =>
+    supabase.from('user_vacancy_history').select('source_id').eq('is_saved', true).gte('saved_at', since).range(from, to),
+  )
+  const shown = await supabase.from('user_vacancy_history').select('*', { count: 'exact', head: true }).gte('seen_at', since)
+
+  const engagement = vacancyEngagement(events)
+  const top = engagement.byVacancy.slice(0, 15)
+
+  const { data: posts } = top.length > 0
+    ? await supabase.from('community_posts').select('id, slug, title, company, role_category').in('slug', top.map((row) => row.slug))
+    : { data: [] as { id: string; slug: string; title: string; company: string | null; role_category: string | null }[] }
+  const bySlug = new Map((posts ?? []).map((post) => [post.slug, post]))
+  const savedCount = new Map<string, number>()
+  for (const row of saved) savedCount.set(row.source_id, (savedCount.get(row.source_id) ?? 0) + 1)
+
+  res.json({
+    ready: true,
+    days,
+    totals: { ...engagement, byVacancy: undefined, saved: saved.length, recommendationsShown: shown.count ?? 0 },
+    top: top.map((row) => {
+      const post = bySlug.get(row.slug)
+      return { ...row, title: post?.title ?? row.slug, company: post?.company ?? null, role: post?.role_category ?? null, saved: post ? savedCount.get(post.id) ?? 0 : 0 }
+    }),
+  })
+}))
+
 /** Resumen: los números de arriba del panel, con su comparación contra el periodo anterior. */
 router.get('/overview', handle('resumen', async (req, res) => {
   const days = periodOf(req)
@@ -103,16 +140,22 @@ router.get('/overview', handle('resumen', async (req, res) => {
   const overview = buildOverview({ visits, users, posts, days })
 
   const activeSince = new Date(Date.now() - 45 * 86400000).toISOString()
-  const [{ count: totalUsers }, { count: activeVacancies }, { count: queued }, { data: lastIngested }] = await Promise.all([
+  const [{ count: totalUsers }, { count: activeVacancies }, { count: queued }, { data: lastIngested }, claims] = await Promise.all([
     supabase.from('users').select('*', { count: 'exact', head: true }).eq('is_test_account', false).not('is_scraper_profile', 'is', true).in('user_kind', ['user', 'company', 'superadmin']),
     supabase.from('community_posts').select('*', { count: 'exact', head: true }).eq('type', 'job').gte('created_at', activeSince),
     supabase.from('scraper_posts').select('*', { count: 'exact', head: true }).eq('post_type', 'vacancy').eq('synced_to_community', false),
     supabase.from('scraper_posts').select('created_at').eq('post_type', 'vacancy').order('created_at', { ascending: false }).limit(1),
+    supabase.from('company_claims').select('status'),
   ])
 
   res.json({
     ...overview,
     totals: { users: totalUsers ?? 0, activeVacancies: activeVacancies ?? 0, queuedVacancies: queued ?? 0, lastIngestedAt: lastIngested?.[0]?.created_at ?? null },
+    // El lado de las empresas: las que ya reclamaron su perfil y las que están esperando que las apruebes.
+    companies: {
+      claimed: (claims.data ?? []).filter((claim: { status: string }) => claim.status === 'approved').length,
+      pendingClaims: (claims.data ?? []).filter((claim: { status: string }) => claim.status === 'pending').length,
+    },
   })
 }))
 

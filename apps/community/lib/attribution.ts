@@ -9,6 +9,8 @@
  * almacenamiento (ventana privada, bloqueado) la app funciona igual, solo sin medir.
  */
 
+import { getToken } from './session'
+
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'
 
 const ATTRIBUTION_KEY = 'avo_attribution'
@@ -125,6 +127,39 @@ export function captureAttribution(): void {
       visitorId: visitorId(),
       ...(current ?? { landingPath: window.location.pathname }),
     }),
+    keepalive: true,
+  }).catch(() => {
+    // medir no debe romper nada
+  })
+}
+
+/**
+ * Anota que alguien abrió una vacante ('view') o pulsó "Postularse" ('apply'), para saber si la
+ * gente que llega encuentra algo útil. Lleva el mismo identificador de navegador que las visitas y
+ * la sesión, si la hay. No espera ni puede romper la página: si falla, se ignora.
+ *
+ * Una vista se anota una sola vez por sesión del navegador y vacante; recargar la página no la
+ * repite. El clic en "Postularse" se anota cada vez (el servidor ignora un doble clic).
+ */
+export function trackVacancyEvent(slug: string, event: 'view' | 'apply'): void {
+  if (typeof window === 'undefined' || !slug) return
+
+  if (event === 'view') {
+    const key = `avo_vacancy_view_${slug}`
+    try {
+      if (sessionStorage.getItem(key)) return
+      sessionStorage.setItem(key, '1')
+    } catch {
+      // sin sessionStorage se anotaría en cada carga; mejor no anotar que inflar la cuenta
+      return
+    }
+  }
+
+  const token = getToken()
+  fetch(`${API_URL}/api/community/attribution/event`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+    body: JSON.stringify({ visitorId: visitorId(), slug, event, source: getAttribution()?.source ?? undefined }),
     keepalive: true,
   }).catch(() => {
     // medir no debe romper nada

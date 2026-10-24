@@ -273,6 +273,63 @@ export function topLandingPages(visits: VisitRow[], limit = 10): { path: string;
     .slice(0, limit)
 }
 
+export interface VacancyEventRow {
+  vacancy_slug: string
+  event: 'view' | 'apply'
+  visitor_id: string
+}
+
+export interface VacancyEngagement {
+  /** Vacantes abiertas: un navegador que abre la misma vacante dos veces cuenta una. */
+  views: number
+  /** Clics en "Postularse", contados igual. */
+  applies: number
+  /** Navegadores distintos que abrieron alguna vacante. */
+  viewers: number
+  /** applies / views. */
+  applyRatePct: number | null
+  byVacancy: { slug: string; views: number; applies: number; applyRatePct: number | null }[]
+}
+
+/**
+ * Qué hace la gente con las vacantes. Todo se cuenta por navegador distinto y vacante: abrir la
+ * misma vacante tres veces es una vista, y pulsar "Postularse" dos veces es un clic.
+ */
+export function vacancyEngagement(events: VacancyEventRow[]): VacancyEngagement {
+  const pairs = (event: 'view' | 'apply') => {
+    const bySlug = new Map<string, Set<string>>()
+    for (const row of events) {
+      if (row.event !== event) continue
+      if (!bySlug.has(row.vacancy_slug)) bySlug.set(row.vacancy_slug, new Set())
+      bySlug.get(row.vacancy_slug)!.add(row.visitor_id)
+    }
+    return bySlug
+  }
+
+  const viewed = pairs('view')
+  const applied = pairs('apply')
+  const sum = (map: Map<string, Set<string>>) => [...map.values()].reduce((total, set) => total + set.size, 0)
+  const views = sum(viewed)
+  const applies = sum(applied)
+
+  const slugs = new Set([...viewed.keys(), ...applied.keys()])
+  const byVacancy = [...slugs]
+    .map((slug) => {
+      const v = viewed.get(slug)?.size ?? 0
+      const a = applied.get(slug)?.size ?? 0
+      return { slug, views: v, applies: a, applyRatePct: pct(a, v) }
+    })
+    .sort((x, y) => y.views - x.views || y.applies - x.applies)
+
+  return {
+    views,
+    applies,
+    viewers: new Set(events.filter((row) => row.event === 'view').map((row) => row.visitor_id)).size,
+    applyRatePct: pct(applies, views),
+    byVacancy,
+  }
+}
+
 export interface RetentionResult {
   dau: number
   wau: number

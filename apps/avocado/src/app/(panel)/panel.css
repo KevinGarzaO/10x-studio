@@ -78,6 +78,12 @@
 
 .panel-cohort td.cell { text-align: center; font-weight: 700; font-variant-numeric: tabular-nums; }
 
+.panel-alerts { display: grid; gap: 10px; margin-bottom: 20px; }
+.panel-alert { display: flex; flex-direction: column; gap: 3px; padding: 12px 16px; border-radius: 12px; border: 1px solid; font-size: 14px; }
+.panel-alert.bad { background: var(--p-bad-bg); border-color: #fca5a5; color: #7f1d1d; }
+.panel-alert.warn { background: var(--p-warn-bg); border-color: #fde68a; color: #78350f; }
+.panel-alert span { font-size: 13px; opacity: .9; }
+
 .panel-muted { color: var(--p-muted); font-size: 14px; }
 .panel-empty { color: var(--p-muted); font-size: 14px; padding: 18px 4px; margin: 0; }
 .panel-error { background: var(--p-bad-bg); color: var(--p-bad); border: 1px solid #fecaca; border-radius: 12px; padding: 14px 16px; font-size: 14px; display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }

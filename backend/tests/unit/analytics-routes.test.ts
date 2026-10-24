@@ -224,3 +224,78 @@ describe('GET /analytics/retention', () => {
     expect(res.body).toHaveProperty('cohorts')
   })
 })
+
+describe('GET /analytics/overview: companies', () => {
+  it('reports how many companies claimed their profile and how many wait for approval', async () => {
+    data.tables.company_claims = [{ status: 'approved' }, { status: 'approved' }, { status: 'pending' }, { status: 'rejected' }]
+    const res = await request(app()).get('/analytics/overview').expect(200)
+
+    expect(res.body.companies).toEqual({ claimed: 2, pendingClaims: 1 })
+  })
+
+  it('is zero when there are no claims', async () => {
+    const res = await request(app()).get('/analytics/overview').expect(200)
+    expect(res.body.companies).toEqual({ claimed: 0, pendingClaims: 0 })
+  })
+})
+
+describe('GET /analytics/vacancies', () => {
+  beforeEach(() => {
+    data.tables.vacancy_events = [
+      { vacancy_slug: 'vac-1', event: 'view', visitor_id: 'a' },
+      { vacancy_slug: 'vac-1', event: 'view', visitor_id: 'a' },
+      { vacancy_slug: 'vac-1', event: 'view', visitor_id: 'b' },
+      { vacancy_slug: 'vac-1', event: 'apply', visitor_id: 'a' },
+    ]
+    data.tables.user_vacancy_history = [{ source_id: 'p1' }, { source_id: 'p1' }]
+    data.tables.community_posts = [{ id: 'p1', slug: 'vac-1', title: 'Backend Engineer', company: 'Stripe', role_category: 'backend' }]
+  })
+
+  it('counts a browser once per vacancy and gives the rate of apply clicks', async () => {
+    const res = await request(app()).get('/analytics/vacancies?days=7').expect(200)
+
+    expect(res.body.ready).toBe(true)
+    expect(res.body.totals).toMatchObject({ views: 2, applies: 1, viewers: 2, applyRatePct: 50 })
+  })
+
+  it('names each vacancy and adds how many people saved it', async () => {
+    const res = await request(app()).get('/analytics/vacancies').expect(200)
+
+    expect(res.body.top[0]).toMatchObject({ slug: 'vac-1', title: 'Backend Engineer', company: 'Stripe', role: 'backend', views: 2, applies: 1, saved: 2 })
+    expect(res.body.totals.saved).toBe(2)
+  })
+
+  it('says the events are not being recorded yet instead of showing zeros', async () => {
+    data.errors.vacancy_events = 'relation "vacancy_events" does not exist'
+    const res = await request(app()).get('/analytics/vacancies').expect(200)
+    expect(res.body).toEqual({ ready: false })
+  })
+
+  it('does not break when nobody has opened a vacancy yet', async () => {
+    data.tables.vacancy_events = []
+    const res = await request(app()).get('/analytics/vacancies').expect(200)
+    expect(res.body.top).toEqual([])
+    expect(res.body.totals.applyRatePct).toBeNull()
+  })
+})
+
+describe('GET /analytics/alerts', () => {
+  it('returns the alerts, serious ones first', async () => {
+    data.tables.linkedin_profiles = []
+    const res = await request(app()).get('/analytics/alerts').expect(200)
+
+    expect(res.body.alerts[0]).toMatchObject({ id: 'linkedin-disconnected', level: 'bad' })
+  })
+
+  it('is quiet when LinkedIn is connected and there is nothing wrong', async () => {
+    process.env.LINKEDIN_VACANCY_POSTS = 'on'
+    data.tables.landing_visits = []
+    data.tables.users = []
+    data.tables.linkedin_vacancy_posts = []
+    const res = await request(app()).get('/analytics/alerts').expect(200)
+    delete process.env.LINKEDIN_VACANCY_POSTS
+
+    // Solo puede quedar, a lo más, el aviso de publicaciones que faltan según la hora de hoy.
+    expect(res.body.alerts.filter((alert: { level: string }) => alert.level === 'bad')).toEqual([])
+  })
+})

@@ -14,6 +14,7 @@ interface Overview {
   linkedin: { visitors: number; signups: number; posts: number; failedPosts: number }
   series: { day: string; visitors: number; signups: number }[]
   totals: { users: number; activeVacancies: number; queuedVacancies: number; lastIngestedAt: string | null }
+  companies: { claimed: number; pendingClaims: number }
 }
 
 export default function ResumenPage() {
@@ -64,6 +65,17 @@ export default function ResumenPage() {
               </div>
             </Card>
           </div>
+
+          <Card title="Empresas" hint="El otro lado de la plataforma">
+            <div className="panel-grid cols-3">
+              <Stat label="Empresas con dueño" value={fmtNum(data.companies.claimed)} tone={data.companies.claimed === 0 ? 'warn' : undefined} caption="Empresas cuya cuenta ya fue reclamada y aprobada: son las que pueden publicar y ver candidatos." />
+              <Stat label="Reclamos pendientes" value={fmtNum(data.companies.pendingClaims)} tone={data.companies.pendingClaims > 0 ? 'warn' : undefined} caption={data.companies.pendingClaims > 0 ? 'Esperan que los apruebes.' : 'Nadie espera aprobación.'} />
+              <Stat label="Candidatos por empresa" value={data.companies.claimed > 0 ? fmtNum(Math.round(data.totals.users / data.companies.claimed)) : '—'} caption="Cuentas reales entre empresas con dueño. Si es muy alto, falta lado empresa." />
+            </div>
+            <p className="panel-muted" style={{ marginTop: 12 }}>
+              Las demás empresas que ves en las vacantes las trajo el scraper: aparecen, pero nadie de esa empresa ha entrado a AvoTalent.
+            </p>
+          </Card>
 
           <p className="panel-defs">
             <b>Cómo leer estos números.</b> Un <b>visitante</b> es un navegador distinto: si la misma persona entra el lunes y el viernes cuenta una vez,

@@ -7,6 +7,7 @@ import { BadgeCheck, Bookmark, Building, Check, LockKeyhole, MapPin } from 'luci
 import { marked } from 'marked'
 import { useShell } from '../../../../lib/shell-context'
 import { getToken } from '../../../../lib/session'
+import { trackVacancyEvent } from '../../../../lib/attribution'
 import { companySlug, formatCompanyName } from '../../../../lib/company'
 import { parseJobContent } from '../../../../components/community-hub'
 import { DetailHeader } from '../../../../components/post-detail/DetailHeader'
@@ -321,6 +322,11 @@ export default function VacancyPage() {
       .catch(() => setSimilar([]))
   }, [post, expired, slug])
 
+  // Anota que se abrió la vacante (una vez por sesión): es lo que dice si la gente que llega encuentra algo.
+  useEffect(() => {
+    if (post) trackVacancyEvent(post.slug || slug, 'view')
+  }, [post, slug])
+
   if (loading || error || !post) {
     return (
       <div className="detail-page">
@@ -404,6 +410,7 @@ export default function VacancyPage() {
   }
 
   function handleApplyClick() {
+    trackVacancyEvent(current.slug || slug, 'apply')
     if (!applyUrl) return
     if (canEmbedApply) {
       setApplyOpen(true)
@@ -431,7 +438,7 @@ export default function VacancyPage() {
               ? { label: 'Postularse', onClick: handleApplyClick }
               // Sin cuenta, "Postularse" lleva a registrarse y de vuelta a esta vacante.
               : applyUrl
-                ? { label: 'Postularse', onClick: () => requestAuth({ variant: 'vacancy', subject: `${post.title} — ${companyName}` }) }
+                ? { label: 'Postularse', onClick: () => { trackVacancyEvent(post.slug || slug, 'apply'); requestAuth({ variant: 'vacancy', subject: `${post.title} — ${companyName}` }) } }
                 : undefined
           }
         />

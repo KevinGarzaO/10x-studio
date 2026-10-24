@@ -92,6 +92,23 @@ export const initCron = () => {
     })
   }
 
+  // 3c. ALARMAS: cada hora se revisan las reglas del panel (services/analytics/alerts.ts) y, si aparece
+  //     una grave nueva, se deja en el registro del servidor. Es el único aviso fuera del panel.
+  let lastAlerts = ''
+  cron.schedule('5 * * * *', async () => {
+    try {
+      const { loadAlerts } = require('./analytics/alerts-data')
+      const bad = (await loadAlerts()).filter((alert: { level: string }) => alert.level === 'bad')
+      const key = bad.map((alert: { id: string }) => alert.id).join(',')
+      if (key !== lastAlerts && bad.length > 0) {
+        for (const alert of bad) console.warn(`[ALARMA] ${alert.title}: ${alert.detail}`)
+      }
+      lastAlerts = key
+    } catch (error) {
+      console.error('[Alarmas] No se pudieron revisar:', error)
+    }
+  })
+
   // 4. Global Scheduler (Every 15 minutes for pending posts)
   const { SchedulerService } = require('./scheduler.service')
   cron.schedule('*/15 * * * *', async () => {
