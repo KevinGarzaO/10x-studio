@@ -660,3 +660,10 @@ button { cursor: pointer; }
 .saved-remove { display: inline-flex; align-items: center; gap: 6px; align-self: center; background: transparent; border: 1px solid #322f29; color: #b3aba1; font-size: 12px; padding: 8px 12px; border-radius: 8px; cursor: pointer; }
 .saved-remove:hover { color: #ef4444; border-color: #5a2f2f; }
 @media (max-width: 640px) { .saved-row { flex-direction: column; } .saved-remove { align-self: flex-end; } }
+.detail-expired { background: rgba(212,184,90,.08); border: 1px solid #4a4026; border-radius: 10px; padding: 14px 16px; margin: 14px 0; color: #e8e2d8; }
+.detail-expired strong { color: #d4b85a; font-size: 14px; }
+.detail-expired p { margin: 6px 0 10px; color: #b3aba1; font-size: 13px; }
+.detail-expired ul { list-style: none; margin: 0 0 10px; padding: 0; display: grid; gap: 8px; }
+.detail-expired li { display: flex; flex-direction: column; gap: 2px; font-size: 13px; }
+.detail-expired li a, .detail-expired .detail-expired-more { color: #4fd39a; font-weight: 600; text-decoration: none; }
+.detail-expired li span { color: #b3aba1; font-size: 12px; }

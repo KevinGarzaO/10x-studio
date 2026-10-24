@@ -1,5 +1,7 @@
 import type { Metadata } from 'next'
 import { ROLE_CATEGORY_LABELS, SENIORITY_LABELS } from '../../../../lib/profile-options'
+import { getSeoVacancy, SITE_URL } from '../../../../lib/seo'
+import { jobPostingSchema, jsonLdString } from '../../../../lib/job-posting-schema'
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'
 
@@ -53,6 +55,8 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
   return {
     title,
     description,
+    // Una sola dirección por vacante: sin esto, el mismo texto con otros parámetros (utm_...) cuenta como página aparte.
+    alternates: { canonical: `${SITE_URL}/vacantes/${slug}` },
     openGraph: {
       title,
       description,
@@ -64,6 +68,25 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
   }
 }
 
-export default function VacancyLayout({ children }: { children: React.ReactNode }) {
-  return children
+/**
+ * Además de los metadatos, incrusta el JSON-LD `JobPosting` que Google usa para mostrar la
+ * vacante en Google for Jobs (ver lib/job-posting-schema.ts). Una vacante vencida no lo lleva.
+ */
+export default async function VacancyLayout({
+  children,
+  params,
+}: {
+  children: React.ReactNode
+  params: Promise<{ slug: string }>
+}) {
+  const { slug } = await params
+  const vacancy = await getSeoVacancy(slug)
+  const schema = vacancy ? jobPostingSchema(vacancy) : null
+
+  return (
+    <>
+      {schema && <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLdString(schema) }} />}
+      {children}
+    </>
+  )
 }

@@ -15,6 +15,17 @@ import { DetailConversation, type DetailComment } from '../../../../components/p
 import { commentsOf, createComment } from '../../../../lib/post-comments'
 import { ROLE_CATEGORY_LABELS, SENIORITY_LABELS } from '../../../../lib/profile-options'
 
+/** Días que una vacante se considera abierta (el mismo plazo que el backend y el JSON-LD). */
+const VACANCY_OPEN_DAYS = 45
+
+interface SimilarVacancy {
+  id: string
+  slug: string
+  title: string
+  company: string | null
+  location: string | null
+}
+
 interface VacancyMatch {
   score: number
   role: 'exact' | 'adjacent' | 'unknown' | 'none'
@@ -295,6 +306,21 @@ export default function VacancyPage() {
     requestAuth({ variant: 'vacancy', subject: [post.title, formatCompanyName(post.company)].filter(Boolean).join(' — ') })
   }, [post, userLoaded, user, slug, requestAuth])
 
+  // Una vacante abierta más de VACANCY_OPEN_DAYS ya no acepta solicitudes. La página NO desaparece
+  // (un 404 perdería los enlaces que ya apuntan a ella, por ejemplo los de LinkedIn): avisa y
+  // ofrece vacantes parecidas que sí están abiertas.
+  const expired = !!post && Date.parse(post.created_at) < Date.now() - VACANCY_OPEN_DAYS * 86400000
+  const [similar, setSimilar] = useState<SimilarVacancy[]>([])
+
+  useEffect(() => {
+    if (!post || !expired) return
+    const skill = Array.isArray(post.skills) && post.skills.length > 0 ? `&skill=${encodeURIComponent(post.skills[0])}` : ''
+    fetch(`${API_URL}/api/community/seo/vacancies?exclude=${encodeURIComponent(post.slug || slug)}&limit=4${skill}`)
+      .then(res => (res.ok ? res.json() : null))
+      .then(data => setSimilar((data?.vacancies as SimilarVacancy[] | undefined) ?? []))
+      .catch(() => setSimilar([]))
+  }, [post, expired, slug])
+
   if (loading || error || !post) {
     return (
       <div className="detail-page">
@@ -399,7 +425,9 @@ export default function VacancyPage() {
           time={time}
           verified={!isScraped}
           action={
-            applyUrl && user
+            expired
+              ? undefined
+              : applyUrl && user
               ? { label: 'Postularse', onClick: handleApplyClick }
               // Sin cuenta, "Postularse" lleva a registrarse y de vuelta a esta vacante.
               : applyUrl
@@ -409,6 +437,24 @@ export default function VacancyPage() {
         />
 
         <h1>{post.title}</h1>
+
+        {expired && (
+          <section className="detail-expired" role="status">
+            <strong>Esta vacante ya no acepta solicitudes</strong>
+            <p>Lleva más de {VACANCY_OPEN_DAYS} días publicada y es probable que ya esté cubierta. Mira estas vacantes abiertas:</p>
+            {similar.length > 0 && (
+              <ul>
+                {similar.map(item => (
+                  <li key={item.id}>
+                    <Link href={`/vacantes/${item.slug}`}>{item.title}</Link>
+                    <span>{[formatCompanyName(item.company), item.location?.split(/[•;|]/)[0].trim()].filter(Boolean).join(' · ')}</span>
+                  </li>
+                ))}
+              </ul>
+            )}
+            <Link href="/empleos" className="detail-expired-more">Ver todas las vacantes abiertas</Link>
+          </section>
+        )}
 
         <div className="detail-chips">
           <button
