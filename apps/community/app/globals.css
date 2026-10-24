@@ -821,3 +821,25 @@ button { cursor: pointer; }
 .modal-backdrop.is-locked { background: rgba(23,23,23,.25); backdrop-filter: blur(3px); }
 .modal-backdrop { overflow-y: auto; overscroll-behavior: contain; }
 .modal-backdrop .auth-modal { margin: auto; }
+
+/*
+ * Misma identidad que AvoTalent Admin: barra azul marino con el nombre en blanco y esmeralda, menú con
+ * elementos redondeados y activo en esmeralda, y tarjetas de 14px con borde fino. Si cambias algo aquí,
+ * cambia también apps/avocado/src/app/(panel)/panel.css.
+ */
+.topbar { background: #0f172a; border-bottom: 0; color: #cbd5e1; }
+.topbar .brand-avo { color: #ffffff; }
+.topbar .brand-accent { color: #34d399; }
+.topbar .search-wrap { background: rgba(255,255,255,.08); border-color: rgba(255,255,255,.12); color: #94a3b8; }
+.topbar .search-wrap input { color: #ffffff; }
+.topbar .search-wrap input::placeholder { color: #94a3b8; }
+.topbar .search-wrap kbd { color: #94a3b8; border-color: rgba(255,255,255,.18); }
+.topbar .icon-button { color: #cbd5e1; background: transparent; border-color: transparent; }
+.topbar .icon-button:hover { background: rgba(255,255,255,.08); color: #ffffff; }
+.topbar-signup { background: #10b981; border-color: #10b981; color: #052e1f; }
+.topbar-signup:hover { background: #34d399; border-color: #34d399; color: #052e1f; }
+.side-nav-link { padding: 10px 12px; border-radius: 10px; font-size: 14px; }
+.side-nav-link:hover { background: rgba(5,150,105,.08); color: var(--accent-text); }
+.side-nav-link.active { background: rgba(5,150,105,.14); color: var(--accent-text); font-weight: 600; }
+.post-card, .widget, .auth-modal { border-radius: 14px; }
+.post-card { padding: 18px 20px; }

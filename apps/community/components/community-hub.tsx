@@ -94,7 +94,6 @@ export function ProfileMenu({ user }: { user: any }) {
   if (!user) {
     return (
       <div className="topbar-auth">
-        <Link href="/login" className="topbar-login">Iniciar sesión</Link>
         <Link href="/signup" className="topbar-signup">Crear cuenta</Link>
       </div>
     )

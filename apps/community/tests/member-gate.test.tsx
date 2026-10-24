@@ -94,10 +94,10 @@ describe('AuthModal', () => {
 })
 
 describe('the top bar for a visitor', () => {
-  it('offers to log in or sign up instead of a "?" avatar', () => {
+  it('offers a single "Crear cuenta" button instead of a "?" avatar', () => {
     render(<ProfileMenu user={null} />)
 
-    expect(screen.getByRole('link', { name: /iniciar sesión/i }).getAttribute('href')).toBe('/login')
+    expect(screen.queryByRole('link', { name: /iniciar sesión/i })).toBeNull()
     expect(screen.getByRole('link', { name: /crear cuenta/i }).getAttribute('href')).toBe('/signup')
     expect(screen.queryByText('?')).toBeNull()
   })
