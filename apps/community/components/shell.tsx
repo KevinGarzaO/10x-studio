@@ -73,7 +73,7 @@ export function CommunityShell({ children }: { children: ReactNode }) {
           </div>
           <div className="top-actions">
             <ThemeToggle />
-            <Link href="/notifications" className="icon-button notification" aria-label="Notificaciones"><Bell size={18} /></Link>
+            {user && <Link href="/notifications" className="icon-button notification" aria-label="Notificaciones"><Bell size={18} /></Link>}
             <ProfileMenu user={user} />
           </div>
         </header>
