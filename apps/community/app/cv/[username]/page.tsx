@@ -64,7 +64,7 @@ export default function PublicCvPage() {
     <div className="cv-page">
       <header className="cv-page-bar">
         <Link href="/" className="back-link"><ArrowLeft size={15} /> Volver a AvoTalent</Link>
-        <div className="account-brand"><span className="brand-mark" aria-hidden="true">A</span> <span className="brand-avo">Avo</span><span className="brand-accent">Talent</span></div>
+        <div className="account-brand"><img className="brand-mark" src="/avotalent-logo.png" alt="" aria-hidden="true" /> <span className="brand-avo">Avo</span><span className="brand-accent">Talent</span></div>
       </header>
 
       {state.status === 'loading' && <p className="muted cv-page-note">Cargando CV...</p>}

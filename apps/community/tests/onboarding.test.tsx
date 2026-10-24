@@ -66,7 +66,7 @@ describe('OnboardingPage (T042)', () => {
     // La cuenta ya trae foto (la subió antes o vino de la red social): el
     // formulario arranca directo en el puesto y solo tiene 2 pasos.
     await waitFor(() => {
-      const photo = document.querySelector('img')
+      const photo = document.querySelector('img:not(.brand-mark)')
       expect(photo?.getAttribute('src')).toBe('https://example.com/foto.png')
     })
     expect(screen.getByText('Paso 1 de 2')).toBeTruthy()

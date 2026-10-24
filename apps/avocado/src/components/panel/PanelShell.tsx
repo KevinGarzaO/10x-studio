@@ -55,8 +55,8 @@ export function PanelShell({ children }: { children: React.ReactNode }) {
     <div className="panel-app">
       <aside className="panel-side">
         <Link href="/panel" className="panel-brand">
-          <b>A</b>
-          <span>Avo<em>Talent</em></span>
+          <img src="/icon-192.png" alt="" width={30} height={30} />
+          <span>Avo<em>Talent</em> <small>Admin</small></span>
         </Link>
         <nav className="panel-nav" aria-label="Secciones del panel">
           {NAV.map(item => (
@@ -67,7 +67,7 @@ export function PanelShell({ children }: { children: React.ReactNode }) {
           ))}
         </nav>
         <div className="panel-side-foot">
-          Panel de analítica
+          AvoTalent Admin
           <br />
           <button type="button" onClick={() => { clearSession(); router.replace('/login') }}>Cerrar sesión</button>
         </div>

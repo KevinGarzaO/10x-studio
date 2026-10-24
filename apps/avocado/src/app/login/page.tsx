@@ -27,7 +27,7 @@ export default function LoginPage() {
   return (
     <div className="panel-login">
       <form onSubmit={submit}>
-        <h1>Panel de AvoTalent</h1>
+        <h1>AvoTalent Admin</h1>
         <p>Entra con tu cuenta de AvoTalent. Solo administradores.</p>
         <label>
           Correo

@@ -43,7 +43,7 @@ export function Header() {
   const notifRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
-    document.title = `Avocado Estudio | ${getSectionLabel(pathname)}`
+    document.title = `AvoTalent Admin | ${getSectionLabel(pathname)}`
   }, [pathname])
 
   const loadSubstackExpiry = useCallback(async () => {

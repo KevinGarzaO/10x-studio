@@ -179,7 +179,7 @@ export function AccountLayout({ children, active }: { children: React.ReactNode;
       <div className="account-wrap">
         <div className="account-nav">
           <Link href="/" className="back-link"><ArrowLeft size={15} /> Volver a AvoTalent</Link>
-          <div className="account-brand"><span className="brand-mark" aria-hidden="true">A</span> <span className="brand-avo">Avo</span><span className="brand-accent">Talent</span></div>
+          <div className="account-brand"><img className="brand-mark" src="/avotalent-logo.png" alt="" aria-hidden="true" /> <span className="brand-avo">Avo</span><span className="brand-accent">Talent</span></div>
         </div>
         <div className="account-grid">
           <nav className="account-menu" aria-label="Cuenta">
@@ -465,7 +465,7 @@ export function AuthPage({ mode }: { mode: 'login' | 'signup' }) {
       <style>{styles}</style>
       <div className="auth-shell">
         <aside className="auth-aside">
-          <Link href="/" className="auth-logo"><span className="brand-mark" aria-hidden="true">A</span> <span className="brand-avo">Avo</span><span className="brand-accent">Talent</span></Link>
+          <Link href="/" className="auth-logo"><img className="brand-mark" src="/avotalent-logo.png" alt="" aria-hidden="true" /> <span className="brand-avo">Avo</span><span className="brand-accent">Talent</span></Link>
           <div className="auth-aside-copy">
             <p className="page-kicker">Comunidad de developers</p>
             <h1>{signup ? 'Construye tu siguiente gran idea.' : 'Las mejores conversaciones empiezan aquí.'}</h1>

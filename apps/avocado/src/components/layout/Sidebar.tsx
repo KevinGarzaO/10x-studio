@@ -290,7 +290,7 @@ export function Sidebar({ active, onNav, collapsed, onToggleCollapse, mobileOpen
         {/* Logo */}
         <div className={`flex items-center px-6 pt-6 pb-6 ${collapsed ? 'justify-center !px-2' : ''}`}>
           <div className="w-9 h-9 relative flex-shrink-0">
-             <img src="/icon-192.png" alt="Avocado" className="w-full h-full object-contain" />
+             <img src="/icon-192.png" alt="AvoTalent Admin" className="w-full h-full object-contain" />
           </div>
           {!collapsed && (
             <div className="flex items-center ml-3">

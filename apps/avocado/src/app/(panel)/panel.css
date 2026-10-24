@@ -3,7 +3,8 @@
 
 .panel-side { background: #0f172a; color: #cbd5e1; padding: 20px 14px; display: flex; flex-direction: column; gap: 4px; position: sticky; top: 0; height: 100vh; }
 .panel-brand { display: flex; align-items: center; gap: 10px; padding: 4px 8px 18px; color: #fff; font-weight: 800; font-size: 17px; letter-spacing: -.02em; text-decoration: none; }
-.panel-brand b { width: 30px; height: 30px; border-radius: 9px; background: #10b981; color: #052e1f; display: grid; place-items: center; font-size: 15px; }
+.panel-brand img { width: 30px; height: 30px; border-radius: 9px; display: block; }
+.panel-brand small { font-size: 11px; font-weight: 700; color: #94a3b8; letter-spacing: .06em; text-transform: uppercase; margin-left: 2px; }
 .panel-brand span em { font-style: normal; color: #34d399; }
 .panel-nav a { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-radius: 10px; color: #cbd5e1; text-decoration: none; font-size: 14px; font-weight: 500; }
 .panel-nav a:hover { background: rgba(255,255,255,.07); color: #fff; }

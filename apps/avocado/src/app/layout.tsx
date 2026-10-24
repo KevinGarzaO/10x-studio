@@ -9,17 +9,17 @@ export const viewport: Viewport = {
 }
 
 export const metadata: Metadata = {
-  title: 'AvoTalent — Comunidad Global de Talento',
-  description: 'Plataforma de creación y publicación de contenido con IA',
+  title: 'AvoTalent Admin',
+  description: 'Panel de administración de AvoTalent',
   manifest: '/manifest.json',
   icons: { 
-    icon: '/icon-192.png',
+    icon: [{ url: '/favicon.ico' }, { url: '/icon-192.png', sizes: '192x192', type: 'image/png' }],
     apple: '/icon-192.png'
   },
   appleWebApp: {
     capable: true,
     statusBarStyle: 'default',
-    title: 'AvoTalent',
+    title: 'AvoTalent Admin',
   }
 }
 

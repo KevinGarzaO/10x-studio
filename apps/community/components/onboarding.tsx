@@ -229,7 +229,7 @@ export function OnboardingPage() {
   }
 
   const brand = (
-    <div className="onboarding-brand"><span className="brand-mark" aria-hidden="true">A</span><span><span className="brand-avo">Avo</span><span className="brand-accent">Talent</span></span></div>
+    <div className="onboarding-brand"><img className="brand-mark" src="/avotalent-logo.png" alt="" aria-hidden="true" /><span><span className="brand-avo">Avo</span><span className="brand-accent">Talent</span></span></div>
   )
 
   // Quien ya mandó una solicitud, o eligió empresa, sigue por ese camino: a una
