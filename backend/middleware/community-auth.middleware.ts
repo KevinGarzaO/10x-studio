@@ -1,5 +1,6 @@
 import { Request, Response, NextFunction } from 'express'
 import { supabase } from '../services/supabase.service'
+import { recordActivity } from '../services/analytics/activity'
 
 export interface AuthRequest extends Request {
   userId?: string
@@ -23,6 +24,9 @@ export const communityAuthMiddleware = async (req: AuthRequest, res: Response, n
 
   req.userId = data.user.id
   req.userEmail = data.user.email
+
+  // Anota que esta persona estuvo activa hoy (para la retención). No espera ni puede fallar.
+  recordActivity(data.user.id)
 
   next()
 }

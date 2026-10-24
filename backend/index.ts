@@ -12,7 +12,8 @@ import blogRoutes from './routes/blog'
 import sitemapRoutes from './routes/sitemap'
 import { linkedinCallback } from './controllers/linkedin.controller'
 import { initCron } from './services/cron.service'
-import { authMiddleware } from './middleware/auth.middleware'
+import { studioAuth, STUDIO_ROOT_PATHS, isLinkedInPublic, isBlogPublic } from './middleware/studio-auth.middleware'
+import adminAnalyticsRoutes from './src/routes/admin/analytics.routes'
 import { communityAuthMiddleware } from './middleware/community-auth.middleware'
 
 // Community Hub routes
@@ -88,15 +89,18 @@ const swaggerOptions = {
 const swaggerDocs = swaggerJsdoc(swaggerOptions)
 app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerDocs))
 
-// Routes
-app.use('/api', authMiddleware, crudRoutes)
-app.use('/api', authMiddleware, aiRoutes)
-app.use('/api/substack', authMiddleware, substackRoutes)
-app.use('/api/users', authMiddleware, usersRoutes)
-app.use('/api/blog', authMiddleware, blogRoutes)
-// LinkedIn: callback is public (OAuth redirect), rest requires auth
+// Routes del Studio y del panel: solo superadmin (ver middleware/studio-auth.middleware.ts).
+// crud e IA se montan en `/api` junto con otras rutas, así que solo se protegen las suyas.
+app.use('/api', studioAuth({ onlyFor: (req) => STUDIO_ROOT_PATHS.test(req.path) }), crudRoutes)
+app.use('/api', studioAuth({ onlyFor: (req) => STUDIO_ROOT_PATHS.test(req.path) }), aiRoutes)
+app.use('/api/substack', studioAuth(), substackRoutes)
+app.use('/api/users', studioAuth(), usersRoutes)
+app.use('/api/blog', studioAuth({ isPublic: isBlogPublic }), blogRoutes)
+// LinkedIn: el inicio y el regreso del OAuth se abren sin sesión; el resto es del panel
 app.get('/api/linkedin/callback', linkedinCallback)
-app.use('/api/linkedin', authMiddleware, linkedinRoutes)
+app.use('/api/linkedin', studioAuth({ isPublic: isLinkedInPublic }), linkedinRoutes)
+// Panel de analítica de AvoTalent
+app.use('/api/admin/analytics', studioAuth(), adminAnalyticsRoutes)
 
 // Community Hub routes (public auth endpoints, protected community endpoints)
 app.use('/api/community/auth', communityAuthRoutes)

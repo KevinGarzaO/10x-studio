@@ -1,6 +1,5 @@
 import type { Metadata, Viewport } from 'next'
 import './globals.css'
-import { AppProvider } from '@/components/layout/AppProvider'
 import { InstallPWA } from '@/components/layout/InstallPWA'
 
 const GA_MEASUREMENT_ID = process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID
@@ -42,7 +41,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       </head>
       <body suppressHydrationWarning>
         <InstallPWA />
-        <AppProvider>{children}</AppProvider>
+        {children}
       </body>
     </html>
   )
