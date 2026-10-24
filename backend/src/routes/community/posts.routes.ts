@@ -1,5 +1,6 @@
 import { Router, Request, Response } from 'express'
 import { supabase } from '../../../services/supabase.service'
+import { loadVacancyStats, rankByPopularity, type VacancyStats } from '../../../services/vacancies/popularity'
 import { communityAuthMiddleware, AuthRequest } from '../../../middleware/community-auth.middleware'
 import { generateSlug } from '../../../services/slug'
 import { companySlug } from '../../../services/company'
@@ -132,9 +133,51 @@ router.get('/', async (req: Request, res: Response) => {
     const from = (page - 1) * limit
     const to = from + limit - 1
 
+    const POST_SELECT = '*, author:users(id, username, display_name, name, handle, photo_url), community_post_tags(tag:community_tags(name))'
+    const shape = (p: any) => ({
+      ...p,
+      author: normalizeAuthor(p.author),
+      tags: p.community_post_tags?.map((pt: any) => pt.tag?.name).filter(Boolean) || [],
+      votesCount: p.votes_count || 0,
+      commentsCount: p.comments_count || 0,
+    })
+
+    // `sort=popular` (vacantes): la más popular primero, y a igual popularidad la más nueva. Lo usa el feed.
+    // La popularidad no vive en una columna, así que se ordena aquí y se pagina después.
+    if (type === 'job' && (req.query.sort as string | undefined) === 'popular') {
+      const { data: ranks, error: ranksError } = await supabase
+        .from('community_posts')
+        .select('id, slug, created_at')
+        .eq('type', 'job')
+        .in('platform', ['lever', 'workable', 'greenhouse'])
+        .limit(5000)
+      if (ranksError) throw ranksError
+
+      const statsOf = await loadVacancyStats()
+      const ranked = rankByPopularity((ranks || []) as { id: string; slug: string | null; created_at: string }[], statsOf)
+      const pageIds = ranked.slice(from, from + limit).map((row) => row.id)
+
+      const { data: pagePosts, error: pageError } = pageIds.length
+        ? await supabase.from('community_posts').select(POST_SELECT).in('id', pageIds)
+        : { data: [] as any[], error: null }
+      if (pageError) throw pageError
+
+      const byId = new Map((pagePosts || []).map((row: any) => [row.id, row]))
+      let ordered = pageIds.map((id) => byId.get(id)).filter(Boolean).map(shape)
+
+      const viewerId = await getOptionalUserId(req)
+      const savedMap = await getSavedMap(viewerId, ordered.map((p: any) => p.id))
+      ordered = ordered.map((p: any) => ({ ...p, stats: statsOf(p), isSaved: savedMap.has(p.id), historyId: savedMap.get(p.id) ?? null }))
+
+      return res.json({
+        posts: ordered,
+        pagination: { page, limit, total: ranked.length, pages: Math.ceil(ranked.length / limit) },
+      })
+    }
+
     let query = supabase
       .from('community_posts')
-      .select('*, author:users(id, username, display_name, name, handle, photo_url), community_post_tags(tag:community_tags(name))', { count: 'exact' })
+      .select(POST_SELECT, { count: 'exact' })
 
     if (recent) {
       // El id desempata las vacantes creadas en el mismo instante, para que dos
@@ -238,7 +281,8 @@ router.get('/', async (req: Request, res: Response) => {
 
     const viewerId = await getOptionalUserId(req)
     const savedMap = await getSavedMap(viewerId, mapped.map((p: any) => p.id))
-    mapped = mapped.map((p: any) => ({ ...p, isSaved: savedMap.has(p.id), historyId: savedMap.get(p.id) ?? null }))
+    const statsOf = type === 'job' ? await loadVacancyStats() : null
+    mapped = mapped.map((p: any) => ({ ...p, ...(statsOf ? { stats: statsOf(p) } : {}), isSaved: savedMap.has(p.id), historyId: savedMap.get(p.id) ?? null }))
 
     res.json({
       posts: mapped,
@@ -323,9 +367,12 @@ router.get('/:id', async (req: Request, res: Response) => {
         }
       }
 
+      const stats: VacancyStats | null = (post as any).type === 'job' ? (await loadVacancyStats())(post as any) : null
+
       return res.json({
         ...post,
         match,
+        ...(stats ? { stats } : {}),
         author: normalizeAuthor(post.author),
         community_comments: ((post as any).community_comments || []).map((c: any) => ({ ...c, author: normalizeAuthor(c.author) })),
         tags: (post as any).community_post_tags?.map((pt: any) => pt.tag?.name).filter(Boolean) || [],

@@ -17,6 +17,7 @@ import { DEFAULT_ROLES, DEFAULT_TAGS, assignHues, tagHref, type SidebarRole, typ
 import { getToken, clearSession } from '../lib/session'
 import { buildFeed, type MatchedItem } from '../lib/mixed-feed'
 import { ForYouCard } from './for-you-card'
+import { VacancyStats, type VacancyStatsData } from './vacancy-stats'
 import { HeroBanner } from './hero-banner'
 import { RECOMMENDED_SKILLS, shouldNudgeSkills } from '../lib/skills-recommendation'
 
@@ -54,6 +55,8 @@ interface EditorialPost {
   seniority_level?: string | null
   isSaved?: boolean
   historyId?: string | null
+  /** Cuánta gente abrió, guardó y se postuló a la vacante (solo en vacantes). */
+  stats?: VacancyStatsData
 }
 
 export type FeedPost = EditorialPost
@@ -405,18 +408,10 @@ export function PostCard({ post, onAuthRequired }: { post: FeedPost; onAuthRequi
         </p>
       )}
       {tags.length > 0 && <div className="jc-tags">{tags.map(tag => <span key={tag} className="jc-tag"><i>#</i>{tag}</span>)}</div>}
-      <div className="jc-foot">
-        <button className="engagement" aria-label="Comentarios"><MessageCircle size={16} />{post.commentsCount}</button>
+      <div className="jc-meta">
+        <VacancyStats stats={post.stats} />
         <span className="footer-spacer" />
-        {user ? (
-          applyUrl
-            ? <button className="jc-cta" onClick={e => { e.stopPropagation(); openPost() }}>Postularse ahora →</button>
-            : job?.emails && job.emails.length > 0 && <span className="jc-email"><Mail size={12} /> {job.emails[0]}</span>
-        ) : (
-          <button className="jc-cta is-locked" onClick={e => { e.stopPropagation(); onAuthRequired?.() }}>
-            <LockKeyhole size={14} /> Desbloquear contacto
-          </button>
-        )}
+        <span className="jc-more">Ver vacante →</span>
       </div>
     </article>
   }
@@ -641,7 +636,7 @@ export function Feed() {
   const fetchBatch = async (pageNum: number) => {
     const [articles, jobs] = await Promise.all([
       fetchJson(`${API_URL}/api/community/posts/editorial?page=${pageNum}&limit=${ARTICLES_PER_PAGE}`),
-      fetchJson(`${API_URL}/api/community/posts?page=${pageNum}&limit=${JOBS_PER_PAGE}&type=job&sort=recent`),
+      fetchJson(`${API_URL}/api/community/posts?page=${pageNum}&limit=${JOBS_PER_PAGE}&type=job&sort=popular`),
     ])
     return {
       articles: (articles?.posts || []) as FeedPost[],

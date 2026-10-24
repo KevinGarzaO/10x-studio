@@ -8,6 +8,7 @@ import { marked } from 'marked'
 import { useShell } from '../../../../lib/shell-context'
 import { getToken } from '../../../../lib/session'
 import { trackVacancyEvent } from '../../../../lib/attribution'
+import { VacancyStats, type VacancyStatsData } from '../../../../components/vacancy-stats'
 import { companySlug, formatCompanyName } from '../../../../lib/company'
 import { parseJobContent } from '../../../../components/community-hub'
 import { DetailHeader } from '../../../../components/post-detail/DetailHeader'
@@ -146,6 +147,7 @@ interface PostData {
   is_scraper_post?: boolean
   /** Lo escribe el clasificador del scraper; puede venir vacío. */
   seniority_level?: string | null
+  stats?: VacancyStatsData
   role_category?: string | null
   skills?: string[] | null
   modalidad?: string | null
@@ -436,6 +438,7 @@ export default function VacancyPage() {
         />
 
         <h1>{post.title}</h1>
+        <VacancyStats stats={post.stats} detailed />
 
         {expired && (
           <section className="detail-expired" role="status">
