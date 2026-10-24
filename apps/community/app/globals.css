@@ -819,3 +819,5 @@ button { cursor: pointer; }
 
 /* Aviso de registro dentro de una vacante: la información queda detrás, con un desenfoque ligero. */
 .modal-backdrop.is-locked { background: rgba(23,23,23,.25); backdrop-filter: blur(3px); }
+.modal-backdrop { overflow-y: auto; overscroll-behavior: contain; }
+.modal-backdrop .auth-modal { margin: auto; }

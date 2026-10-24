@@ -102,3 +102,14 @@ describe('the top bar for a visitor', () => {
     expect(screen.queryByText('?')).toBeNull()
   })
 })
+
+describe('AuthModal and the page behind it', () => {
+  it('does not let the page scroll while it is open, and gives it back on close', () => {
+    document.body.style.overflow = ''
+    const { unmount } = render(<AuthModal onClose={vi.fn()} locked />)
+    expect(document.body.style.overflow).toBe('hidden')
+
+    unmount()
+    expect(document.body.style.overflow).toBe('')
+  })
+})

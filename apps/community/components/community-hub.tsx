@@ -554,6 +554,13 @@ export function AuthModal({ onClose, request, locked = false, gate = false }: { 
   const router = useRouter()
   const vacancy = request?.variant === 'vacancy'
 
+  // Con el aviso abierto la página de atrás no se desplaza: solo el aviso, si no cabe en la pantalla.
+  useEffect(() => {
+    const previous = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    return () => { document.body.style.overflow = previous }
+  }, [])
+
   // Se recuerda la página en la que estaba: al terminar el registro (y el onboarding) se
   // le regresa a ella en lugar de mandarla al inicio.
   function go(path: '/signup' | '/login') {
