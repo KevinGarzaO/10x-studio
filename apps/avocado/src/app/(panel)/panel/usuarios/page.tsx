@@ -1,6 +1,6 @@
 'use client'
 
-import { Card, Empty, ErrorBox, fmtDate, fmtNum, Loading, PageHeader, roleLabel, Stat, usePanelData } from '@/components/panel/ui'
+import { Avatar, Card, Empty, ErrorBox, fmtDate, fmtNum, Loading, PageHeader, roleLabel, Stat, usePanelData } from '@/components/panel/ui'
 
 interface UsersData {
   total: number
@@ -13,15 +13,6 @@ interface UsersData {
     profile_completed: boolean | null; role_category: string | null; seniority: string | null; location: string | null
     signup_source: string | null; created_at: string; lastActive: string | null
   }[]
-}
-
-/** La foto de la persona; si no tiene, sus iniciales. */
-function Avatar({ name, photo }: { name: string; photo: string | null }) {
-  const initials = name.split(/\s+/).filter(Boolean).slice(0, 2).map(part => part[0]?.toUpperCase()).join('') || '?'
-  return photo
-    // eslint-disable-next-line @next/next/no-img-element
-    ? <img className="panel-avatar" src={photo} alt="" width={36} height={36} loading="lazy" referrerPolicy="no-referrer" />
-    : <span className="panel-avatar panel-avatar-fallback" aria-hidden="true">{initials}</span>
 }
 
 const KIND: Record<string, string> = { user: 'Candidato', company: 'Empresa', superadmin: 'Administrador' }

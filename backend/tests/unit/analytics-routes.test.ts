@@ -299,3 +299,46 @@ describe('GET /analytics/alerts', () => {
     expect(res.body.alerts.filter((alert: { level: string }) => alert.level === 'bad')).toEqual([])
   })
 })
+
+describe('GET /analytics/matching', () => {
+  beforeEach(() => {
+    data.tables.users = [
+      { id: 'u1', username: 'ana', display_name: 'Ana', photo_url: null, role_category: 'backend', seniority: 'senior', skills: ['python', 'aws'], work_modality: 'Remoto' },
+      { id: 'u2', username: 'sin-puesto', display_name: 'Sin puesto', photo_url: null, role_category: null, seniority: null, skills: [], work_modality: null },
+    ]
+    data.tables.community_posts = [
+      { slug: 'vac-1', title: 'Backend Engineer', company: 'Stripe', role_category: 'backend', seniority_level: 'senior', skills: ['python', 'aws'], modalidad: 'Remoto' },
+      { slug: 'vac-2', title: 'Contador', company: 'Acme', role_category: 'finanzas', seniority_level: 'senior', skills: ['accounting'], modalidad: 'Presencial' },
+    ]
+    data.tables.user_skill_levels = []
+  })
+
+  it('scores each person against the open vacancies with the same engine as "Para ti"', async () => {
+    const res = await request(app()).get('/analytics/matching').expect(200)
+
+    expect(res.body).toMatchObject({ candidates: 1, vacancies: 2, withoutRole: 1 })
+    expect(res.body.people[0]).toMatchObject({ name: 'Ana', skills: 2, matches: 1 })
+    expect(res.body.people[0].bestScore).toBeGreaterThanOrEqual(70)
+    expect(res.body.vacancyCoverage).toMatchObject({ withCandidates: 1, withNone: 1 })
+  })
+
+  it('counts the people who have not chosen a role apart, since they cannot see "Para ti"', async () => {
+    const res = await request(app()).get('/analytics/matching').expect(200)
+    expect(res.body.withoutRole).toBe(1)
+    expect(res.body.people.map((person: { name: string }) => person.name)).not.toContain('Sin puesto')
+  })
+
+  it('looks only at real people', async () => {
+    await request(app()).get('/analytics/matching')
+
+    expect(seen.filters).toContain('users:eq:is_test_account,false')
+    expect(seen.filters).toContain('users:not:is_scraper_profile,is,true')
+    expect(seen.filters).toContain('users:eq:account_type,candidate')
+  })
+
+  it('never returns emails', async () => {
+    data.tables.users[0] = { ...data.tables.users[0], email: 'ana@secreto.com' }
+    const res = await request(app()).get('/analytics/matching').expect(200)
+    expect(JSON.stringify(res.body)).not.toContain('ana@secreto.com')
+  })
+})

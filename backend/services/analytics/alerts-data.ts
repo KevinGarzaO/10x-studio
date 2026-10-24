@@ -1,7 +1,7 @@
 import { supabase } from '../supabase.service'
 import { siteUrl } from '../linkedin/vacancy-publisher'
 import { buildAlerts, type Alert } from './alerts'
-import { dayKey, uniqueVisitors, windowStart } from './metrics'
+import { dayKey, uniqueVisitors } from './metrics'
 import { readAll } from './read'
 import { expectedPublicationsToday } from './schedule'
 
@@ -12,14 +12,13 @@ const DAY_MS = 86400000
  * Lo usan la ruta del panel y la revisión que corre cada hora.
  */
 export async function loadAlerts(now: Date = new Date()): Promise<Alert[]> {
-  const todayStart = windowStart(1, now)
-  const yesterdayStart = new Date(todayStart.getTime() - DAY_MS)
+  const since = new Date(now.getTime() - 2 * DAY_MS)
   const today = dayKey(now.toISOString())
-  const yesterday = dayKey(yesterdayStart.toISOString())
 
   const [visits, users, posts, { data: profile }] = await Promise.all([
+    // Solo visitas con un origen identificado: el tráfico directo mezcla pruebas propias y robots.
     readAll<{ visitor_id: string; created_at: string }>((from, to) =>
-      supabase.from('landing_visits').select('visitor_id, created_at').gte('created_at', yesterdayStart.toISOString()).range(from, to),
+      supabase.from('landing_visits').select('visitor_id, created_at').not('source', 'is', null).gte('created_at', since.toISOString()).range(from, to),
     ),
     readAll<{ created_at: string }>((from, to) =>
       supabase
@@ -28,7 +27,7 @@ export async function loadAlerts(now: Date = new Date()): Promise<Alert[]> {
         .eq('is_test_account', false)
         .not('is_scraper_profile', 'is', true)
         .in('user_kind', ['user', 'company', 'superadmin'])
-        .gte('created_at', yesterdayStart.toISOString())
+        .gte('created_at', since.toISOString())
         .range(from, to),
     ),
     readAll<{ status: string; published_at: string | null; created_at: string }>((from, to) =>
@@ -37,17 +36,10 @@ export async function loadAlerts(now: Date = new Date()): Promise<Alert[]> {
     supabase.from('linkedin_profiles').select('expires_at').not('access_token', 'is', null).order('connected_at', { ascending: false }).limit(1).maybeSingle(),
   ])
 
-  const on = (day: string) => ({
-    visitors: uniqueVisitors(visits.filter((visit) => dayKey(visit.created_at) === day)),
-    signups: users.filter((user) => dayKey(user.created_at) === day).length,
-  })
-
   const expiresAt = profile?.expires_at ?? null
 
   return buildAlerts({
-    hourNow: Number(new Date(now.getTime() - 6 * 3600000).toISOString().slice(11, 13)),
-    today: on(today),
-    yesterday: on(yesterday),
+    recent: { attributedVisitors: uniqueVisitors(visits), signups: users.length },
     linkedin: {
       connected: !!profile,
       daysLeft: expiresAt ? Math.floor((Date.parse(expiresAt) - now.getTime()) / DAY_MS) : null,

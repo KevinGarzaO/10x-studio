@@ -4,6 +4,7 @@ import { siteUrl } from '../../../services/linkedin/vacancy-publisher'
 import { nextPublication } from '../../../services/analytics/schedule'
 import { readAll } from '../../../services/analytics/read'
 import { loadAlerts } from '../../../services/analytics/alerts-data'
+import { loadMatchingOverview } from '../../../services/analytics/matching-data'
 import {
   acquisitionBySource,
   buildOverview,
@@ -85,6 +86,11 @@ const handle = (name: string, run: (req: Request, res: Response) => Promise<unkn
 router.get('/me', (_req, res) => {
   res.json({ ok: true })
 })
+
+/** El match: qué tan bien encajan las vacantes con la gente que hay, con el mismo motor de "Para ti". */
+router.get('/matching', handle('match', async (_req, res) => {
+  res.json(await loadMatchingOverview())
+}))
 
 /** Las alarmas: lo que se rompió o está por romperse y conviene enterarse hoy. */
 router.get('/alerts', handle('alarmas', async (_req, res) => {

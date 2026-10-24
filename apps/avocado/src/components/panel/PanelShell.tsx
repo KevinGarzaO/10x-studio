@@ -10,6 +10,7 @@ const NAV = [
   { href: '/panel', label: 'Resumen', icon: '▦' },
   { href: '/panel/linkedin', label: 'LinkedIn', icon: 'in' },
   { href: '/panel/vacantes', label: 'Vacantes', icon: '▤' },
+  { href: '/panel/match', label: 'Match', icon: '✦' },
   { href: '/panel/adquisicion', label: 'Adquisición', icon: '⇢' },
   { href: '/panel/usuarios', label: 'Usuarios', icon: '☺' },
   { href: '/panel/retencion', label: 'Retención', icon: '↻' },

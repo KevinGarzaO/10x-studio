@@ -5,9 +5,7 @@ import { vacancyEngagement } from '../../services/analytics/metrics'
 
 /** Un día normal y sano: nada que avisar. */
 const healthy = (patch: Partial<AlertInput> = {}): AlertInput => ({
-  hourNow: 15,
-  today: { visitors: 20, signups: 2 },
-  yesterday: { visitors: 30, signups: 3 },
+  recent: { attributedVisitors: 60, signups: 5 },
   linkedin: { connected: true, daysLeft: 40, publishing: true, siteUrlConfigured: true, failedLast24h: 0, publishedToday: 2, expectedToday: 2 },
   ...patch,
 })
@@ -19,32 +17,30 @@ describe('buildAlerts', () => {
     expect(buildAlerts(healthy())).toEqual([])
   })
 
-  describe('visits without signups (what happened on October 23)', () => {
-    it('is serious when yesterday had traffic and nobody signed up', () => {
-      const alerts = buildAlerts(healthy({ yesterday: { visitors: 59, signups: 0 } }))
+  describe('visitors with an identified origin but no signups', () => {
+    it('is serious when enough people arrived in 48 hours and nobody signed up', () => {
+      const alerts = buildAlerts(healthy({ recent: { attributedVisitors: 80, signups: 0 } }))
 
-      expect(alerts[0]).toMatchObject({ id: 'signups-stalled-yesterday', level: 'bad' })
-      expect(alerts[0].detail).toContain('59 visitantes')
-    })
-
-    it('warns during the day when today already has traffic and no signup', () => {
-      expect(ids(healthy({ today: { visitors: 40, signups: 0 }, hourNow: 14 }))).toEqual(['signups-stalled-today'])
-    })
-
-    it('does not warn early in the day, when nobody has had time to sign up', () => {
-      expect(ids(healthy({ today: { visitors: 40, signups: 0 }, hourNow: 9 }))).toEqual([])
+      expect(alerts[0]).toMatchObject({ id: 'signups-stalled', level: 'bad' })
+      expect(alerts[0].detail).toContain('80 visitantes')
     })
 
     it('does not warn with little traffic: zero out of a few is just chance', () => {
-      expect(ids(healthy({ yesterday: { visitors: TRAFFIC_WITHOUT_SIGNUPS - 1, signups: 0 }, today: { visitors: 5, signups: 0 } }))).toEqual([])
+      expect(ids(healthy({ recent: { attributedVisitors: TRAFFIC_WITHOUT_SIGNUPS - 1, signups: 0 } }))).toEqual([])
     })
 
     it('does not warn once someone signed up', () => {
-      expect(ids(healthy({ today: { visitors: 80, signups: 1 }, yesterday: { visitors: 80, signups: 1 } }))).toEqual([])
+      expect(ids(healthy({ recent: { attributedVisitors: 300, signups: 1 } }))).toEqual([])
     })
 
-    it('reports yesterday and not today when both apply, so the same problem is not shown twice', () => {
-      expect(ids(healthy({ yesterday: { visitors: 50, signups: 0 }, today: { visitors: 50, signups: 0 } }))).toEqual(['signups-stalled-yesterday'])
+    it('the threshold sits where zero signups is not plausible by chance at the real conversion (about 8%)', () => {
+      const chanceOfZero = Math.pow(1 - 0.08, TRAFFIC_WITHOUT_SIGNUPS)
+      expect(chanceOfZero).toBeLessThan(0.05)
+    })
+
+    it('direct traffic is not counted: on Oct 23 only 11 of the 66 entries had an origin, so there was no alarm to raise', () => {
+      // 55 de las 66 entradas eran directas (pruebas propias y robots): la regla recibe solo las 11 con origen.
+      expect(ids(healthy({ recent: { attributedVisitors: 11 + 7, signups: 0 } }))).toEqual([])
     })
   })
 
@@ -91,12 +87,11 @@ describe('buildAlerts', () => {
 
   it('puts the serious ones first', () => {
     const order = buildAlerts(healthy({
-      today: { visitors: 40, signups: 0 },
-      hourNow: 15,
+      recent: { attributedVisitors: 90, signups: 0 },
       linkedin: { ...healthy().linkedin, daysLeft: 3, failedLast24h: 1 },
     }))
 
-    expect(order.map(alert => alert.level)).toEqual(['bad', 'warn', 'warn'])
+    expect(order.map(alert => alert.level)).toEqual(['bad', 'bad', 'warn'])
   })
 })
 
