@@ -32,6 +32,13 @@ export function LinkedInSection() {
   // Medición por publicación (tab "Medición")
   const [registry, setRegistry] = useState<any[]>([])
   const [registryLoading, setRegistryLoading] = useState(false)
+  const sortedRegistry = [...registry].sort((a, b) => {
+    const dateA = Date.parse(a.published_at || '')
+    const dateB = Date.parse(b.published_at || '')
+    if (Number.isNaN(dateA)) return Number.isNaN(dateB) ? 0 : 1
+    if (Number.isNaN(dateB)) return -1
+    return dateB - dateA
+  })
   const [pendingMigration, setPendingMigration] = useState(false)
   const [saving, setSaving] = useState(false)
   const [lastLink, setLastLink] = useState<string | null>(null)
@@ -622,7 +629,7 @@ export function LinkedInSection() {
                 </tr>
               </thead>
               <tbody>
-                {registry.map(p => (
+                {sortedRegistry.map(p => (
                   <tr key={p.utm_content} style={{ borderTop: '1px solid #f1f5f9' }}>
                     <td style={{ padding: '12px 14px' }}>
                       <div style={{ fontWeight: 600, color: '#0d1117' }}>{p.label || p.utm_content}</div>
