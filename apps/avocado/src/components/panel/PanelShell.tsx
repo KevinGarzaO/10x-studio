@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { api } from '@/lib/api'
 import { clearSession, getToken } from '@/lib/admin-auth'
+import { AccountMenu } from './AccountMenu'
 
 const NAV = [
   { href: '/panel', label: 'Resumen', icon: '▦' },
@@ -14,6 +15,7 @@ const NAV = [
   { href: '/panel/adquisicion', label: 'Adquisición', icon: '⇢' },
   { href: '/panel/usuarios', label: 'Usuarios', icon: '☺' },
   { href: '/panel/retencion', label: 'Retención', icon: '↻' },
+  { href: '/panel/configuracion', label: 'Configuración', icon: '⚙' },
 ]
 
 interface Alert {
@@ -66,12 +68,12 @@ export function PanelShell({ children }: { children: React.ReactNode }) {
             </Link>
           ))}
         </nav>
-        <div className="panel-side-foot">
-          AvoTalent Admin
-          <br />
-          <button type="button" onClick={() => { clearSession(); router.replace('/login') }}>Cerrar sesión</button>
-        </div>
       </aside>
+      <div className="panel-body">
+        <header className="panel-top">
+          <span className="panel-top-title">{NAV.find(item => active(item.href))?.label ?? 'Panel'}</span>
+          <AccountMenu />
+        </header>
       <main className="panel-main">
         {alerts.length > 0 && (
           <section className="panel-alerts" aria-label="Alarmas">
@@ -85,6 +87,7 @@ export function PanelShell({ children }: { children: React.ReactNode }) {
         )}
         {children}
       </main>
+      </div>
     </div>
   )
 }

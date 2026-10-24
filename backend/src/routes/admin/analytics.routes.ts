@@ -86,8 +86,12 @@ const handle = (name: string, run: (req: Request, res: Response) => Promise<unkn
 }
 
 /** Comprueba que la sesión tenga permiso para el panel (lo usa el inicio de sesión). */
-router.get('/me', (_req, res) => {
-  res.json({ ok: true })
+router.get('/me', async (req, res) => {
+  const userId = (req as Request & { userId?: string }).userId
+  const { data } = userId
+    ? await supabase.from('users').select('username, display_name, photo_url, email').eq('id', userId).maybeSingle()
+    : { data: null }
+  res.json({ ok: true, user: data ? { username: data.username ?? null, displayName: data.display_name ?? null, photoUrl: data.photo_url ?? null, email: data.email ?? null } : null })
 })
 
 /** El match: qué tan bien encajan las vacantes con la gente que hay, con el mismo motor de "Para ti". */

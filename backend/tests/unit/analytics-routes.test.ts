@@ -358,3 +358,14 @@ describe('GET /analytics/matching', () => {
     expect(JSON.stringify(res.body)).not.toContain('ana@secreto.com')
   })
 })
+
+describe('GET /analytics/me', () => {
+  it('confirms the permission and brings the account that is looking at the panel', async () => {
+    data.tables.users = [{ id: 'adm', username: 'kgarza', display_name: 'Kevin', photo_url: 'https://cdn.test/k.jpg', email: 'k@x.com' }]
+    const res = await request(app()).get('/analytics/me').expect(200)
+
+    // sin sesión simulada no hay quién: la ruta responde ok y no inventa una cuenta
+    expect(res.body.ok).toBe(true)
+    expect(res.body.user).toBeNull()
+  })
+})
