@@ -7,10 +7,10 @@ import {
   Bell, Bookmark, BriefcaseBusiness, Flame,
   Hash, Menu, MessageCircle, PenLine, Search,
   LogOut, Send, Settings, Share2, ShieldCheck, Sparkles, Tag, Target, TrendingUp, Users, X,
-  ArrowBigUp, LockKeyhole, CheckCircle2, Building, MapPin, Home as HomeIcon, Mail, Clock, Check
+  ArrowBigUp, LockKeyhole, CheckCircle2, Building, MapPin, Home as HomeIcon, Mail, Clock, Check, BadgeCheck, Eye
 } from 'lucide-react'
 import { companySlug, formatCompanyName } from '../lib/company'
-import { SENIORITY_LABELS } from '../lib/profile-options'
+import { ROLE_CATEGORY_LABELS, SENIORITY_LABELS } from '../lib/profile-options'
 import { useShell, type AuthRequest } from '../lib/shell-context'
 import { saveReturnTo } from '../lib/return-to'
 import { DEFAULT_ROLES, DEFAULT_TAGS, assignHues, tagHref, type SidebarRole, type SidebarTag } from '../lib/tag-colors'
@@ -457,8 +457,18 @@ export function PostCard({ post, onAuthRequired }: { post: FeedPost; onAuthRequi
   </article>
 }
 
+interface FeaturedUser {
+  username: string
+  displayName: string
+  photoUrl: string | null
+  roleCategory: string | null
+  seniority: string | null
+  skills: string[]
+  validatedSkills: number
+}
+
 export function RightSidebar({ onUnlock }: { onUnlock: () => void }) {
-  const [trending, setTrending] = useState<FeedPost[]>([])
+  const [people, setPeople] = useState<FeaturedUser[]>([])
   const [featured, setFeatured] = useState<FeedPost[]>([])
   const [stats, setStats] = useState<{ members: number; companies: number; vacancies: number } | null>(null)
 
@@ -469,67 +479,71 @@ export function RightSidebar({ onUnlock }: { onUnlock: () => void }) {
       .catch(() => {})
   }, [])
 
+  // Quiénes destacan en la comunidad: personas reales con el perfil completo, las que más validan sus skills primero.
   useEffect(() => {
-    fetch(`${API_URL}/api/community/posts/editorial?page=1&limit=3`)
+    const token = getToken()
+    if (!token) return
+    fetch(`${API_URL}/api/community/discover/featured-users?limit=5`, { headers: { Authorization: `Bearer ${token}` } })
       .then(r => r.ok ? r.json() : null)
-      .then(d => setTrending(d?.posts || []))
+      .then(d => setPeople(d?.users || []))
       .catch(() => {})
   }, [])
 
+  // Las vacantes que más interesan (vistas, guardados y postulaciones), no las más nuevas.
   useEffect(() => {
-    fetch(`${API_URL}/api/community/posts?page=1&limit=3&type=job`)
+    fetch(`${API_URL}/api/community/posts?page=1&limit=5&type=job&sort=popular`)
       .then(r => r.ok ? r.json() : null)
       .then(d => setFeatured(d?.posts || []))
       .catch(() => {})
   }, [])
 
-  const parseMiniJob = (content: string) => {
-    const decoded = unescapeHtml(content)
-    const lines = decoded.split('\n').map(l => l.trim()).filter(Boolean)
-    const company = lines.find(l => /\*\*Empresa:?\*\*/i.test(l))?.replace(/\*\*Empresa:?\*\*\s*/i, '') || null
-    const salary = lines.find(l => /\*\*Presupuesto:?\*\*/i.test(l))?.replace(/\*\*Presupuesto:?\*\*\s*/i, '') || null
-    const modality = lines.find(l => /\*\*Modalidad:?\*\*/i.test(l))?.replace(/\*\*Modalidad:?\*\*\s*/i, '') || null
-    return { company, salary, modality }
-  }
-
   return <aside className="right-sidebar">
-    <section className="widget">
-      <div className="widget-title"><span>Conversaciones</span></div>
-      {trending.length > 0 ? trending.map(post => (
-        <Link href={`/post/${post.id}`} className="trend-item" key={post.id}>
-          <span><strong>{post.title.replace(/^[^\p{L}\p{N}]+/u, '')}</strong>{post.commentsCount > 0 && <small>{post.commentsCount} {post.commentsCount === 1 ? 'respuesta' : 'respuestas'}</small>}</span>
-        </Link>
-      )) : (
-        <p style={{ color: 'var(--text-muted)', fontSize: 13, padding: '8px 0' }}>Sé el primero en iniciar una conversación</p>
-      )}
-    </section>
+    {people.length > 0 && (
+      <section className="widget featured-people">
+        <div className="widget-title"><span>Usuarios destacados</span></div>
+        {people.map(person => {
+          const role = ROLE_CATEGORY_LABELS[person.roleCategory ?? ''] || null
+          const level = person.seniority ? SENIORITY_LABELS[person.seniority] || person.seniority : null
+          return (
+            <Link href={`/users/${person.username}`} className="person-item" key={person.username}>
+              <Avatar initials={person.displayName.slice(0, 2).toUpperCase()} tone="emerald" avatar={person.photoUrl || undefined} />
+              <span className="person-info">
+                <strong>{person.displayName}</strong>
+                <small>{[role, level].filter(Boolean).join(' · ') || `@${person.username}`}</small>
+                {person.validatedSkills > 0 && (
+                  <span className="person-validated"><BadgeCheck size={12} /> {person.validatedSkills} {person.validatedSkills === 1 ? 'skill validado' : 'skills validados'}</span>
+                )}
+              </span>
+            </Link>
+          )
+        })}
+      </section>
+    )}
 
     {featured.length > 0 && (
       <section className="widget opportunities">
         <div className="widget-title"><span>Oportunidades destacadas</span></div>
-        {featured.length > 0 ? featured.map(post => {
-          const job = parseMiniJob(post.content || post.original_text || '')
-          const company = formatCompanyName(post.company || job?.company) || null
+        {featured.map(post => {
+          const company = formatCompanyName(post.company) || null
+          const level = post.seniority_level ? SENIORITY_LABELS[post.seniority_level] || post.seniority_level : null
+          const modality = [post.modalidad].find(value => value && !/no especificado|unknown/i.test(value)) || null
+          const views = post.stats?.views ?? 0
           return (
-            <Link href={post.slug?.startsWith('/vacantes/') ? post.slug : `/vacantes/${post.slug || post.id}`} className="mini-job" key={post.id}>
+            <Link href={`/vacantes/${post.slug || post.id}`} className="mini-job" key={post.id}>
               <div className="mini-job-row">
                 <CompanyAvatar company={company} logoUrl={post.company_logo} size={34} />
                 <div className="mini-job-info">
-                  {!post.is_scraper_post && <span className="verified-pill"><CheckCircle2 size={11} /> Verificada</span>}
                   <strong>{post.title}</strong>
                   <div className="mini-job-meta">
-                    <span className="mini-job-company">{company || post.source_name || 'Comunidad'}</span>
-                    <span className="mini-job-dot">·</span>
-                    <span>{job.modality || 'Remoto'}</span>
-                    {job.salary && <span className="mini-job-salary">{job.salary}</span>}
+                    <span className="mini-job-company">{company || 'Comunidad'}</span>
+                    {[modality, level].filter(Boolean).map(fact => <span key={fact as string}><span className="mini-job-dot">·</span> {fact}</span>)}
                   </div>
+                  {views > 0 && <small className="mini-job-views"><Eye size={12} /> {views} {views === 1 ? 'vista' : 'vistas'}</small>}
                 </div>
               </div>
             </Link>
           )
-        }) : (
-          <p style={{ color: 'var(--text-muted)', fontSize: 13, padding: '8px 0' }}>Próximamente verás aquí las mejores oportunidades</p>
-        )}
+        })}
       </section>
     )}
 

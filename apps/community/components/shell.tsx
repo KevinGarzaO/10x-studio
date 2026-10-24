@@ -3,12 +3,13 @@
 import { useState, useEffect, useCallback, useMemo, type ReactNode } from 'react'
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
-import { Bell, Menu, Search, X } from 'lucide-react'
+import { Bell, Menu, X } from 'lucide-react'
 import { fetchCurrentUser, getCachedUser } from '../lib/session'
 import { ShellContext, type AuthRequest } from '../lib/shell-context'
 import { LeftSidebar, RightSidebar, ProfileMenu, AuthModal } from './community-hub'
 import { ProfileGate } from './profile-gate'
 import { ThemeToggle } from './theme-toggle'
+import { SearchBox } from './search-box'
 import { HeroBanner } from './hero-banner'
 
 export function CommunityShell({ children }: { children: ReactNode }) {
@@ -66,11 +67,7 @@ export function CommunityShell({ children }: { children: ReactNode }) {
         <header className="topbar">
           <button className="mobile-menu-button icon-button" onClick={() => setMobileMenu(!mobileMenu)} aria-label="Abrir menú"><Menu size={20} /></button>
           <Link href="/" className="brand" aria-label="AvoTalent"><img className="brand-mark" src="/avotalent-logo.png" alt="" aria-hidden="true" /><span><span className="brand-avo">Avo</span><span className="brand-accent">Talent</span></span></Link>
-          <div className="search-wrap">
-            <Search size={17} />
-            <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Buscar personas, temas, vacantes..." aria-label="Buscar" />
-            <kbd>⌘ K</kbd>
-          </div>
+          <SearchBox />
           <div className="top-actions">
             <ThemeToggle />
             {user && <Link href="/notifications" className="icon-button notification" aria-label="Notificaciones"><Bell size={18} /></Link>}
