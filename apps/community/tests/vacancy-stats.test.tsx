@@ -7,19 +7,19 @@ import { ShellContext } from '@/lib/shell-context'
 vi.mock('next/navigation', () => ({ useRouter: () => ({ push: vi.fn() }), usePathname: () => '/' }))
 
 describe('VacancyStats', () => {
-  it('on a card only shows the numbers that have something', () => {
+  const titles = (container: HTMLElement) => [...container.querySelectorAll('li')].map(li => li.getAttribute('title'))
+
+  it('always shows the three numbers, zeros included', () => {
     const { container } = render(<VacancyStats stats={{ views: 128, saves: 0, applies: 6 }} />)
-
-    const items = [...container.querySelectorAll('li')].map(li => li.getAttribute('title'))
-    expect(items).toEqual(['128 vistas', '6 postulaciones'])
+    expect(titles(container)).toEqual(['128 vistas', '0 guardados', '6 postulaciones'])
   })
 
-  it('shows nothing when nobody has opened the vacancy yet', () => {
-    const { container } = render(<VacancyStats stats={{ views: 0, saves: 0, applies: 0 }} />)
-    expect(container.querySelector('ul')).toBeNull()
+  it('shows zeros when nobody has opened the vacancy yet, and also when there is no data', () => {
+    expect(titles(render(<VacancyStats stats={{ views: 0, saves: 0, applies: 0 }} />).container)).toEqual(['0 vistas', '0 guardados', '0 postulaciones'])
+    expect(titles(render(<VacancyStats />).container)).toEqual(['0 vistas', '0 guardados', '0 postulaciones'])
   })
 
-  it('in the detail it always shows the three, named', () => {
+  it('names each number', () => {
     render(<VacancyStats stats={{ views: 1, saves: 0, applies: 0 }} detailed />)
 
     expect(screen.getByText('vista')).toBeTruthy()
@@ -28,13 +28,17 @@ describe('VacancyStats', () => {
   })
 
   it('uses the singular for one', () => {
-    const { container } = render(<VacancyStats stats={{ views: 1, saves: 1, applies: 1 }} />)
-    expect([...container.querySelectorAll('li')].map(li => li.getAttribute('title'))).toEqual(['1 vista', '1 guardado', '1 postulación'])
+    expect(titles(render(<VacancyStats stats={{ views: 1, saves: 1, applies: 1 }} />).container)).toEqual(['1 vista', '1 guardado', '1 postulación'])
   })
 
   it('abbreviates thousands', () => {
     const { container } = render(<VacancyStats stats={{ views: 1500, saves: 0, applies: 0 }} />)
     expect(container.textContent).toContain('1.5k')
+  })
+
+  it('is bigger in the detail', () => {
+    const { container } = render(<VacancyStats stats={{ views: 1, saves: 1, applies: 1 }} detailed />)
+    expect(container.querySelector('.vacancy-stats.is-detailed')).toBeTruthy()
   })
 })
 

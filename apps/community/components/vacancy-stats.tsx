@@ -10,17 +10,17 @@ const formatCount = (n: number): string => (n >= 1000 ? `${(n / 1000).toFixed(n 
 
 /**
  * Qué tanto interesa una vacante: cuánta gente la abrió, la guardó y se postuló. Cada persona cuenta una
- * sola vez. En la tarjeta solo salen las cifras que ya tienen algo (una fila de ceros no informa);
- * en el detalle salen siempre las tres, con su nombre completo.
+ * sola vez. Salen siempre las tres cifras, también en cero: un cero dice que nadie la ha visto todavía,
+ * y que falte la fila no dice nada. En el detalle van más grandes.
  */
 export function VacancyStats({ stats, detailed = false }: { stats?: VacancyStatsData | null; detailed?: boolean }) {
-  if (!stats) return null
+  const data = stats ?? { views: 0, saves: 0, applies: 0 }
+  const size = detailed ? 20 : 17
   const items = [
-    { key: 'views', icon: <Eye size={14} />, value: stats.views, one: 'vista', many: 'vistas' },
-    { key: 'saves', icon: <Bookmark size={14} />, value: stats.saves, one: 'guardado', many: 'guardados' },
-    { key: 'applies', icon: <Send size={14} />, value: stats.applies, one: 'postulación', many: 'postulaciones' },
-  ].filter(item => detailed || item.value > 0)
-  if (items.length === 0) return null
+    { key: 'views', icon: <Eye size={size} />, value: data.views, one: 'vista', many: 'vistas' },
+    { key: 'saves', icon: <Bookmark size={size} />, value: data.saves, one: 'guardado', many: 'guardados' },
+    { key: 'applies', icon: <Send size={size} />, value: data.applies, one: 'postulación', many: 'postulaciones' },
+  ]
 
   return (
     <ul className={`vacancy-stats${detailed ? ' is-detailed' : ''}`} aria-label="Interés en la vacante">
@@ -30,7 +30,7 @@ export function VacancyStats({ stats, detailed = false }: { stats?: VacancyStats
           <li key={item.key} title={`${item.value} ${label}`}>
             {item.icon}
             <b>{formatCount(item.value)}</b>
-            {detailed && <span>{label}</span>}
+            <span>{label}</span>
           </li>
         )
       })}
