@@ -290,20 +290,12 @@ export default function VacancyPage() {
     }
   }
 
-  // Quien llega sin cuenta (por ejemplo, desde LinkedIn) ve al entrar un aviso para
-  // registrarse: al terminar su perfil vuelve justo a esta vacante (ver AuthModal y
-  // lib/return-to.ts). Una vez por sesión y vacante, y cerrable: no estorba al que solo
-  // quiere leer. No aparece mientras se confirma la sesión, para no avisar a quien ya
-  // tiene cuenta.
+  // Quien llega sin cuenta (por ejemplo, desde LinkedIn) ve el aviso para registrarse sobre la vacante, que
+  // queda detrás con un desenfoque ligero. El aviso no se cierra: sin cuenta no se lee la vacante. Al terminar
+  // su perfil vuelve justo a esta vacante (ver AuthModal y lib/return-to.ts). No aparece mientras se confirma
+  // la sesión, para no avisar a quien ya tiene cuenta.
   useEffect(() => {
     if (!post || !userLoaded || user) return
-    const key = `avo_vacancy_prompt_${slug}`
-    try {
-      if (sessionStorage.getItem(key)) return
-      sessionStorage.setItem(key, '1')
-    } catch {
-      // sin sessionStorage el aviso sale cada vez; es lo más seguro para el registro
-    }
     requestAuth({ variant: 'vacancy', subject: [post.title, formatCompanyName(post.company)].filter(Boolean).join(' — ') })
   }, [post, userLoaded, user, slug, requestAuth])
 

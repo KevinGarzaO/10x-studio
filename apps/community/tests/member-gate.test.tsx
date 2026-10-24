@@ -29,6 +29,7 @@ const Secret = () => <p>Vacante con datos privados</p>
 
 describe('the app needs an account', () => {
   it('shows a visitor no vacancy information, only the way in', async () => {
+    pathname = '/saved'
     render(<CommunityShell><Secret /></CommunityShell>)
 
     expect(await screen.findByRole('dialog')).toBeTruthy()
@@ -38,13 +39,14 @@ describe('the app needs an account', () => {
   })
 
   it('cannot be dismissed: no close button', async () => {
+    pathname = '/saved'
     render(<CommunityShell><Secret /></CommunityShell>)
     const dialog = await screen.findByRole('dialog')
 
     expect(within(dialog).queryByRole('button', { name: /cerrar/i })).toBeNull()
   })
 
-  it.each(['/post/abc', '/users/ana', '/saved', '/empresas/stripe', '/profile'])('also closes %s', async path => {
+  it.each(['/post/abc', '/users/ana', '/saved', '/empresas/stripe', '/profile'])('closes %s to a visitor', async path => {
     pathname = path
     render(<CommunityShell><Secret /></CommunityShell>)
 
@@ -53,13 +55,21 @@ describe('the app needs an account', () => {
   })
 
   it('leaves the pages Google indexes open, without the gate', async () => {
-    for (const path of ['/empleos', '/puestos/backend', '/vacantes/una-vacante']) {
+    for (const path of ['/', '/empleos', '/puestos/backend']) {
       pathname = path
       const { unmount } = render(<CommunityShell><Secret /></CommunityShell>)
       expect(await screen.findByText('Vacante con datos privados')).toBeTruthy()
       expect(screen.queryByText(/crea tu cuenta para entrar/i)).toBeNull()
       unmount()
     }
+  })
+
+  it('lets a visitor see the feed, but not the vacancy widgets next to it', async () => {
+    pathname = '/'
+    render(<CommunityShell><Secret /></CommunityShell>)
+
+    expect(await screen.findByText('Vacante con datos privados')).toBeTruthy()
+    expect(screen.queryByText(/oportunidades destacadas/i)).toBeNull()
   })
 
   it('lets a member in', async () => {

@@ -816,3 +816,6 @@ button { cursor: pointer; }
 .trend-item:hover strong { color: var(--accent-text); }
 .trend-item small { display: block; margin-top: 2px; font-size: 12px; color: var(--text-faint); }
 .hero-banner { max-width: 760px; margin: 0 auto; padding: 56px 24px; }
+
+/* Aviso de registro dentro de una vacante: la información queda detrás, con un desenfoque ligero. */
+.modal-backdrop.is-locked { background: rgba(23,23,23,.25); backdrop-filter: blur(3px); }

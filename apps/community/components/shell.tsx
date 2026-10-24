@@ -38,10 +38,12 @@ export function CommunityShell({ children }: { children: ReactNode }) {
   const isFocusedRoute = ['/post/', '/vacantes/', '/users/', '/empresas/', '/empleos', '/puestos'].some(prefix => pathname.startsWith(prefix))
     || pathname === '/profile'
 
-  // Sin cuenta solo se ve lo que Google indexa (los directorios de empleos y la ficha de cada vacante, esta
-  // última detrás del aviso para registrarse). Todo lo demás exige cuenta.
-  const isPublicRoute = ['/empleos', '/puestos', '/vacantes/'].some(prefix => pathname.startsWith(prefix))
+  // Sin cuenta solo se ve el feed, los directorios de empleos y la ficha de cada vacante (esta última detrás
+  // de un aviso para registrarse que no se puede cerrar). Todo lo demás exige cuenta.
+  const isPublicRoute = pathname === '/' || ['/empleos', '/puestos', '/vacantes/'].some(prefix => pathname.startsWith(prefix))
   const gated = !user && !isPublicRoute
+  // Dentro de una vacante el aviso no se cierra: la información queda detrás, desenfocada.
+  const lockedNotice = !user && pathname.startsWith('/vacantes/')
 
   // Un tema filtra el feed; desde cualquier otra pantalla primero se vuelve a él.
   const onTagClick = useCallback((tag: string) => {
@@ -91,12 +93,12 @@ export function CommunityShell({ children }: { children: ReactNode }) {
           <div className="layout">
             <LeftSidebar activeTag={activeTag} onTagClick={onTagClick} />
             {children}
-            <RightSidebar onUnlock={requestAuth} />
+            {user && <RightSidebar onUnlock={requestAuth} />}
           </div>
         )}
 
         {gated && userLoaded && <AuthModal gate locked onClose={() => {}} request={null} />}
-        {!gated && authOpen && <AuthModal onClose={() => setAuthOpen(false)} request={authRequest} locked={!user} />}
+        {!gated && authOpen && <AuthModal onClose={() => setAuthOpen(false)} request={authRequest} locked={lockedNotice} />}
       </div>
     </ShellContext.Provider>
   )
