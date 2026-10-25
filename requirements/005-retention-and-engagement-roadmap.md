@@ -96,3 +96,19 @@ salen realmente de AvoTalent.
 - Lo que escriben los miembros se muestra siempre por `lib/user-markdown.ts` (nunca HTML crudo).
 - Lo que no está construido no se muestra (nada de botones apagados).
 - Los números que ve el público no cuentan al equipo, cuentas de prueba ni robots.
+
+## H. Diseño y SEO/GEO (pedido el 2026-10-25)
+
+Petición original: "en el backlog de cosas por hacer hay que agregar mejorar el diseño hasta llegar a algo
+bien, y también lo del SEO que el SEO sea cada vez mejor pero no solo SEO que sea para comunidad si no también
+empezar a meter GEO, o sea SEO para IAs (ChatGPT, Gemini, etc.) y lograr buscar el puesto 0 en Google".
+
+- **Diseño**: mejora continua de la app hasta llegar a algo realmente bien pulido (comunidad y admin, misma paleta).
+  Se hace por pantallas, revisando en escritorio y celular.
+- **SEO de comunidad**: hoy hay `/empleos`, `/puestos`, sitemap y JSON-LD de vacantes. Falta SEO también para
+  discusiones/artículos de la comunidad, perfiles públicos, empresas, y seguir afinando lo que ya existe.
+- **GEO (SEO para IAs)**: `llms.txt`, páginas con respuestas directas y estructura clara que las IAs puedan citar,
+  datos estructurados más completos (FAQ, Article, Organization), permitir los rastreadores de IA en `robots.txt`
+  y medir si nos citan.
+- **Posición 0 en Google**: fragmentos destacados (respuestas cortas y directas bajo encabezados de pregunta,
+  listas y tablas), FAQ/HowTo marcados, y revisar velocidad y Core Web Vitals.
