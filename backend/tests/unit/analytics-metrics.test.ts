@@ -2,6 +2,8 @@ import { describe, it, expect } from 'vitest'
 import {
   acquisitionBySource,
   buildOverview,
+  periodStart,
+  hourKey,
   change,
   dayKey,
   groupPerformance,
@@ -311,5 +313,42 @@ describe('activePeople', () => {
     const list = activePeople({ activity, people, today: '2026-10-24' })
     expect(list.find(row => row.id === 'admin')!.counted).toBe(false)
     expect(list.find(row => row.id === 'ana')!.counted).toBe(true)
+  })
+})
+
+describe('the last 24 hours', () => {
+  // NOW es el 24 de octubre de 2026, 18:00 UTC = 12:00 en Monterrey.
+  const hourVisits = [
+    visit('a', '2026-10-24T17:30:00Z'), // hace media hora
+    visit('b', '2026-10-24T17:45:00Z'), // la misma hora, otra persona
+    visit('c', '2026-10-24T02:00:00Z'), // hace 16 horas
+    visit('d', '2026-10-23T17:00:00Z'), // hace 25 horas: ya no cuenta
+    visit('e', '2026-10-23T10:00:00Z'), // el periodo anterior (de 24 a 48 horas atrás)
+  ]
+
+  it('is a rolling window that ends now, not the day of today', () => {
+    expect(periodStart(1, NOW).toISOString()).toBe('2026-10-23T18:00:00.000Z')
+    expect(periodStart(7, NOW).toISOString()).toBe(windowStart(7, NOW).toISOString())
+  })
+
+  it('counts the visitors of the last 24 hours and compares them with the 24 before', () => {
+    const overview = buildOverview({ visits: hourVisits, users: [], posts: [], days: 1, now: NOW })
+
+    expect(overview.visitors).toBe(3)
+    // antes: 'd' (hace 25 h) y 'e' (hace 32 h) = 2; ahora 3 → +50 %
+    expect(overview.vs.visitors).toBe(50)
+  })
+
+  it('draws one bar per hour, 24 of them, the last one being the current hour', () => {
+    const { series } = buildOverview({ visits: hourVisits, users: [], posts: [], days: 1, now: NOW })
+
+    expect(series).toHaveLength(24)
+    expect(series[23]).toMatchObject({ day: hourKey('2026-10-24T18:00:00Z'), visitors: 0 })
+    expect(series[22]).toMatchObject({ day: '2026-10-24T11', visitors: 2 })
+    expect(series.reduce((total, point) => total + point.visitors, 0)).toBe(3)
+  })
+
+  it('labels the hours in Monterrey time', () => {
+    expect(hourKey('2026-10-24T18:30:00Z')).toBe('2026-10-24T12')
   })
 })

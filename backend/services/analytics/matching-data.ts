@@ -10,7 +10,7 @@ const asSkills = (raw: unknown): string[] => (Array.isArray(raw) ? raw.filter((s
 /**
  * Lee a las personas reales y las vacantes abiertas, y las pasa por el motor de match
  * (services/analytics/matching.ts). Las mismas personas que ven "Para ti": candidatos reales, sin
- * cuentas de prueba ni perfiles del scraper. Quien aún no eligió su puesto no se puede puntuar y
+ * cuentas de prueba, ni el equipo (administradores), ni perfiles del scraper. Quien aún no eligió su puesto no se puede puntuar y
  * se cuenta aparte.
  */
 export async function loadMatchingOverview(): Promise<MatchingOverview & { withoutRole: number }> {
@@ -25,6 +25,7 @@ export async function loadMatchingOverview(): Promise<MatchingOverview & { witho
         .from('users')
         .select('id, username, display_name, photo_url, role_category, seniority, skills, work_modality')
         .eq('account_type', 'candidate')
+        .eq('user_kind', 'user')
         .eq('is_test_account', false)
         .not('is_scraper_profile', 'is', true)
         .range(from, to),

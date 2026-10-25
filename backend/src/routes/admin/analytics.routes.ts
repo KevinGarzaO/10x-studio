@@ -20,7 +20,8 @@ import {
   topLandingPages,
   uniqueVisitors,
   vacancyEngagement,
-  windowStart,
+  periodStart,
+  periodSpanMs,
   type LinkedInPostRow,
   type UserRow,
   type VacancyEventRow,
@@ -37,7 +38,7 @@ const router = Router()
  * donde está la definición de cada número.
  */
 
-const PERIODS = [7, 30, 90]
+const PERIODS = [1, 7, 30, 90] // 1 = las últimas 24 horas
 const periodOf = (req: Request) => {
   const days = parseInt(String(req.query.days ?? '30'), 10)
   return PERIODS.includes(days) ? days : 30
@@ -107,7 +108,7 @@ router.get('/alerts', handle('alarmas', async (_req, res) => {
 /** Vacantes: cuánta gente abre cada una, cuánta pulsa "Postularse" y cuánta la guarda. */
 router.get('/vacancies', handle('vacantes', async (req, res) => {
   const days = periodOf(req)
-  const since = windowStart(days).toISOString()
+  const since = periodStart(days).toISOString()
 
   const events = await readAll<VacancyEventRow>((from, to) =>
     supabase.from('vacancy_events').select('vacancy_slug, event, visitor_id').gte('created_at', since).range(from, to),
@@ -147,7 +148,7 @@ router.get('/vacancies', handle('vacantes', async (req, res) => {
 /** Resumen: los números de arriba del panel, con su comparación contra el periodo anterior. */
 router.get('/overview', handle('resumen', async (req, res) => {
   const days = periodOf(req)
-  const since = new Date(windowStart(days).getTime() - days * 86400000).toISOString()
+  const since = new Date(periodStart(days).getTime() - periodSpanMs(days)).toISOString()
   const [visits, users, posts] = await Promise.all([visitsSince(since), realUsers(since), linkedinPosts(since)])
 
   const overview = buildOverview({ visits, users, posts, days })
@@ -175,7 +176,7 @@ router.get('/overview', handle('resumen', async (req, res) => {
 /** LinkedIn: el estado del publicador y el rendimiento de cada publicación. */
 router.get('/linkedin', handle('linkedin', async (req, res) => {
   const days = periodOf(req)
-  const since = new Date(windowStart(days).getTime()).toISOString()
+  const since = new Date(periodStart(days).getTime()).toISOString()
 
   const [posts, visits, users, { data: profile }] = await Promise.all([
     linkedinPosts(since),
@@ -218,7 +219,7 @@ router.get('/linkedin', handle('linkedin', async (req, res) => {
 /** Adquisición: de dónde llega la gente y por dónde avanza hasta quedarse. */
 router.get('/acquisition', handle('adquisición', async (req, res) => {
   const days = periodOf(req)
-  const since = windowStart(days).toISOString()
+  const since = periodStart(days).toISOString()
   const [visits, users] = await Promise.all([visitsSince(since), realUsers(since)])
 
   // "Volvió": estuvo activa en un día posterior al de su registro. Solo se sabe si la tabla existe.

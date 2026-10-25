@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { BarSeries, Card, Empty, ErrorBox, fmtDate, fmtNum, fmtPct, Loading, PageHeader, PeriodPicker, Stat, usePanelData } from '@/components/panel/ui'
+import { BarSeries, Card, Empty, ErrorBox, fmtDate, fmtNum, fmtPct, Loading, PageHeader, PeriodPicker, periodPhrase, Stat, usePanelData } from '@/components/panel/ui'
 
 interface Overview {
   days: number
@@ -23,7 +23,7 @@ export default function ResumenPage() {
 
   return (
     <>
-      <PageHeader title="Resumen" subtitle={`Qué pasó en AvoTalent en los últimos ${days} días, contra los ${days} anteriores.`}>
+      <PageHeader title="Resumen" subtitle={days === 1 ? 'Qué pasó en AvoTalent en las últimas 24 horas, contra las 24 anteriores.' : `Qué pasó en AvoTalent en ${periodPhrase(days)}, contra los ${days} anteriores.`}>
         <PeriodPicker days={days} onChange={setDays} />
       </PageHeader>
 
@@ -39,7 +39,7 @@ export default function ResumenPage() {
             <Stat label="Perfiles completos" value={fmtNum(data.completedProfiles)} caption={`De ${fmtNum(data.signups)} registros del periodo: ya pueden recibir vacantes “Para ti”.`} />
           </div>
 
-          <Card title="Visitantes y registros por día" hint="Hora de Monterrey">
+          <Card title={days === 1 ? 'Visitantes y registros por hora' : 'Visitantes y registros por día'} hint="Hora de Monterrey">
             {data.series.every(point => point.visitors === 0 && point.signups === 0)
               ? <Empty>Todavía no hay visitas en este periodo.</Empty>
               : <BarSeries points={data.series} series={[{ key: 'visitors', label: 'Visitantes', color: '#94a3b8' }, { key: 'signups', label: 'Registros', color: '#10b981' }]} />}

@@ -80,11 +80,15 @@
 
 .panel-chart-legend { display: flex; gap: 16px; font-size: 12px; color: var(--p-muted); margin-bottom: 10px; }
 .panel-chart-legend i { display: inline-block; width: 10px; height: 10px; border-radius: 3px; margin-right: 6px; }
-.panel-chart-bars { display: flex; align-items: stretch; gap: 3px; height: 190px; }
-.panel-chart-day { flex: 1; display: flex; flex-direction: column; min-width: 0; }
-.panel-chart-stack { flex: 1; display: flex; align-items: flex-end; gap: 2px; border-bottom: 1px solid var(--p-line); }
-.panel-chart-bar { flex: 1; min-height: 2px; border-radius: 3px 3px 0 0; }
-.panel-chart-label { height: 18px; font-size: 10px; color: var(--p-muted); text-align: center; white-space: nowrap; overflow: visible; }
+.panel-chart-scroll { overflow-x: auto; padding-bottom: 4px; }
+.panel-chart-bars { display: flex; align-items: stretch; gap: 6px; height: 230px; min-width: 100%; width: max-content; }
+.panel-chart-day { flex: 1 0 58px; display: flex; flex-direction: column; min-width: 0; }
+.panel-chart-stack { flex: 1; display: flex; align-items: stretch; gap: 3px; border-bottom: 1px solid var(--p-line); }
+.panel-chart-col { flex: 1; min-width: 0; display: flex; flex-direction: column; justify-content: flex-end; align-items: stretch; }
+.panel-chart-value { text-align: center; font-size: 12px; font-weight: 700; color: var(--p-text); line-height: 1.6; font-variant-numeric: tabular-nums; }
+.panel-chart-value.is-zero { color: #cbd5e1; font-weight: 500; }
+.panel-chart-bar { min-height: 2px; border-radius: 3px 3px 0 0; }
+.panel-chart-label { height: 20px; padding-top: 4px; font-size: 11px; color: var(--p-muted); text-align: center; white-space: nowrap; }
 
 .panel-funnel-row { display: grid; grid-template-columns: 190px minmax(0, 1fr) 150px; gap: 14px; align-items: center; padding: 9px 0; font-size: 14px; }
 .panel-inline-bar { display: block; height: 12px; background: #eef2f6; border-radius: 6px; overflow: hidden; }
@@ -116,18 +120,34 @@
 .panel-login button:disabled { opacity: .6; cursor: default; }
 .panel-login .error { color: #b91c1c; font-size: 13px; background: #fef2f2; border-radius: 8px; padding: 8px 10px; }
 
+/* La barra de arriba: en escritorio solo lleva el nombre de la sección y la cuenta. */
+.panel-burger { display: none; flex-direction: column; justify-content: center; gap: 4px; width: 40px; height: 40px; padding: 0 9px; background: transparent; border: 0; border-radius: 10px; cursor: pointer; }
+.panel-burger span { display: block; height: 2px; background: #fff; border-radius: 2px; }
+.panel-burger:hover { background: rgba(255,255,255,.1); }
+.panel-top-brand { display: none; align-items: center; gap: 8px; color: #fff; text-decoration: none; font-weight: 800; font-size: 16px; letter-spacing: -.02em; min-width: 0; }
+.panel-top-brand img { width: 30px; height: 30px; border-radius: 8px; }
+.panel-top-brand em { font-style: normal; color: #34d399; }
+.panel-top-brand small { font-size: 10px; font-weight: 700; color: #94a3b8; letter-spacing: .06em; text-transform: uppercase; }
+
 @media (max-width: 900px) {
   .panel-app { grid-template-columns: 1fr; }
-  .panel-side { position: static; height: auto; flex-direction: row; flex-wrap: wrap; align-items: center; padding: 10px; }
-  .panel-brand { padding: 0 8px; }
-  .panel-nav { display: flex; flex-wrap: wrap; gap: 2px; }
-  .panel-side-foot { margin: 0 0 0 auto; border: 0; padding: 0; }
   .panel-main { padding: 20px 16px 48px; }
-  .panel-top { padding: 0 16px; }
   .panel-account-name { display: none; }
   .panel-grid.cols-4, .panel-grid.cols-3 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .panel-grid.cols-2 { grid-template-columns: 1fr; }
   .panel-funnel-row { grid-template-columns: 1fr; gap: 4px; }
+  /* El menú es un cajón y la barra de arriba es azul marino, como en AvoTalent. */
+  .panel-side { position: fixed; left: 0; top: 0; bottom: 0; width: 260px; height: 100vh; z-index: 30; transform: translateX(-100%); transition: transform .22s ease; }
+  .panel-side.open { transform: translateX(0); box-shadow: 0 0 40px rgba(0,0,0,.35); }
+  .panel-side .panel-brand { display: none; }
+  .panel-overlay { position: fixed; inset: 0; background: rgba(15,23,42,.5); z-index: 25; }
+  .panel-top { background: #0f172a; border-bottom: 0; padding: 0 12px; gap: 8px; justify-content: flex-start; }
+  .panel-top-title { display: none; }
+  .panel-top-brand { display: flex; }
+  .panel-burger { display: flex; }
+  .panel-account { margin-left: auto; }
+  .panel-account > button { color: #fff; }
+  .panel-account > button:hover { background: rgba(255,255,255,.1); }
 }
 @media (max-width: 520px) { .panel-grid.cols-4, .panel-grid.cols-3 { grid-template-columns: 1fr; } }
 

@@ -35,6 +35,7 @@ export function PanelShell({ children }: { children: React.ReactNode }) {
   const router = useRouter()
   const [ready, setReady] = useState(false)
   const [alerts, setAlerts] = useState<Alert[]>([])
+  const [menuOpen, setMenuOpen] = useState(false)
 
   useEffect(() => {
     if (!getToken()) router.replace('/login')
@@ -49,13 +50,17 @@ export function PanelShell({ children }: { children: React.ReactNode }) {
       .catch(() => setAlerts([]))
   }, [ready, pathname])
 
+  // En el celular el menú es un cajón: se cierra al elegir una sección.
+  useEffect(() => { setMenuOpen(false) }, [pathname])
+
   if (!ready) return <div className="panel-app" style={{ display: 'block', padding: 32 }}><p className="panel-muted">Cargando…</p></div>
 
   const active = (href: string) => (href === '/panel' ? pathname === '/panel' : pathname.startsWith(href))
 
   return (
     <div className="panel-app">
-      <aside className="panel-side">
+      {menuOpen && <div className="panel-overlay" onClick={() => setMenuOpen(false)} aria-hidden="true" />}
+      <aside className={`panel-side${menuOpen ? ' open' : ''}`}>
         <Link href="/panel" className="panel-brand">
           <img src="/icon-192.png" alt="" width={32} height={32} />
           <span>Avo<em>Talent</em> <small>Admin</small></span>
@@ -71,6 +76,13 @@ export function PanelShell({ children }: { children: React.ReactNode }) {
       </aside>
       <div className="panel-body">
         <header className="panel-top">
+          <button type="button" className="panel-burger" aria-label={menuOpen ? 'Cerrar menú' : 'Abrir menú'} aria-expanded={menuOpen} onClick={() => setMenuOpen(open => !open)}>
+            <span /><span /><span />
+          </button>
+          <Link href="/panel" className="panel-top-brand">
+            <img src="/icon-192.png" alt="" width={30} height={30} />
+            <span>Avo<em>Talent</em> <small>Admin</small></span>
+          </Link>
           <span className="panel-top-title">{NAV.find(item => active(item.href))?.label ?? 'Panel'}</span>
           <AccountMenu />
         </header>

@@ -368,3 +368,23 @@ describe('GET /analytics/me', () => {
     expect(res.body.user).toBeNull()
   })
 })
+
+describe('GET /analytics/matching', () => {
+  it('only counts real members: not the team, not test accounts', async () => {
+    await request(app()).get('/analytics/matching')
+
+    expect(seen.filters).toContain('users:eq:user_kind,user')
+    expect(seen.filters).toContain('users:eq:is_test_account,false')
+  })
+})
+
+describe('the last 24 hours period', () => {
+  it('is accepted, and any other value falls back to 30 days', async () => {
+    const day = await request(app()).get('/analytics/overview?days=1').expect(200)
+    expect(day.body.days).toBe(1)
+    expect(day.body.series).toHaveLength(24)
+
+    const other = await request(app()).get('/analytics/overview?days=5').expect(200)
+    expect(other.body.days).toBe(30)
+  })
+})

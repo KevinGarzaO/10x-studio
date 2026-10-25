@@ -64,6 +64,25 @@ export function windowStart(days: number, now: Date = new Date()): Date {
   return new Date(today.getTime() - (days - 1) * DAY_MS + MONTERREY_OFFSET_MS)
 }
 
+const HOUR_MS = 3600000
+
+/**
+ * Los periodos del panel. `1` es "las últimas 24 horas": una ventana corrida que termina ahora, no el día
+ * de hoy (que a las 8 am solo tendría ocho horas). Los demás son días completos de Monterrey, contando hoy.
+ */
+export const LAST_24_HOURS = 1
+
+/** Cuándo empieza el periodo. */
+export function periodStart(days: number, now: Date = new Date()): Date {
+  return days === LAST_24_HOURS ? new Date(now.getTime() - 24 * HOUR_MS) : windowStart(days, now)
+}
+
+/** Cuánto dura el periodo, para poder compararlo con el anterior de la misma duración. */
+export const periodSpanMs = (days: number): number => (days === LAST_24_HOURS ? 24 * HOUR_MS : days * DAY_MS)
+
+/** La hora (de Monterrey) de un instante, como "2026-10-25T14". */
+export const hourKey = (iso: string): string => new Date(Date.parse(iso) - MONTERREY_OFFSET_MS).toISOString().slice(0, 13)
+
 const within = (iso: string, from: Date, to: Date) => {
   const t = Date.parse(iso)
   return t >= from.getTime() && t < to.getTime()
@@ -108,8 +127,8 @@ export function buildOverview(input: {
 }): Overview {
   const now = input.now ?? new Date()
   const days = input.days
-  const from = windowStart(days, now)
-  const previousFrom = new Date(from.getTime() - days * DAY_MS)
+  const from = periodStart(days, now)
+  const previousFrom = new Date(from.getTime() - periodSpanMs(days))
   const to = new Date(now.getTime() + 1)
 
   const visits = input.visits.filter((visit) => within(visit.created_at, from, to))
@@ -121,7 +140,17 @@ export function buildOverview(input: {
   const fromLinkedIn = visits.filter((visit) => visit.source === 'linkedin')
 
   // Una serie con todos los días de la ventana, también los de cero: una gráfica con huecos engaña.
-  const series = Array.from({ length: days }, (_, index) => {
+  // En "24 horas" la serie es por hora (24 barras); en los demás periodos, por día.
+  const hourly = days === LAST_24_HOURS
+  const series = Array.from({ length: hourly ? 24 : days }, (_, index) => {
+    if (hourly) {
+      const hour = hourKey(new Date(now.getTime() - (23 - index) * HOUR_MS).toISOString())
+      return {
+        day: hour,
+        visitors: uniqueVisitors(visits.filter((visit) => hourKey(visit.created_at) === hour)),
+        signups: users.filter((user) => hourKey(user.created_at) === hour).length,
+      }
+    }
     const day = dayKey(new Date(from.getTime() + index * DAY_MS + 3600000).toISOString())
     return {
       day,

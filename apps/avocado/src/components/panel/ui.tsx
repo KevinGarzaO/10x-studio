@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useEffect, useState, type ReactNode } from 'react'
+import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
 import { api } from '@/lib/api'
 
 /* ------------------------------------------------------------------ */
@@ -85,12 +85,20 @@ export function PageHeader({ title, subtitle, children }: { title: string; subti
   )
 }
 
+/** 1 es "las últimas 24 horas"; los demás son días completos. */
+export const PERIOD_OPTIONS = [1, 7, 30, 90]
+
+export const periodButton = (days: number): string => (days === 1 ? '24 horas' : `${days} días`)
+
+/** "las últimas 24 horas" / "los últimos 7 días", para frases. */
+export const periodPhrase = (days: number): string => (days === 1 ? 'las últimas 24 horas' : `los últimos ${days} días`)
+
 export function PeriodPicker({ days, onChange }: { days: number; onChange: (days: number) => void }) {
   return (
     <div className="panel-period" role="group" aria-label="Periodo">
-      {[7, 30, 90].map(option => (
+      {PERIOD_OPTIONS.map(option => (
         <button key={option} type="button" className={days === option ? 'active' : ''} aria-pressed={days === option} onClick={() => onChange(option)}>
-          {option} días
+          {periodButton(option)}
         </button>
       ))}
     </div>
@@ -144,27 +152,52 @@ export function Empty({ children }: { children: ReactNode }) {
   return <p className="panel-empty">{children}</p>
 }
 
-/** Barras verticales por día; las de cero también se dibujan, para que un hueco no se confunda con falta de datos. */
+/** Una etiqueta de la gráfica: "14h" para una hora ("2026-10-25T14"), "25 oct" para un día. */
+export function fmtPoint(key: string): string {
+  return key.includes('T') ? `${key.slice(11, 13)}h` : fmtDay(key)
+}
+
+/**
+ * Barras verticales por día (o por hora), con el número de cada barra a la vista, en celular y en escritorio:
+ * nadie tiene que pasar el dedo o el cursor para leerlo. Las de cero también se dibujan, para que un hueco no
+ * se confunda con falta de datos. Con muchos puntos la gráfica se desplaza hacia los lados, sin apretar los
+ * números, y arranca mostrando lo más reciente.
+ */
 export function BarSeries({ points, series }: { points: { day: string; [key: string]: number | string }[]; series: { key: string; label: string; color: string }[] }) {
   const max = Math.max(1, ...points.flatMap(point => series.map(item => Number(point[item.key]) || 0)))
-  const every = Math.ceil(points.length / 8)
+  const scroller = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    const element = scroller.current
+    if (element) element.scrollLeft = element.scrollWidth
+  }, [points])
+
+  const summary = points.map(point => `${fmtPoint(point.day)} ${series.map(item => `${item.label} ${point[item.key]}`).join(', ')}`).join('; ')
 
   return (
     <div className="panel-chart">
       <div className="panel-chart-legend">
         {series.map(item => <span key={item.key}><i style={{ background: item.color }} />{item.label}</span>)}
       </div>
-      <div className="panel-chart-bars" role="img" aria-label={`Gráfica diaria de ${series.map(item => item.label).join(' y ')}`}>
-        {points.map((point, index) => (
-          <div key={point.day} className="panel-chart-day" title={`${fmtDay(point.day)}: ${series.map(item => `${item.label} ${point[item.key]}`).join(', ')}`}>
-            <div className="panel-chart-stack">
-              {series.map(item => (
-                <div key={item.key} className="panel-chart-bar" style={{ height: `${((Number(point[item.key]) || 0) / max) * 100}%`, background: item.color }} />
-              ))}
+      <div className="panel-chart-scroll" ref={scroller}>
+        <div className="panel-chart-bars" role="img" aria-label={`Gráfica de ${series.map(item => item.label).join(' y ')}: ${summary}`}>
+          {points.map(point => (
+            <div key={point.day} className="panel-chart-day">
+              <div className="panel-chart-stack">
+                {series.map(item => {
+                  const value = Number(point[item.key]) || 0
+                  return (
+                    <div key={item.key} className="panel-chart-col">
+                      <span className={`panel-chart-value${value === 0 ? ' is-zero' : ''}`}>{fmtNum(value)}</span>
+                      <div className="panel-chart-bar" style={{ height: `calc((100% - 24px) * ${value / max})`, background: item.color }} />
+                    </div>
+                  )
+                })}
+              </div>
+              <span className="panel-chart-label">{fmtPoint(point.day)}</span>
             </div>
-            <span className="panel-chart-label">{index % every === 0 ? fmtDay(point.day) : ''}</span>
-          </div>
-        ))}
+          ))}
+        </div>
       </div>
     </div>
   )
