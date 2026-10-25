@@ -922,23 +922,21 @@ button { cursor: pointer; }
 .detail-avatar { width: 48px; height: 48px; font-size: 15px; }
 .detail-author-name { font-size: 16px; }
 
-/* Las tres cifras: tarjetas iguales, con el número grande. */
-.vacancy-stats.is-detailed { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; margin: 0 0 18px; }
-.vacancy-stats.is-detailed li { display: grid; grid-template-columns: auto 1fr; grid-template-areas: "icon label" "num num"; column-gap: 8px; row-gap: 6px; align-items: center; background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 14px 16px; }
-.vacancy-stats.is-detailed li > svg { grid-area: icon; color: var(--text-faint); }
-.vacancy-stats.is-detailed li > span { grid-area: label; font-size: 13px; color: var(--text-muted); }
-.vacancy-stats.is-detailed li > b { grid-area: num; font-size: 28px; line-height: 1; letter-spacing: -.02em; }
+/* Las cifras de interés son información de apoyo: una línea discreta. Lo principal de la vacante es el match. */
+.vacancy-stats.is-detailed { margin: 0 0 22px; gap: 8px 22px; font-size: 14px; color: var(--text-muted); }
+.vacancy-stats.is-detailed li > svg { color: var(--text-faint); }
+.vacancy-stats.is-detailed b { font-size: 15px; font-weight: 600; color: var(--text-2); }
 
 .detail-chips { gap: 8px; margin-bottom: 20px; }
 .detail-chip, .detail-save { min-height: 36px; padding: 6px 14px; }
 
 /* La caja de match: el porcentaje, la barra y por qué, en cuatro renglones. */
-.detail-match { background: var(--surface); border: 1px solid var(--purple-line); box-shadow: none; border-radius: 14px; padding: 18px 20px; margin: 22px 0; }
+.detail-match { background: var(--surface); border: 1px solid var(--purple-line); box-shadow: none; border-radius: 16px; padding: 22px 24px; margin: 8px 0 22px; }
 .detail-match-top { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
 .detail-match-score { display: flex; align-items: baseline; gap: 8px; }
-.detail-match-score strong { font-size: 32px; font-weight: 800; letter-spacing: -.02em; line-height: 1; color: var(--purple-text); }
-.detail-match-score span { font-size: 14px; color: var(--text-muted); }
-.detail-match-bar { height: 8px; border-radius: 999px; background: var(--purple-soft); overflow: hidden; margin: 14px 0 16px; }
+.detail-match-score strong { font-size: 44px; font-weight: 800; letter-spacing: -.03em; line-height: 1; color: var(--purple-text); }
+.detail-match-score span { font-size: 16px; color: var(--text-muted); }
+.detail-match-bar { height: 10px; border-radius: 999px; background: var(--purple-soft); overflow: hidden; margin: 16px 0 20px; }
 .detail-match-bar i { display: block; height: 100%; border-radius: 999px; background: var(--purple-text); }
 .detail-match-list { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px 20px; font-size: 14px; line-height: 1.45; }
 .detail-match-list li { display: flex; align-items: flex-start; gap: 10px; color: var(--text-2); }
@@ -958,12 +956,19 @@ button { cursor: pointer; }
   .detail-page h1 { font-size: 24px; margin: 16px 0 14px; }
   .detail-identity-row { flex-wrap: wrap; }
   .detail-action { width: 100%; justify-content: center; }
-  .vacancy-stats.is-detailed { gap: 8px; }
-  .vacancy-stats.is-detailed li { padding: 12px; row-gap: 4px; }
-  .vacancy-stats.is-detailed li > span { font-size: 12px; }
-  .vacancy-stats.is-detailed li > b { font-size: 22px; }
+  .vacancy-stats.is-detailed { gap: 6px 16px; font-size: 13px; }
   .detail-match { padding: 16px; }
-  .detail-match-score strong { font-size: 28px; }
+  .detail-match-score strong { font-size: 36px; }
   .detail-match-list { grid-template-columns: 1fr; }
   .detail-footer { flex-wrap: nowrap; }
+}
+
+/* Skills que pide: más grandes, para que se lean de un vistazo. */
+.detail-page .detail-section-title { font-size: 20px; font-weight: 700; margin: 8px 0 14px; }
+.detail-page .stack-row { gap: 10px; margin-bottom: 26px; }
+.detail-page .stack-badge { font-size: 15px; font-weight: 600; padding: 9px 16px; border-radius: 12px; line-height: 1.2; }
+.detail-page .stack-badge.is-shared, .detail-page .stack-badge.is-validated { padding: 9px 16px; }
+@media (max-width: 700px) {
+  .detail-page .detail-section-title { font-size: 18px; }
+  .detail-page .stack-badge { font-size: 14px; padding: 8px 14px; }
 }
