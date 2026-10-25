@@ -91,24 +91,57 @@ describe('PublicProfileView skill levels', () => {
 })
 
 describe('PublicProfileView actions', () => {
-  // Seguir y mensajería no existen en el backend: se muestran apagadas y
-  // diciendo por qué, en vez de fingir que funcionan.
-  it('disables the actions that are not built yet, with their reason', () => {
+  // Seguir y mensajería no existen: no se muestran botones apagados que no hacen nada.
+  it('shows no follow or message buttons, not even disabled', () => {
     renderProfile()
 
-    const follow = screen.getByRole('button', { name: 'Seguir' })
-    const message = screen.getByRole('button', { name: 'Mensaje' })
-
-    expect(follow).toBeDisabled()
-    expect(follow.getAttribute('title')).toMatch(/todavía no/i)
-    expect(message).toBeDisabled()
-    expect(message.getAttribute('title')).toMatch(/todavía no/i)
+    expect(screen.queryByRole('button', { name: 'Seguir' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Mensaje' })).not.toBeInTheDocument()
   })
 
-  it('offers editing instead of following on your own profile', () => {
+  it('lets you share the profile of someone else', () => {
+    renderProfile()
+    expect(screen.getByRole('button', { name: /compartir/i })).toBeEnabled()
+  })
+
+  it('offers editing instead of sharing on your own profile', () => {
     render(<PublicProfileView profile={base} isOwnProfile />)
 
     expect(screen.getByRole('link', { name: /editar perfil/i })).toBeInTheDocument()
-    expect(screen.queryByRole('button', { name: 'Seguir' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /compartir/i })).not.toBeInTheDocument()
+  })
+})
+
+describe('PublicProfileView content', () => {
+  it('shows what matters for a vacancy: level, place and modality', () => {
+    renderProfile()
+
+    expect(screen.getByText('Senior')).toBeInTheDocument()
+    expect(screen.getByText('Monterrey')).toBeInTheDocument()
+    expect(screen.getByText('Híbrido')).toBeInTheDocument()
+  })
+
+  it('counts the skills and how many are validated', () => {
+    renderProfile({ skillLevels: [{ skillName: 'react', level: 'basico', achievedAt: '2026-09-01T00:00:00Z' }] })
+    expect(screen.getByText('2 skills · 1 validado')).toBeInTheDocument()
+  })
+
+  it('no longer shows the empty 0 / 0 / 0 counters', () => {
+    renderProfile()
+
+    expect(screen.queryByText('votos recibidos')).not.toBeInTheDocument()
+    expect(screen.queryByText(/todavía no ha publicado/i)).not.toBeInTheDocument()
+  })
+
+  it('shows the publications section only when there are publications', () => {
+    const post = {
+      id: 'p1', type: 'discussion', title: 'Hola', content: 'x', tags: [], votesCount: 0, commentsCount: 0, votes_count: 0,
+      comments_count: 0, created_at: '2026-10-01T00:00:00Z', author: { id: 'u1', username: 'kevin', display_name: 'Kevin', photo_url: null },
+    }
+    const { rerender } = renderProfile()
+    expect(screen.queryByRole('heading', { name: 'Publicaciones' })).not.toBeInTheDocument()
+
+    rerender(<PublicProfileView profile={{ ...base, community_posts: [post as never] }} isOwnProfile={false} />)
+    expect(screen.getByRole('heading', { name: 'Publicaciones' })).toBeInTheDocument()
   })
 })
