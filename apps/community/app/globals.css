@@ -5,7 +5,7 @@
 @custom-variant dark (&:is(.dark *));
 
 @theme inline {
-  --color-background: var(--background); --color-foreground: var(--foreground); --color-card: var(--card); --color-card-foreground: var(--card-foreground); --color-popover: var(--popover); --color-popover-foreground: var(--popover-foreground); --color-primary: var(--primary); --color-primary-foreground: var(--primary-foreground); --color-secondary: var(--secondary); --color-secondary-foreground: var(--secondary-foreground); --color-muted: var(--muted); --color-muted-foreground: var(--muted-foreground); --color-accent: var(--brand); --color-accent-foreground: var(--accent-foreground); --color-destructive: var(--destructive); --color-border: var(--line); --color-input: var(--input); --color-ring: var(--ring); --radius-sm: calc(var(--radius) * .6); --radius-md: calc(var(--radius) * .8); --radius-lg: var(--radius); --font-sans: 'Inter', 'Arial', sans-serif; --font-mono: 'JetBrains Mono', monospace; --font-meta: 'Inter', 'Arial', sans-serif;
+  --color-background: var(--background); --color-foreground: var(--foreground); --color-card: var(--card); --color-card-foreground: var(--card-foreground); --color-popover: var(--popover); --color-popover-foreground: var(--popover-foreground); --color-primary: var(--primary); --color-primary-foreground: var(--primary-foreground); --color-secondary: var(--secondary); --color-secondary-foreground: var(--secondary-foreground); --color-muted: var(--muted); --color-muted-foreground: var(--muted-foreground); --color-accent: var(--brand); --color-accent-foreground: var(--accent-foreground); --color-destructive: var(--destructive); --color-border: var(--line); --color-input: var(--input); --color-ring: var(--ring); --radius-sm: calc(var(--radius) * .6); --radius-md: calc(var(--radius) * .8); --radius-lg: var(--radius); --font-sans: var(--font-inter), 'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif; --font-mono: 'JetBrains Mono', monospace; --font-meta: 'Inter', 'Arial', sans-serif;
 }
 /*
  * Dos temas con los mismos nombres. El claro es el de base; el oscuro se activa con
@@ -913,3 +913,57 @@ button { cursor: pointer; }
 :root[data-theme='dark'] .post-card.is-for-you { border-color: var(--purple-line); box-shadow: inset 3px 0 0 var(--purple-text); }
 .jc-forme { border-bottom-color: var(--purple-line); }
 .match-pill:not(.is-validated) { background: var(--purple-soft); color: var(--purple-text); }
+
+/*
+ * Detalle de la vacante: encabezado, cifras, etiquetas y caja de match con una jerarquía clara, y bien en celular.
+ */
+.detail-page h1 { font-size: 32px; font-weight: 800; letter-spacing: -.025em; line-height: 1.2; margin: 20px 0 18px; }
+.detail-identity-row { gap: 16px; }
+.detail-avatar { width: 48px; height: 48px; font-size: 15px; }
+.detail-author-name { font-size: 16px; }
+
+/* Las tres cifras: tarjetas iguales, con el número grande. */
+.vacancy-stats.is-detailed { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; margin: 0 0 18px; }
+.vacancy-stats.is-detailed li { display: grid; grid-template-columns: auto 1fr; grid-template-areas: "icon label" "num num"; column-gap: 8px; row-gap: 6px; align-items: center; background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 14px 16px; }
+.vacancy-stats.is-detailed li > svg { grid-area: icon; color: var(--text-faint); }
+.vacancy-stats.is-detailed li > span { grid-area: label; font-size: 13px; color: var(--text-muted); }
+.vacancy-stats.is-detailed li > b { grid-area: num; font-size: 28px; line-height: 1; letter-spacing: -.02em; }
+
+.detail-chips { gap: 8px; margin-bottom: 20px; }
+.detail-chip, .detail-save { min-height: 36px; padding: 6px 14px; }
+
+/* La caja de match: el porcentaje, la barra y por qué, en cuatro renglones. */
+.detail-match { background: var(--surface); border: 1px solid var(--purple-line); box-shadow: none; border-radius: 14px; padding: 18px 20px; margin: 22px 0; }
+.detail-match-top { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.detail-match-score { display: flex; align-items: baseline; gap: 8px; }
+.detail-match-score strong { font-size: 32px; font-weight: 800; letter-spacing: -.02em; line-height: 1; color: var(--purple-text); }
+.detail-match-score span { font-size: 14px; color: var(--text-muted); }
+.detail-match-bar { height: 8px; border-radius: 999px; background: var(--purple-soft); overflow: hidden; margin: 14px 0 16px; }
+.detail-match-bar i { display: block; height: 100%; border-radius: 999px; background: var(--purple-text); }
+.detail-match-list { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px 20px; font-size: 14px; line-height: 1.45; }
+.detail-match-list li { display: flex; align-items: flex-start; gap: 10px; color: var(--text-2); }
+.detail-match-icon { flex: none; display: grid; place-items: center; width: 24px; height: 24px; border-radius: 50%; margin-top: 1px; background: var(--surface-2); color: var(--text-faint); }
+.detail-match-list .is-good .detail-match-icon { background: var(--accent-soft); color: var(--accent-text); }
+.detail-match-list .is-ok .detail-match-icon { background: var(--warn-soft); color: var(--warn); }
+.detail-match-list .is-bad .detail-match-icon { background: var(--danger-soft); color: var(--danger); }
+.detail-match-text { display: flex; flex-direction: column; min-width: 0; }
+.detail-match-text small { font-size: 11px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--text-faint); }
+
+/* Pie de acciones: comentarios a la izquierda, guardar y compartir a la derecha, en una sola fila. */
+.detail-footer { flex-direction: row; flex-wrap: wrap; justify-content: flex-start; gap: 12px 20px; }
+.detail-footer-spacer { flex: 1 1 auto; }
+
+@media (max-width: 700px) {
+  .detail-page { padding: 20px 16px 72px; }
+  .detail-page h1 { font-size: 24px; margin: 16px 0 14px; }
+  .detail-identity-row { flex-wrap: wrap; }
+  .detail-action { width: 100%; justify-content: center; }
+  .vacancy-stats.is-detailed { gap: 8px; }
+  .vacancy-stats.is-detailed li { padding: 12px; row-gap: 4px; }
+  .vacancy-stats.is-detailed li > span { font-size: 12px; }
+  .vacancy-stats.is-detailed li > b { font-size: 22px; }
+  .detail-match { padding: 16px; }
+  .detail-match-score strong { font-size: 28px; }
+  .detail-match-list { grid-template-columns: 1fr; }
+  .detail-footer { flex-wrap: nowrap; }
+}

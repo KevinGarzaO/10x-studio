@@ -3,7 +3,7 @@
 import Link from 'next/link'
 import { useParams, useRouter } from 'next/navigation'
 import { useState, useEffect, useRef } from 'react'
-import { BadgeCheck, Bookmark, Building, Check, LockKeyhole, MapPin } from 'lucide-react'
+import { BadgeCheck, Bookmark, Building, Check, LockKeyhole, MapPin, Minus, X } from 'lucide-react'
 import { marked } from 'marked'
 import { useShell } from '../../../../lib/shell-context'
 import { getToken } from '../../../../lib/session'
@@ -477,20 +477,52 @@ export default function VacancyPage() {
           {meta.salary && <span className="detail-chip is-salary">{meta.salary}</span>}
         </div>
 
-        {match && (
-          <section className="detail-match" aria-label="Por qué es para ti">
-            <div className="detail-match-head">
-              <span className="post-type-badge is-for-you">PARA TI</span>
-              <strong>{match.score}% match contigo</strong>
-            </div>
-            <ul>
-              <li>{ROLE_FIT_TEXT[match.role]}{match.role === 'adjacent' && roleLabel ? ` (${roleLabel})` : ''}</li>
-              <li>{match.sharedSkills.length} de {match.vacancySkills || skills.length} skills que pide los tienes tú{validated.size > 0 ? `, ${validated.size} validados con examen` : ''}</li>
-              <li>{SENIORITY_FIT_TEXT[match.seniority]}</li>
-              <li>{MODALITY_FIT_TEXT[match.modality]}</li>
-            </ul>
-          </section>
-        )}
+        {match && (() => {
+          const totalSkills = match.vacancySkills || skills.length
+          const skillsShare = totalSkills > 0 ? match.sharedSkills.length / totalSkills : 0
+          const fits: { key: string; label: string; text: string; tone: 'good' | 'ok' | 'neutral' | 'bad' }[] = [
+            {
+              key: 'role', label: 'Puesto',
+              text: `${ROLE_FIT_TEXT[match.role]}${match.role === 'adjacent' && roleLabel ? ` (${roleLabel})` : ''}`,
+              tone: match.role === 'exact' ? 'good' : match.role === 'adjacent' ? 'ok' : match.role === 'unknown' ? 'neutral' : 'bad',
+            },
+            {
+              key: 'skills', label: 'Skills',
+              text: `${match.sharedSkills.length} de ${totalSkills} skills que pide los tienes tú${validated.size > 0 ? `, ${validated.size} validados con examen` : ''}`,
+              tone: skillsShare >= 0.6 ? 'good' : match.sharedSkills.length > 0 ? 'ok' : 'bad',
+            },
+            {
+              key: 'level', label: 'Nivel', text: SENIORITY_FIT_TEXT[match.seniority],
+              tone: match.seniority === 'exact' ? 'good' : match.seniority === 'near' ? 'ok' : match.seniority === 'unknown' ? 'neutral' : 'bad',
+            },
+            {
+              key: 'modality', label: 'Modalidad', text: MODALITY_FIT_TEXT[match.modality],
+              tone: match.modality === 'match' ? 'good' : match.modality === 'compatible' ? 'ok' : match.modality === 'unknown' ? 'neutral' : 'bad',
+            },
+          ]
+          return (
+            <section className="detail-match" aria-label="Por qué es para ti">
+              <div className="detail-match-top">
+                <div className="detail-match-score">
+                  <strong>{match.score}%</strong>
+                  <span>match contigo</span>
+                </div>
+                <span className="post-type-badge is-for-you">PARA TI</span>
+              </div>
+              <div className="detail-match-bar" role="img" aria-label={`${match.score}% de coincidencia`}><i style={{ width: `${Math.min(100, Math.max(0, match.score))}%` }} /></div>
+              <ul className="detail-match-list">
+                {fits.map(fit => (
+                  <li key={fit.key} className={`is-${fit.tone}`}>
+                    <span className="detail-match-icon" aria-hidden="true">
+                      {fit.tone === 'good' ? <Check size={14} strokeWidth={3} /> : fit.tone === 'bad' ? <X size={14} strokeWidth={3} /> : <Minus size={14} strokeWidth={3} />}
+                    </span>
+                    <span className="detail-match-text"><small>{fit.label}</small>{fit.text}</span>
+                  </li>
+                ))}
+              </ul>
+            </section>
+          )
+        })()}
 
         {skills.length > 0 && (
           <>

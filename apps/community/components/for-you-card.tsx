@@ -8,7 +8,7 @@ import { getToken } from '../lib/session'
 import { formatCompanyName, companySlug } from '../lib/company'
 import { ROLE_CATEGORY_LABELS, SENIORITY_LABELS } from '../lib/profile-options'
 import type { MatchedItem } from '../lib/mixed-feed'
-import { CompanyAvatar } from './community-hub'
+import { CompanyAvatar, rememberFeedPosition } from './community-hub'
 import { VacancyStats } from './vacancy-stats'
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'
@@ -58,6 +58,7 @@ export function ForYouCard({ item }: { item: MatchedItem }) {
   // Las del scraper no tienen página hasta que se promueven, así que el backend lo
   // hace en ese momento; si no hay detalle, se abre el enlace original.
   async function open() {
+    rememberFeedPosition()
     if (item.sourceType === 'community') { router.push(item.url); return }
 
     setOpening(true)

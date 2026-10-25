@@ -29,9 +29,19 @@ const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'
 const FEED_CACHE_MS = 60 * 1000
 const feedCache = new Map<string, { at: number; snapshot: FeedSnapshot }>()
 
+// Al abrir una tarjeta se recuerda dónde iba la persona en el feed: al volver (con "Volver al feed" o con la flecha
+// del navegador) el feed reaparece en ese mismo lugar, no arriba ni al final de la página de la vacante.
+const FEED_RETURN_MS = 30 * 60 * 1000
+let feedReturn: { y: number; at: number } | null = null
+
+export function rememberFeedPosition() {
+  if (typeof window !== 'undefined') feedReturn = { y: window.scrollY, at: Date.now() }
+}
+
 /** Olvida el feed guardado (lo usan las pruebas, y sirve para forzar una recarga). */
 export function clearFeedCache() {
   feedCache.clear()
+  feedReturn = null
 }
 
 interface EditorialPost {
@@ -398,7 +408,7 @@ export function PostCard({ post, onAuthRequired }: { post: FeedPost; onAuthRequi
   const rawApplyUrl = job?.applyUrl || post.source_url || null
   const applyUrl = buildApplyUrl(post.platform ?? null, rawApplyUrl)
 
-  const openPost = (e?: React.MouseEvent<HTMLElement>) => { if (e?.target instanceof HTMLElement && e.target.closest('button, a, input, textarea, select')) return; const isJob = post.type === 'job'; const slug = post.slug || post.id; const basePath = isJob ? (slug.startsWith('/vacantes/') ? slug : `/vacantes/${slug}`) : `/post/${post.id}`; router.push(basePath) }
+  const openPost = (e?: React.MouseEvent<HTMLElement>) => { if (e?.target instanceof HTMLElement && e.target.closest('button, a, input, textarea, select')) return; rememberFeedPosition(); const isJob = post.type === 'job'; const slug = post.slug || post.id; const basePath = isJob ? (slug.startsWith('/vacantes/') ? slug : `/vacantes/${slug}`) : `/post/${post.id}`; router.push(basePath) }
 
   if (isJob) {
     // "No especificado" es el relleno del scraper cuando no detectó modalidad: no dice nada.
@@ -685,10 +695,46 @@ export function Feed() {
     cacheKeyRef.current = token ? 'member' : 'guest'
 
     const cached = feedCache.get(cacheKeyRef.current)
-    if (cached && Date.now() - cached.at < FEED_CACHE_MS) {
+    const returning = !!feedReturn && Date.now() - feedReturn.at < FEED_RETURN_MS
+    const fresh = !!cached && Date.now() - cached.at < FEED_CACHE_MS
+
+    // Volviendo de una vacante se muestra el feed tal como estaba (aunque tenga más de un minuto) y se baja a donde
+    // iba; las cifras se ponen al día en silencio, sin mover ni reordenar ninguna tarjeta.
+    if (cached && (fresh || returning)) {
       snapshotRef.current = cached.snapshot
       setSnapshot(cached.snapshot)
       setLoading(false)
+
+      if (returning && feedReturn) {
+        const y = feedReturn.y
+        feedReturn = null
+        const restore = () => window.scrollTo(0, y)
+        requestAnimationFrame(restore)
+        setTimeout(restore, 120)
+        setTimeout(restore, 400)
+      }
+
+      if (!fresh) {
+        const base = cached.snapshot
+        let cancelledRefresh = false
+        ;(async () => {
+          const pages = await Promise.all(Array.from({ length: base.page }, (_, index) =>
+            fetchJson(`${API_URL}/api/community/posts?page=${index + 1}&limit=${JOBS_PER_PAGE}&type=job&sort=popular`, token),
+          ))
+          if (cancelledRefresh) return
+          const latest = new Map<string, FeedPost>()
+          for (const page of pages) for (const post of (page?.posts || []) as FeedPost[]) latest.set(post.id, post)
+          const current = snapshotRef.current ?? base
+          commit({
+            ...current,
+            jobs: current.jobs.map(job => {
+              const next = latest.get(job.id)
+              return next ? { ...job, stats: next.stats, isSaved: next.isSaved, historyId: next.historyId } : job
+            }),
+          })
+        })()
+        return () => { cancelledRefresh = true }
+      }
       return
     }
 

@@ -1,6 +1,6 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { render, screen, waitFor } from '@testing-library/react'
-import { Feed, clearFeedCache } from '@/components/community-hub'
+import { Feed, clearFeedCache, rememberFeedPosition } from '@/components/community-hub'
 import { ShellContext } from '@/lib/shell-context'
 
 vi.mock('next/navigation', () => ({
@@ -91,5 +91,54 @@ describe('single feed', () => {
 
     const call = (global.fetch as any).mock.calls.find((c: any[]) => String(c[0]).includes('type=job'))
     expect(call[1].headers.Authorization).toBe('Bearer tok')
+  })
+
+  describe('coming back from a vacancy', () => {
+    afterEach(() => { vi.restoreAllMocks() })
+
+    it('scrolls back to where the person was, instead of leaving them wherever the page ended', async () => {
+      const first = renderFeed(null)
+      await screen.findByText('Una vacante de prueba')
+
+      Object.defineProperty(window, 'scrollY', { value: 840, configurable: true })
+      rememberFeedPosition() // se llama al abrir una tarjeta
+      first.unmount()
+
+      const scrollTo = vi.spyOn(window, 'scrollTo').mockImplementation(() => {})
+      renderFeed(null)
+      await screen.findByText('Una vacante de prueba')
+
+      await waitFor(() => expect(scrollTo).toHaveBeenCalledWith(0, 840))
+    })
+
+    it('shows the feed as it was at once, without loading it again', async () => {
+      const first = renderFeed(null)
+      await screen.findByText('Una vacante de prueba')
+      rememberFeedPosition()
+      first.unmount()
+
+      vi.spyOn(window, 'scrollTo').mockImplementation(() => {})
+      ;(global.fetch as any).mockClear()
+      renderFeed(null)
+
+      expect(screen.getByText('Una vacante de prueba')).toBeTruthy()
+      expect((global.fetch as any).mock.calls.filter((c: any[]) => String(c[0]).includes('/posts/editorial'))).toHaveLength(0)
+
+      // deja que terminen los reintentos de posición antes de la siguiente prueba
+      await new Promise(resolve => setTimeout(resolve, 500))
+    })
+
+    it('does not scroll anywhere when the feed is opened fresh', async () => {
+      const first = renderFeed(null)
+      await screen.findByText('Una vacante de prueba')
+      first.unmount()
+
+      const scrollTo = vi.spyOn(window, 'scrollTo').mockImplementation(() => {})
+      renderFeed(null)
+      await screen.findByText('Una vacante de prueba')
+      await new Promise(resolve => setTimeout(resolve, 500))
+
+      expect(scrollTo).not.toHaveBeenCalled()
+    })
   })
 })

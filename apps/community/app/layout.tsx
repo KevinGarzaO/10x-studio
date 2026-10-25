@@ -2,8 +2,13 @@ import { Analytics } from '@vercel/analytics/next'
 import type { Metadata, Viewport } from 'next'
 import { AttributionCapture } from '@/components/attribution-capture'
 import { SessionCapture } from '@/components/session-capture'
+import { Inter } from 'next/font/google'
 import { THEME_SCRIPT } from '@/lib/theme'
 import './globals.css'
+
+// Inter se carga de verdad. Antes solo se nombraba y, sin estar instalada, el navegador usaba Arial y los títulos en
+// peso 800 salían como "Arial Black".
+const inter = Inter({ subsets: ['latin'], weight: ['400', '500', '600', '700', '800'], variable: '--font-inter', display: 'swap' })
 
 const GA_MEASUREMENT_ID = process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID || 'G-B5F7C83ERC'
 
@@ -27,7 +32,7 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html lang="es" data-theme="light" className="bg-background" suppressHydrationWarning>
+    <html lang="es" data-theme="light" className={`bg-background ${inter.variable}`} suppressHydrationWarning>
       <head>
         <script dangerouslySetInnerHTML={{ __html: THEME_SCRIPT }} />
         {GA_MEASUREMENT_ID && (
