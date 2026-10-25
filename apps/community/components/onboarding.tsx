@@ -10,8 +10,6 @@ import { useSkillCatalog } from '../lib/skill-catalog'
 import { takeReturnTo } from '../lib/return-to'
 import { validateCandidateProfile, messageForField } from '../lib/profile-validation'
 import { useSkillProposals } from '../lib/skill-proposals'
-import { useMyCompanyClaim, SIGNUP_INTENT_KEY } from '../lib/company-claim'
-import { CompanyClaimForm } from './company-claim-form'
 import { SkillProposalsList } from './skill-proposals-list'
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'
@@ -75,17 +73,6 @@ export function OnboardingPage() {
   const { catalog, failed: catalogFailed } = useSkillCatalog()
   const addSkill = (name: string) => setSkills(prev => (prev.includes(name) ? prev : [...prev, name]))
   const { proposals, message: proposalMessage, propose } = useSkillProposals(addSkill)
-  const { claim, loading: loadingClaim, reload: reloadClaim } = useMyCompanyClaim()
-  // Candidato o empresa. Quien eligió "empresa" al registrarse llega con la
-  // intención guardada; el resto elige aquí.
-  const [accountKind, setAccountKind] = useState<'candidate' | 'company' | null>(null)
-
-  useEffect(() => {
-    if (typeof window === 'undefined') return
-    const intent = localStorage.getItem(SIGNUP_INTENT_KEY)
-    if (intent === 'company' || intent === 'candidate') setAccountKind(intent)
-  }, [])
-
   // La precarga corre UNA sola vez aunque el efecto se vuelva a disparar (el
   // router cambia de identidad en algunos entornos): si no, cada re-render
   // devolvería el asistente al primer paso y navegar se volvería imposible.
@@ -118,11 +105,6 @@ export function OnboardingPage() {
       if (Array.isArray(user.skills)) setSkills(user.skills)
       if (user.location) setLocation(user.location)
       if (user.work_modality) setWorkModality(user.work_modality)
-      // A quien ya capturó perfil de candidato no se le pregunta de nuevo si
-      // es empresa: su respuesta ya está en la cuenta.
-      if (user.role_category || (Array.isArray(user.skills) && user.skills.length > 0)) {
-        setAccountKind(prev => prev ?? 'candidate')
-      }
       setCheckingSession(false)
     })
   }, [router])
@@ -231,57 +213,6 @@ export function OnboardingPage() {
   const brand = (
     <div className="onboarding-brand"><img className="brand-mark" src="/avotalent-logo.png" alt="" aria-hidden="true" /><span><span className="brand-avo">Avo</span><span className="brand-accent">Talent</span></span></div>
   )
-
-  // Quien ya mandó una solicitud, o eligió empresa, sigue por ese camino: a una
-  // empresa no se le piden skills ni modalidad de trabajo.
-  const showsCompanyFlow = accountKind === 'company' || (!!claim && claim.status !== 'approved')
-
-  if (!loadingClaim && showsCompanyFlow) {
-    return (
-      <div className="onboarding-page">
-        <style>{styles}</style>
-        <div className="onboarding-card">
-          {brand}
-          <p className="onboarding-kicker">Registro de empresa</p>
-          <h1>Verifica tu empresa</h1>
-          <p className="muted">
-            Necesitamos comprobar que la empresa existe y que tú puedes representarla. Una persona
-            revisa los documentos y te avisamos aquí mismo.
-          </p>
-          <CompanyClaimForm claim={claim} onSubmitted={reloadClaim} />
-          {!claim && (
-            <button className="text-button onboarding-switch" onClick={() => setAccountKind('candidate')}>
-              En realidad busco trabajo
-            </button>
-          )}
-        </div>
-      </div>
-    )
-  }
-
-  if (!loadingClaim && accountKind === null) {
-    return (
-      <div className="onboarding-page">
-        <style>{styles}</style>
-        <div className="onboarding-card">
-          {brand}
-          <p className="onboarding-kicker">Un último paso</p>
-          <h1>¿Cómo vas a usar AvoTalent?</h1>
-          <p className="muted">Puedes cambiarlo después solo con ayuda del equipo, así que elige con calma.</p>
-          <div className="onboarding-kind">
-            <button onClick={() => setAccountKind('candidate')}>
-              <strong>Busco trabajo</strong>
-              <small>Arma tu perfil, valida tus skills y recibe vacantes que te queden.</small>
-            </button>
-            <button onClick={() => setAccountKind('company')}>
-              <strong>Represento a una empresa</strong>
-              <small>Reclama el perfil de tu empresa y publica tus vacantes.</small>
-            </button>
-          </div>
-        </div>
-      </div>
-    )
-  }
 
   // Con la foto ya presente (la subió antes o vino de la red social) el
   // formulario arranca en el paso de puesto y solo tiene 2 pasos.

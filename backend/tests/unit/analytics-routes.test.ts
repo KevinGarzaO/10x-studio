@@ -241,16 +241,12 @@ describe('GET /analytics/retention', () => {
 })
 
 describe('GET /analytics/overview: companies', () => {
-  it('reports how many companies claimed their profile and how many wait for approval', async () => {
-    data.tables.company_claims = [{ status: 'approved' }, { status: 'approved' }, { status: 'pending' }, { status: 'rejected' }]
+  it('no longer reports company claims: AvoTalent only serves people for now', async () => {
+    data.tables.company_claims = [{ status: 'approved' }, { status: 'pending' }]
     const res = await request(app()).get('/analytics/overview').expect(200)
 
-    expect(res.body.companies).toEqual({ claimed: 2, pendingClaims: 1 })
-  })
-
-  it('is zero when there are no claims', async () => {
-    const res = await request(app()).get('/analytics/overview').expect(200)
-    expect(res.body.companies).toEqual({ claimed: 0, pendingClaims: 0 })
+    expect(res.body).not.toHaveProperty('companies')
+    expect(seen.filters.every(filter => !filter.startsWith('company_claims'))).toBe(true)
   })
 })
 

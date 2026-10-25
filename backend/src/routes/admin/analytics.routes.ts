@@ -154,22 +154,16 @@ router.get('/overview', handle('resumen', async (req, res) => {
   const overview = buildOverview({ visits, users, posts, days })
 
   const activeSince = new Date(Date.now() - 45 * 86400000).toISOString()
-  const [{ count: totalUsers }, { count: activeVacancies }, { count: queued }, { data: lastIngested }, claims] = await Promise.all([
+  const [{ count: totalUsers }, { count: activeVacancies }, { count: queued }, { data: lastIngested }] = await Promise.all([
     supabase.from('users').select('*', { count: 'exact', head: true }).eq('is_test_account', false).not('is_scraper_profile', 'is', true).in('user_kind', ['user', 'company']),
     supabase.from('community_posts').select('*', { count: 'exact', head: true }).eq('type', 'job').gte('created_at', activeSince),
     supabase.from('scraper_posts').select('*', { count: 'exact', head: true }).eq('post_type', 'vacancy').eq('synced_to_community', false),
     supabase.from('scraper_posts').select('created_at').eq('post_type', 'vacancy').order('created_at', { ascending: false }).limit(1),
-    supabase.from('company_claims').select('status'),
   ])
 
   res.json({
     ...overview,
     totals: { users: totalUsers ?? 0, activeVacancies: activeVacancies ?? 0, queuedVacancies: queued ?? 0, lastIngestedAt: lastIngested?.[0]?.created_at ?? null },
-    // El lado de las empresas: las que ya reclamaron su perfil y las que están esperando que las apruebes.
-    companies: {
-      claimed: (claims.data ?? []).filter((claim: { status: string }) => claim.status === 'approved').length,
-      pendingClaims: (claims.data ?? []).filter((claim: { status: string }) => claim.status === 'pending').length,
-    },
   })
 }))
 
