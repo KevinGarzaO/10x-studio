@@ -189,7 +189,8 @@ export default function PostPage() {
   // placeholder rayado ahí sería ruido. Y si el cuerpo ya trae la imagen
   // (los artículos del CMS la incluyen en su markdown), no se repite arriba.
   const bodyHasImage = /<img|!\[/.test(displayContent || '')
-  const showsMedia = (post.type === 'editorial' || post.type === 'showcase') && !bodyHasImage
+  // Una discusión sí la muestra cuando la persona subió una portada (sin portada no hay placeholder).
+  const showsMedia = ((post.type === 'editorial' || post.type === 'showcase') || (post.type === 'discussion' && !!post.image_url)) && !bodyHasImage
 
   return (
     <div className="detail-page">
