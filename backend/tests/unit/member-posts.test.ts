@@ -35,6 +35,7 @@ vi.mock('../../services/supabase.service', () => ({
       q.update = (values: Record<string, unknown>) => { state.updates.push({ table, values }); q._op = 'update'; return q }
       q.delete = () => { q._op = 'delete'; return q }
       const result = () => {
+        if (table === 'skills') return { data: [{ name: 'qa' }, { name: 'testing' }, { name: 'react' }], error: null }
         if (table === 'users') return { data: state.user, error: null }
         if (table === 'community_posts' && q._op === 'select' && q._head) return { data: null, count: state.postsToday, error: null }
         if (table === 'community_posts' && q._op === 'select') return { data: { id: 'p1', author_id: state.postAuthor }, error: null }
@@ -117,6 +118,18 @@ describe('POST /posts for members', () => {
 
     expect(res.body.post.id).toBe('new-post')
     expect(state.inserted[0]).toMatchObject({ type: 'discussion', title: valid.title, author_id: 'u1' })
+  })
+
+  it('accepts a role (puesto) and a skill as tags, and nothing else', async () => {
+    await request(app()).post('/posts').send({ ...valid, tags: ['backend', 'ux-ui', 'react'] }).expect(201)
+  })
+
+  it('rejects a tag that is not a skill or a puesto, and says which one', async () => {
+    const res = await request(app()).post('/posts').send({ ...valid, tags: ['react', 'mi-etiqueta-inventada'] }).expect(400)
+
+    expect(res.body.error).toBe('invalid_tags')
+    expect(res.body.invalid).toEqual(['mi-etiqueta-inventada'])
+    expect(state.inserted).toHaveLength(0)
   })
 
   it('rejects text that is too short, with the reasons', async () => {

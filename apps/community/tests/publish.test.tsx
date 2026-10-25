@@ -4,6 +4,7 @@ import userEvent from '@testing-library/user-event'
 import { PublishForm } from '@/components/publish-form'
 import { LeftSidebar, PostCard } from '@/components/community-hub'
 import { ShellContext } from '@/lib/shell-context'
+import { resetSkillCatalogCache } from '@/lib/skill-catalog'
 
 const push = vi.fn()
 vi.mock('next/navigation', () => ({
@@ -17,9 +18,19 @@ const goodTitle = '¿Cómo estructuran sus pruebas?'
 const goodContent = 'Estoy armando la estrategia de pruebas de un equipo nuevo y quiero saber cómo lo hacen ustedes.'
 
 let calls: { url: string; init?: RequestInit }[] = []
+const catalog = {
+  skills: [
+    { name: 'react', label: 'React' }, { name: 'python', label: 'Python' }, { name: 'qa', label: 'QA y Testing' },
+    { name: 'testing', label: 'Testing' }, { name: 'aws', label: 'AWS' }, { name: 'sql', label: 'SQL' }, { name: 'docker', label: 'Docker' },
+  ],
+  aliases: [],
+}
+
 function stubFetch(responder: (url: string, init?: RequestInit) => { ok: boolean; status?: number; body: unknown }) {
   calls = []
   global.fetch = vi.fn(async (url: string, init?: RequestInit) => {
+    // El catálogo de skills lo pide el selector de etiquetas; no cuenta como llamada de la prueba.
+    if (String(url).includes('/api/community/skills')) return { ok: true, status: 200, json: async () => catalog }
     calls.push({ url: String(url), init })
     const result = responder(String(url), init)
     return { ok: result.ok, status: result.status ?? (result.ok ? 200 : 400), json: async () => result.body }
@@ -28,6 +39,7 @@ function stubFetch(responder: (url: string, init?: RequestInit) => { ok: boolean
 
 beforeEach(() => {
   push.mockClear()
+  resetSkillCatalogCache()
   stubFetch(() => ({ ok: true, body: { post: { id: 'p-new' } } }))
 })
 
@@ -73,24 +85,81 @@ describe('PublishForm', () => {
     expect(screen.queryByText(/proyecto/i)).not.toBeInTheDocument()
   })
 
-  it('adds tags with Enter, cleans them, ignores repeats and stops at five', async () => {
+  it('shows the puestos and skills that match while you type', async () => {
+    render(<PublishForm />)
+    await userEvent.type(screen.getByLabelText('Etiquetas'), 're')
+
+    expect(await screen.findByRole('option', { name: 'React' })).toBeInTheDocument()
+    expect(screen.getByText('Skills')).toBeInTheDocument()
+  })
+
+  it('also offers puestos, grouped before the skills', async () => {
+    render(<PublishForm />)
+    await userEvent.type(screen.getByLabelText('Etiquetas'), 'back')
+
+    expect(await screen.findByRole('option', { name: /backend/i })).toBeInTheDocument()
+    expect(screen.getByText('Puestos')).toBeInTheDocument()
+  })
+
+  it('picks from the list with a click, and shows the readable name', async () => {
+    render(<PublishForm />)
+    await userEvent.type(screen.getByLabelText('Etiquetas'), 'pyth')
+    await userEvent.click(await screen.findByRole('option', { name: 'Python' }))
+
+    expect(screen.getByText('#Python')).toBeInTheDocument()
+    expect(screen.queryByRole('listbox')).not.toBeInTheDocument()
+  })
+
+  it('picks the highlighted one with Enter, and moves with the arrows', async () => {
     render(<PublishForm />)
     const input = screen.getByLabelText('Etiquetas')
+    await userEvent.type(input, 'test')
+    await screen.findByRole('option', { name: 'Testing' })
 
-    for (const raw of ['React', 'Node JS!', 'react', 'qa', 'testing', 'carrera', 'sexta']) {
-      await userEvent.type(input, `${raw}{Enter}`)
+    await userEvent.keyboard('{ArrowDown}{Enter}')
+
+    expect(screen.getByText(/^#/)).toBeInTheDocument()
+    expect(screen.queryByRole('option')).not.toBeInTheDocument()
+  })
+
+  it('is closed to the list: text that is not a puesto or a skill cannot be added', async () => {
+    render(<PublishForm />)
+    const input = screen.getByLabelText('Etiquetas')
+    await userEvent.type(input, 'mi etiqueta inventada{Enter}')
+
+    expect(screen.getByText(/sin coincidencias/i)).toBeInTheDocument()
+    expect(screen.queryByText(/^#/)).not.toBeInTheDocument()
+    fireEvent.blur(input)
+    expect(screen.queryByText(/^#/)).not.toBeInTheDocument()
+  })
+
+  it('does not offer what is already chosen, and stops at five', async () => {
+    render(<PublishForm />)
+    const input = () => screen.getByLabelText('Etiquetas')
+
+    for (const [typed, name] of [['react', 'React'], ['python', 'Python'], ['aws', 'AWS'], ['sql', 'SQL'], ['docker', 'Docker']]) {
+      await userEvent.type(input(), typed)
+      await userEvent.click(await screen.findByRole('option', { name }))
     }
 
-    expect(screen.getByText('#react')).toBeInTheDocument()
-    expect(screen.getByText('#node-js')).toBeInTheDocument()
-    expect(screen.getAllByText(/^#react$/)).toHaveLength(1)
-    expect(screen.queryByText('#sexta')).not.toBeInTheDocument()
+    expect(screen.getAllByText(/^#/)).toHaveLength(5)
+    expect(screen.queryByLabelText('Etiquetas')).not.toBeInTheDocument()
+  })
+
+  it('removes a chosen tag', async () => {
+    render(<PublishForm />)
+    await userEvent.type(screen.getByLabelText('Etiquetas'), 'react')
+    await userEvent.click(await screen.findByRole('option', { name: 'React' }))
+
+    await userEvent.click(screen.getByRole('button', { name: 'Quitar React' }))
+    expect(screen.queryByText('#React')).not.toBeInTheDocument()
   })
 
   it('sends the post with the session and goes to it', async () => {
     render(<PublishForm />)
     await fill()
-    await userEvent.type(screen.getByLabelText('Etiquetas'), 'qa{Enter}')
+    await userEvent.type(screen.getByLabelText('Etiquetas'), 'react')
+    await userEvent.click(await screen.findByRole('option', { name: 'React' }))
     await userEvent.click(screen.getByRole('button', { name: 'Publicar' }))
 
     await waitFor(() => expect(push).toHaveBeenCalledWith('/post/p-new'))
@@ -98,7 +167,7 @@ describe('PublishForm', () => {
     expect(call.init?.method).toBe('POST')
     expect((call.init?.headers as Record<string, string>).Authorization).toBe('Bearer tok')
     const body = JSON.parse(String(call.init?.body))
-    expect(body).toMatchObject({ type: 'discussion', title: goodTitle, tags: ['qa'] })
+    expect(body).toMatchObject({ type: 'discussion', title: goodTitle, tags: ['react'] })
     expect(body).not.toHaveProperty('imageUrl')
   })
 

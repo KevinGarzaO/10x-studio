@@ -9,6 +9,7 @@ import { scoreMatch } from '../../../services/matching/score'
 import { evaluateVacancy, MANUAL_PUBLISH_RULE, REJECT_REASON_LABEL } from '../../../services/vacancies/publish-rule'
 import { validateMemberPost, normalizeTags, POSTS_PER_DAY } from '../../../services/community/post-rules'
 import { uploadPostImage, isCommunityImageUrl } from '../../../services/community/post-images'
+import { loadAllowedTags, findInvalidTags } from '../../../services/community/post-tags'
 
 const router = Router()
 
@@ -510,6 +511,18 @@ router.post('/', communityAuthMiddleware, async (req: AuthRequest, res: Response
       postTitle = check.clean.title
       postContent = check.clean.content
       postTags = check.clean.tags
+
+      // Las etiquetas solo pueden ser puestos o skills del catálogo.
+      if (postTags.length > 0) {
+        const invalid = findInvalidTags(postTags, await loadAllowedTags())
+        if (invalid.length > 0) {
+          return res.status(400).json({
+            error: 'invalid_tags',
+            invalid,
+            message: `Las etiquetas deben ser un puesto o un skill de la lista. No se reconoce: ${invalid.join(', ')}.`,
+          })
+        }
+      }
 
       const { data: member } = await supabase.from('users').select('profile_completed').eq('id', req.userId).maybeSingle()
       if (!member?.profile_completed) {

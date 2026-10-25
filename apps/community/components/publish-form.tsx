@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useMemo, useRef, useState, type ChangeEvent, type KeyboardEvent } from 'react'
+import { useEffect, useMemo, useRef, useState, type ChangeEvent } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { Bold, Code, Heading2, ImagePlus, Italic, Link as LinkIcon, List, ListOrdered, Quote, SquareCode, X } from 'lucide-react'
@@ -8,6 +8,7 @@ import { getToken } from '../lib/session'
 import { renderUserMarkdown } from '../lib/user-markdown'
 import { applyFormat, insertAtCursor, type FormatAction } from '../lib/markdown-toolbar'
 import { clearFeedCache } from './community-hub'
+import { TagPicker } from './tag-picker'
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'
 
@@ -35,9 +36,6 @@ const TOOLS: { action: FormatAction; label: string; icon: React.ReactNode }[] = 
   { action: 'code', label: 'Código en línea', icon: <Code size={18} /> },
   { action: 'codeblock', label: 'Bloque de código', icon: <SquareCode size={18} /> },
 ]
-
-const cleanTag = (raw: string): string =>
-  raw.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/^#+/, '').replace(/[^a-z0-9+#.]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 30)
 
 function readAsDataUrl(file: File): Promise<string> {
   return new Promise((resolve, reject) => {
@@ -71,7 +69,6 @@ export function PublishForm() {
   const [title, setTitle] = useState('')
   const [content, setContent] = useState('')
   const [tags, setTags] = useState<string[]>([])
-  const [tagInput, setTagInput] = useState('')
   const [cover, setCover] = useState<string | null>(null)
   const [preview, setPreview] = useState(false)
   const [busy, setBusy] = useState(false)
@@ -119,22 +116,6 @@ export function PublishForm() {
   function flash(text: string) {
     setNote(text)
     setTimeout(() => setNote(''), 2500)
-  }
-
-  function addTag(raw: string) {
-    const tag = cleanTag(raw)
-    if (!tag || tags.includes(tag) || tags.length >= TAGS_MAX) return
-    setTags(previous => [...previous, tag])
-  }
-
-  function onTagKey(event: KeyboardEvent<HTMLInputElement>) {
-    if (event.key === 'Enter' || event.key === ',') {
-      event.preventDefault()
-      addTag(tagInput)
-      setTagInput('')
-    } else if (event.key === 'Backspace' && !tagInput && tags.length > 0) {
-      setTags(previous => previous.slice(0, -1))
-    }
   }
 
   /** Sube una imagen al servidor y devuelve su dirección, o muestra por qué no se pudo. */
@@ -201,7 +182,7 @@ export function PublishForm() {
           type: TYPE,
           title: title.trim(),
           content: content.trim(),
-          tags: tagInput ? [...tags, cleanTag(tagInput)].filter(Boolean) : tags,
+          tags,
           ...(cover ? { imageUrl: cover } : {}),
         }),
       })
@@ -279,21 +260,7 @@ export function PublishForm() {
                   onKeyDown={event => { if (event.key === 'Enter') { event.preventDefault(); textarea.current?.focus() } }}
                 />
 
-                <div className="editor-tags">
-                  {tags.map(tag => (
-                    <span key={tag} className="editor-tag">#{tag}<button type="button" aria-label={`Quitar ${tag}`} onClick={() => setTags(previous => previous.filter(item => item !== tag))}><X size={13} /></button></span>
-                  ))}
-                  {tags.length < TAGS_MAX && (
-                    <input
-                      aria-label="Etiquetas"
-                      value={tagInput}
-                      onChange={event => setTagInput(event.target.value)}
-                      onKeyDown={onTagKey}
-                      onBlur={() => { addTag(tagInput); setTagInput('') }}
-                      placeholder={tags.length === 0 ? `Agrega hasta ${TAGS_MAX} etiquetas…` : 'Agrega otra…'}
-                    />
-                  )}
-                </div>
+                <TagPicker value={tags} onChange={setTags} max={TAGS_MAX} />
 
                 <div className="editor-toolbar" role="toolbar" aria-label="Formato">
                   {TOOLS.map(tool => (
