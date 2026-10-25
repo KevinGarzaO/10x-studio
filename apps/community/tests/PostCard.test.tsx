@@ -70,7 +70,7 @@ describe('PostCard (rediseño del feed)', () => {
   it('tints the badge differently for showcase and article', () => {
     const showcase = render(<PostCard post={{ ...base, type: 'showcase' }} />)
     const showcaseBadge = showcase.container.querySelector('.post-type-badge')
-    expect(showcaseBadge?.textContent).toBe('SHOWCASE')
+    expect(showcaseBadge?.textContent).toBe('PROYECTO')
     expect(showcaseBadge?.className).toContain('is-showcase')
     showcase.unmount()
 

@@ -36,7 +36,7 @@ export function CommunityShell({ children }: { children: ReactNode }) {
 
   // Detalle y perfiles se leen en una sola columna: el diseño quita los
   // sidebars para no competir con el contenido.
-  const isFocusedRoute = ['/post/', '/vacantes/', '/users/', '/empresas/', '/empleos', '/puestos'].some(prefix => pathname.startsWith(prefix))
+  const isFocusedRoute = ['/post/', '/vacantes/', '/users/', '/empresas/', '/empleos', '/puestos', '/publicar'].some(prefix => pathname.startsWith(prefix))
     || pathname === '/profile'
 
   // Sin cuenta solo se ve el feed, los directorios de empleos y la ficha de cada vacante (esta última detrás

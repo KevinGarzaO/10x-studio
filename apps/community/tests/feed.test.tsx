@@ -19,6 +19,7 @@ vi.mock('@/lib/session', () => ({
 const base = { votesCount: 0, commentsCount: 0, tags: [], created_at: '2026-10-01T10:00:00Z', content: 'contenido' }
 const article = { ...base, id: 'a1', type: 'editorial', title: 'Un artículo de prueba', author: { id: 'u1', username: 'ana', display_name: 'Ana', photo_url: null } }
 const job = { ...base, id: 'j1', type: 'job', title: 'Una vacante de prueba', slug: 'una-vacante', company: 'Stripe', author: { id: 'u2', username: 'stripe', display_name: 'Stripe', photo_url: null } }
+const social = { ...base, id: 's1', type: 'discussion', title: 'Una discusión de un miembro', author: { id: 'u3', username: 'beto', display_name: 'Beto', photo_url: null } }
 const match = {
   sourceType: 'community', id: 'j9', title: 'Vacante que coincide', company: 'Twilio', companyLogo: null,
   roleCategory: 'backend', seniorityLevel: 'senior', skills: ['python'], url: '/vacantes/coincide',
@@ -40,6 +41,7 @@ beforeEach(() => {
     const u = String(url)
     if (u.includes('/feed/for-you')) return { ok: true, json: async () => ({ items: [match] }) }
     if (u.includes('/posts/editorial')) return { ok: true, json: async () => ({ posts: [article] }) }
+    if (u.includes('type=social')) return { ok: true, json: async () => ({ posts: [social] }) }
     if (u.includes('type=job')) return { ok: true, json: async () => ({ posts: [job] }) }
     return { ok: true, json: async () => ({}) }
   }) as unknown as typeof fetch
@@ -140,5 +142,24 @@ describe('single feed', () => {
 
       expect(scrollTo).not.toHaveBeenCalled()
     })
+  })
+
+  it('shows what the members publish next to the team articles', async () => {
+    renderFeed(null)
+
+    expect(await screen.findByText('Una discusión de un miembro')).toBeTruthy()
+    expect(screen.getByText('Un artículo de prueba')).toBeTruthy()
+  })
+
+  it('invites a member to publish, and does not invite a visitor', async () => {
+    const member = renderFeed({ id: 'u1', username: 'ana' })
+    await screen.findByText('Una vacante de prueba')
+    expect(member.container.querySelector('a[href="/publicar"].feed-compose')).toBeTruthy()
+    member.unmount()
+    clearFeedCache()
+
+    const visitor = renderFeed(null)
+    await screen.findByText('Una vacante de prueba')
+    expect(visitor.container.querySelector('.feed-compose')).toBeNull()
   })
 })

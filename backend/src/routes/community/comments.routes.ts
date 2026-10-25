@@ -4,6 +4,13 @@ import { communityAuthMiddleware, AuthRequest } from '../../../middleware/commun
 
 const router = Router()
 
+// comments_count has no database trigger: it is recomputed from the real rows.
+async function recountComments(postId: string): Promise<number> {
+  const { count } = await supabase.from('community_comments').select('*', { count: 'exact', head: true }).eq('post_id', postId)
+  await supabase.from('community_posts').update({ comments_count: count ?? 0 }).eq('id', postId)
+  return count ?? 0
+}
+
 router.get('/:postId/comments', async (req: Request, res: Response) => {
   try {
     const postId = req.params.postId as string
@@ -54,7 +61,8 @@ router.post('/:postId/comments', communityAuthMiddleware, async (req: AuthReques
 
     if (error) throw error
 
-    res.status(201).json({ comment })
+    const commentsCount = await recountComments(postId)
+    res.status(201).json({ comment, commentsCount })
   } catch (error) {
     console.error('Community Create comment error:', error)
     res.status(500).json({ error: 'Error al crear el comentario' })
@@ -67,7 +75,7 @@ router.delete('/:commentId', communityAuthMiddleware, async (req: AuthRequest, r
 
     const { data: comment } = await supabase
       .from('community_comments')
-      .select('author_id')
+      .select('author_id, post_id')
       .eq('id', commentId)
       .single()
 
@@ -75,13 +83,15 @@ router.delete('/:commentId', communityAuthMiddleware, async (req: AuthRequest, r
       return res.status(404).json({ error: 'Comentario no encontrado' })
     }
 
-    if (comment.author_id !== req.userId) {
+    const { data: viewer } = await supabase.from('users').select('is_superadmin').eq('id', req.userId).maybeSingle()
+    if (comment.author_id !== req.userId && !viewer?.is_superadmin) {
       return res.status(403).json({ error: 'No tienes permiso para eliminar este comentario' })
     }
 
     await supabase.from('community_comments').delete().eq('id', commentId)
+    const commentsCount = comment.post_id ? await recountComments(comment.post_id) : undefined
 
-    res.json({ message: 'Comentario eliminado' })
+    res.json({ message: 'Comentario eliminado', commentsCount })
   } catch (error) {
     console.error('Community Delete comment error:', error)
     res.status(500).json({ error: 'Error al eliminar el comentario' })

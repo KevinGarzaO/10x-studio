@@ -1,6 +1,9 @@
 'use client'
 
 import { useParams, useRouter } from 'next/navigation'
+import { renderUserMarkdown } from '../../../../lib/user-markdown'
+import { clearFeedCache } from '../../../../components/community-hub'
+import { getToken } from '../../../../lib/session'
 import { PostStats } from '../../../../components/post-stats'
 import { excerptRepeatsBody, promoteCapsHeadings } from '../../../../lib/article-html'
 import { useState, useEffect } from 'react'
@@ -25,6 +28,8 @@ interface PostData {
   author: { id: string | null; username: string; display_name: string; photo_url: string | null }
   tags: string[]
   votesCount: number
+  /** Si quien mira ya votó (discusiones y proyectos). */
+  hasVoted?: boolean
   commentsCount: number
   image_url?: string | null
   slug?: string
@@ -69,7 +74,7 @@ function maskContact(content: string): string {
 
 const TYPE_LABELS: Record<string, string> = {
   editorial: 'ARTÍCULO',
-  showcase: 'SHOWCASE',
+  showcase: 'PROYECTO',
   discussion: 'DISCUSIÓN',
   job: 'VACANTE',
 }
@@ -87,6 +92,7 @@ export default function PostPage() {
   const [votes, setVotes] = useState(0)
   const [voted, setVoted] = useState(false)
   const [saved, setSaved] = useState(false)
+  const [deleting, setDeleting] = useState(false)
   const [comments, setComments] = useState<DetailComment[]>([])
   const [sent, setSent] = useState(false)
   const [commentError, setCommentError] = useState<string | null>(null)
@@ -103,7 +109,8 @@ export default function PostPage() {
     setLoading(true)
     setError(null)
 
-    fetch(`${API_URL}/api/community/posts/${id}`)
+    const token = getToken()
+    fetch(`${API_URL}/api/community/posts/${id}`, token ? { headers: { Authorization: `Bearer ${token}` } } : undefined)
       .then(res => {
         if (!res.ok) throw new Error('Post no encontrado')
         return res.json()
@@ -112,6 +119,7 @@ export default function PostPage() {
         setPost(data)
         setComments(commentsOf(data))
         setVotes(data.votesCount || 0)
+        setVoted(!!data.hasVoted)
         setLoading(false)
       })
       .catch(() => {
@@ -132,6 +140,9 @@ export default function PostPage() {
   }
 
   const isJob = post.type === 'job'
+  // Lo que escriben los miembros se muestra con el convertidor seguro; el contenido del equipo conserva su HTML.
+  const isMemberPost = post.type === 'discussion' || post.type === 'showcase'
+  const canDelete = isMemberPost && !!user && (user.id === post.author?.id || user.user_kind === 'superadmin')
   // A post only has no real author when it fell back to the CMS "content"
   // table (backend marks that with author.id === null) — genuine AvoTalent
   // editorial content.
@@ -140,6 +151,35 @@ export default function PostPage() {
   const initials = hasRealAuthor
     ? authorName.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase()
     : 'AT'
+
+  async function voteOnPost() {
+    if (!isMemberPost) { setVoted(value => !value); return }
+    if (!user) { requestAuth(); return }
+    const next = !voted
+    setVoted(next)
+    try {
+      const res = await fetch(`${API_URL}/api/community/posts/${post!.id}/vote`, { method: 'POST', headers: { Authorization: `Bearer ${getToken()}` } })
+      if (!res.ok) setVoted(!next)
+    } catch {
+      setVoted(!next)
+    }
+  }
+
+  async function deletePost() {
+    if (deleting || !window.confirm('¿Eliminar esta publicación? No se puede deshacer.')) return
+    setDeleting(true)
+    try {
+      const res = await fetch(`${API_URL}/api/community/posts/${post!.id}`, { method: 'DELETE', headers: { Authorization: `Bearer ${getToken()}` } })
+      if (res.ok) {
+        clearFeedCache()
+        router.push('/')
+        return
+      }
+    } catch {
+      // se queda en la página y se puede intentar de nuevo
+    }
+    setDeleting(false)
+  }
 
   const displayContent = (isJob && !user && post.content) ? maskContact(post.content) : post.content
   // Solo artículos y showcase llevan imagen: una discusión es texto, y un
@@ -165,9 +205,9 @@ export default function PostPage() {
 
       {!isJob && (
         <PostStats
-          votes={votes + (voted ? 1 : 0)}
+          votes={Math.max(0, votes + (voted ? 1 : 0) - (post.hasVoted ? 1 : 0))}
           voted={voted}
-          onVote={() => setVoted(!voted)}
+          onVote={voteOnPost}
           comments={comments.length || post.commentsCount || 0}
           readMinutes={post.word_count ? Math.max(1, Math.round(post.word_count / 200)) : null}
           detailed
@@ -185,7 +225,7 @@ export default function PostPage() {
       {displayContent && (
         <div
           className="detail-body editorial-content"
-          dangerouslySetInnerHTML={{ __html: promoteCapsHeadings(marked.parse(displayContent) as string) }}
+          dangerouslySetInnerHTML={{ __html: isMemberPost ? renderUserMarkdown(displayContent) : promoteCapsHeadings(marked.parse(displayContent) as string) }}
         />
       )}
 
@@ -210,6 +250,12 @@ export default function PostPage() {
         onSave={() => (user ? setSaved(!saved) : requestAuth())}
         conversationHref={isJob ? undefined : '#conversation'}
       />
+
+      {canDelete && (
+        <div className="detail-owner-actions">
+          <button type="button" className="detail-delete" onClick={deletePost} disabled={deleting}>{deleting ? 'Eliminando…' : 'Eliminar publicación'}</button>
+        </div>
+      )}
 
       {!isJob && (
         <DetailConversation

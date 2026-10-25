@@ -19,6 +19,7 @@ import { buildFeed, type MatchedItem } from '../lib/mixed-feed'
 import { ForYouCard } from './for-you-card'
 import { VacancyStats, type VacancyStatsData } from './vacancy-stats'
 import { PostStats } from './post-stats'
+import { excerptOf } from '../lib/user-markdown'
 import { HeroBanner } from './hero-banner'
 import { RECOMMENDED_SKILLS, shouldNudgeSkills } from '../lib/skills-recommendation'
 
@@ -74,6 +75,8 @@ interface EditorialPost {
   seniority_level?: string | null
   isSaved?: boolean
   historyId?: string | null
+  /** Si quien mira ya votó esta publicación (discusiones y proyectos). */
+  hasVoted?: boolean
   /** Cuánta gente abrió, guardó y se postuló a la vacante (solo en vacantes). */
   stats?: VacancyStatsData
 }
@@ -190,6 +193,7 @@ export function LeftSidebar({ activeTag, onTagClick }: { activeTag: string | nul
     <nav className="side-nav" aria-label="Navegación principal">
       {[
         { href: '/', label: 'Inicio', icon: <HomeIcon size={18} /> },
+        { href: '/publicar', label: 'Publicar', icon: <PenLine size={18} /> },
         { href: '/empleos', label: 'Empleos por skill', icon: <BriefcaseBusiness size={18} /> },
         { href: '/puestos', label: 'Empleos por puesto', icon: <Target size={18} /> },
         { href: '/saved', label: 'Guardadas', icon: <Bookmark size={18} /> },
@@ -358,11 +362,29 @@ function buildApplyUrl(platform: string | null, sourceUrl: string | null): strin
 }
 
 export function PostCard({ post, onAuthRequired }: { post: FeedPost; onAuthRequired?: () => void }) {
-  const router = useRouter(); const [voted, setVoted] = useState(false); const [saved, setSaved] = useState(!!post.isSaved)
+  const router = useRouter(); const [voted, setVoted] = useState(!!post.hasVoted); const [saved, setSaved] = useState(!!post.isSaved)
   const [historyId, setHistoryId] = useState<string | null>(post.historyId ?? null)
   // Session comes from the shared shell context — every card used to fetch
   // its own copy, which meant one request per card rendered on the page.
   const { user } = useShell()
+
+  // Discusiones y proyectos se votan de verdad (se guarda en el servidor). Los artículos del equipo todavía no tienen
+  // dónde guardar el voto, así que ahí solo cambia en pantalla.
+  const isMemberPost = post.type === 'discussion' || post.type === 'showcase'
+  const handleVote = async () => {
+    if (!isMemberPost) { setVoted(value => !value); return }
+    if (!user) { onAuthRequired?.(); return }
+    const next = !voted
+    setVoted(next)
+    try {
+      const res = await fetch(`${API_URL}/api/community/posts/${post.id}/vote`, { method: 'POST', headers: { Authorization: `Bearer ${getToken()}` } })
+      if (!res.ok) setVoted(!next)
+    } catch {
+      setVoted(!next)
+    }
+  }
+  // El número cuenta el voto propio una sola vez, venga ya guardado o recién dado.
+  const shownVotes = Math.max(0, post.votesCount + (voted ? 1 : 0) - (post.hasVoted ? 1 : 0))
 
   const handleSaveClick = async (e: React.MouseEvent) => {
     e.stopPropagation()
@@ -455,7 +477,7 @@ export function PostCard({ post, onAuthRequired }: { post: FeedPost; onAuthRequi
   const authorName = hasRealAuthor ? (post.author?.display_name || authorUsername || 'Anónimo') : 'AvoTalent'
   const authorInitials = authorName.slice(0, 2).toUpperCase()
   const authorPhoto = hasRealAuthor ? post.author?.photo_url : null
-  const typeLabel = post.type === 'showcase' ? 'SHOWCASE' : post.type === 'discussion' ? 'DISCUSIÓN' : 'ARTÍCULO'
+  const typeLabel = post.type === 'showcase' ? 'PROYECTO' : post.type === 'discussion' ? 'DISCUSIÓN' : 'ARTÍCULO'
   const badgeTone = post.type === 'showcase' ? 'is-showcase' : post.type === 'discussion' ? '' : 'is-article'
   // Solo artículos y showcase llevan imagen: una discusión es texto, y un
   // placeholder rayado ahí solo metería ruido.
@@ -476,12 +498,15 @@ export function PostCard({ post, onAuthRequired }: { post: FeedPost; onAuthRequi
     {image
       ? <div className="post-media"><img src={image} alt="" /></div>
       : showsMedia && <div className="post-media is-placeholder"><span>{typeLabel}</span></div>}
-    <p className="post-excerpt">{(post.content || '').substring(0, 200)}{(post.content || '').length > 200 ? '...' : ''}</p>
+    <p className="post-excerpt">{excerptOf(post.content, 200)}</p>
+    {post.tags && post.tags.length > 0 && (
+      <div className="jc-tags">{post.tags.slice(0, 5).map(tag => <span key={tag} className="jc-tag"><i>#</i>{tag}</span>)}</div>
+    )}
     <div className="jc-meta">
       <PostStats
-        votes={post.votesCount + (voted ? 1 : 0)}
+        votes={shownVotes}
         voted={voted}
-        onVote={() => setVoted(!voted)}
+        onVote={handleVote}
         comments={post.commentsCount}
         readMinutes={post.word_count ? Math.max(1, Math.round(post.word_count / 200)) : null}
       />
@@ -685,13 +710,19 @@ export function Feed() {
     // Las vacantes se piden CON la sesión: sin ella el servidor no sabe cuáles guardaste y al recargar el
     // marcador aparecía vacío aunque la vacante sí estuviera guardada.
     const token = getToken()
-    const [articles, jobs] = await Promise.all([
+    const [editorial, social, jobs] = await Promise.all([
       fetchJson(`${API_URL}/api/community/posts/editorial?page=${pageNum}&limit=${ARTICLES_PER_PAGE}`),
+      // Lo que publican los miembros (discusiones y proyectos), junto a los artículos del equipo.
+      fetchJson(`${API_URL}/api/community/posts?page=${pageNum}&limit=${ARTICLES_PER_PAGE}&type=social`, token),
       fetchJson(`${API_URL}/api/community/posts?page=${pageNum}&limit=${JOBS_PER_PAGE}&type=job&sort=popular`, token),
     ])
+    const editorialPosts = (editorial?.posts || []) as FeedPost[]
+    const socialPosts = (social?.posts || []) as FeedPost[]
     return {
-      articles: (articles?.posts || []) as FeedPost[],
+      articles: [...editorialPosts, ...socialPosts],
       jobs: (jobs?.posts || []) as FeedPost[],
+      // Hay más páginas si cualquiera de las dos fuentes llenó la suya.
+      moreArticles: editorialPosts.length === ARTICLES_PER_PAGE || socialPosts.length === ARTICLES_PER_PAGE,
     }
   }
 
@@ -758,7 +789,7 @@ export function Feed() {
         jobs: batch.jobs,
         forYou,
         page: 1,
-        moreArticles: batch.articles.length === ARTICLES_PER_PAGE,
+        moreArticles: batch.moreArticles,
         moreJobs: batch.jobs.length === JOBS_PER_PAGE,
       })
       loadingRef.current = false
@@ -784,7 +815,7 @@ export function Feed() {
       articles: [...fresh.articles, ...batch.articles.filter(p => !knownArticles.has(p.id))],
       jobs: [...fresh.jobs, ...batch.jobs.filter(p => !knownJobs.has(p.id))],
       page: nextPage,
-      moreArticles: batch.articles.length === ARTICLES_PER_PAGE,
+      moreArticles: batch.moreArticles,
       moreJobs: batch.jobs.length === JOBS_PER_PAGE,
     })
     loadingRef.current = false
@@ -828,6 +859,13 @@ export function Feed() {
 
   return <main className="feed">
     {!user && <HeroBanner />}
+    {user && (
+      <Link href="/publicar" className="feed-compose">
+        <PenLine size={18} />
+        <span>Comparte una pregunta o un proyecto con la comunidad…</span>
+        <strong>Publicar</strong>
+      </Link>
+    )}
     <div className="feed-heading">
       <div>
         <p className="eyebrow">{todayLabel}</p>

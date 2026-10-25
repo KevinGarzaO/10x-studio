@@ -7,6 +7,7 @@ import { companySlug } from '../../../services/company'
 import { loadValidatedSkills } from '../../../services/matching/validated'
 import { scoreMatch } from '../../../services/matching/score'
 import { evaluateVacancy, MANUAL_PUBLISH_RULE, REJECT_REASON_LABEL } from '../../../services/vacancies/publish-rule'
+import { validateMemberPost, normalizeTags, POSTS_PER_DAY } from '../../../services/community/post-rules'
 
 const router = Router()
 
@@ -49,6 +50,26 @@ async function getSavedMap(userId: string | null, postIds: string[]): Promise<Ma
     .eq('is_saved', true)
     .in('source_id', postIds)
   return new Map((data || []).map((r: any) => [r.source_id, r.id]))
+}
+
+// Which of these posts the viewer has voted for (so the arrow shows as pressed after a reload).
+async function getVotedSet(userId: string | null, postIds: string[]): Promise<Set<string>> {
+  if (!userId || postIds.length === 0) return new Set()
+  const { data } = await supabase.from('community_votes').select('post_id').eq('user_id', userId).in('post_id', postIds)
+  return new Set((data || []).map((row: any) => row.post_id as string))
+}
+
+// votes_count / comments_count have no database trigger, so they are recomputed from the real rows here.
+export async function recountVotes(postId: string): Promise<number> {
+  const { count } = await supabase.from('community_votes').select('*', { count: 'exact', head: true }).eq('post_id', postId)
+  await supabase.from('community_posts').update({ votes_count: count ?? 0 }).eq('id', postId)
+  return count ?? 0
+}
+
+async function isSuperadmin(userId: string | undefined): Promise<boolean> {
+  if (!userId) return false
+  const { data } = await supabase.from('users').select('is_superadmin').eq('id', userId).maybeSingle()
+  return !!data?.is_superadmin
 }
 
 router.get('/editorial', async (req: Request, res: Response) => {
@@ -191,7 +212,9 @@ router.get('/', async (req: Request, res: Response) => {
       query = query.order('created_at', { ascending: false })
     }
 
-    if (type) query = query.eq('type', type)
+    // `social` = lo que publican los miembros (discusiones y proyectos), todo junto y lo más nuevo primero.
+    if (type === 'social') query = query.in('type', ['discussion', 'showcase']).order('created_at', { ascending: false })
+    else if (type) query = query.eq('type', type)
     // Only ATS platforms — exclude Telegram/old sources
     if (type === 'job') query = query.in('platform', ['lever', 'workable', 'greenhouse'])
     if (search) {
@@ -282,7 +305,8 @@ router.get('/', async (req: Request, res: Response) => {
     const viewerId = await getOptionalUserId(req)
     const savedMap = await getSavedMap(viewerId, mapped.map((p: any) => p.id))
     const statsOf = type === 'job' ? await loadVacancyStats() : null
-    mapped = mapped.map((p: any) => ({ ...p, ...(statsOf ? { stats: statsOf(p) } : {}), isSaved: savedMap.has(p.id), historyId: savedMap.get(p.id) ?? null }))
+    const votedSet = await getVotedSet(viewerId, mapped.map((p: any) => p.id))
+    mapped = mapped.map((p: any) => ({ ...p, ...(statsOf ? { stats: statsOf(p) } : {}), isSaved: savedMap.has(p.id), historyId: savedMap.get(p.id) ?? null, hasVoted: votedSet.has(p.id) }))
 
     res.json({
       posts: mapped,
@@ -380,6 +404,7 @@ router.get('/:id', async (req: Request, res: Response) => {
         commentsCount: (post as any).comments_count || 0,
         isSaved: savedMap.has((post as any).id),
         historyId: savedMap.get((post as any).id) ?? null,
+        hasVoted: (await getVotedSet(viewerId, [(post as any).id])).has((post as any).id),
       })
     }
 
@@ -428,6 +453,42 @@ router.post('/', communityAuthMiddleware, async (req: AuthRequest, res: Response
 
     if (!title || !content || !type) {
       return res.status(400).json({ error: 'Título, contenido y tipo son requeridos' })
+    }
+
+    // Lo que se guarda: para discusiones y proyectos, el texto ya validado y limpio (ver services/community/post-rules.ts).
+    let postTitle: string = title
+    let postContent: string = content
+    let postTags: string[] | undefined = tags
+
+    if (type === 'job') {
+      // Mientras el alta de empresas esté en pausa, solo el equipo crea vacantes a mano.
+      if (!(await isSuperadmin(req.userId))) {
+        return res.status(403).json({ error: 'jobs_paused', message: 'Por ahora las vacantes las publica solo el equipo de AvoTalent.' })
+      }
+    } else {
+      const check = validateMemberPost({ title, content, type, tags })
+      if (!check.ok) {
+        return res.status(400).json({ error: 'invalid_post', errors: check.errors, message: check.errors.join(' ') })
+      }
+      postTitle = check.clean.title
+      postContent = check.clean.content
+      postTags = check.clean.tags
+
+      const { data: member } = await supabase.from('users').select('profile_completed').eq('id', req.userId).maybeSingle()
+      if (!member?.profile_completed) {
+        return res.status(403).json({ error: 'profile_incomplete', message: 'Completa tu perfil para poder publicar.' })
+      }
+
+      const since = new Date(Date.now() - 24 * 3600 * 1000).toISOString()
+      const { count: today } = await supabase
+        .from('community_posts')
+        .select('*', { count: 'exact', head: true })
+        .eq('author_id', req.userId)
+        .in('type', ['discussion', 'showcase'])
+        .gte('created_at', since)
+      if ((today ?? 0) >= POSTS_PER_DAY) {
+        return res.status(429).json({ error: 'daily_limit', message: `Ya publicaste ${POSTS_PER_DAY} veces en las últimas 24 horas. Vuelve mañana.` })
+      }
     }
 
     // REGLA DE NEGOCIO (services/vacancies/publish-rule.ts): una vacante solo se publica si
@@ -479,8 +540,8 @@ router.post('/', communityAuthMiddleware, async (req: AuthRequest, res: Response
     const { data: post, error } = await supabase
       .from('community_posts')
       .insert({
-        title,
-        content,
+        title: postTitle,
+        content: postContent,
         type,
         budget,
         modalidad,
@@ -494,7 +555,7 @@ router.post('/', communityAuthMiddleware, async (req: AuthRequest, res: Response
 
     // Generate slug for job posts
     if (post && type === 'job') {
-      const slug = generateSlug(title, post.id)
+      const slug = generateSlug(postTitle, post.id)
       await supabase
         .from('community_posts')
         .update({ slug })
@@ -502,8 +563,8 @@ router.post('/', communityAuthMiddleware, async (req: AuthRequest, res: Response
       post.slug = slug
     }
 
-    if (tags?.length && post) {
-      for (const tagName of tags) {
+    if (postTags?.length && post) {
+      for (const tagName of postTags) {
         const { data: existingTag } = await supabase
           .from('community_tags')
           .select('id')
@@ -551,7 +612,7 @@ router.delete('/:id', communityAuthMiddleware, async (req: AuthRequest, res: Res
       return res.status(404).json({ error: 'Publicación no encontrada' })
     }
 
-    if (post.author_id !== req.userId) {
+    if (post.author_id !== req.userId && !(await isSuperadmin(req.userId))) {
       return res.status(403).json({ error: 'No tienes permiso para eliminar esta publicación' })
     }
 
@@ -643,15 +704,16 @@ router.post('/:id/vote', communityAuthMiddleware, async (req: AuthRequest, res: 
         .delete()
         .eq('user_id', req.userId)
         .eq('post_id', id)
-      return res.json({ voted: false })
+      return res.json({ voted: false, votesCount: await recountVotes(id) })
     }
 
-    await supabase.from('community_votes').insert({
+    const { error: voteError } = await supabase.from('community_votes').insert({
       user_id: req.userId,
       post_id: id,
     })
+    if (voteError) return res.status(404).json({ error: 'Publicación no encontrada' })
 
-    res.json({ voted: true })
+    res.json({ voted: true, votesCount: await recountVotes(id) })
   } catch (error) {
     console.error('Community Vote error:', error)
     res.status(500).json({ error: 'Error al votar' })
