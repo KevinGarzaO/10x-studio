@@ -1,6 +1,8 @@
 import { Router, Request, Response } from 'express'
 import { supabase } from '../../../services/supabase.service'
 import { sanitizeAttribution, sanitizeVisitorId } from '../../../services/attribution'
+import { isBotUserAgent } from '../../../services/analytics/bots'
+import { clearPopularityCache } from '../../../services/vacancies/popularity'
 
 const router = Router()
 
@@ -42,7 +44,8 @@ router.post('/visit', async (req: Request, res: Response) => {
   try {
     const visitorId = sanitizeVisitorId(req.body?.visitorId)
     const attribution = sanitizeAttribution(req.body)
-    if (!visitorId || !allowedVisit(req)) return res.status(204).end()
+    // Los robots no son visitantes: no se anotan.
+    if (!visitorId || isBotUserAgent(req.headers['user-agent']) || !allowedVisit(req)) return res.status(204).end()
 
     const since = new Date(Date.now() - SESSION_WINDOW_MS).toISOString()
     let recentQuery = supabase
@@ -88,7 +91,7 @@ router.post('/event', async (req: Request, res: Response) => {
     const visitorId = sanitizeVisitorId(req.body?.visitorId)
     const slug = typeof req.body?.slug === 'string' ? req.body.slug.trim() : ''
     const event = req.body?.event
-    if (!visitorId || !SLUG.test(slug) || !(VACANCY_EVENTS as readonly unknown[]).includes(event) || !allowedEvent(req)) {
+    if (!visitorId || isBotUserAgent(req.headers['user-agent']) || !SLUG.test(slug) || !(VACANCY_EVENTS as readonly unknown[]).includes(event) || !allowedEvent(req)) {
       return res.status(204).end()
     }
 
@@ -113,6 +116,12 @@ router.post('/event', async (req: Request, res: Response) => {
       userId = data.user?.id ?? null
     }
 
+    // El equipo (administradores) y las cuentas de prueba no cuentan como interés en una vacante.
+    if (userId) {
+      const { data: account } = await supabase.from('users').select('user_kind, is_test_account').eq('id', userId).maybeSingle()
+      if (account && (account.is_test_account || account.user_kind === 'superadmin')) return res.status(204).end()
+    }
+
     const attribution = sanitizeAttribution(req.body)
     const { error: insertError } = await supabase.from('vacancy_events').insert({
       vacancy_slug: slug,
@@ -122,6 +131,8 @@ router.post('/event', async (req: Request, res: Response) => {
       source: attribution?.source ?? null,
     })
     if (insertError) throw insertError
+    // Las cifras de la vacante (y su lugar en el feed) cambiaron: que la siguiente lectura las recalcule.
+    clearPopularityCache()
   } catch (error) {
     console.warn('[Attribution] No se pudo guardar el evento de vacante:', (error as Error).message)
   }

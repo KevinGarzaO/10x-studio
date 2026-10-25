@@ -24,7 +24,15 @@ import { RECOMMENDED_SKILLS, shouldNudgeSkills } from '../lib/skills-recommendat
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'
 
 // Module-level cache to preserve feed state across navigations
-const feedCache = new Map<string, FeedSnapshot>()
+// El feed guardado dura poco: pasado este tiempo se vuelve a pedir, para que las cifras (vistas, guardados) y el
+// orden por popularidad se pongan al día cuando alguien regresa al inicio.
+const FEED_CACHE_MS = 60 * 1000
+const feedCache = new Map<string, { at: number; snapshot: FeedSnapshot }>()
+
+/** Olvida el feed guardado (lo usan las pruebas, y sirve para forzar una recarga). */
+export function clearFeedCache() {
+  feedCache.clear()
+}
 
 interface EditorialPost {
   id: string
@@ -377,6 +385,10 @@ export function PostCard({ post, onAuthRequired }: { post: FeedPost; onAuthRequi
   }
 
   const isJob = post.type === 'job'
+  // Guardar o quitar el guardado se refleja al instante en la cifra, sin esperar a que el servidor la recalcule.
+  const liveStats = post.stats
+    ? { ...post.stats, saves: Math.max(0, post.stats.saves + (saved ? 1 : 0) - (post.isSaved ? 1 : 0)) }
+    : post.stats
   const time = formatTime(post.created_at)
   const image = post.image_url
   const job = isJob ? parseJobContent(post.content || post.original_text || '') : null
@@ -415,7 +427,7 @@ export function PostCard({ post, onAuthRequired }: { post: FeedPost; onAuthRequi
       )}
       {tags.length > 0 && <div className="jc-tags">{tags.map(tag => <span key={tag} className="jc-tag"><i>#</i>{tag}</span>)}</div>}
       <div className="jc-meta">
-        <VacancyStats stats={post.stats} />
+        <VacancyStats stats={liveStats} />
         <span className="footer-spacer" />
         <span className="jc-more">Ver vacante →</span>
       </div>
@@ -649,14 +661,17 @@ export function Feed() {
 
   const commit = (next: FeedSnapshot) => {
     snapshotRef.current = next
-    feedCache.set(cacheKeyRef.current, next)
+    feedCache.set(cacheKeyRef.current, { at: Date.now(), snapshot: next })
     setSnapshot(next)
   }
 
   const fetchBatch = async (pageNum: number) => {
+    // Las vacantes se piden CON la sesión: sin ella el servidor no sabe cuáles guardaste y al recargar el
+    // marcador aparecía vacío aunque la vacante sí estuviera guardada.
+    const token = getToken()
     const [articles, jobs] = await Promise.all([
       fetchJson(`${API_URL}/api/community/posts/editorial?page=${pageNum}&limit=${ARTICLES_PER_PAGE}`),
-      fetchJson(`${API_URL}/api/community/posts?page=${pageNum}&limit=${JOBS_PER_PAGE}&type=job&sort=popular`),
+      fetchJson(`${API_URL}/api/community/posts?page=${pageNum}&limit=${JOBS_PER_PAGE}&type=job&sort=popular`, token),
     ])
     return {
       articles: (articles?.posts || []) as FeedPost[],
@@ -670,9 +685,9 @@ export function Feed() {
     cacheKeyRef.current = token ? 'member' : 'guest'
 
     const cached = feedCache.get(cacheKeyRef.current)
-    if (cached) {
-      snapshotRef.current = cached
-      setSnapshot(cached)
+    if (cached && Date.now() - cached.at < FEED_CACHE_MS) {
+      snapshotRef.current = cached.snapshot
+      setSnapshot(cached.snapshot)
       setLoading(false)
       return
     }

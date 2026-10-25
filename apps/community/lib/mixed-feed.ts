@@ -43,7 +43,8 @@ export interface FeedSources<P extends { id: string; created_at?: string | null 
   moreJobs: boolean
 }
 
-type Dated<T> = { time: number; order: number; entry: T }
+/** Un artículo después de cada tantas vacantes: las vacantes mandan, los artículos las acompañan. */
+export const ARTICLE_EVERY = 4
 
 function timeOf(value: string | null | undefined): number {
   const time = value ? new Date(value).getTime() : NaN
@@ -52,22 +53,18 @@ function timeOf(value: string | null | undefined): number {
 }
 
 /**
- * Mezcla artículos, vacantes y coincidencias "Para ti" en UN solo feed, de lo más
- * nuevo a lo más antiguo.
+ * Arma el feed en UN solo flujo. Las vacantes van en el orden que manda el servidor, que es el de popularidad
+ * (más vistas, guardados y postulaciones primero; a igual interés, la más nueva). Este orden NO se vuelve a
+ * ordenar por fecha: antes se mezclaba todo por fecha y la popularidad se perdía.
  *
- * Cada fuente llega por páginas, así que no se puede ordenar solo lo cargado:
- * si la página 2 de las vacantes trae algo más nuevo que lo último que se cargó
- * de los artículos, las tarjetas ya mostradas tendrían que moverse. Por eso solo
- * se muestra lo que ya no puede ser superado por algo sin cargar: una fuente con
- * más páginas pendientes sabe que lo que falta es más viejo que lo último que
- * trajo, y el feed se corta ahí (el "frente") hasta que cargue más. Al cargar más
- * solo se agregan tarjetas al final; las anteriores conservan su lugar.
+ * - Las coincidencias "Para ti" van AL PRINCIPIO, de mayor a menor porcentaje de match (a igual porcentaje, la
+ *   más reciente). Una vacante que ya sale como "Para ti" no se repite como vacante normal.
+ * - Los artículos se reparten entre las vacantes: uno después de cada `ARTICLE_EVERY`, del más nuevo al más viejo.
+ *   Los que sobran van al final cuando ya no hay más vacantes por cargar.
  *
- * Una vacante que ya sale como "Para ti" no se repite como vacante normal.
- *
- * Las "Para ti" van AL PRINCIPIO, de mayor a menor porcentaje de match (a igual
- * porcentaje, la más reciente): son lo que la persona más quiere ver. Siempre llegan
- * completas, así que ponerlas arriba no mueve nada al cargar más.
+ * Cada fuente llega por páginas y lo que ya se mostró no se mueve al cargar más: solo se agregan tarjetas al
+ * final. Por eso, mientras falten artículos por cargar, las vacantes se muestran solo hasta el hueco del siguiente
+ * artículo (que aún no llega), y los artículos sobrantes esperan a que no queden vacantes pendientes.
  */
 export function buildFeed<P extends { id: string; created_at?: string | null }>(
   sources: FeedSources<P>,
@@ -76,35 +73,33 @@ export function buildFeed<P extends { id: string; created_at?: string | null }>(
     sources.forYou.filter(item => item.sourceType === 'community').map(item => item.id),
   )
 
-  const items: Dated<FeedEntry<P>>[] = []
-  let order = 0
-
-  for (const post of sources.articles) {
-    items.push({ time: timeOf(post.created_at), order: order++, entry: { kind: 'article', key: `article:${post.id}`, post } })
-  }
-  for (const post of sources.jobs) {
-    if (matchedCommunityIds.has(post.id)) continue
-    items.push({ time: timeOf(post.created_at), order: order++, entry: { kind: 'job', key: `job:${post.id}`, post } })
-  }
   const forYou: FeedEntry<P>[] = [...sources.forYou]
     .sort((a, b) => (b.matchScore ?? 0) - (a.matchScore ?? 0) || timeOf(b.postDate) - timeOf(a.postDate))
     .map(item => ({ kind: 'forYou', key: `forYou:${item.sourceType}:${item.id}`, item }))
 
-  // Más nuevo primero; a igual fecha, se respeta el orden en que llegó cada fuente.
-  items.sort((a, b) => b.time - a.time || a.order - b.order)
+  const articles = [...sources.articles].sort((a, b) => timeOf(b.created_at) - timeOf(a.created_at))
+  let jobs = sources.jobs.filter(post => !matchedCommunityIds.has(post.id))
 
-  // El frente: de cada fuente con páginas pendientes, lo más viejo que ya trajo.
-  // Todo lo más nuevo que el más reciente de esos límites es seguro de mostrar.
-  const limits: number[] = []
-  if (sources.moreArticles) limits.push(oldestOf(sources.articles))
-  if (sources.moreJobs) limits.push(oldestOf(sources.jobs))
-  const frontier = limits.length > 0 ? Math.max(...limits) : -Infinity
+  // Con artículos por cargar, no se pasa del hueco del siguiente artículo: ese lugar ya está reservado.
+  if (sources.moreArticles) jobs = jobs.slice(0, (articles.length + 1) * ARTICLE_EVERY)
 
-  return [...forYou, ...items.filter(item => item.time >= frontier).map(item => item.entry)]
-}
+  const flow: FeedEntry<P>[] = []
+  let nextArticle = 0
+  jobs.forEach((post, index) => {
+    flow.push({ kind: 'job', key: `job:${post.id}`, post })
+    if ((index + 1) % ARTICLE_EVERY === 0 && nextArticle < articles.length) {
+      const article = articles[nextArticle++]
+      flow.push({ kind: 'article', key: `article:${article.id}`, post: article })
+    }
+  })
 
-/** La fecha más vieja que ya se trajo de una fuente; Infinity si no trajo nada. */
-function oldestOf<P extends { created_at?: string | null }>(posts: P[]): number {
-  if (posts.length === 0) return Infinity
-  return Math.min(...posts.map(post => timeOf(post.created_at)))
+  // Los artículos que sobran, al final, solo cuando ya no puede llegar otra vacante que los desplace.
+  if (!sources.moreJobs) {
+    for (; nextArticle < articles.length; nextArticle++) {
+      const article = articles[nextArticle]
+      flow.push({ kind: 'article', key: `article:${article.id}`, post: article })
+    }
+  }
+
+  return [...forYou, ...flow]
 }

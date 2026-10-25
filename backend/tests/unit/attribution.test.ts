@@ -39,6 +39,8 @@ const app = () => {
   return a
 }
 
+const BROWSER = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36'
+
 describe('sanitizeAttribution', () => {
   it('keeps the UTM values, lowercasing the source and medium', () => {
     expect(
@@ -83,7 +85,7 @@ describe('POST /attribution/visit', () => {
   })
 
   it('stores the visit and always answers 204', async () => {
-    const res = await request(app()).post('/attribution/visit').send({ visitorId: 'visitor-0001', source: 'linkedin', medium: 'social', landingPath: '/vacantes/x' })
+    const res = await request(app()).post('/attribution/visit').set('User-Agent', BROWSER).send({ visitorId: 'visitor-0001', source: 'linkedin', medium: 'social', landingPath: '/vacantes/x' })
 
     expect(res.status).toBe(204)
     expect(inserted).toEqual([
@@ -92,29 +94,46 @@ describe('POST /attribution/visit', () => {
   })
 
   it('stores a direct visit too, with no source', async () => {
-    await request(app()).post('/attribution/visit').send({ visitorId: 'visitor-0002' })
+    await request(app()).post('/attribution/visit').set('User-Agent', BROWSER).send({ visitorId: 'visitor-0002' })
     expect(inserted).toEqual([expect.objectContaining({ visitor_id: 'visitor-0002', source: null })])
   })
 
   it('ignores a visit with no valid visitor id', async () => {
-    const res = await request(app()).post('/attribution/visit').send({ visitorId: 'no valido', source: 'linkedin' })
+    const res = await request(app()).post('/attribution/visit').set('User-Agent', BROWSER).send({ visitorId: 'no valido', source: 'linkedin' })
     expect(res.status).toBe(204)
     expect(inserted).toEqual([])
   })
 
   it('does not count the same visitor twice for the same post in the same session', async () => {
     state.recentContent = 'post-1'
-    const res = await request(app()).post('/attribution/visit').send({ visitorId: 'visitor-0003', source: 'linkedin', content: 'post-1' })
+    const res = await request(app()).post('/attribution/visit').set('User-Agent', BROWSER).send({ visitorId: 'visitor-0003', source: 'linkedin', content: 'post-1' })
     expect(res.status).toBe(204)
     expect(inserted).toEqual([])
   })
 
   it('counts a different post for a visitor with another recent post visit', async () => {
     state.recentContent = 'post-1'
-    const res = await request(app()).post('/attribution/visit').send({ visitorId: 'visitor-0003', source: 'linkedin', content: 'post-2' })
+    const res = await request(app()).post('/attribution/visit').set('User-Agent', BROWSER).send({ visitorId: 'visitor-0003', source: 'linkedin', content: 'post-2' })
     expect(res.status).toBe(204)
     expect(inserted).toEqual([
       expect.objectContaining({ visitor_id: 'visitor-0003', content: 'post-2' }),
     ])
+  })
+})
+
+describe('POST /attribution/visit: robots', () => {
+  it.each([
+    'Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)',
+    'Mozilla/5.0 AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/124.0 Safari/537.36',
+    'facebookexternalhit/1.1',
+    'LinkedInBot/1.0 (compatible; Mozilla/5.0)',
+    'Slackbot-LinkExpanding 1.0',
+    '',
+  ])('does not count %j as a visitor', async agent => {
+    inserted.length = 0
+    const res = await request(app()).post('/attribution/visit').set('User-Agent', agent).send({ visitorId: 'visitor-bot-01', source: 'linkedin' })
+
+    expect(res.status).toBe(204)
+    expect(inserted).toEqual([])
   })
 })

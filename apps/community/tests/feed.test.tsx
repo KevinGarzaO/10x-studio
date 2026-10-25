@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, waitFor } from '@testing-library/react'
-import { Feed } from '@/components/community-hub'
+import { Feed, clearFeedCache } from '@/components/community-hub'
 import { ShellContext } from '@/lib/shell-context'
 
 vi.mock('next/navigation', () => ({
@@ -34,6 +34,7 @@ function renderFeed(user: unknown) {
 }
 
 beforeEach(() => {
+  clearFeedCache()
   token = null
   global.fetch = vi.fn(async (url: string) => {
     const u = String(url)
@@ -73,5 +74,22 @@ describe('single feed', () => {
     expect(screen.getByText('Un artículo de prueba')).toBeTruthy()
     expect(screen.getByText('Una vacante de prueba')).toBeTruthy()
     expect(screen.getByText(/1 skill en común/)).toBeTruthy()
+  })
+
+  it('asks for the vacancies ordered by popularity', async () => {
+    renderFeed(null)
+    await screen.findByText('Una vacante de prueba')
+
+    const urls = (global.fetch as any).mock.calls.map((c: any[]) => String(c[0]))
+    expect(urls.some((u: string) => u.includes('type=job') && u.includes('sort=popular'))).toBe(true)
+  })
+
+  it('asks for the vacancies WITH the session, so the server knows which ones you saved', async () => {
+    token = 'tok'
+    renderFeed({ id: 'u1', username: 'ana' })
+    await screen.findByText('Una vacante de prueba')
+
+    const call = (global.fetch as any).mock.calls.find((c: any[]) => String(c[0]).includes('type=job'))
+    expect(call[1].headers.Authorization).toBe('Bearer tok')
   })
 })

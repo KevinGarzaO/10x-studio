@@ -154,16 +154,21 @@ router.get('/overview', handle('resumen', async (req, res) => {
   const overview = buildOverview({ visits, users, posts, days })
 
   const activeSince = new Date(Date.now() - 45 * 86400000).toISOString()
-  const [{ count: totalUsers }, { count: activeVacancies }, { count: queued }, { data: lastIngested }] = await Promise.all([
+  const [{ count: totalUsers }, { count: activeVacancies }, { count: queued }, { data: lastIngested }, { data: lastPublished }, { data: cycle }] = await Promise.all([
     supabase.from('users').select('*', { count: 'exact', head: true }).eq('is_test_account', false).not('is_scraper_profile', 'is', true).in('user_kind', ['user', 'company']),
     supabase.from('community_posts').select('*', { count: 'exact', head: true }).eq('type', 'job').gte('created_at', activeSince),
     supabase.from('scraper_posts').select('*', { count: 'exact', head: true }).eq('post_type', 'vacancy').eq('synced_to_community', false),
     supabase.from('scraper_posts').select('created_at').eq('post_type', 'vacancy').order('created_at', { ascending: false }).limit(1),
+    supabase.from('community_posts').select('created_at').eq('type', 'job').order('created_at', { ascending: false }).limit(1),
+    supabase.from('scraper_cycle_state').select('cycle_started_at').eq('id', 1).limit(1),
   ])
 
   res.json({
     ...overview,
-    totals: { users: totalUsers ?? 0, activeVacancies: activeVacancies ?? 0, queuedVacancies: queued ?? 0, lastIngestedAt: lastIngested?.[0]?.created_at ?? null },
+    totals: { users: totalUsers ?? 0, activeVacancies: activeVacancies ?? 0, queuedVacancies: queued ?? 0, lastIngestedAt: lastIngested?.[0]?.created_at ?? null,
+      // La última que salió al feed (el scraper trae lotes cada 15 días y el feed los publica 20 por día) y cuándo toca el siguiente lote.
+      lastPublishedAt: lastPublished?.[0]?.created_at ?? null,
+      nextScrapeAt: cycle?.[0]?.cycle_started_at ? new Date(Date.parse(cycle[0].cycle_started_at) + 15 * 86400000).toISOString() : null },
   })
 }))
 

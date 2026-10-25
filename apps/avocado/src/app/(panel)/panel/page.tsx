@@ -13,7 +13,7 @@ interface Overview {
   vs: { visitors: number | null; signups: number | null }
   linkedin: { visitors: number; signups: number; posts: number; failedPosts: number }
   series: { day: string; visitors: number; signups: number }[]
-  totals: { users: number; activeVacancies: number; queuedVacancies: number; lastIngestedAt: string | null }
+  totals: { users: number; activeVacancies: number; queuedVacancies: number; lastIngestedAt: string | null; lastPublishedAt: string | null; nextScrapeAt: string | null }
 }
 
 export default function ResumenPage() {
@@ -60,7 +60,8 @@ export default function ResumenPage() {
                 <Stat label="Usuarios" value={fmtNum(data.totals.users)} caption="Cuentas reales en total." />
                 <Stat label="Vacantes abiertas" value={fmtNum(data.totals.activeVacancies)} caption="Publicadas en los últimos 45 días." />
                 <Stat label="En cola" value={fmtNum(data.totals.queuedVacancies)} caption="Esperando salir al feed (20 por día)." />
-                <Stat label="Última vacante nueva" value={fmtDate(data.totals.lastIngestedAt, true)} caption="Cuándo trajo el scraper la más reciente." />
+                <Stat label="Última publicada en el feed" value={fmtDate(data.totals.lastPublishedAt, true)} caption="El feed publica 20 por día, de lunes a viernes, de la cola." />
+                <Stat label="Último lote del scraper" value={fmtDate(data.totals.lastIngestedAt, true)} caption={`El scraper trae un lote cada 15 días${data.totals.nextScrapeAt ? `; el siguiente toca hacia el ${fmtDate(data.totals.nextScrapeAt)}` : ''}.`} />
               </div>
             </Card>
           </div>

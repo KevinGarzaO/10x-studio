@@ -88,11 +88,38 @@ export function getAttribution(now: number = Date.now()): Attribution | null {
 }
 
 /**
+ * El equipo no debe contarse como visitantes. Entrar una vez a `?notrack=1` en un navegador deja de medir las
+ * visitas y las vistas de ese navegador; `?notrack=0` lo vuelve a activar.
+ */
+export const NO_TRACK_KEY = 'avo_no_track'
+
+export function isTrackingOff(): boolean {
+  try {
+    return localStorage.getItem(NO_TRACK_KEY) === '1'
+  } catch {
+    return false
+  }
+}
+
+function applyNoTrackParam(search: string): void {
+  try {
+    const value = new URLSearchParams(search).get('notrack')
+    if (value === '1') localStorage.setItem(NO_TRACK_KEY, '1')
+    else if (value === '0') localStorage.removeItem(NO_TRACK_KEY)
+  } catch {
+    // sin almacenamiento no se puede recordar la preferencia
+  }
+}
+
+/**
  * Se llama al entrar al sitio: guarda el origen más reciente y avisa al backend una vez
  * por origen marcado durante la sesión del navegador.
  */
 export function captureAttribution(): void {
   if (typeof window === 'undefined') return
+
+  applyNoTrackParam(window.location.search)
+  if (isTrackingOff()) return
 
   const current = readAttribution(window.location.search, document.referrer, window.location.hostname, window.location.pathname)
 
@@ -142,7 +169,7 @@ export function captureAttribution(): void {
  * repite. El clic en "Postularse" se anota cada vez (el servidor ignora un doble clic).
  */
 export function trackVacancyEvent(slug: string, event: 'view' | 'apply'): void {
-  if (typeof window === 'undefined' || !slug) return
+  if (typeof window === 'undefined' || !slug || isTrackingOff()) return
 
   if (event === 'view') {
     const key = `avo_vacancy_view_${slug}`

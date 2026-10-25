@@ -36,7 +36,8 @@ interface Loaded {
   savesById: Map<string, number>
 }
 
-const CACHE_MS = 5 * 60 * 1000
+// Se guarda poco tiempo y, además, se borra en cuanto alguien abre, guarda o se postula (ver clearPopularityCache).
+const CACHE_MS = 30 * 1000
 let cache: { at: number; value: Loaded } | null = null
 
 export function clearPopularityCache(): void {

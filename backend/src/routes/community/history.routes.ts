@@ -1,6 +1,7 @@
 import { Router, Response } from 'express'
 import { supabase } from '../../../services/supabase.service'
 import { communityAuthMiddleware, AuthRequest } from '../../../middleware/community-auth.middleware'
+import { clearPopularityCache } from '../../../services/vacancies/popularity'
 
 const router = Router()
 
@@ -59,6 +60,7 @@ router.post('/save', communityAuthMiddleware, async (req: AuthRequest, res: Resp
 
     if (error) throw error
 
+    clearPopularityCache()
     res.json({ item: data })
   } catch (error) {
     console.error('Community history save error:', error)
@@ -76,6 +78,7 @@ router.delete('/:id', communityAuthMiddleware, async (req: AuthRequest, res: Res
 
     if (error) throw error
 
+    clearPopularityCache()
     res.json({ message: 'Eliminado de tu historial' })
   } catch (error) {
     console.error('Community history delete error:', error)

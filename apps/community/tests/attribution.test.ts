@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import { readAttribution, getAttribution, captureAttribution } from '@/lib/attribution'
+import { readAttribution, getAttribution, captureAttribution, isTrackingOff, trackVacancyEvent } from '@/lib/attribution'
 
 const url = (search: string) => `https://avotalent.com/vacantes/x${search}`
 
@@ -105,5 +105,51 @@ describe('captureAttribution / getAttribution', () => {
     expect(getAttribution()).toBeNull()
     getItem.mockRestore()
     setItem.mockRestore()
+  })
+})
+
+describe('the team opts out of the measurements', () => {
+  const fetchMock = vi.fn(() => Promise.resolve({ ok: true }))
+  const open = (search: string) => {
+    window.history.pushState({}, '', `/${search}`)
+    Object.defineProperty(document, 'referrer', { value: '', configurable: true })
+    captureAttribution()
+  }
+
+  beforeEach(() => {
+    localStorage.clear()
+    sessionStorage.clear()
+    fetchMock.mockClear()
+    vi.stubGlobal('fetch', fetchMock)
+  })
+  afterEach(() => { vi.unstubAllGlobals() })
+
+  it('?notrack=1 stops counting that browser, from that very visit', () => {
+    open('?notrack=1')
+
+    expect(isTrackingOff()).toBe(true)
+    expect(fetchMock).not.toHaveBeenCalled()
+  })
+
+  it('stays off on later visits and for vacancy views', () => {
+    open('?notrack=1')
+    sessionStorage.clear()
+    open('')
+    trackVacancyEvent('backend-1', 'view')
+
+    expect(fetchMock).not.toHaveBeenCalled()
+  })
+
+  it('?notrack=0 turns it back on', () => {
+    open('?notrack=1')
+    open('?notrack=0')
+
+    expect(isTrackingOff()).toBe(false)
+    expect(fetchMock).toHaveBeenCalledTimes(1)
+  })
+
+  it('counts a normal visitor', () => {
+    open('')
+    expect(fetchMock).toHaveBeenCalledTimes(1)
   })
 })

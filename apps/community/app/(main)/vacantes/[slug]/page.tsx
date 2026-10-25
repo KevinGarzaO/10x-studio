@@ -438,7 +438,7 @@ export default function VacancyPage() {
         />
 
         <h1>{post.title}</h1>
-        <VacancyStats stats={post.stats} detailed />
+        <VacancyStats stats={post.stats ? { ...post.stats, saves: Math.max(0, post.stats.saves + (saved ? 1 : 0) - (post.isSaved ? 1 : 0)) } : post.stats} detailed />
 
         {expired && (
           <section className="detail-expired" role="status">
