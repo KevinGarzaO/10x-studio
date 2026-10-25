@@ -1,6 +1,7 @@
 'use client'
 
 import { useParams, useRouter } from 'next/navigation'
+import { ConfirmDialog } from '../../../../components/confirm-dialog'
 import { renderUserMarkdown } from '../../../../lib/user-markdown'
 import { clearFeedCache } from '../../../../components/community-hub'
 import { getToken } from '../../../../lib/session'
@@ -93,6 +94,7 @@ export default function PostPage() {
   const [voted, setVoted] = useState(false)
   const [saved, setSaved] = useState(false)
   const [deleting, setDeleting] = useState(false)
+  const [confirmingDelete, setConfirmingDelete] = useState(false)
   const [comments, setComments] = useState<DetailComment[]>([])
   const [sent, setSent] = useState(false)
   const [commentError, setCommentError] = useState<string | null>(null)
@@ -166,7 +168,7 @@ export default function PostPage() {
   }
 
   async function deletePost() {
-    if (deleting || !window.confirm('¿Eliminar esta publicación? No se puede deshacer.')) return
+    if (deleting) return
     setDeleting(true)
     try {
       const res = await fetch(`${API_URL}/api/community/posts/${post!.id}`, { method: 'DELETE', headers: { Authorization: `Bearer ${getToken()}` } })
@@ -179,6 +181,7 @@ export default function PostPage() {
       // se queda en la página y se puede intentar de nuevo
     }
     setDeleting(false)
+    setConfirmingDelete(false)
   }
 
   const displayContent = (isJob && !user && post.content) ? maskContact(post.content) : post.content
@@ -251,9 +254,22 @@ export default function PostPage() {
         conversationHref={isJob ? undefined : '#conversation'}
       />
 
+      {confirmingDelete && (
+        <ConfirmDialog
+          danger
+          title="¿Eliminar esta publicación?"
+          message="Se borrará junto con sus comentarios y votos. No se puede deshacer."
+          confirmLabel="Eliminar"
+          busyLabel="Eliminando…"
+          busy={deleting}
+          onConfirm={deletePost}
+          onCancel={() => setConfirmingDelete(false)}
+        />
+      )}
+
       {canDelete && (
         <div className="detail-owner-actions">
-          <button type="button" className="detail-delete" onClick={deletePost} disabled={deleting}>{deleting ? 'Eliminando…' : 'Eliminar publicación'}</button>
+          <button type="button" className="detail-delete" onClick={() => setConfirmingDelete(true)}>Eliminar publicación</button>
         </div>
       )}
 

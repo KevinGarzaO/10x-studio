@@ -8,6 +8,7 @@ import { loadValidatedSkills } from '../../../services/matching/validated'
 import { scoreMatch } from '../../../services/matching/score'
 import { evaluateVacancy, MANUAL_PUBLISH_RULE, REJECT_REASON_LABEL } from '../../../services/vacancies/publish-rule'
 import { validateMemberPost, normalizeTags, POSTS_PER_DAY } from '../../../services/community/post-rules'
+import { uploadPostImage, isCommunityImageUrl } from '../../../services/community/post-images'
 
 const router = Router()
 
@@ -447,9 +448,45 @@ router.get('/:id', async (req: Request, res: Response) => {
   }
 })
 
+// Tope por persona: subir imágenes escribe en el almacenamiento.
+const imageUploads = new Map<string, { count: number; resetAt: number }>()
+function allowedImageUpload(userId: string): boolean {
+  const now = Date.now()
+  const entry = imageUploads.get(userId)
+  if (!entry || entry.resetAt < now) {
+    imageUploads.set(userId, { count: 1, resetAt: now + 3600000 })
+    return true
+  }
+  entry.count += 1
+  return entry.count <= 30
+}
+
+/**
+ * POST /api/community/posts/upload-image — sube una imagen (la portada o una del texto) y devuelve su dirección.
+ * Solo PNG, JPG, WEBP o GIF de hasta 5 MB, solo miembros con el perfil completo, hasta 30 por hora.
+ */
+router.post('/upload-image', communityAuthMiddleware, async (req: AuthRequest, res: Response) => {
+  try {
+    const { data: member } = await supabase.from('users').select('profile_completed').eq('id', req.userId).maybeSingle()
+    if (!member?.profile_completed) {
+      return res.status(403).json({ error: 'profile_incomplete', message: 'Completa tu perfil para poder subir imágenes.' })
+    }
+    if (!allowedImageUpload(req.userId as string)) {
+      return res.status(429).json({ error: 'rate_limited', message: 'Subiste muchas imágenes seguidas. Espera un rato.' })
+    }
+
+    const result = await uploadPostImage(req.body?.dataUrl, req.userId as string)
+    if (!result.ok) return res.status(400).json({ error: 'invalid_image', message: result.error })
+    res.status(201).json({ url: result.url })
+  } catch (error) {
+    console.error('Community upload image error:', error)
+    res.status(500).json({ error: 'No se pudo subir la imagen' })
+  }
+})
+
 router.post('/', communityAuthMiddleware, async (req: AuthRequest, res: Response) => {
   try {
-    const { title, content, type, budget, modalidad, tags, roleCategory, seniority, skills, applyUrl, company, location } = req.body
+    const { title, content, type, budget, modalidad, tags, roleCategory, seniority, skills, applyUrl, company, location, imageUrl } = req.body
 
     if (!title || !content || !type) {
       return res.status(400).json({ error: 'Título, contenido y tipo son requeridos' })
@@ -537,19 +574,29 @@ router.post('/', communityAuthMiddleware, async (req: AuthRequest, res: Response
       })
     }
 
-    const { data: post, error } = await supabase
+    // La portada solo puede ser una imagen que se subió a nuestro almacenamiento (no una dirección cualquiera).
+    const cover = type !== 'job' && isCommunityImageUrl(imageUrl) ? imageUrl : null
+
+    const row = {
+      title: postTitle,
+      content: postContent,
+      type,
+      budget,
+      modalidad,
+      author_id: req.userId,
+      ...vacancy,
+    }
+    let { data: post, error } = await supabase
       .from('community_posts')
-      .insert({
-        title: postTitle,
-        content: postContent,
-        type,
-        budget,
-        modalidad,
-        author_id: req.userId,
-        ...vacancy,
-      })
+      .insert(cover ? { ...row, image_url: cover } : row)
       .select()
       .single()
+
+    // Mientras la columna `image_url` no exista (community-post-images-migration.sql sin aplicar), la publicación se
+    // guarda igual, sin portada: mejor eso que perder lo que la persona escribió.
+    if (error && cover && /image_url/.test(String(error.message))) {
+      ;({ data: post, error } = await supabase.from('community_posts').insert(row).select().single())
+    }
 
     if (error) throw error
 

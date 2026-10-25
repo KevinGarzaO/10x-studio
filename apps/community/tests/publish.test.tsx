@@ -37,6 +37,8 @@ const fill = async (title = goodTitle, content = goodContent) => {
 }
 
 describe('PublishForm', () => {
+  beforeEach(() => { localStorage.clear() })
+
   it('cannot publish until the title and the content are long enough', async () => {
     render(<PublishForm />)
     const button = screen.getByRole('button', { name: 'Publicar' })
@@ -53,20 +55,27 @@ describe('PublishForm', () => {
   it('shows how much is left to write', async () => {
     render(<PublishForm />)
     await userEvent.type(screen.getByLabelText('Título'), 'corto')
-    expect(screen.getByText(/5 \/ 140 · mínimo 8/)).toBeInTheDocument()
+    expect(screen.getByText(/Título 5\/140 · mínimo 8/)).toBeInTheDocument()
   })
 
-  it('only offers discussions for now: no project option', () => {
+  it('only offers what is built: a cover upload, the toolbar, publish and save draft', () => {
     render(<PublishForm />)
 
-    expect(screen.queryByRole('radio')).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Subir imagen de portada' })).toBeInTheDocument()
+    expect(screen.getByRole('toolbar', { name: 'Formato' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Guardar borrador' })).toBeInTheDocument()
+
+    // Lo que no existe todavía no se muestra.
+    expect(screen.queryByText(/generar imagen/i)).not.toBeInTheDocument()
+    expect(screen.queryByText(/video/i)).not.toBeInTheDocument()
+    expect(screen.queryByText(/opciones avanzadas|advanced/i)).not.toBeInTheDocument()
+    expect(screen.queryByText(/\bIA\b|inteligencia artificial/)).not.toBeInTheDocument()
     expect(screen.queryByText(/proyecto/i)).not.toBeInTheDocument()
-    expect(screen.getByRole('heading', { name: 'Nueva discusión' })).toBeInTheDocument()
   })
 
   it('adds tags with Enter, cleans them, ignores repeats and stops at five', async () => {
     render(<PublishForm />)
-    const input = screen.getByLabelText(/etiquetas/i)
+    const input = screen.getByLabelText('Etiquetas')
 
     for (const raw of ['React', 'Node JS!', 'react', 'qa', 'testing', 'carrera', 'sexta']) {
       await userEvent.type(input, `${raw}{Enter}`)
@@ -81,14 +90,16 @@ describe('PublishForm', () => {
   it('sends the post with the session and goes to it', async () => {
     render(<PublishForm />)
     await fill()
-    await userEvent.type(screen.getByLabelText(/etiquetas/i), 'qa{Enter}')
+    await userEvent.type(screen.getByLabelText('Etiquetas'), 'qa{Enter}')
     await userEvent.click(screen.getByRole('button', { name: 'Publicar' }))
 
     await waitFor(() => expect(push).toHaveBeenCalledWith('/post/p-new'))
     const call = calls.find(item => item.url.endsWith('/api/community/posts'))!
     expect(call.init?.method).toBe('POST')
     expect((call.init?.headers as Record<string, string>).Authorization).toBe('Bearer tok')
-    expect(JSON.parse(String(call.init?.body))).toMatchObject({ type: 'discussion', title: goodTitle, tags: ['qa'] })
+    const body = JSON.parse(String(call.init?.body))
+    expect(body).toMatchObject({ type: 'discussion', title: goodTitle, tags: ['qa'] })
+    expect(body).not.toHaveProperty('imageUrl')
   })
 
   it('shows the reason when the server refuses, and stays on the form', async () => {
@@ -107,8 +118,115 @@ describe('PublishForm', () => {
     fireEvent.change(screen.getByLabelText('Contenido'), { target: { value: 'Hola **mundo** <script>alert(1)</script>' } })
     await userEvent.click(screen.getByRole('tab', { name: 'Vista previa' }))
 
-    expect(document.querySelector('.publish-preview strong')?.textContent).toBe('mundo')
-    expect(document.querySelector('.publish-preview script')).toBeNull()
+    expect(document.querySelector('.editor-preview strong')?.textContent).toBe('mundo')
+    expect(document.querySelector('.editor-preview script')).toBeNull()
+  })
+})
+
+describe('the cover image', () => {
+  beforeEach(() => { localStorage.clear() })
+
+  const pick = (label: string, file: File) => fireEvent.change(screen.getByLabelText(label), { target: { files: [file] } })
+  const png = () => new File([new Uint8Array(20)], 'portada.png', { type: 'image/png' })
+
+  it('is uploaded to our server and sent with the post', async () => {
+    stubFetch(url => (url.endsWith('/upload-image') ? { ok: true, status: 201, body: { url: 'https://cdn.test/community/u1-1.png' } } : { ok: true, body: { post: { id: 'p-new' } } }))
+    render(<PublishForm />)
+
+    pick('Elegir imagen de portada', png())
+    expect(await screen.findByAltText('Portada de la publicación')).toHaveAttribute('src', 'https://cdn.test/community/u1-1.png')
+    expect(screen.getByRole('button', { name: 'Cambiar' })).toBeInTheDocument()
+
+    await fill()
+    await userEvent.click(screen.getByRole('button', { name: 'Publicar' }))
+    await waitFor(() => expect(push).toHaveBeenCalled())
+    const body = JSON.parse(String(calls.find(item => item.url.endsWith('/api/community/posts'))!.init?.body))
+    expect(body.imageUrl).toBe('https://cdn.test/community/u1-1.png')
+  })
+
+  it('can be removed', async () => {
+    stubFetch(() => ({ ok: true, status: 201, body: { url: 'https://cdn.test/community/u1-1.png' } }))
+    render(<PublishForm />)
+    pick('Elegir imagen de portada', png())
+    await screen.findByAltText('Portada de la publicación')
+
+    await userEvent.click(screen.getByRole('button', { name: 'Quitar' }))
+    expect(screen.queryByAltText('Portada de la publicación')).not.toBeInTheDocument()
+  })
+
+  it('refuses a file that is not an image, without calling the server', async () => {
+    render(<PublishForm />)
+    pick('Elegir imagen de portada', new File(['x'], 'doc.pdf', { type: 'application/pdf' }))
+
+    expect(await screen.findByRole('alert')).toHaveTextContent(/PNG, JPG, WEBP o GIF/)
+    expect(calls).toHaveLength(0)
+  })
+
+  it('shows the reason when the server rejects the image', async () => {
+    stubFetch(() => ({ ok: false, status: 400, body: { message: 'La imagen pesa más de 5 MB.' } }))
+    render(<PublishForm />)
+    pick('Elegir imagen de portada', png())
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('La imagen pesa más de 5 MB.')
+  })
+})
+
+describe('the toolbar', () => {
+  beforeEach(() => { localStorage.clear() })
+
+  it('wraps the selected text in bold', async () => {
+    render(<PublishForm />)
+    const body = screen.getByLabelText('Contenido') as HTMLTextAreaElement
+    fireEvent.change(body, { target: { value: 'hola mundo' } })
+    body.setSelectionRange(5, 10)
+
+    await userEvent.click(screen.getByRole('button', { name: 'Negritas' }))
+
+    expect(body.value).toBe('hola **mundo**')
+  })
+
+  it('turns lines into a list', async () => {
+    render(<PublishForm />)
+    const body = screen.getByLabelText('Contenido') as HTMLTextAreaElement
+    fireEvent.change(body, { target: { value: 'uno\ndos' } })
+    body.setSelectionRange(0, 7)
+
+    await userEvent.click(screen.getByRole('button', { name: 'Lista con viñetas' }))
+
+    expect(body.value).toBe('- uno\n- dos')
+  })
+})
+
+describe('the draft', () => {
+  beforeEach(() => { localStorage.clear() })
+
+  it('is kept in this browser while writing and comes back', async () => {
+    const first = render(<PublishForm />)
+    await fill()
+    await waitFor(() => expect(localStorage.getItem('avo_post_draft')).toContain(goodTitle), { timeout: 2000 })
+    first.unmount()
+
+    render(<PublishForm />)
+    expect((screen.getByLabelText('Título') as HTMLTextAreaElement).value).toBe(goodTitle)
+    expect(screen.getByText('Recuperamos tu borrador')).toBeInTheDocument()
+  })
+
+  it('"Guardar borrador" saves it at once and says so', async () => {
+    render(<PublishForm />)
+    await fill()
+    await userEvent.click(screen.getByRole('button', { name: 'Guardar borrador' }))
+
+    expect(await screen.findByRole('status')).toHaveTextContent('Borrador guardado')
+    expect(localStorage.getItem('avo_post_draft')).toContain(goodTitle)
+  })
+
+  it('is cleared once the post is published', async () => {
+    render(<PublishForm />)
+    await fill()
+    await userEvent.click(screen.getByRole('button', { name: 'Publicar' }))
+
+    await waitFor(() => expect(push).toHaveBeenCalled())
+    expect(localStorage.getItem('avo_post_draft')).toBeNull()
   })
 })
 
