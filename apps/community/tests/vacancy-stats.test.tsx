@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest'
-import { render, screen } from '@testing-library/react'
+import { render, screen, fireEvent } from '@testing-library/react'
 import { VacancyStats } from '@/components/vacancy-stats'
 import { PostCard } from '@/components/community-hub'
 import { ShellContext } from '@/lib/shell-context'
@@ -31,6 +31,11 @@ describe('VacancyStats', () => {
     expect(titles(render(<VacancyStats stats={{ views: 1, saves: 1, applies: 1 }} />).container)).toEqual(['1 vista', '1 guardado', '1 postulación'])
   })
 
+  it('adds the comments to the same row when they are given', () => {
+    const { container } = render(<VacancyStats stats={{ views: 1, saves: 0, applies: 0 }} comments={3} />)
+    expect([...container.querySelectorAll('li')].map(li => li.getAttribute('title'))).toEqual(['1 vista', '0 guardados', '0 postulaciones', '3 comentarios'])
+  })
+
   it('abbreviates thousands', () => {
     const { container } = render(<VacancyStats stats={{ views: 1500, saves: 0, applies: 0 }} />)
     expect(container.textContent).toContain('1.5k')
@@ -54,11 +59,28 @@ describe('a vacancy card', () => {
     </ShellContext.Provider>,
   )
 
-  it('shows how popular it is instead of a comments count and a button', () => {
-    const { container } = renderCard({ ...job, stats: { views: 40, saves: 3, applies: 2 } })
+  it('shows views, saves, applies and comments in one row, with no separate button or footer', () => {
+    const { container } = renderCard({ ...job, commentsCount: 5, stats: { views: 40, saves: 3, applies: 2 } })
 
-    expect(container.querySelectorAll('.vacancy-stats li')).toHaveLength(3)
+    const titles = [...container.querySelectorAll('.vacancy-stats li')].map(li => li.getAttribute('title'))
+    expect(titles).toEqual(['40 vistas', '3 guardados', '2 postulaciones', '5 comentarios'])
     expect(container.querySelector('.jc-cta')).toBeNull()
     expect(container.querySelector('.engagement')).toBeNull()
+  })
+
+  it('an article card has the same kind of row: votes, comments and reading time', () => {
+    const article = { ...job, type: 'editorial', title: 'Un artículo', votesCount: 7, commentsCount: 2, word_count: 800 }
+    const { container } = renderCard(article)
+
+    const texts = [...container.querySelectorAll('.vacancy-stats li')].map(li => li.textContent?.replace(/\s+/g, ' ').trim())
+    expect(texts).toEqual(['7 votos', '2 comentarios', '4 min de lectura'])
+  })
+
+  it('voting on an article moves its number', () => {
+    const article = { ...job, type: 'editorial', title: 'Un artículo', votesCount: 7, commentsCount: 0 }
+    const { container } = renderCard(article)
+
+    fireEvent.click(container.querySelector('.vote-button')!)
+    expect(container.querySelector('.vote-button')?.textContent).toContain('8')
   })
 })

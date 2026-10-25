@@ -1,6 +1,8 @@
 'use client'
 
 import { useParams, useRouter } from 'next/navigation'
+import { PostStats } from '../../../../components/post-stats'
+import { excerptRepeatsBody, promoteCapsHeadings } from '../../../../lib/article-html'
 import { useState, useEffect } from 'react'
 import { LockKeyhole } from 'lucide-react'
 import { marked } from 'marked'
@@ -157,20 +159,20 @@ export default function PostPage() {
         typeLabel={TYPE_LABELS[post.type] || 'PUBLICACIÓN'}
         time={formatTime(post.created_at)}
         verified={!hasRealAuthor}
-        action={
-          hasRealAuthor
-            ? {
-                label: 'Seguir',
-                variant: 'outline',
-                // Seguir no existe en el backend todavía: se muestra como en el
-                // diseño, pero apagado, en vez de fingir que hace algo.
-                disabledReason: 'Seguir a alguien todavía no está disponible',
-              }
-            : undefined
-        }
       />
 
       <h1>{post.title}</h1>
+
+      {!isJob && (
+        <PostStats
+          votes={votes + (voted ? 1 : 0)}
+          voted={voted}
+          onVote={() => setVoted(!voted)}
+          comments={comments.length || post.commentsCount || 0}
+          readMinutes={post.word_count ? Math.max(1, Math.round(post.word_count / 200)) : null}
+          detailed
+        />
+      )}
 
       {showsMedia && (
         post.image_url
@@ -178,12 +180,12 @@ export default function PostPage() {
           : <div className="detail-media is-placeholder"><span>{TYPE_LABELS[post.type]}</span></div>
       )}
 
-      {post.excerpt && <p className="detail-lead">{post.excerpt}</p>}
+      {post.excerpt && !excerptRepeatsBody(post.excerpt, displayContent) && <p className="detail-lead">{post.excerpt}</p>}
 
       {displayContent && (
         <div
           className="detail-body editorial-content"
-          dangerouslySetInnerHTML={{ __html: marked.parse(displayContent) as string }}
+          dangerouslySetInnerHTML={{ __html: promoteCapsHeadings(marked.parse(displayContent) as string) }}
         />
       )}
 
@@ -203,7 +205,6 @@ export default function PostPage() {
       )}
 
       <DetailFooter
-        votes={isJob ? undefined : { count: votes + (voted ? 1 : 0), voted, onVote: () => setVoted(!voted) }}
         commentsCount={comments.length || post.commentsCount || 0}
         saved={saved}
         onSave={() => (user ? setSaved(!saved) : requestAuth())}

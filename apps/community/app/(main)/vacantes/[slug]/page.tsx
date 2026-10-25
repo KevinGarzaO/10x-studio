@@ -523,7 +523,7 @@ export default function VacancyPage() {
           )
         })()}
 
-        <VacancyStats stats={post.stats ? { ...post.stats, saves: Math.max(0, post.stats.saves + (saved ? 1 : 0) - (post.isSaved ? 1 : 0)) } : post.stats} detailed />
+        <VacancyStats stats={post.stats ? { ...post.stats, saves: Math.max(0, post.stats.saves + (saved ? 1 : 0) - (post.isSaved ? 1 : 0)) } : post.stats} comments={comments.length || post.commentsCount || 0} detailed />
 
         {skills.length > 0 && (
           <>

@@ -18,6 +18,7 @@ import { getToken, clearSession } from '../lib/session'
 import { buildFeed, type MatchedItem } from '../lib/mixed-feed'
 import { ForYouCard } from './for-you-card'
 import { VacancyStats, type VacancyStatsData } from './vacancy-stats'
+import { PostStats } from './post-stats'
 import { HeroBanner } from './hero-banner'
 import { RECOMMENDED_SKILLS, shouldNudgeSkills } from '../lib/skills-recommendation'
 
@@ -437,7 +438,7 @@ export function PostCard({ post, onAuthRequired }: { post: FeedPost; onAuthRequi
       )}
       {tags.length > 0 && <div className="jc-tags">{tags.map(tag => <span key={tag} className="jc-tag"><i>#</i>{tag}</span>)}</div>}
       <div className="jc-meta">
-        <VacancyStats stats={liveStats} />
+        <VacancyStats stats={liveStats} comments={post.commentsCount} />
         <span className="footer-spacer" />
         <span className="jc-more">Ver vacante →</span>
       </div>
@@ -476,11 +477,16 @@ export function PostCard({ post, onAuthRequired }: { post: FeedPost; onAuthRequi
       ? <div className="post-media"><img src={image} alt="" /></div>
       : showsMedia && <div className="post-media is-placeholder"><span>{typeLabel}</span></div>}
     <p className="post-excerpt">{(post.content || '').substring(0, 200)}{(post.content || '').length > 200 ? '...' : ''}</p>
-    <div className="jc-foot">
-      <button className={`vote-button ${voted ? 'voted' : ''}`} onClick={() => setVoted(!voted)}><ArrowBigUp size={17} fill={voted ? 'currentColor' : 'none'} />{post.votesCount + (voted ? 1 : 0)}</button>
-      <button className="engagement"><MessageCircle size={16} />{post.commentsCount} comentarios</button>
+    <div className="jc-meta">
+      <PostStats
+        votes={post.votesCount + (voted ? 1 : 0)}
+        voted={voted}
+        onVote={() => setVoted(!voted)}
+        comments={post.commentsCount}
+        readMinutes={post.word_count ? Math.max(1, Math.round(post.word_count / 200)) : null}
+      />
       <span className="footer-spacer" />
-      {post.word_count ? <span className="jc-read"><Clock size={12} /> {Math.max(1, Math.round(post.word_count / 200))} min de lectura</span> : null}
+      <span className="jc-more">Leer →</span>
     </div>
   </article>
 }
