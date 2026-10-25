@@ -862,7 +862,7 @@ export function Feed() {
     {user && (
       <Link href="/publicar" className="feed-compose">
         <PenLine size={18} />
-        <span>Comparte una pregunta o un proyecto con la comunidad…</span>
+        <span>Haz una pregunta o abre un tema con la comunidad…</span>
         <strong>Publicar</strong>
       </Link>
     )}

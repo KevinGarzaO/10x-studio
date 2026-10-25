@@ -2,7 +2,7 @@
 
 import { useMemo, useState, type KeyboardEvent } from 'react'
 import { useRouter } from 'next/navigation'
-import { ArrowLeft, Lightbulb, Rocket, X } from 'lucide-react'
+import { ArrowLeft, X } from 'lucide-react'
 import { getToken } from '../lib/session'
 import { renderUserMarkdown } from '../lib/user-markdown'
 import { clearFeedCache } from './community-hub'
@@ -16,12 +16,9 @@ export const CONTENT_MIN = 20
 export const CONTENT_MAX = 10000
 export const TAGS_MAX = 5
 
-type PostType = 'discussion' | 'showcase'
-
-const TYPES: { value: PostType; label: string; hint: string; icon: React.ReactNode; placeholder: string }[] = [
-  { value: 'discussion', label: 'Discusión', hint: 'Una pregunta o un tema para conversar con la comunidad.', icon: <Lightbulb size={18} />, placeholder: '¿Cómo estructuran las pruebas de un equipo nuevo?' },
-  { value: 'showcase', label: 'Proyecto', hint: 'Algo que construiste y quieres enseñar.', icon: <Rocket size={18} />, placeholder: 'Construí un lector de CVs con IA' },
-]
+// Por ahora solo hay discusiones; los proyectos están en pausa (ver backend/services/community/post-rules.ts).
+const TYPE = 'discussion' as const
+const PLACEHOLDER = '¿Cómo estructuran las pruebas de un equipo nuevo?'
 
 const cleanTag = (raw: string): string =>
   raw.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/^#+/, '').replace(/[^a-z0-9+#.]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 30)
@@ -29,7 +26,6 @@ const cleanTag = (raw: string): string =>
 /** Escribir y publicar una discusión o un proyecto. Solo para miembros con el perfil completo (lo exige el servidor). */
 export function PublishForm() {
   const router = useRouter()
-  const [type, setType] = useState<PostType>('discussion')
   const [title, setTitle] = useState('')
   const [content, setContent] = useState('')
   const [tags, setTags] = useState<string[]>([])
@@ -38,7 +34,6 @@ export function PublishForm() {
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
 
-  const current = TYPES.find(item => item.value === type)!
   const titleLength = title.trim().length
   const contentLength = content.trim().length
   const ready = titleLength >= TITLE_MIN && titleLength <= TITLE_MAX && contentLength >= CONTENT_MIN && contentLength <= CONTENT_MAX
@@ -68,7 +63,7 @@ export function PublishForm() {
       const res = await fetch(`${API_URL}/api/community/posts`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${getToken()}` },
-        body: JSON.stringify({ type, title: title.trim(), content: content.trim(), tags: tagInput ? [...tags, cleanTag(tagInput)].filter(Boolean) : tags }),
+        body: JSON.stringify({ type: TYPE, title: title.trim(), content: content.trim(), tags: tagInput ? [...tags, cleanTag(tagInput)].filter(Boolean) : tags }),
       })
       const data = await res.json().catch(() => ({}))
       if (!res.ok) {
@@ -88,28 +83,12 @@ export function PublishForm() {
     <div className="publish-page">
       <button onClick={() => router.back()} className="detail-back"><ArrowLeft size={15} /> Volver</button>
 
-      <h1 className="publish-title">Nueva publicación</h1>
-      <p className="publish-lead">Comparte lo que sabes con la comunidad. Sé claro y respetuoso: lo que publiques lo verán los demás miembros.</p>
-
-      <div className="publish-types" role="radiogroup" aria-label="Tipo de publicación">
-        {TYPES.map(item => (
-          <button
-            key={item.value}
-            type="button"
-            role="radio"
-            aria-checked={type === item.value}
-            className={`publish-type${type === item.value ? ' is-active' : ''}`}
-            onClick={() => setType(item.value)}
-          >
-            {item.icon}
-            <span><strong>{item.label}</strong><small>{item.hint}</small></span>
-          </button>
-        ))}
-      </div>
+      <h1 className="publish-title">Nueva discusión</h1>
+      <p className="publish-lead">Haz una pregunta o abre un tema con la comunidad. Sé claro y respetuoso: lo que publiques lo verán los demás miembros.</p>
 
       <div className="publish-field">
         <label htmlFor="publish-title">Título</label>
-        <input id="publish-title" value={title} onChange={event => setTitle(event.target.value)} placeholder={current.placeholder} maxLength={TITLE_MAX + 20} />
+        <input id="publish-title" value={title} onChange={event => setTitle(event.target.value)} placeholder={PLACEHOLDER} maxLength={TITLE_MAX + 20} />
         <small className={titleLength > TITLE_MAX ? 'is-bad' : ''}>{titleLength} / {TITLE_MAX}{titleLength > 0 && titleLength < TITLE_MIN ? ` · mínimo ${TITLE_MIN}` : ''}</small>
       </div>
 

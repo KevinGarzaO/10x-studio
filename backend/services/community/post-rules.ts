@@ -1,12 +1,14 @@
 /**
- * Reglas para publicar en la comunidad (discusiones y proyectos). Una sola definición, la misma que usa la ruta
+ * Reglas para publicar en la comunidad (solo discusiones por ahora). Una sola definición, la misma que usa la ruta
  * y que se prueba aparte.
  *
- * Qué se puede publicar: `discussion` (una pregunta o tema) y `showcase` (un proyecto). Las vacantes (`job`)
+ * Qué se puede publicar: `discussion` (una pregunta o tema). Los proyectos (`showcase`) están en pausa. Las vacantes (`job`)
  * las crea el scraper o el equipo; mientras el alta de empresas esté en pausa, nadie más las publica. Los
  * artículos (`editorial`) vienen del equipo editorial, no de los miembros.
  */
-export const MEMBER_POST_TYPES = ['discussion', 'showcase'] as const
+// Por ahora los miembros solo publican discusiones. `showcase` (proyectos) existe en la base y en el feed por si se
+// reactiva, pero no se acepta crearlo: para volver a abrirlo basta agregarlo aquí.
+export const MEMBER_POST_TYPES = ['discussion'] as const
 export type MemberPostType = (typeof MEMBER_POST_TYPES)[number]
 
 export const TITLE_MIN = 8
@@ -59,7 +61,7 @@ export function validateMemberPost(input: PostInput): PostCheck {
 
   const type = input.type
   if (!(MEMBER_POST_TYPES as readonly unknown[]).includes(type)) {
-    errors.push('El tipo de publicación debe ser "discusión" o "proyecto".')
+    errors.push('Por ahora solo se pueden publicar discusiones.')
   }
 
   const title = typeof input.title === 'string' ? input.title.replace(/\s+/g, ' ').trim() : ''

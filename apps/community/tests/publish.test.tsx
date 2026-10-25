@@ -56,12 +56,12 @@ describe('PublishForm', () => {
     expect(screen.getByText(/5 \/ 140 · mínimo 8/)).toBeInTheDocument()
   })
 
-  it('lets you choose between a discussion and a project', async () => {
+  it('only offers discussions for now: no project option', () => {
     render(<PublishForm />)
-    expect(screen.getByRole('radio', { name: /discusión/i })).toHaveAttribute('aria-checked', 'true')
 
-    await userEvent.click(screen.getByRole('radio', { name: /proyecto/i }))
-    expect(screen.getByRole('radio', { name: /proyecto/i })).toHaveAttribute('aria-checked', 'true')
+    expect(screen.queryByRole('radio')).not.toBeInTheDocument()
+    expect(screen.queryByText(/proyecto/i)).not.toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'Nueva discusión' })).toBeInTheDocument()
   })
 
   it('adds tags with Enter, cleans them, ignores repeats and stops at five', async () => {

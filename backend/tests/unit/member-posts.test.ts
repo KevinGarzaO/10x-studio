@@ -94,13 +94,13 @@ describe('post rules', () => {
     expect(normalizeTags('no es una lista')).toEqual([])
   })
 
-  it('accepts a discussion and a project, trimmed', () => {
+  it('accepts a discussion, trimmed', () => {
     const result = validateMemberPost({ ...valid, title: '  Un título   con espacios  ' })
     expect(result.ok).toBe(true)
     if (result.ok) expect(result.clean.title).toBe('Un título con espacios')
   })
 
-  it.each(['job', 'editorial', 'admin', undefined])('does not let a member publish a %s', type => {
+  it.each(['job', 'editorial', 'showcase', 'admin', undefined])('does not let a member publish a %s (projects are paused)', type => {
     expect(validateMemberPost({ ...valid, type }).ok).toBe(false)
   })
 
