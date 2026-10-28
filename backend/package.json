@@ -22,7 +22,11 @@
     "weekly-report": "tsx scripts/weekly-acquisition.ts",
     "linkedin-avatar-metadata": "tsx scripts/linkedin-avatar-metadata.ts",
     "profile-reminder": "tsx scripts/profile-reminder.ts",
-    "email-report": "tsx scripts/email-report.ts"
+    "email-report": "tsx scripts/email-report.ts",
+    "invitation-preview": "tsx scripts/invitation-preview.ts",
+    "import-invitations": "tsx scripts/import-invitations.ts",
+    "invite": "tsx scripts/invite.ts",
+    "invite-report": "tsx scripts/invite-report.ts"
   },
   "dependencies": {
     "@avocado/schemas": "workspace:*",

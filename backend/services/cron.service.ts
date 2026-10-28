@@ -106,6 +106,21 @@ export const initCron = () => {
     }
   })
 
+  // 3b-ter. INVITACIONES POR CORREO a la lista de contactos: una vez al día, 11:00 AM Monterrey (17:00 UTC), después del
+  //     recordatorio de perfil. Primera invitación en el orden de la cola y, a los 5 días, la segunda y última;
+  //     con calentamiento (20, 40, luego 70 al día) y dentro del cupo compartido de 100 correos de Resend. Apagado
+  //     hasta que se active INVITE_EMAILS=on en el servidor (services/email/invitations.ts).
+  cron.schedule('0 17 * * *', async () => {
+    if (process.env.INVITE_EMAILS !== 'on') return
+    try {
+      const { runInvitationBatch } = require('./email/invitations')
+      const outcome = await runInvitationBatch()
+      console.log(`[Invitaciones] ${outcome.status === 'skipped' ? `omitido: ${outcome.reason}` : `enviados ${outcome.sent} (primera ${outcome.step1}, última ${outcome.step2}), fallidos ${outcome.failed}, en espera ${outcome.waiting}`}`)
+    } catch (error) {
+      console.error('[Invitaciones] Error:', error)
+    }
+  })
+
   // 3c. ALARMAS: cada hora se revisan las reglas del panel (services/analytics/alerts.ts) y, si aparece
   //     una grave nueva, se deja en el registro del servidor. Es el único aviso fuera del panel.
   let lastAlerts = ''

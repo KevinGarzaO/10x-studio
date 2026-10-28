@@ -2,6 +2,7 @@ import { Resend } from 'resend'
 import { supabase } from '../supabase.service'
 import { loadVacancyStats, popularityScore, rankByPopularity } from '../vacancies/popularity'
 import { modalityFromLabel } from '../vacancies/modality'
+import { remainingBudget } from './budget'
 import { emailSiteUrl, trackedLink } from './links'
 import { renderProfileReminder, type RenderedEmail, type ReminderVacancy } from './templates/profile-reminder'
 
@@ -134,8 +135,7 @@ export interface PickedVacancy extends ReminderVacancy {
   score: number
 }
 
-/** La vacante abierta más popular (vistas + 3 × guardados + 5 × postulaciones); si nadie ha interactuado, la más reciente. */
-export async function pickPopularVacancy(): Promise<{ vacancy: PickedVacancy; openVacancies: number } | null> {
+async function loadRanked(): Promise<{ ranked: (VacancyRow & { score: number })[]; openVacancies: number }> {
   const since = new Date(Date.now() - OPEN_DAYS * 86400000).toISOString()
   const { data, count } = await supabase
     .from('community_posts')
@@ -149,30 +149,48 @@ export async function pickPopularVacancy(): Promise<{ vacancy: PickedVacancy; op
     .limit(600)
 
   const rows = ((data ?? []) as VacancyRow[]).filter(row => row.slug && known(row.company))
-  if (rows.length === 0) return null
-
   const statsOf = await loadVacancyStats()
-  const top = rankByPopularity(rows, row => statsOf(row))[0]
-  const score = popularityScore(statsOf(top))
+  const ranked = rankByPopularity(rows, row => statsOf(row)).map(row => ({ ...row, score: popularityScore(statsOf(row)) }))
+  return { ranked, openVacancies: count ?? rows.length }
+}
 
+function toPicked(row: VacancyRow & { score: number }, campaign: string, content: string, medium: string = 'recordatorio'): PickedVacancy {
   const meta = [
-    top.company!.trim(),
-    modalityFromLabel(top.modalidad) !== 'unknown' ? top.modalidad!.trim() : null,
-    SENIORITY[top.seniority_level ?? ''] ?? null,
+    row.company!.trim(),
+    modalityFromLabel(row.modalidad) !== 'unknown' ? row.modalidad!.trim() : null,
+    SENIORITY[row.seniority_level ?? ''] ?? null,
   ].filter(Boolean).join(' • ')
-
   return {
-    openVacancies: count ?? rows.length,
-    vacancy: {
-      id: top.id,
-      slug: top.slug,
-      title: top.title.trim(),
-      meta,
-      url: trackedLink(`/vacantes/${top.slug}`, REMINDER_CAMPAIGN, 'vacante-popular'),
-      label: score > 0 ? 'popular' : 'reciente',
-      score,
-    },
+    id: row.id,
+    slug: row.slug,
+    title: row.title.trim(),
+    meta,
+    url: trackedLink(`/vacantes/${row.slug}`, campaign, content, medium),
+    label: row.score > 0 ? 'popular' : 'reciente',
+    score: row.score,
   }
+}
+
+/** La vacante abierta más popular (vistas + 3 × guardados + 5 × postulaciones); si nadie ha interactuado, la más reciente. */
+export async function pickPopularVacancy(): Promise<{ vacancy: PickedVacancy; openVacancies: number } | null> {
+  const { ranked, openVacancies } = await loadRanked()
+  if (ranked.length === 0) return null
+  return { openVacancies, vacancy: toPicked(ranked[0], REMINDER_CAMPAIGN, 'vacante-popular') }
+}
+
+/** Las `count` vacantes más populares, de empresas distintas, para que el correo no sea tres veces lo mismo. */
+export async function pickTopVacancies(count: number, campaign: string, content: string, medium: string = 'recordatorio'): Promise<{ vacancies: PickedVacancy[]; openVacancies: number }> {
+  const { ranked, openVacancies } = await loadRanked()
+  const companies = new Set<string>()
+  const chosen: (VacancyRow & { score: number })[] = []
+  for (const row of ranked) {
+    const key = row.company!.trim().toLowerCase()
+    if (companies.has(key)) continue
+    companies.add(key)
+    chosen.push(row)
+    if (chosen.length === count) break
+  }
+  return { openVacancies, vacancies: chosen.map(row => toPicked(row, campaign, content, medium)) }
 }
 
 export interface MailConfig {
@@ -246,6 +264,8 @@ export interface BatchDeps {
   pickPopularVacancy: typeof pickPopularVacancy
   sendReminders: typeof sendReminders
   mailConfig: () => { config: MailConfig | null; missing: string[] }
+  /** Cuántos correos quedan hoy en el cupo compartido de Resend (100 al día en el plan gratis). */
+  remainingBudget: () => Promise<number>
 }
 
 export type BatchOutcome =
@@ -257,7 +277,7 @@ export type BatchOutcome =
  * Lo llama el cron (encendido con PROFILE_REMINDER_EMAILS=on) y no lanza errores: cualquier problema se devuelve
  * como 'skipped' para que el servidor siga funcionando.
  */
-export async function runProfileReminderBatch(deps: BatchDeps = { loadAudience, pickPopularVacancy, sendReminders, mailConfig: mailConfigFromEnv }): Promise<BatchOutcome> {
+export async function runProfileReminderBatch(deps: BatchDeps = { loadAudience, pickPopularVacancy, sendReminders, mailConfig: mailConfigFromEnv, remainingBudget: () => remainingBudget() }): Promise<BatchOutcome> {
   const { config, missing } = deps.mailConfig()
   if (!config) return { status: 'skipped', reason: `falta ${missing.join(', ')}` }
 
@@ -268,6 +288,8 @@ export async function runProfileReminderBatch(deps: BatchDeps = { loadAudience, 
   const picked = await deps.pickPopularVacancy()
   if (!picked) return { status: 'skipped', reason: 'no hay vacantes abiertas para destacar' }
 
-  const result = await deps.sendReminders(audience.eligible.slice(0, DAILY_LIMIT), picked, config)
+  const room = Math.min(DAILY_LIMIT, await deps.remainingBudget())
+  if (room <= 0) return { status: 'skipped', reason: 'ya se usó el cupo de correos de hoy' }
+  const result = await deps.sendReminders(audience.eligible.slice(0, room), picked, config)
   return { status: 'done', sent: result.sent, failed: result.failed.length, eligible: audience.eligible.length }
 }

@@ -106,6 +106,7 @@ describe('la corrida diaria', () => {
         pickPopularVacancy: async () => picked,
         sendReminders: async (users: AudienceUser[]) => { sentTo.push(users.map(item => item.id)); return { sent: users.length, failed: [], skipped: 0 } },
         mailConfig: () => ({ config, missing: [] }),
+        remainingBudget: async () => 90,
         ...over,
       } as never,
     }
