@@ -12,7 +12,6 @@ export interface ReminderVacancy {
 export interface ProfileReminderData {
   name: string
   completeProfileUrl: string
-  unsubscribeUrl: string
   vacancy: ReminderVacancy
   /** Cuántas vacantes abiertas hay hoy en el sitio. */
   openVacancies: number
@@ -34,7 +33,7 @@ const LABELS = { popular: 'La vacante más popular', reciente: 'Vacante reciente
  * compatibilidad y por qué conviene llenarlo. Todo lo que viene de datos se escapa; las cifras son reales.
  */
 export function renderProfileReminder(data: ProfileReminderData): RenderedEmail {
-  const { name, completeProfileUrl, unsubscribeUrl, vacancy, openVacancies } = data
+  const { name, completeProfileUrl, vacancy, openVacancies } = data
   const others = Math.max(0, openVacancies - 1)
   const othersText = others > 0 ? `esta y las otras ${others.toLocaleString('es-MX')} vacantes abiertas` : 'esta vacante'
 
@@ -153,7 +152,6 @@ export function renderProfileReminder(data: ProfileReminderData): RenderedEmail 
                 <tr>
                   <td bgcolor="#f8fafc" style="background-color: #f8fafc !important; padding: 20px 30px; border-top: 1px solid #e5e7eb; text-align: center;">
                     <p style="margin: 0 0 6px 0; font-size: 12px; color: #9ca3af !important; line-height: 1.5;">Recibes este correo porque creaste una cuenta en AvoTalent. Es un único recordatorio.</p>
-                    <p style="margin: 0 0 6px 0; font-size: 12px; color: #9ca3af !important;"><a href="${escapeHtml(unsubscribeUrl)}" style="color: #6b7280 !important; text-decoration: underline;">No quiero recibir más correos</a></p>
                     <p style="margin: 0; font-size: 12px; color: #9ca3af !important;">© 2026 AvoTalent. Todos los derechos reservados.</p>
                   </td>
                 </tr>
@@ -182,7 +180,6 @@ export function renderProfileReminder(data: ProfileReminderData): RenderedEmail 
     completeProfileUrl,
     '',
     'Recibes este correo porque creaste una cuenta en AvoTalent. Es un único recordatorio.',
-    `Para no recibir más correos: ${unsubscribeUrl}`,
   ].join('\n')
 
   return { subject: PROFILE_REMINDER_SUBJECT, html, text }

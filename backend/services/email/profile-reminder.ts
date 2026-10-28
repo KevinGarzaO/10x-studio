@@ -2,7 +2,7 @@ import { Resend } from 'resend'
 import { supabase } from '../supabase.service'
 import { loadVacancyStats, popularityScore, rankByPopularity } from '../vacancies/popularity'
 import { modalityFromLabel } from '../vacancies/modality'
-import { emailSiteUrl, trackedLink, unsubscribeUrl } from './links'
+import { emailSiteUrl, trackedLink } from './links'
 import { renderProfileReminder, type RenderedEmail, type ReminderVacancy } from './templates/profile-reminder'
 
 /** El tipo de correo: una persona lo recibe una sola vez. */
@@ -35,14 +35,14 @@ export type Exclusion = 'completo' | 'prueba-o-scraper' | 'equipo-o-empresa' | '
  * Por qué una persona NO recibe el recordatorio (o null si sí). Solo personas reales que se registraron, no
  * terminaron el perfil, tienen correo, no se dieron de baja, llevan al menos un día y no lo han recibido.
  */
-export function exclusionFor(user: AudienceUser, alreadySent: Set<string>, now: Date = new Date()): Exclusion | null {
+export function exclusionFor(user: AudienceUser, alreadySent: Set<string>, now: Date = new Date(), minAgeHours: number = MIN_ACCOUNT_AGE_HOURS): Exclusion | null {
   if (user.is_test_account || user.is_scraper_profile) return 'prueba-o-scraper'
   if (user.user_kind !== 'user') return 'equipo-o-empresa'
   if (user.profile_completed) return 'completo'
   if (!user.email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(user.email)) return 'sin-correo'
   if (user.email_opt_out) return 'dio-de-baja'
   if (alreadySent.has(user.id)) return 'ya-enviado'
-  if (now.getTime() - Date.parse(user.created_at) < MIN_ACCOUNT_AGE_HOURS * 3600000) return 'muy-reciente'
+  if (now.getTime() - Date.parse(user.created_at) < minAgeHours * 3600000) return 'muy-reciente'
   return null
 }
 
@@ -74,11 +74,11 @@ export interface Audience {
   /** Personas reales (sin equipo, pruebas ni scraper) y cuántas de ellas ya completaron el perfil. */
   realPeople: number
   completed: number
-  /** false si todavía no se aplicó email-reminders-migration.sql: no se puede enviar sin baja ni registro. */
+  /** false si todavía no se aplicó email-reminders-migration.sql: sin el registro de envíos no se manda. */
   ready: { optOut: boolean; log: boolean }
 }
 
-export async function loadAudience(kind: string = REMINDER_KIND, now: Date = new Date()): Promise<Audience> {
+export async function loadAudience(kind: string = REMINDER_KIND, now: Date = new Date(), minAgeHours: number = MIN_ACCOUNT_AGE_HOURS): Promise<Audience> {
   const base = 'id, email, display_name, name, username, provider, user_kind, is_test_account, is_scraper_profile, profile_completed, created_at'
   const ready = { optOut: true, log: true }
 
@@ -107,7 +107,7 @@ export async function loadAudience(kind: string = REMINDER_KIND, now: Date = new
       realPeople += 1
       if (user.profile_completed) completed += 1
     }
-    const reason = exclusionFor(user, alreadySent, now)
+    const reason = exclusionFor(user, alreadySent, now, minAgeHours)
     if (reason) excluded[reason] += 1
     else eligible.push(user)
   }
@@ -179,32 +179,18 @@ export interface MailConfig {
   apiKey: string
   /** Remitente. Por defecto no-reply@avotalent.app. */
   from: string
-  /** Firma de los enlaces de baja. */
-  linkSecret: string
-  /** Dirección pública del backend, donde vive la baja. */
-  apiUrl: string
 }
 
 export function mailConfigFromEnv(env: NodeJS.ProcessEnv = process.env): { config: MailConfig | null; missing: string[] } {
-  const missing = ['RESEND_API_KEY', 'EMAIL_LINK_SECRET', 'API_PUBLIC_URL'].filter(name => !env[name])
-  if (missing.length > 0) return { config: null, missing }
-  return {
-    missing,
-    config: {
-      apiKey: env.RESEND_API_KEY!,
-      from: env.RESEND_FROM || 'AvoTalent <no-reply@avotalent.app>',
-      linkSecret: env.EMAIL_LINK_SECRET!,
-      apiUrl: env.API_PUBLIC_URL!,
-    },
-  }
+  if (!env.RESEND_API_KEY) return { config: null, missing: ['RESEND_API_KEY'] }
+  return { missing: [], config: { apiKey: env.RESEND_API_KEY, from: env.RESEND_FROM || 'AvoTalent <no-reply@avotalent.app>' } }
 }
 
 /** El correo tal como le llega a una persona (también lo usa la vista previa). */
-export function buildReminder(user: Pick<AudienceUser, 'id' | 'display_name' | 'name' | 'username'>, picked: { vacancy: PickedVacancy; openVacancies: number }, config: Pick<MailConfig, 'linkSecret' | 'apiUrl'>): RenderedEmail {
+export function buildReminder(user: Pick<AudienceUser, 'display_name' | 'name' | 'username'>, picked: { vacancy: PickedVacancy; openVacancies: number }): RenderedEmail {
   return renderProfileReminder({
     name: firstName(user),
     completeProfileUrl: trackedLink('/onboarding', REMINDER_CAMPAIGN, 'boton-completar'),
-    unsubscribeUrl: unsubscribeUrl(user.id, config.linkSecret, config.apiUrl),
     vacancy: picked.vacancy,
     openVacancies: picked.openVacancies,
   })
@@ -230,15 +216,13 @@ export async function sendReminders(users: AudienceUser[], picked: { vacancy: Pi
     const claim = await supabase.from('email_sends').insert({ user_id: user.id, kind, vacancy_id: picked.vacancy.id, status: 'pending' })
     if (claim.error) { result.skipped += 1; continue }
 
-    const email = buildReminder(user, picked, config)
-    const unsubscribe = unsubscribeUrl(user.id, config.linkSecret, config.apiUrl)
+    const email = buildReminder(user, picked)
     const { data, error } = await resend.emails.send({
       from: config.from,
       to: user.email!,
       subject: email.subject,
       html: email.html,
       text: email.text,
-      headers: { 'List-Unsubscribe': `<${unsubscribe}>`, 'List-Unsubscribe-Post': 'List-Unsubscribe=One-Click' },
     })
 
     if (error) {
