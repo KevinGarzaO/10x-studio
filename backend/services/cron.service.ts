@@ -92,6 +92,20 @@ export const initCron = () => {
     })
   }
 
+  // 3b-bis. RECORDATORIO DE PERFIL POR CORREO: una vez al día, 10:00 AM Monterrey (16:00 UTC), a quien se registró hace
+  //     más de un día y sigue sin completar su perfil; un solo correo por persona y máximo 20 por corrida
+  //     (services/email/profile-reminder.ts). Apagado hasta que se active PROFILE_REMINDER_EMAILS=on en el servidor.
+  cron.schedule('0 16 * * *', async () => {
+    if (process.env.PROFILE_REMINDER_EMAILS !== 'on') return
+    try {
+      const { runProfileReminderBatch } = require('./email/profile-reminder')
+      const outcome = await runProfileReminderBatch()
+      console.log(`[RecordatorioPerfil] ${outcome.status === 'skipped' ? `omitido: ${outcome.reason}` : `enviados ${outcome.sent}, fallidos ${outcome.failed}, pendientes por enviar ${outcome.eligible}`}`)
+    } catch (error) {
+      console.error('[RecordatorioPerfil] Error:', error)
+    }
+  })
+
   // 3c. ALARMAS: cada hora se revisan las reglas del panel (services/analytics/alerts.ts) y, si aparece
   //     una grave nueva, se deja en el registro del servidor. Es el único aviso fuera del panel.
   let lastAlerts = ''

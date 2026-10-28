@@ -238,4 +238,36 @@ export async function sendReminders(users: AudienceUser[], picked: { vacancy: Pi
   return result
 }
 
-export { emailSiteUrl }
+/** Cuántos correos salen como máximo en cada corrida diaria: si llegan muchos registros de golpe, no sale todo junto. */
+export const DAILY_LIMIT = 20
+
+export interface BatchDeps {
+  loadAudience: typeof loadAudience
+  pickPopularVacancy: typeof pickPopularVacancy
+  sendReminders: typeof sendReminders
+  mailConfig: () => { config: MailConfig | null; missing: string[] }
+}
+
+export type BatchOutcome =
+  | { status: 'skipped'; reason: string }
+  | { status: 'done'; sent: number; failed: number; eligible: number }
+
+/**
+ * La corrida diaria: manda el recordatorio a quien le toca (máximo DAILY_LIMIT) con la vacante más popular del día.
+ * Lo llama el cron (encendido con PROFILE_REMINDER_EMAILS=on) y no lanza errores: cualquier problema se devuelve
+ * como 'skipped' para que el servidor siga funcionando.
+ */
+export async function runProfileReminderBatch(deps: BatchDeps = { loadAudience, pickPopularVacancy, sendReminders, mailConfig: mailConfigFromEnv }): Promise<BatchOutcome> {
+  const { config, missing } = deps.mailConfig()
+  if (!config) return { status: 'skipped', reason: `falta ${missing.join(', ')}` }
+
+  const audience = await deps.loadAudience()
+  if (!audience.ready.log) return { status: 'skipped', reason: 'falta aplicar email-reminders-migration.sql' }
+  if (audience.eligible.length === 0) return { status: 'done', sent: 0, failed: 0, eligible: 0 }
+
+  const picked = await deps.pickPopularVacancy()
+  if (!picked) return { status: 'skipped', reason: 'no hay vacantes abiertas para destacar' }
+
+  const result = await deps.sendReminders(audience.eligible.slice(0, DAILY_LIMIT), picked, config)
+  return { status: 'done', sent: result.sent, failed: result.failed.length, eligible: audience.eligible.length }
+}

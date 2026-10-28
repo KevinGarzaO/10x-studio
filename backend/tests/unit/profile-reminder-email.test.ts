@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest'
 
 import { renderProfileReminder } from '../../services/email/templates/profile-reminder'
-import { exclusionFor, firstName, maskEmail, MIN_ACCOUNT_AGE_HOURS, type AudienceUser } from '../../services/email/profile-reminder'
+import { DAILY_LIMIT, exclusionFor, firstName, maskEmail, MIN_ACCOUNT_AGE_HOURS, runProfileReminderBatch, type AudienceUser } from '../../services/email/profile-reminder'
 import { trackedLink } from '../../services/email/links'
 
 const NOW = new Date('2026-10-27T18:00:00Z')
@@ -88,5 +88,56 @@ describe('el correo', () => {
     expect(link.searchParams.get('utm_medium')).toBe('recordatorio')
     expect(link.searchParams.get('utm_campaign')).toBe('perfil-pendiente')
     expect(link.searchParams.get('utm_content')).toBe('boton-completar')
+  })
+})
+
+describe('la corrida diaria', () => {
+  const user = (id: string) => ({ ...person(), id })
+  const picked = { vacancy: { id: 'v1', slug: 'x', title: 'Dev', meta: 'Acme', url: 'https://avotalent.app/vacantes/x', label: 'popular' as const, score: 3 }, openVacancies: 10 }
+  const audience = (users: AudienceUser[], log = true) => ({ eligible: users, excluded: {} as never, realPeople: 10, completed: 5, ready: { optOut: true, log } })
+  const config = { apiKey: 'k', from: 'AvoTalent <no-reply@avotalent.app>' }
+
+  const deps = (over: Record<string, unknown> = {}) => {
+    const sentTo: string[][] = []
+    return {
+      sentTo,
+      deps: {
+        loadAudience: async () => audience([user('a'), user('b')]),
+        pickPopularVacancy: async () => picked,
+        sendReminders: async (users: AudienceUser[]) => { sentTo.push(users.map(item => item.id)); return { sent: users.length, failed: [], skipped: 0 } },
+        mailConfig: () => ({ config, missing: [] }),
+        ...over,
+      } as never,
+    }
+  }
+
+  it('manda a quien le toca', async () => {
+    const { deps: d, sentTo } = deps()
+    expect(await runProfileReminderBatch(d)).toEqual({ status: 'done', sent: 2, failed: 0, eligible: 2 })
+    expect(sentTo).toEqual([['a', 'b']])
+  })
+
+  it(`nunca manda más de ${DAILY_LIMIT} en una corrida; el resto queda para mañana`, async () => {
+    const many = Array.from({ length: DAILY_LIMIT + 7 }, (_, index) => user(`u${index}`))
+    const { deps: d, sentTo } = deps({ loadAudience: async () => audience(many) })
+    const outcome = await runProfileReminderBatch(d)
+    expect(sentTo[0]).toHaveLength(DAILY_LIMIT)
+    expect(outcome).toMatchObject({ sent: DAILY_LIMIT, eligible: DAILY_LIMIT + 7 })
+  })
+
+  it('sin nadie que recibirlo no hace nada ni busca vacante', async () => {
+    const { deps: d, sentTo } = deps({ loadAudience: async () => audience([]), pickPopularVacancy: async () => { throw new Error('no debía llamarse') } })
+    expect(await runProfileReminderBatch(d)).toEqual({ status: 'done', sent: 0, failed: 0, eligible: 0 })
+    expect(sentTo).toEqual([])
+  })
+
+  it('se omite, sin enviar, si falta la clave de Resend, la migración o una vacante', async () => {
+    const a = deps({ mailConfig: () => ({ config: null, missing: ['RESEND_API_KEY'] }) })
+    expect(await runProfileReminderBatch(a.deps)).toEqual({ status: 'skipped', reason: 'falta RESEND_API_KEY' })
+    const b = deps({ loadAudience: async () => audience([user('a')], false) })
+    expect((await runProfileReminderBatch(b.deps)).status).toBe('skipped')
+    const c = deps({ pickPopularVacancy: async () => null })
+    expect((await runProfileReminderBatch(c.deps)).status).toBe('skipped')
+    expect([a, b, c].every(item => item.sentTo.length === 0)).toBe(true)
   })
 })
