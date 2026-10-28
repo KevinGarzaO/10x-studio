@@ -20,7 +20,9 @@
     "linkedin-vacancy-preview": "tsx scripts/linkedin-vacancy-preview.ts",
     "signup-sources": "tsx scripts/signup-sources.ts",
     "weekly-report": "tsx scripts/weekly-acquisition.ts",
-    "linkedin-avatar-metadata": "tsx scripts/linkedin-avatar-metadata.ts"
+    "linkedin-avatar-metadata": "tsx scripts/linkedin-avatar-metadata.ts",
+    "profile-reminder": "tsx scripts/profile-reminder.ts",
+    "email-report": "tsx scripts/email-report.ts"
   },
   "dependencies": {
     "@avocado/schemas": "workspace:*",
@@ -35,6 +37,7 @@
     "node-cron": "^3.0.3",
     "node-fetch": "^2.7.0",
     "pg": "^8.23.0",
+    "resend": "^6.35.0",
     "swagger-jsdoc": "^6.2.8",
     "swagger-ui-express": "^5.0.0"
   },
@@ -44,9 +47,9 @@
     "@types/node": "^20.11.24",
     "@types/node-cron": "^3.0.11",
     "@types/node-fetch": "^2.6.11",
+    "@types/supertest": "^6.0.2",
     "@types/swagger-jsdoc": "^6.0.4",
     "@types/swagger-ui-express": "^4.1.6",
-    "@types/supertest": "^6.0.2",
     "supertest": "^7.0.0",
     "ts-node": "^10.9.2",
     "tsx": "^4.7.1",
