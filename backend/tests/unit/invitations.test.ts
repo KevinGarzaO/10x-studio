@@ -122,7 +122,7 @@ describe('el correo de cada persona', () => {
 })
 
 describe('la corrida diaria', () => {
-  const config = { apiKey: 'k', from: 'AvoTalent <no-reply@avotalent.app>' }
+  const config = { apiKey: 'k', from: 'AvoTalent <notificaciones@notificaciones.avotalent.app>' }
   const vacancies = [{ id: 'v', slug: 's', title: 'Dev', meta: 'Acme', url: 'x', label: 'popular' as const, score: 1 }]
 
   const setup = (state: { invitations: Invitation[]; sends: InviteSend[] }, over: Partial<InviteDeps> = {}) => {

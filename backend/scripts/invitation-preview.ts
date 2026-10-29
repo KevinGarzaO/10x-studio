@@ -7,7 +7,7 @@
  */
 import 'dotenv/config'
 import { Resend } from 'resend'
-import { pickTopVacancies } from '../services/email/profile-reminder'
+import { DEFAULT_FROM, pickTopVacancies } from '../services/email/profile-reminder'
 import { trackedLink } from '../services/email/links'
 import { renderInvitation1, renderInvitation2 } from '../services/email/templates/invitation'
 
@@ -18,7 +18,7 @@ async function main() {
   if (!to) throw new Error('Uso: npm run invitation-preview -- tu@correo.com [nombre]')
 
   const resend = new Resend(process.env.RESEND_API_KEY)
-  const from = process.env.RESEND_FROM || 'AvoTalent <no-reply@avotalent.app>'
+  const from = process.env.RESEND_FROM || DEFAULT_FROM
 
   for (const step of [1, 2] as const) {
     const campaign = `invitacion-${step}`

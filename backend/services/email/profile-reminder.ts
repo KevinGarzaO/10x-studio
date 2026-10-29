@@ -6,6 +6,9 @@ import { remainingBudget } from './budget'
 import { emailSiteUrl, trackedLink } from './links'
 import { renderProfileReminder, type RenderedEmail, type ReminderVacancy } from './templates/profile-reminder'
 
+/** El remitente de todos los correos: el subdominio verificado en Resend para notificaciones. */
+export const DEFAULT_FROM = 'AvoTalent <notificaciones@notificaciones.avotalent.app>'
+
 /** El tipo de correo: una persona lo recibe una sola vez. */
 export const REMINDER_KIND = 'perfil-pendiente-1'
 /** Nombre de la campaña en los enlaces (utm_campaign): así el panel cuenta quién llegó desde este correo. */
@@ -195,13 +198,13 @@ export async function pickTopVacancies(count: number, campaign: string, content:
 
 export interface MailConfig {
   apiKey: string
-  /** Remitente. Por defecto no-reply@avotalent.app. */
+  /** Remitente. Por defecto notificaciones@notificaciones.avotalent.app. */
   from: string
 }
 
 export function mailConfigFromEnv(env: NodeJS.ProcessEnv = process.env): { config: MailConfig | null; missing: string[] } {
   if (!env.RESEND_API_KEY) return { config: null, missing: ['RESEND_API_KEY'] }
-  return { missing: [], config: { apiKey: env.RESEND_API_KEY, from: env.RESEND_FROM || 'AvoTalent <no-reply@avotalent.app>' } }
+  return { missing: [], config: { apiKey: env.RESEND_API_KEY, from: env.RESEND_FROM || DEFAULT_FROM } }
 }
 
 /** El correo tal como le llega a una persona (también lo usa la vista previa). */
