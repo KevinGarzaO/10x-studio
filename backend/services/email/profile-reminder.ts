@@ -9,6 +9,9 @@ import { renderProfileReminder, type RenderedEmail, type ReminderVacancy } from 
 /** El remitente de todos los correos: el subdominio verificado en Resend para notificaciones. */
 export const DEFAULT_FROM = 'AvoTalent <notificaciones@notificaciones.avotalent.app>'
 
+/** A dónde llegan las respuestas de las personas (el remitente es de notificaciones y no se lee). */
+export const DEFAULT_REPLY_TO = 'hola@avotalent.app'
+
 /** El tipo de correo: una persona lo recibe una sola vez. */
 export const REMINDER_KIND = 'perfil-pendiente-1'
 /** Nombre de la campaña en los enlaces (utm_campaign): así el panel cuenta quién llegó desde este correo. */
@@ -200,11 +203,13 @@ export interface MailConfig {
   apiKey: string
   /** Remitente. Por defecto notificaciones@notificaciones.avotalent.app. */
   from: string
+  /** A dónde llegan las respuestas. Por defecto hola@avotalent.app. */
+  replyTo: string
 }
 
 export function mailConfigFromEnv(env: NodeJS.ProcessEnv = process.env): { config: MailConfig | null; missing: string[] } {
   if (!env.RESEND_API_KEY) return { config: null, missing: ['RESEND_API_KEY'] }
-  return { missing: [], config: { apiKey: env.RESEND_API_KEY, from: env.RESEND_FROM || DEFAULT_FROM } }
+  return { missing: [], config: { apiKey: env.RESEND_API_KEY, from: env.RESEND_FROM || DEFAULT_FROM, replyTo: env.RESEND_REPLY_TO || DEFAULT_REPLY_TO } }
 }
 
 /** El correo tal como le llega a una persona (también lo usa la vista previa). */
@@ -240,6 +245,7 @@ export async function sendReminders(users: AudienceUser[], picked: { vacancy: Pi
     const email = buildReminder(user, picked)
     const { data, error } = await resend.emails.send({
       from: config.from,
+      replyTo: config.replyTo,
       to: user.email!,
       subject: email.subject,
       html: email.html,

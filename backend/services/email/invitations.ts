@@ -196,7 +196,7 @@ export type InviteOutcome =
 export async function deliverInvitation(invitation: Invitation, step: 1 | 2, email: RenderedEmail, config: MailConfig): Promise<{ ok: boolean; error?: string }> {
   const claim = await supabase.from('invitation_sends').insert({ invitation_id: invitation.id, step, status: 'pending' })
   if (claim.error) return { ok: false, error: 'ya tenía registro' }
-  const { data, error } = await new Resend(config.apiKey).emails.send({ from: config.from, to: invitation.email, subject: email.subject, html: email.html, text: email.text })
+  const { data, error } = await new Resend(config.apiKey).emails.send({ from: config.from, replyTo: config.replyTo, to: invitation.email, subject: email.subject, html: email.html, text: email.text })
   if (error) {
     const message = `${error.name}: ${error.message}`
     await supabase.from('invitation_sends').update({ status: 'failed', error: message }).eq('invitation_id', invitation.id).eq('step', step)

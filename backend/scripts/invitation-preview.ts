@@ -7,7 +7,7 @@
  */
 import 'dotenv/config'
 import { Resend } from 'resend'
-import { DEFAULT_FROM, pickTopVacancies } from '../services/email/profile-reminder'
+import { DEFAULT_FROM, DEFAULT_REPLY_TO, pickTopVacancies } from '../services/email/profile-reminder'
 import { trackedLink } from '../services/email/links'
 import { renderInvitation1, renderInvitation2 } from '../services/email/templates/invitation'
 
@@ -25,7 +25,7 @@ async function main() {
     const { vacancies, openVacancies } = await pickTopVacancies(step === 1 ? 1 : 3, campaign, 'prueba', 'invitacion')
     const data = { name, signupUrl: trackedLink('/signup', campaign, 'prueba', 'invitacion'), openVacancies, vacancies }
     const email = step === 1 ? renderInvitation1(data) : renderInvitation2(data)
-    const { data: sent, error } = await resend.emails.send({ from, to, subject: email.subject, html: email.html, text: email.text })
+    const { data: sent, error } = await resend.emails.send({ from, replyTo: process.env.RESEND_REPLY_TO || DEFAULT_REPLY_TO, to, subject: email.subject, html: email.html, text: email.text })
     if (error) throw new Error(`Resend rechazó la invitación ${step}: ${error.name}: ${error.message}`)
     console.log(`Invitación ${step} enviada (id ${sent?.id}): ${email.subject}`)
   }

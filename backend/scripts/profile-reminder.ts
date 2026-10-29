@@ -71,7 +71,7 @@ async function main() {
   if (preview) {
     // La vista previa nunca usa a una persona real: lleva el nombre que le des (por defecto Kevin).
     const email = buildReminder({ display_name: arg('--name') ?? 'Kevin', name: null, username: null }, picked)
-    const { data, error } = await new Resend(config.apiKey).emails.send({ from: config.from, to: preview, subject: email.subject, html: email.html, text: email.text })
+    const { data, error } = await new Resend(config.apiKey).emails.send({ from: config.from, replyTo: config.replyTo, to: preview, subject: email.subject, html: email.html, text: email.text })
     if (error) { console.error(`\nResend rechazó el envío: ${error.name}: ${error.message}`); process.exit(1) }
     console.log(`\nVista previa enviada a ${preview} (id ${data?.id}). Es el mismo correo que recibiría la persona.`)
     return

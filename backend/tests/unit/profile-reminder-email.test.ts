@@ -95,7 +95,7 @@ describe('la corrida diaria', () => {
   const user = (id: string) => ({ ...person(), id })
   const picked = { vacancy: { id: 'v1', slug: 'x', title: 'Dev', meta: 'Acme', url: 'https://avotalent.app/vacantes/x', label: 'popular' as const, score: 3 }, openVacancies: 10 }
   const audience = (users: AudienceUser[], log = true) => ({ eligible: users, excluded: {} as never, realPeople: 10, completed: 5, ready: { optOut: true, log } })
-  const config = { apiKey: 'k', from: 'AvoTalent <notificaciones@notificaciones.avotalent.app>' }
+  const config = { apiKey: 'k', from: 'AvoTalent <notificaciones@notificaciones.avotalent.app>', replyTo: 'hola@avotalent.app' }
 
   const deps = (over: Record<string, unknown> = {}) => {
     const sentTo: string[][] = []
