@@ -161,7 +161,12 @@ export async function refreshEvents(config: MailConfig, now: Date = new Date()):
 
   let updated = 0
   for (const row of rows) {
-    const { data: email } = await resend.emails.get(row.resend_id)
+    const { data: email, error } = await resend.emails.get(row.resend_id)
+    if (error) {
+      // Una llave de Resend que solo puede enviar ("Sending access") no puede leer estados: se avisa en vez de callar.
+      console.warn(`[Invitaciones] No se pueden leer los estados de Resend (${error.name}: ${error.message}). Usa una llave con acceso completo o un webhook.`)
+      break
+    }
     const event = (email as { last_event?: string } | null)?.last_event
     if (event && event !== row.last_event) {
       await supabase.from('invitation_sends').update({ last_event: event, last_event_at: new Date().toISOString() }).eq('invitation_id', row.invitation_id).eq('step', row.step)

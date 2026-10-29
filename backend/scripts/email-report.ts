@@ -51,7 +51,10 @@ async function main() {
     const counts: Record<string, number> = {}
     for (const row of sent) {
       if (!row.resend_id) continue
-      const { data } = await resend.emails.get(row.resend_id)
+      const { data, error: eventError } = await resend.emails.get(row.resend_id)
+      if (eventError) { console.error(`
+Resend no deja leer los estados: ${eventError.name}: ${eventError.message}
+(La llave solo puede enviar. Para ver entregado/abierto/clic hace falta una llave con acceso completo.)`); return }
       const event = (data as { last_event?: string } | null)?.last_event ?? 'desconocido'
       counts[event] = (counts[event] ?? 0) + 1
       await sleep(600)

@@ -28,6 +28,7 @@ async function main() {
     console.log(`\nInvitación ${step} (${rows.length} enviadas):`)
     console.log(`  entregadas: ${delivered} (${pct(delivered, rows.length)}) · abiertas: ${events('opened', 'clicked')} (${pct(events('opened', 'clicked'), rows.length)}) · con clic: ${events('clicked')} (${pct(events('clicked'), rows.length)})`)
     console.log(`  rebotaron: ${events('bounced')} · marcaron spam: ${events('complained')} · sin dato todavía: ${rows.filter(send => !send.last_event || send.last_event === 'sent').length}`)
+    if (rows.every(send => !send.last_event)) console.log('  (Sin estados: la llave de Resend solo puede enviar y no puede leerlos. Hace falta una llave con acceso completo.)')
   }
 
   const firstSent = new Map(sent.filter(send => send.step === 1).map(send => [send.invitation_id, send.created_at]))
@@ -39,11 +40,12 @@ async function main() {
   const viaLink = registered.filter(inv => byId.get(inv.user_id!)?.signup_content === inv.code)
   const completed = registered.filter(inv => byId.get(inv.user_id!)?.profile_completed)
   const before = invitations.filter(inv => inv.user_id && !registered.includes(inv)).length
+  const neverEmailed = invitations.filter(inv => inv.user_id && !firstSent.has(inv.id)).length
   const invited = firstSent.size
 
   console.log(`\nSe registraron después de la invitación: ${registered.length} de ${invited} invitadas (${pct(registered.length, invited)})`)
   console.log(`  entraron con el enlace del correo: ${viaLink.length} · completaron el perfil: ${completed.length}`)
-  console.log(`  ya tenían cuenta antes de la invitación: ${before}`)
+  console.log(`  ya tenían cuenta y por eso no se les escribió: ${neverEmailed}${before > neverEmailed ? ` · se registraron antes de que les llegara: ${before - neverEmailed}` : ''}`)
   for (const source of ['substack', 'lista']) {
     const group = invitations.filter(inv => inv.source === source && firstSent.has(inv.id))
     const joined = registered.filter(inv => inv.source === source).length
