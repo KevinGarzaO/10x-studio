@@ -1,4 +1,5 @@
 import { Router, Response } from 'express'
+import { notify } from '../../../services/notifications/notify'
 import { buildStartSkillExamSchema, submitAnswerSchema } from '@avocado/schemas'
 import { supabase } from '../../../services/supabase.service'
 import { communityAuthMiddleware, AuthRequest } from '../../../middleware/community-auth.middleware'
@@ -471,6 +472,11 @@ router.post('/:attemptId/answers', communityAuthMiddleware, requireAccountType('
         { onConflict: 'user_id,skill_name' },
       )
       if (levelError) throw levelError
+
+      // Aviso en la campana: validó un skill (o subió de nivel).
+      const { data: skillRow } = await supabase.from('skills').select('label').eq('name', attempt.skill_name).maybeSingle()
+      const levelText = ({ basico: 'básico', intermedio: 'intermedio', avanzado: 'avanzado' } as Record<string, string>)[level] ?? level
+      await notify({ userId, type: 'skill', message: `Validaste ${skillRow?.label ?? attempt.skill_name} con nivel ${levelText}`, link: '/settings', meta: { skill: attempt.skill_name, level } })
     }
 
     const retryAt = retryAvailableAt({

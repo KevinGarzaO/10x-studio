@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { Bell, Menu, X } from 'lucide-react'
 import { fetchCurrentUser, getCachedUser } from '../lib/session'
+import { fetchUnreadCount } from '../lib/notifications'
 import { ShellContext, type AuthRequest } from '../lib/shell-context'
 import { LeftSidebar, RightSidebar, ProfileMenu, AuthModal } from './community-hub'
 import { ProfileGate } from './profile-gate'
@@ -23,6 +24,7 @@ export function CommunityShell({ children }: { children: ReactNode }) {
   const [authOpen, setAuthOpen] = useState(false)
   const [authRequest, setAuthRequest] = useState<AuthRequest | null>(null)
   const [userLoaded, setUserLoaded] = useState(false)
+  const [unread, setUnread] = useState(0)
 
   useEffect(() => {
     setUser(getCachedUser())
@@ -58,6 +60,14 @@ export function CommunityShell({ children }: { children: ReactNode }) {
     setAuthOpen(true)
   }, [])
 
+  // El puntito de la campana: cuántos avisos sin leer. Se vuelve a pedir al cambiar de página.
+  useEffect(() => {
+    if (!user) { setUnread(0); return }
+    let active = true
+    fetchUnreadCount().then(count => { if (active) setUnread(count) })
+    return () => { active = false }
+  }, [user, pathname])
+
   const contextValue = useMemo(() => ({ user, userLoaded, requestAuth, search, activeTag, setActiveTag }), [user, userLoaded, requestAuth, search, activeTag])
 
   return (
@@ -70,7 +80,7 @@ export function CommunityShell({ children }: { children: ReactNode }) {
           <SearchBox />
           <div className="top-actions">
             <ThemeToggle />
-            {user && <Link href="/notifications" className="icon-button notification" aria-label="Notificaciones"><Bell size={18} /></Link>}
+            {user && <Link href="/notifications" className="icon-button notification" aria-label={unread > 0 ? `Notificaciones, ${unread} sin leer` : 'Notificaciones'}><Bell size={18} />{unread > 0 && <span aria-hidden="true" />}</Link>}
             <ProfileMenu user={user} />
           </div>
         </header>

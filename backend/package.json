@@ -29,7 +29,8 @@
     "invite-report": "tsx scripts/invite-report.ts",
     "welcome-preview": "tsx scripts/welcome-preview.ts",
     "welcome": "tsx scripts/welcome.ts",
-    "para-ti-preview": "tsx scripts/para-ti-preview.ts"
+    "para-ti-preview": "tsx scripts/para-ti-preview.ts",
+    "para-ti": "tsx scripts/para-ti.ts"
   },
   "dependencies": {
     "@avocado/schemas": "workspace:*",

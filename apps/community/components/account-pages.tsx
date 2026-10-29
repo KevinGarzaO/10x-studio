@@ -9,6 +9,7 @@ import {
   Eye, EyeOff, MessageCircle, Heart, Loader2, Tag
 } from 'lucide-react'
 import { saveSession, getToken, fetchCurrentUser } from '../lib/session'
+import { NotificationPrefs } from './notification-prefs'
 import { SENIORITY_OPTIONS, MODALITY_OPTIONS, ROLE_CATEGORY_OPTIONS, ROLE_CATEGORY_LABELS, SENIORITY_LABELS } from '../lib/profile-options'
 import { PhotoPicker, SegmentedControl, SkillsInput, RoleCategorySelect } from './profile-form-fields'
 import { useSkillCatalog, skillLabel } from '../lib/skill-catalog'
@@ -214,7 +215,7 @@ export function SettingsPage() {
   const [skillInput, setSkillInput] = useState('')
   const [location, setLocation] = useState('')
   const [workModality, setWorkModality] = useState<string | null>(null)
-  const [tab, setTab] = useState<'profile' | 'cv' | 'preview'>('profile')
+  const [tab, setTab] = useState<'profile' | 'cv' | 'preview' | 'notifications'>('profile')
   const { catalog, failed: catalogFailed } = useSkillCatalog()
   const addSkill = (name: string) => setSkills(prev => (prev.includes(name) ? prev : [...prev, name]))
   const { proposals, message: proposalMessage, propose } = useSkillProposals(addSkill)
@@ -317,7 +318,7 @@ export function SettingsPage() {
         <h1 className="page-title">Configuración</h1>
         <p className="muted page-description">Controla tu perfil público, arma tu CV y míralo en línea.</p>
         <div className="settings-tabs" role="tablist" aria-label="Secciones de configuración">
-          {([['profile', 'Perfil'], ['cv', 'Mi CV'], ['preview', 'Vista previa']] as const).map(([key, label]) => (
+          {([['profile', 'Perfil'], ['cv', 'Mi CV'], ['preview', 'Vista previa'], ['notifications', 'Notificaciones']] as const).map(([key, label]) => (
             <button key={key} type="button" role="tab" aria-selected={tab === key} className={tab === key ? 'active' : ''} onClick={() => setTab(key)}>
               {label}
             </button>
@@ -325,7 +326,9 @@ export function SettingsPage() {
         </div>
 
         {/* El CV se queda montado al cambiar de pestaña, para no perder lo que aún no se guarda. */}
-        <div hidden={tab === 'profile'}>
+        {tab === 'notifications' && <NotificationPrefs />}
+
+        <div hidden={tab !== 'cv' && tab !== 'preview'}>
           <CvSettings
             view={tab === 'preview' ? 'preview' : 'form'}
             username={user.username}

@@ -148,6 +148,34 @@ export const initCron = () => {
     }
   })
 
+  // 3b-quinquies. "PARA TI" (services/email/para-ti-batch.ts).
+  //     Alertas: todos los días 8:30 AM Monterrey (14:30 UTC). A cada persona con una vacante nueva de 80 % o más de
+  //     compatibilidad le deja un aviso en la campana y, si lo quiere y no pasó de 1 al día ni 3 a la semana, un correo.
+  //     Apagado hasta que se active MATCH_ALERTS=on en el servidor.
+  cron.schedule('30 14 * * *', async () => {
+    if (process.env.MATCH_ALERTS !== 'on') return
+    try {
+      const { runAlertBatch } = require('./email/para-ti-batch')
+      const outcome = await runAlertBatch()
+      console.log(`[ParaTiAlertas] ${outcome.status === 'skipped' ? `omitido: ${outcome.reason}` : `avisos ${outcome.notified}, correos ${outcome.emailed}, en espera ${outcome.waiting}`}`)
+    } catch (error) {
+      console.error('[ParaTiAlertas] Error:', error)
+    }
+  })
+
+  //     Resumen semanal: martes y miércoles 10:05 AM Monterrey (16:05 UTC); el miércoles solo completa a quien no alcanzó
+  //     el martes (cada persona recibe uno cada 6 días como máximo). Apagado hasta que se active MATCH_DIGEST=on.
+  cron.schedule('5 16 * * 2,3', async () => {
+    if (process.env.MATCH_DIGEST !== 'on') return
+    try {
+      const { runDigestBatch } = require('./email/para-ti-batch')
+      const outcome = await runDigestBatch()
+      console.log(`[ParaTiResumen] ${outcome.status === 'skipped' ? `omitido: ${outcome.reason}` : `enviados ${outcome.emailed} de ${outcome.planned}`}`)
+    } catch (error) {
+      console.error('[ParaTiResumen] Error:', error)
+    }
+  })
+
   // 3c. ALARMAS: cada hora se revisan las reglas del panel (services/analytics/alerts.ts) y, si aparece
   //     una grave nueva, se deja en el registro del servidor. Es el único aviso fuera del panel.
   let lastAlerts = ''

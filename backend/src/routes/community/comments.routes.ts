@@ -1,6 +1,7 @@
 import { Router, Request, Response } from 'express'
 import { supabase } from '../../../services/supabase.service'
 import { communityAuthMiddleware, AuthRequest } from '../../../middleware/community-auth.middleware'
+import { notifyComment } from '../../../services/notifications/notify'
 
 const router = Router()
 
@@ -41,7 +42,7 @@ router.post('/:postId/comments', communityAuthMiddleware, async (req: AuthReques
 
     const { data: post } = await supabase
       .from('community_posts')
-      .select('id')
+      .select('id, author_id, title')
       .eq('id', postId)
       .single()
 
@@ -62,6 +63,17 @@ router.post('/:postId/comments', communityAuthMiddleware, async (req: AuthReques
     if (error) throw error
 
     const commentsCount = await recountComments(postId)
+
+    // Al autor le llega un aviso en la campana (sin bloquear la respuesta si algo falla).
+    const commenter = (comment as { author?: { display_name?: string | null; username?: string | null } }).author
+    await notifyComment({
+      authorId: (post as { author_id?: string | null }).author_id ?? null,
+      commenterId: req.userId as string,
+      commenterName: commenter?.display_name || commenter?.username || 'Alguien',
+      postId,
+      postTitle: (post as { title?: string | null }).title || 'tu publicación',
+    })
+
     res.status(201).json({ comment, commentsCount })
   } catch (error) {
     console.error('Community Create comment error:', error)
