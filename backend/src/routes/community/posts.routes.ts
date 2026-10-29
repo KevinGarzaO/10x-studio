@@ -24,6 +24,11 @@ function normalizeAuthor(a: any) {
     display_name: a.display_name || a.name,
     photo_url: a.photo_url,
     ...(a.bio !== undefined ? { bio: a.bio } : {}),
+    // Datos públicos del perfil que muestra la tarjeta del autor en el detalle (solo si la consulta los pidió).
+    ...(a.location !== undefined ? { location: a.location } : {}),
+    ...(a.role_category !== undefined ? { role_category: a.role_category } : {}),
+    ...(a.seniority !== undefined ? { seniority: a.seniority } : {}),
+    ...(a.created_at !== undefined ? { joined_at: a.created_at } : {}),
   }
 }
 
@@ -325,6 +330,63 @@ router.get('/', async (req: Request, res: Response) => {
   }
 })
 
+// "Más de esta persona" (publicaciones) o "Más vacantes de esta empresa" (vacantes), para la columna lateral del detalle.
+// Acepta el id o el slug. Solo devuelve lo público: título, etiquetas y fecha.
+router.get('/:id/related', async (req: Request, res: Response) => {
+  try {
+    const idOrSlug = req.params.id as string
+    const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(idOrSlug)
+    const { data: current } = await supabase
+      .from('community_posts')
+      .select('id, type, author_id, company, role_category')
+      .eq(isUuid ? 'id' : 'slug', idOrSlug)
+      .maybeSingle()
+
+    if (!current) return res.json({ kind: 'none', items: [] })
+
+    const columns = 'id, slug, title, type, company, created_at, community_post_tags(tag:community_tags(name))'
+    const toItem = (row: any) => ({
+      id: row.id,
+      slug: row.slug,
+      title: row.title,
+      type: row.type,
+      company: row.company ?? null,
+      created_at: row.created_at,
+      tags: (row.community_post_tags || []).map((entry: any) => entry.tag?.name).filter(Boolean),
+    })
+
+    if (current.type === 'job') {
+      // Las abiertas (45 días): primero las de la misma empresa y, si faltan, las del mismo puesto.
+      const since = new Date(Date.now() - 45 * 86400000).toISOString()
+      const base = () => supabase.from('community_posts').select(columns).eq('type', 'job').not('slug', 'is', null).neq('id', current.id).gte('created_at', since).order('created_at', { ascending: false }).limit(4)
+      const sameCompany = current.company ? ((await base().eq('company', current.company)).data ?? []) : []
+      let items = sameCompany.slice(0, 4)
+      let kind = 'company'
+      if (items.length < 3 && current.role_category) {
+        const taken = new Set(items.map((row: any) => row.id))
+        const sameRole = ((await base().eq('role_category', current.role_category)).data ?? []).filter((row: any) => !taken.has(row.id))
+        items = [...items, ...sameRole].slice(0, 4)
+        if (sameCompany.length === 0) kind = 'role'
+      }
+      return res.json({ kind, company: current.company ?? null, items: items.map(toItem) })
+    }
+
+    if (!current.author_id) return res.json({ kind: 'none', items: [] })
+    const { data } = await supabase
+      .from('community_posts')
+      .select(columns)
+      .eq('author_id', current.author_id)
+      .neq('id', current.id)
+      .in('type', ['discussion', 'showcase'])
+      .order('created_at', { ascending: false })
+      .limit(4)
+    return res.json({ kind: 'author', items: (data ?? []).map(toItem) })
+  } catch (error) {
+    console.error('Community related posts error:', error)
+    res.json({ kind: 'none', items: [] })
+  }
+})
+
 router.get('/:id', async (req: Request, res: Response) => {
   try {
     const idOrSlug = req.params.id as string
@@ -334,7 +396,7 @@ router.get('/:id', async (req: Request, res: Response) => {
       .from('community_posts')
       .select(`
         *,
-        author:users(id, username, display_name, name, handle, photo_url, bio),
+        author:users(id, username, display_name, name, handle, photo_url, bio, location, role_category, seniority, created_at),
         community_post_tags(tag:community_tags(name)),
         community_comments(*, author:users(id, username, display_name, name, handle, photo_url))
       `)

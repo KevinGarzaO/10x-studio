@@ -3,7 +3,7 @@
 import Link from 'next/link'
 import { useParams, useRouter } from 'next/navigation'
 import { useState, useEffect, useRef } from 'react'
-import { BadgeCheck, Bookmark, Building, Check, LockKeyhole, MapPin, Minus, X } from 'lucide-react'
+import { ArrowLeft, BadgeCheck, Check, LockKeyhole, MapPin, Minus, X } from 'lucide-react'
 import { marked } from 'marked'
 import { useShell } from '../../../../lib/shell-context'
 import { getToken } from '../../../../lib/session'
@@ -12,7 +12,9 @@ import { VacancyStats, type VacancyStatsData } from '../../../../components/vaca
 import { companySlug, formatCompanyName } from '../../../../lib/company'
 import { parseJobContent } from '../../../../components/community-hub'
 import { DetailHeader } from '../../../../components/post-detail/DetailHeader'
-import { DetailFooter } from '../../../../components/post-detail/DetailFooter'
+import { DetailRail } from '../../../../components/post-detail/DetailRail'
+import { SideCard } from '../../../../components/post-detail/SideCard'
+import { RelatedCard } from '../../../../components/post-detail/RelatedCard'
 import { DetailConversation, type DetailComment } from '../../../../components/post-detail/DetailConversation'
 import { commentsOf, createComment } from '../../../../lib/post-comments'
 import { ROLE_CATEGORY_LABELS, SENIORITY_LABELS } from '../../../../lib/profile-options'
@@ -413,203 +415,225 @@ export default function VacancyPage() {
     }
   }
 
+  const commentsTotal = comments.length || post.commentsCount || 0
+  const applyAction = expired || !applyUrl
+    ? null
+    : user
+      ? handleApplyClick
+      // Sin cuenta, "Postularse" lleva a registrarse y de vuelta a esta vacante.
+      : () => { trackVacancyEvent(post.slug || slug, 'apply'); requestAuth({ variant: 'vacancy', subject: `${post.title} — ${companyName}` }) }
+
   return (
     <>
-      <div className="detail-page">
-        <DetailHeader
-          onBack={goBack}
-          authorName={companyName}
-          initials={companyName.slice(0, 2).toUpperCase()}
-          photoUrl={post.company_logo}
-          profileHref={`/empresas/${companySlug(companyName)}`}
-          typeLabel={isScraped ? 'VACANTE' : 'VACANTE VERIFICADA'}
-          time={time}
-          verified={!isScraped}
-          action={
-            expired
-              ? undefined
-              : applyUrl && user
-              ? { label: 'Postularse', onClick: handleApplyClick }
-              // Sin cuenta, "Postularse" lleva a registrarse y de vuelta a esta vacante.
-              : applyUrl
-                ? { label: 'Postularse', onClick: () => { trackVacancyEvent(post.slug || slug, 'apply'); requestAuth({ variant: 'vacancy', subject: `${post.title} — ${companyName}` }) } }
-                : undefined
-          }
-        />
+      <div className="detail-shell">
+        <button onClick={goBack} className="detail-back"><ArrowLeft size={16} /> Volver al feed</button>
 
-        <h1>{post.title}</h1>
+        <div className="detail-grid">
+          <DetailRail
+            commentsCount={commentsTotal}
+            conversationHref="#conversation"
+            save={{ saved, busy: savingBusy, onToggle: toggleSave, saveLabel: 'Guardar vacante', savedLabel: 'Quitar de guardados' }}
+          />
 
-        {expired && (
-          <section className="detail-expired" role="status">
-            <strong>Esta vacante ya no acepta solicitudes</strong>
-            <p>Lleva más de {VACANCY_OPEN_DAYS} días publicada y es probable que ya esté cubierta. Mira estas vacantes abiertas:</p>
-            {similar.length > 0 && (
-              <ul>
-                {similar.map(item => (
-                  <li key={item.id}>
-                    <Link href={`/vacantes/${item.slug}`}>{item.title}</Link>
-                    <span>{[formatCompanyName(item.company), item.location?.split(/[•;|]/)[0].trim()].filter(Boolean).join(' · ')}</span>
-                  </li>
-                ))}
-              </ul>
-            )}
-            <Link href="/empleos" className="detail-expired-more">Ver todas las vacantes abiertas</Link>
-          </section>
-        )}
+          <main className="detail-col">
+            <article className="detail-card">
+              <div className="detail-card-body">
+                <DetailHeader
+                  onBack={goBack}
+                  hideBack
+                  authorName={companyName}
+                  initials={companyName.slice(0, 2).toUpperCase()}
+                  photoUrl={post.company_logo}
+                  profileHref={`/empresas/${companySlug(companyName)}`}
+                  typeLabel={isScraped ? 'VACANTE' : 'VACANTE VERIFICADA'}
+                  time={time}
+                  verified={!isScraped}
+                />
 
-        <div className="detail-chips">
-          <button
-            type="button"
-            className={`detail-save${saved ? ' is-saved' : ''}`}
-            onClick={toggleSave}
-            disabled={savingBusy}
-            aria-pressed={saved}
-            aria-label={saved ? 'Quitar de guardados' : 'Guardar vacante'}
-          >
-            <Bookmark size={15} fill={saved ? 'currentColor' : 'none'} /> {saved ? 'Guardada' : 'Guardar'}
-          </button>
-          <span className="detail-chip"><Building size={14} /> {companyName}</span>
-          {meta.location && <span className="detail-chip"><MapPin size={14} /> {meta.location}</span>}
-          {roleLabel && <span className="detail-chip is-role">{roleLabel}</span>}
-          {levelLabel && <span className="detail-chip">{levelLabel}</span>}
-          {modalityLabel && <span className="detail-chip">{modalityLabel}</span>}
-          {meta.salary && <span className="detail-chip is-salary">{meta.salary}</span>}
-        </div>
+                <h1>{post.title}</h1>
 
-        {match && (() => {
-          const totalSkills = match.vacancySkills || skills.length
-          const skillsShare = totalSkills > 0 ? match.sharedSkills.length / totalSkills : 0
-          const fits: { key: string; label: string; text: string; tone: 'good' | 'ok' | 'neutral' | 'bad' }[] = [
-            {
-              key: 'role', label: 'Puesto',
-              text: `${ROLE_FIT_TEXT[match.role]}${match.role === 'adjacent' && roleLabel ? ` (${roleLabel})` : ''}`,
-              tone: match.role === 'exact' ? 'good' : match.role === 'adjacent' ? 'ok' : match.role === 'unknown' ? 'neutral' : 'bad',
-            },
-            {
-              key: 'skills', label: 'Skills',
-              text: `${match.sharedSkills.length} de ${totalSkills} skills que pide los tienes tú${validated.size > 0 ? `, ${validated.size} validados con examen` : ''}`,
-              tone: skillsShare >= 0.6 ? 'good' : match.sharedSkills.length > 0 ? 'ok' : 'bad',
-            },
-            {
-              key: 'level', label: 'Nivel', text: SENIORITY_FIT_TEXT[match.seniority],
-              tone: match.seniority === 'exact' ? 'good' : match.seniority === 'near' ? 'ok' : match.seniority === 'unknown' ? 'neutral' : 'bad',
-            },
-            {
-              key: 'modality', label: 'Modalidad', text: MODALITY_FIT_TEXT[match.modality],
-              tone: match.modality === 'match' ? 'good' : match.modality === 'compatible' ? 'ok' : match.modality === 'unknown' ? 'neutral' : 'bad',
-            },
-          ]
-          return (
-            <section className="detail-match" aria-label="Por qué es para ti">
-              <div className="detail-match-top">
-                <div className="detail-match-score">
-                  <strong>{match.score}%</strong>
-                  <span>match contigo</span>
+                {expired && (
+                  <section className="detail-expired" role="status">
+                    <strong>Esta vacante ya no acepta solicitudes</strong>
+                    <p>Lleva más de {VACANCY_OPEN_DAYS} días publicada y es probable que ya esté cubierta. Mira estas vacantes abiertas:</p>
+                    {similar.length > 0 && (
+                      <ul>
+                        {similar.map(item => (
+                          <li key={item.id}>
+                            <Link href={`/vacantes/${item.slug}`}>{item.title}</Link>
+                            <span>{[formatCompanyName(item.company), item.location?.split(/[•;|]/)[0].trim()].filter(Boolean).join(' · ')}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                    <Link href="/empleos" className="detail-expired-more">Ver todas las vacantes abiertas</Link>
+                  </section>
+                )}
+
+                <div className="detail-chips">
+                  {meta.location && <span className="detail-chip"><MapPin size={14} /> {meta.location}</span>}
+                  {roleLabel && <span className="detail-chip is-role">{roleLabel}</span>}
+                  {levelLabel && <span className="detail-chip">{levelLabel}</span>}
+                  {modalityLabel && <span className="detail-chip">{modalityLabel}</span>}
+                  {meta.salary && <span className="detail-chip is-salary">{meta.salary}</span>}
                 </div>
-                <span className="post-type-badge is-for-you">PARA TI</span>
+
+                <VacancyStats stats={post.stats ? { ...post.stats, saves: Math.max(0, post.stats.saves + (saved ? 1 : 0) - (post.isSaved ? 1 : 0)) } : post.stats} comments={comments.length || post.commentsCount || 0} detailed />
+
+                {skills.length > 0 && (
+                  <>
+                    <h2 className="detail-section-title">Skills que pide</h2>
+                    <div className="stack-row">
+                      {[...skills].sort((a, b) => Number(validated.has(b.toLowerCase())) - Number(validated.has(a.toLowerCase())) || Number(shared.has(b.toLowerCase())) - Number(shared.has(a.toLowerCase()))).map(skill => {
+                        const level = validated.get(skill.toLowerCase())
+                        return level
+                          ? <span key={skill} className="stack-badge is-validated" title="Lo validaste con examen"><BadgeCheck size={12} /> {skill} · {level === 'basico' ? 'básico' : level}</span>
+                          : <span key={skill} className={`stack-badge${shared.has(skill.toLowerCase()) ? ' is-shared' : ''}`}>{skill}</span>
+                      })}
+                    </div>
+                  </>
+                )}
+
+                {hasStructured ? (
+                  <>
+                    {job.description && <p className="detail-lead">{job.description}</p>}
+
+                    {job.requirements.length > 0 && (
+                      <>
+                        <h2 className="detail-section-title">Requisitos</h2>
+                        <ul className="detail-requirements">
+                          {job.requirements.map(req => <li key={req}>{req}</li>)}
+                        </ul>
+                      </>
+                    )}
+
+                    {job.benefits.length > 0 && (
+                      <>
+                        <h2 className="detail-section-title">Beneficios</h2>
+                        <div className="detail-perks">
+                          {job.benefits.map(perk => (
+                            <span key={perk} className="detail-perk"><Check size={12} strokeWidth={2.5} /> {perk}</span>
+                          ))}
+                        </div>
+                      </>
+                    )}
+                  </>
+                ) : (
+                  renderedHtml && (
+                    <div
+                      className="detail-body editorial-content"
+                      dangerouslySetInnerHTML={{ __html: renderedHtml }}
+                    />
+                  )
+                )}
+
+                {applyUrl && !user && (
+                  <div className="detail-guest-cta">
+                    <LockKeyhole size={24} />
+                    <h3>¿Interesado en esta vacante?</h3>
+                    <p>Regístrate gratis para acceder al email, teléfono, WhatsApp y enlace de aplicación.</p>
+                    <button type="button" className="detail-action" onClick={requestAuth}>Crear cuenta gratis</button>
+                  </div>
+                )}
+
+                {post.tags && post.tags.length > 0 && (
+                  <div className="detail-tags">
+                    {post.tags.map(tag => <span key={tag}>#{tag}</span>)}
+                  </div>
+                )}
+
               </div>
-              <div className="detail-match-bar" role="img" aria-label={`${match.score}% de coincidencia`}><i style={{ width: `${Math.min(100, Math.max(0, match.score))}%` }} /></div>
-              <ul className="detail-match-list">
-                {fits.map(fit => (
-                  <li key={fit.key} className={`is-${fit.tone}`}>
-                    <span className="detail-match-icon" aria-hidden="true">
-                      {fit.tone === 'good' ? <Check size={14} strokeWidth={3} /> : fit.tone === 'bad' ? <X size={14} strokeWidth={3} /> : <Minus size={14} strokeWidth={3} />}
-                    </span>
-                    <span className="detail-match-text"><small>{fit.label}</small>{fit.text}</span>
-                  </li>
-                ))}
-              </ul>
+            </article>
+
+            <section className="detail-card">
+              <div className="detail-card-body">
+                <DetailConversation
+                  comments={comments}
+                  currentUserInitials={user ? (user.display_name || user.username || 'U').slice(0, 2).toUpperCase() : null}
+                  onSubmit={async text => {
+                    setSent(false)
+                    setCommentError(null)
+                    const result = await createComment(post.id, text)
+                    if ('error' in result) { setCommentError(result.error); return }
+                    setComments(prev => [result.comment, ...prev])
+                    setSent(true)
+                  }}
+                  formatTime={formatTime}
+                  sent={sent}
+                  error={commentError}
+                />
+              </div>
             </section>
-          )
-        })()}
+          </main>
 
-        <VacancyStats stats={post.stats ? { ...post.stats, saves: Math.max(0, post.stats.saves + (saved ? 1 : 0) - (post.isSaved ? 1 : 0)) } : post.stats} comments={comments.length || post.commentsCount || 0} detailed />
+          <aside className="detail-aside">
+            {match && (() => {
+              const totalSkills = match.vacancySkills || skills.length
+              const skillsShare = totalSkills > 0 ? match.sharedSkills.length / totalSkills : 0
+              const fits: { key: string; label: string; text: string; tone: 'good' | 'ok' | 'neutral' | 'bad' }[] = [
+                {
+                  key: 'role', label: 'Puesto',
+                  text: `${ROLE_FIT_TEXT[match.role]}${match.role === 'adjacent' && roleLabel ? ` (${roleLabel})` : ''}`,
+                  tone: match.role === 'exact' ? 'good' : match.role === 'adjacent' ? 'ok' : match.role === 'unknown' ? 'neutral' : 'bad',
+                },
+                {
+                  key: 'skills', label: 'Skills',
+                  text: `${match.sharedSkills.length} de ${totalSkills} skills que pide los tienes tú${validated.size > 0 ? `, ${validated.size} validados con examen` : ''}`,
+                  tone: skillsShare >= 0.6 ? 'good' : match.sharedSkills.length > 0 ? 'ok' : 'bad',
+                },
+                {
+                  key: 'level', label: 'Nivel', text: SENIORITY_FIT_TEXT[match.seniority],
+                  tone: match.seniority === 'exact' ? 'good' : match.seniority === 'near' ? 'ok' : match.seniority === 'unknown' ? 'neutral' : 'bad',
+                },
+                {
+                  key: 'modality', label: 'Modalidad', text: MODALITY_FIT_TEXT[match.modality],
+                  tone: match.modality === 'match' ? 'good' : match.modality === 'compatible' ? 'ok' : match.modality === 'unknown' ? 'neutral' : 'bad',
+                },
+              ]
+              return (
+                <section className="detail-match" aria-label="Por qué es para ti">
+                  <div className="detail-match-top">
+                    <div className="detail-match-score">
+                      <strong>{match.score}%</strong>
+                      <span>match contigo</span>
+                    </div>
+                    <span className="post-type-badge is-for-you">PARA TI</span>
+                  </div>
+                  <div className="detail-match-bar" role="img" aria-label={`${match.score}% de coincidencia`}><i style={{ width: `${Math.min(100, Math.max(0, match.score))}%` }} /></div>
+                  <ul className="detail-match-list">
+                    {fits.map(fit => (
+                      <li key={fit.key} className={`is-${fit.tone}`}>
+                        <span className="detail-match-icon" aria-hidden="true">
+                          {fit.tone === 'good' ? <Check size={14} strokeWidth={3} /> : fit.tone === 'bad' ? <X size={14} strokeWidth={3} /> : <Minus size={14} strokeWidth={3} />}
+                        </span>
+                        <span className="detail-match-text"><small>{fit.label}</small>{fit.text}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </section>
+              )
+            })()}
 
-        {skills.length > 0 && (
-          <>
-            <h2 className="detail-section-title">Skills que pide</h2>
-            <div className="stack-row">
-              {[...skills].sort((a, b) => Number(validated.has(b.toLowerCase())) - Number(validated.has(a.toLowerCase())) || Number(shared.has(b.toLowerCase())) - Number(shared.has(a.toLowerCase()))).map(skill => {
-                const level = validated.get(skill.toLowerCase())
-                return level
-                  ? <span key={skill} className="stack-badge is-validated" title="Lo validaste con examen"><BadgeCheck size={12} /> {skill} · {level === 'basico' ? 'básico' : level}</span>
-                  : <span key={skill} className={`stack-badge${shared.has(skill.toLowerCase()) ? ' is-shared' : ''}`}>{skill}</span>
-              })}
-            </div>
-          </>
-        )}
+            <SideCard
+              name={companyName}
+              initials={companyName.slice(0, 2).toUpperCase()}
+              photoUrl={post.company_logo}
+              href={`/empresas/${companySlug(companyName)}`}
+              hrefLabel="Ver empresa"
+              facts={[
+                { label: 'Ubicación', value: meta.location },
+                { label: 'Puesto', value: roleLabel },
+                { label: 'Nivel', value: levelLabel },
+                { label: 'Modalidad', value: modalityLabel },
+                { label: 'Salario', value: meta.salary },
+              ]}
+            >
+              {applyAction && <button type="button" className="detail-action" onClick={applyAction}>Postularse</button>}
+            </SideCard>
 
-        {hasStructured ? (
-          <>
-            {job.description && <p className="detail-lead">{job.description}</p>}
-
-            {job.requirements.length > 0 && (
-              <>
-                <h2 className="detail-section-title">Requisitos</h2>
-                <ul className="detail-requirements">
-                  {job.requirements.map(req => <li key={req}>{req}</li>)}
-                </ul>
-              </>
-            )}
-
-            {job.benefits.length > 0 && (
-              <>
-                <h2 className="detail-section-title">Beneficios</h2>
-                <div className="detail-perks">
-                  {job.benefits.map(perk => (
-                    <span key={perk} className="detail-perk"><Check size={12} strokeWidth={2.5} /> {perk}</span>
-                  ))}
-                </div>
-              </>
-            )}
-          </>
-        ) : (
-          renderedHtml && (
-            <div
-              className="detail-body editorial-content"
-              dangerouslySetInnerHTML={{ __html: renderedHtml }}
-            />
-          )
-        )}
-
-        {applyUrl && !user && (
-          <div className="detail-guest-cta">
-            <LockKeyhole size={24} />
-            <h3>¿Interesado en esta vacante?</h3>
-            <p>Regístrate gratis para acceder al email, teléfono, WhatsApp y enlace de aplicación.</p>
-            <button type="button" className="detail-action" onClick={requestAuth}>Crear cuenta gratis</button>
-          </div>
-        )}
-
-        {post.tags && post.tags.length > 0 && (
-          <div className="detail-tags">
-            {post.tags.map(tag => <span key={tag}>#{tag}</span>)}
-          </div>
-        )}
-
-        {/* Una vacante no se vota, pero tiene la misma conversación que un post. */}
-        <DetailFooter
-          commentsCount={comments.length || post.commentsCount || 0}
-          saved={saved}
-          onSave={toggleSave}
-          conversationHref="#conversation"
-        />
-
-        <DetailConversation
-          comments={comments}
-          currentUserInitials={user ? (user.display_name || user.username || 'U').slice(0, 2).toUpperCase() : null}
-          onSubmit={async text => {
-            setSent(false)
-            setCommentError(null)
-            const result = await createComment(post.id, text)
-            if ('error' in result) { setCommentError(result.error); return }
-            setComments(prev => [result.comment, ...prev])
-            setSent(true)
-          }}
-          formatTime={formatTime}
-          sent={sent}
-          error={commentError}
-        />
+            <RelatedCard postKey={post.slug || slug} />
+          </aside>
+        </div>
       </div>
 
       {applyOpen && applyUrl && (

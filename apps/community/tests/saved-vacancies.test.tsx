@@ -137,12 +137,11 @@ describe('saving from the vacancy page', () => {
     return requestAuth
   }
 
-  it('shows a save button next to the level and modality', async () => {
+  it('shows the save button in the actions column beside the vacancy', async () => {
     renderPage(vacancy)
 
     const save = await screen.findByRole('button', { name: /guardar vacante/i })
-    const chips = save.closest('.detail-chips')!
-    expect(chips.textContent).toMatch(/Senior/)
+    expect(save.closest('.action-rail')).not.toBeNull()
   })
 
   it('saves the vacancy so it shows up in /saved', async () => {

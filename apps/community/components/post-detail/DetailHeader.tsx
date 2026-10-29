@@ -6,6 +6,8 @@ import { ArrowLeft, ShieldCheck } from 'lucide-react'
 export interface DetailHeaderProps {
   /** Volver al feed. */
   onBack: () => void
+  /** Oculta el botón de volver (cuando la página lo pone en otro lugar). */
+  hideBack?: boolean
   /** Nombre visible del autor o de la empresa. */
   authorName: string
   /** Iniciales para el avatar cuando no hay foto. */
@@ -38,6 +40,7 @@ export interface DetailHeaderProps {
  */
 export function DetailHeader({
   onBack,
+  hideBack,
   authorName,
   initials,
   photoUrl,
@@ -66,9 +69,11 @@ export function DetailHeader({
 
   return (
     <header className="detail-header">
-      <button onClick={onBack} className="detail-back">
-        <ArrowLeft size={16} /> Volver al feed
-      </button>
+      {!hideBack && (
+        <button onClick={onBack} className="detail-back">
+          <ArrowLeft size={16} /> Volver al feed
+        </button>
+      )}
 
       <div className="detail-identity-row">
         {profileHref ? (

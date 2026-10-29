@@ -5,14 +5,16 @@ import { ConfirmDialog } from '../../../../components/confirm-dialog'
 import { renderUserMarkdown } from '../../../../lib/user-markdown'
 import { clearFeedCache } from '../../../../components/community-hub'
 import { getToken } from '../../../../lib/session'
-import { PostStats } from '../../../../components/post-stats'
 import { excerptRepeatsBody, promoteCapsHeadings } from '../../../../lib/article-html'
 import { useState, useEffect } from 'react'
-import { LockKeyhole } from 'lucide-react'
+import { ArrowLeft, LockKeyhole } from 'lucide-react'
 import { marked } from 'marked'
 import { useShell } from '../../../../lib/shell-context'
 import { DetailHeader } from '../../../../components/post-detail/DetailHeader'
-import { DetailFooter } from '../../../../components/post-detail/DetailFooter'
+import { DetailRail } from '../../../../components/post-detail/DetailRail'
+import { SideCard } from '../../../../components/post-detail/SideCard'
+import { RelatedCard } from '../../../../components/post-detail/RelatedCard'
+import { ROLE_CATEGORY_LABELS, SENIORITY_LABELS } from '../../../../lib/profile-options'
 import { DetailConversation, type DetailComment } from '../../../../components/post-detail/DetailConversation'
 import { commentsOf, createComment } from '../../../../lib/post-comments'
 
@@ -26,7 +28,17 @@ interface PostData {
   title: string
   content?: string
   excerpt?: string
-  author: { id: string | null; username: string; display_name: string; photo_url: string | null }
+  author: {
+    id: string | null
+    username: string
+    display_name: string
+    photo_url: string | null
+    bio?: string | null
+    location?: string | null
+    role_category?: string | null
+    seniority?: string | null
+    joined_at?: string | null
+  }
   tags: string[]
   votesCount: number
   /** Si quien mira ya votó (discusiones y proyectos). */
@@ -92,7 +104,6 @@ export default function PostPage() {
   const [error, setError] = useState<string | null>(null)
   const [votes, setVotes] = useState(0)
   const [voted, setVoted] = useState(false)
-  const [saved, setSaved] = useState(false)
   const [deleting, setDeleting] = useState(false)
   const [confirmingDelete, setConfirmingDelete] = useState(false)
   const [comments, setComments] = useState<DetailComment[]>([])
@@ -192,105 +203,139 @@ export default function PostPage() {
   // Una discusión sí la muestra cuando la persona subió una portada (sin portada no hay placeholder).
   const showsMedia = ((post.type === 'editorial' || post.type === 'showcase') || (post.type === 'discussion' && !!post.image_url)) && !bodyHasImage
 
+  const readMinutes = post.word_count ? Math.max(1, Math.round(post.word_count / 200)) : null
+  const meta = [formatTime(post.created_at), readMinutes ? `${readMinutes} min de lectura` : null].filter(Boolean).join(' · ')
+  const commentsTotal = comments.length || post.commentsCount || 0
+  const author = post.author
+  const role = [author?.role_category ? ROLE_CATEGORY_LABELS[author.role_category] : '', author?.seniority ? SENIORITY_LABELS[author.seniority] : ''].filter(Boolean).join(' · ')
+  const joined = author?.joined_at ? new Date(author.joined_at).toLocaleDateString('es-MX', { day: 'numeric', month: 'short', year: 'numeric' }) : null
+
   return (
-    <div className="detail-page">
-      <DetailHeader
-        onBack={goBack}
-        authorName={authorName}
-        initials={initials}
-        photoUrl={hasRealAuthor ? post.author?.photo_url : null}
-        profileHref={hasRealAuthor && post.author?.username ? `/users/${post.author.username}` : null}
-        typeLabel={TYPE_LABELS[post.type] || 'PUBLICACIÓN'}
-        time={formatTime(post.created_at)}
-        verified={!hasRealAuthor}
-      />
+    <div className="detail-shell">
+      <button onClick={goBack} className="detail-back"><ArrowLeft size={16} /> Volver al feed</button>
 
-      <h1>{post.title}</h1>
-
-      {!isJob && (
-        <PostStats
-          votes={Math.max(0, votes + (voted ? 1 : 0) - (post.hasVoted ? 1 : 0))}
-          voted={voted}
-          onVote={voteOnPost}
-          comments={comments.length || post.commentsCount || 0}
-          readMinutes={post.word_count ? Math.max(1, Math.round(post.word_count / 200)) : null}
-          detailed
+      <div className="detail-grid">
+        <DetailRail
+          votes={isJob ? undefined : { count: Math.max(0, votes + (voted ? 1 : 0) - (post.hasVoted ? 1 : 0)), voted, onVote: voteOnPost }}
+          commentsCount={commentsTotal}
+          conversationHref={isJob ? undefined : '#conversation'}
         />
-      )}
 
-      {showsMedia && (
-        post.image_url
-          ? <div className="detail-media"><img src={post.image_url} alt={post.title} /></div>
-          : <div className="detail-media is-placeholder"><span>{TYPE_LABELS[post.type]}</span></div>
-      )}
+        <main className="detail-col">
+          <article className="detail-card">
+            {showsMedia && post.image_url && <div className="detail-card-cover"><img src={post.image_url} alt={post.title} /></div>}
 
-      {post.excerpt && !excerptRepeatsBody(post.excerpt, displayContent) && <p className="detail-lead">{post.excerpt}</p>}
+            <div className="detail-card-body">
+              <DetailHeader
+                onBack={goBack}
+                hideBack
+                authorName={authorName}
+                initials={initials}
+                photoUrl={hasRealAuthor ? post.author?.photo_url : null}
+                profileHref={hasRealAuthor && post.author?.username ? `/users/${post.author.username}` : null}
+                typeLabel={TYPE_LABELS[post.type] || 'PUBLICACIÓN'}
+                time={meta}
+                verified={!hasRealAuthor}
+              />
 
-      {displayContent && (
-        <div
-          className="detail-body editorial-content"
-          dangerouslySetInnerHTML={{ __html: isMemberPost ? renderUserMarkdown(displayContent) : promoteCapsHeadings(marked.parse(displayContent) as string) }}
-        />
-      )}
+              <h1>{post.title}</h1>
 
-      {isJob && !user && (
-        <div className="detail-guest-cta">
-          <LockKeyhole size={24} />
-          <h3>¿Interesado en esta vacante?</h3>
-          <p>Regístrate para acceder al email, teléfono, WhatsApp y enlace de aplicación.</p>
-          <button type="button" className="detail-action" onClick={requestAuth}>Crear cuenta gratis</button>
-        </div>
-      )}
+              {post.tags && post.tags.length > 0 && (
+                <div className="detail-tags">
+                  {post.tags.map(tag => <span key={tag}>#{tag}</span>)}
+                </div>
+              )}
 
-      {post.tags && post.tags.length > 0 && (
-        <div className="detail-tags">
-          {post.tags.map(tag => <span key={tag}>#{tag}</span>)}
-        </div>
-      )}
+              {post.excerpt && !excerptRepeatsBody(post.excerpt, displayContent) && <p className="detail-lead">{post.excerpt}</p>}
 
-      <DetailFooter
-        commentsCount={comments.length || post.commentsCount || 0}
-        saved={saved}
-        onSave={() => (user ? setSaved(!saved) : requestAuth())}
-        conversationHref={isJob ? undefined : '#conversation'}
-      />
+              {displayContent && (
+                <div
+                  className="detail-body editorial-content"
+                  dangerouslySetInnerHTML={{ __html: isMemberPost ? renderUserMarkdown(displayContent) : promoteCapsHeadings(marked.parse(displayContent) as string) }}
+                />
+              )}
 
-      {confirmingDelete && (
-        <ConfirmDialog
-          danger
-          title="¿Eliminar esta publicación?"
-          message="Se borrará junto con sus comentarios y votos. No se puede deshacer."
-          confirmLabel="Eliminar"
-          busyLabel="Eliminando…"
-          busy={deleting}
-          onConfirm={deletePost}
-          onCancel={() => setConfirmingDelete(false)}
-        />
-      )}
+              {isJob && !user && (
+                <div className="detail-guest-cta">
+                  <LockKeyhole size={24} />
+                  <h3>¿Interesado en esta vacante?</h3>
+                  <p>Regístrate para acceder al email, teléfono, WhatsApp y enlace de aplicación.</p>
+                  <button type="button" className="detail-action" onClick={requestAuth}>Crear cuenta gratis</button>
+                </div>
+              )}
 
-      {canDelete && (
-        <div className="detail-owner-actions">
-          <button type="button" className="detail-delete" onClick={() => setConfirmingDelete(true)}>Eliminar publicación</button>
-        </div>
-      )}
+              {confirmingDelete && (
+                <ConfirmDialog
+                  danger
+                  title="¿Eliminar esta publicación?"
+                  message="Se borrará junto con sus comentarios y votos. No se puede deshacer."
+                  confirmLabel="Eliminar"
+                  busyLabel="Eliminando…"
+                  busy={deleting}
+                  onConfirm={deletePost}
+                  onCancel={() => setConfirmingDelete(false)}
+                />
+              )}
 
-      {!isJob && (
-        <DetailConversation
-          comments={comments}
-          currentUserInitials={user ? (user.display_name || user.username || 'U').slice(0, 2).toUpperCase() : null}
-          onSubmit={async text => {
-            setSent(false)
-            setCommentError(null)
-            const result = await createComment(post.id, text)
-            if ('error' in result) { setCommentError(result.error); return }
-            setComments(prev => [result.comment, ...prev])
-            setSent(true)
-          }}
-          formatTime={formatTime}
-          sent={sent}
-          error={commentError}
-        />
-      )}
+              {canDelete && (
+                <div className="detail-owner-actions">
+                  <button type="button" className="detail-delete" onClick={() => setConfirmingDelete(true)}>Eliminar publicación</button>
+                </div>
+              )}
+            </div>
+          </article>
+
+          {!isJob && (
+            <section className="detail-card">
+              <div className="detail-card-body">
+                <DetailConversation
+                  comments={comments}
+                  currentUserInitials={user ? (user.display_name || user.username || 'U').slice(0, 2).toUpperCase() : null}
+                  onSubmit={async text => {
+                    setSent(false)
+                    setCommentError(null)
+                    const result = await createComment(post.id, text)
+                    if ('error' in result) { setCommentError(result.error); return }
+                    setComments(prev => [result.comment, ...prev])
+                    setSent(true)
+                  }}
+                  formatTime={formatTime}
+                  sent={sent}
+                  error={commentError}
+                />
+              </div>
+            </section>
+          )}
+        </main>
+
+        <aside className="detail-aside">
+          {hasRealAuthor ? (
+            <SideCard
+              name={authorName}
+              initials={initials}
+              photoUrl={author?.photo_url}
+              about={author?.bio}
+              href={author?.username ? `/users/${author.username}` : null}
+              facts={[
+                { label: 'Ubicación', value: author?.location },
+                { label: 'Puesto', value: role },
+                { label: 'Se unió', value: joined },
+              ]}
+            />
+          ) : (
+            <SideCard
+              name="AvoTalent"
+              initials="AT"
+              photoUrl="/avotalent-logo.png"
+              about="Guías y análisis para tu carrera en tecnología. Las vacantes, ordenadas por lo que más encaja contigo."
+              href="/"
+              hrefLabel="Ver vacantes"
+              facts={[]}
+            />
+          )}
+          <RelatedCard postKey={post.id} authorName={authorName} />
+        </aside>
+      </div>
     </div>
   )
 }
