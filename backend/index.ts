@@ -34,6 +34,7 @@ import communitySkillsRoutes from './src/routes/community/skills.routes'
 import communitySkillProposalsRoutes from './src/routes/community/skill-proposals.routes'
 import communityCompaniesRoutes from './src/routes/community/companies.routes'
 import communityNotificationsRoutes from './src/routes/community/notifications.routes'
+import communityCardsRoutes from './src/routes/community/cards.routes'
 // import communityCompanyClaimsRoutes from './src/routes/community/company-claims.routes'
 
 // Admin routes
@@ -122,6 +123,7 @@ app.use('/api/community/skills', communitySkillsRoutes)
 app.use('/api/community/skill-proposals', communitySkillProposalsRoutes)
 app.use('/api/community/companies', communityCompaniesRoutes)
 app.use('/api/community/notifications', communityNotificationsRoutes)
+app.use('/api/community/cards', communityCardsRoutes)
 // Alta de empresas en pausa: por ahora AvoTalent solo ofrece algo a las personas. Para reactivarla, vuelve a montar
 // communityCompanyClaimsRoutes aquí y a mostrar el flujo en el registro y el onboarding de apps/community.
 // app.use('/api/community/company-claims', communityCompanyClaimsRoutes)

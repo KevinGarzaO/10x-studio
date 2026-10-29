@@ -448,6 +448,7 @@ export default function VacancyPage() {
                   typeLabel={isScraped ? 'VACANTE' : 'VACANTE VERIFICADA'}
                   time={time}
                   verified={!isScraped}
+                  hover={{ kind: 'company', id: companySlug(companyName) }}
                 />
 
                 <h1>{post.title}</h1>

@@ -19,6 +19,7 @@ import { buildFeed, type MatchedItem } from '../lib/mixed-feed'
 import { ForYouCard } from './for-you-card'
 import { VacancyStats, type VacancyStatsData } from './vacancy-stats'
 import { PostStats } from './post-stats'
+import { ProfileHoverCard } from './profile-hover-card'
 import { excerptOf } from '../lib/user-markdown'
 import { HeroBanner } from './hero-banner'
 import { RECOMMENDED_SKILLS, shouldNudgeSkills } from '../lib/skills-recommendation'
@@ -442,10 +443,12 @@ export function PostCard({ post, onAuthRequired }: { post: FeedPost; onAuthRequi
     const tags = (post.tags || []).filter(Boolean).slice(0, 5)
     return <article className="post-card job-card" onClick={openPost}>
       <div className="jc-head">
-        <Link href={company ? `/empresas/${companySlug(company)}` : '#'} className="jc-company" onClick={e => !company && e.preventDefault()}>
-          <CompanyAvatar company={company} logoUrl={post.company_logo} size={32} />
-          <span className="jc-company-name">{company || 'AvoTalent'}</span>
-        </Link>
+        <ProfileHoverCard kind="company" id={company ? companySlug(company) : null} name={company || 'AvoTalent'} photoUrl={post.company_logo} href={company ? `/empresas/${companySlug(company)}` : null}>
+          <Link href={company ? `/empresas/${companySlug(company)}` : '#'} className="jc-company" onClick={e => !company && e.preventDefault()}>
+            <CompanyAvatar company={company} logoUrl={post.company_logo} size={32} />
+            <span className="jc-company-name">{company || 'AvoTalent'}</span>
+          </Link>
+        </ProfileHoverCard>
         <span className="jc-time">{time}</span>
         <span className="post-type-badge">VACANTE</span>
         <span className="footer-spacer" />
@@ -485,10 +488,12 @@ export function PostCard({ post, onAuthRequired }: { post: FeedPost; onAuthRequi
 
   return <article className="post-card" onClick={openPost}>
     <div className="jc-head">
-      <Link href={authorUsername ? `/users/${authorUsername}` : '#'} className="jc-company" onClick={e => (!hasRealAuthor || !authorUsername) && e.preventDefault()}>
-        <Avatar initials={authorInitials} tone="cyan" avatar={authorPhoto || undefined} />
-        <span className="jc-company-name">{authorName} {!hasRealAuthor && <ShieldCheck size={13} className="verified" />}</span>
-      </Link>
+      <ProfileHoverCard kind="user" id={hasRealAuthor ? authorUsername : null} name={authorName} photoUrl={authorPhoto} href={authorUsername ? `/users/${authorUsername}` : null}>
+        <Link href={authorUsername ? `/users/${authorUsername}` : '#'} className="jc-company" onClick={e => (!hasRealAuthor || !authorUsername) && e.preventDefault()}>
+          <Avatar initials={authorInitials} tone="cyan" avatar={authorPhoto || undefined} />
+          <span className="jc-company-name">{authorName} {!hasRealAuthor && <ShieldCheck size={13} className="verified" />}</span>
+        </Link>
+      </ProfileHoverCard>
       <span className="jc-time">{time}</span>
       <span className={`post-type-badge ${badgeTone}`}>{typeLabel}</span>
       <span className="footer-spacer" />

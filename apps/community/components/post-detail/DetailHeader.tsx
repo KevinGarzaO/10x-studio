@@ -2,6 +2,7 @@
 
 import Link from 'next/link'
 import { ArrowLeft, ShieldCheck } from 'lucide-react'
+import { ProfileHoverCard } from '../profile-hover-card'
 
 export interface DetailHeaderProps {
   /** Volver al feed. */
@@ -20,6 +21,8 @@ export interface DetailHeaderProps {
   time: string
   /** Marca de cuenta oficial de AvoTalent. */
   verified?: boolean
+  /** Quién es, para la tarjeta que sale al pasar el cursor (persona por su usuario, empresa por su slug). Sin esto no sale tarjeta. */
+  hover?: { kind: 'user' | 'company'; id: string }
   /** Acción principal a la derecha. Sin ella, no se renderiza nada. */
   action?: {
     label: string
@@ -48,6 +51,7 @@ export function DetailHeader({
   typeLabel,
   time,
   verified,
+  hover,
   action,
 }: DetailHeaderProps) {
   const identity = (
@@ -76,11 +80,13 @@ export function DetailHeader({
       )}
 
       <div className="detail-identity-row">
-        {profileHref ? (
-          <Link href={profileHref} className="detail-identity-link">{identity}</Link>
-        ) : (
-          <div className="detail-identity-link is-static">{identity}</div>
-        )}
+        <ProfileHoverCard kind={hover?.kind ?? 'user'} id={hover?.id} name={authorName} photoUrl={photoUrl} href={profileHref ?? null}>
+          {profileHref ? (
+            <Link href={profileHref} className="detail-identity-link">{identity}</Link>
+          ) : (
+            <div className="detail-identity-link is-static">{identity}</div>
+          )}
+        </ProfileHoverCard>
 
         {action && (
           action.href && !action.disabledReason ? (

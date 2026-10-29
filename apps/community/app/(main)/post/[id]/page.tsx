@@ -236,6 +236,7 @@ export default function PostPage() {
                 typeLabel={TYPE_LABELS[post.type] || 'PUBLICACIÓN'}
                 time={meta}
                 verified={!hasRealAuthor}
+                hover={hasRealAuthor && post.author?.username ? { kind: 'user', id: post.author.username } : undefined}
               />
 
               <h1>{post.title}</h1>

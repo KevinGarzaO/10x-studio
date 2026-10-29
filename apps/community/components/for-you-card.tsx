@@ -9,6 +9,7 @@ import { formatCompanyName, companySlug } from '../lib/company'
 import { ROLE_CATEGORY_LABELS, SENIORITY_LABELS } from '../lib/profile-options'
 import type { MatchedItem } from '../lib/mixed-feed'
 import { CompanyAvatar, rememberFeedPosition } from './community-hub'
+import { ProfileHoverCard } from './profile-hover-card'
 import { VacancyStats } from './vacancy-stats'
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'
@@ -120,10 +121,12 @@ export function ForYouCard({ item }: { item: MatchedItem }) {
         {item.roleFit === 'adjacent' && <span className="match-pill" title="No es exactamente tu puesto, pero es cercano y pide skills que tienes">Rol cercano al tuyo</span>}
       </div>
       <div className="jc-head">
-        <Link href={company ? `/empresas/${companySlug(company)}` : '#'} className="jc-company" onClick={e => !company && e.preventDefault()}>
-          <CompanyAvatar company={company} logoUrl={item.companyLogo} size={32} />
-          <span className="jc-company-name">{company || 'AvoTalent'}</span>
-        </Link>
+        <ProfileHoverCard kind="company" id={company ? companySlug(company) : null} name={company || 'AvoTalent'} photoUrl={item.companyLogo} href={company ? `/empresas/${companySlug(company)}` : null}>
+          <Link href={company ? `/empresas/${companySlug(company)}` : '#'} className="jc-company" onClick={e => !company && e.preventDefault()}>
+            <CompanyAvatar company={company} logoUrl={item.companyLogo} size={32} />
+            <span className="jc-company-name">{company || 'AvoTalent'}</span>
+          </Link>
+        </ProfileHoverCard>
         <span className="jc-time">{formatTime(item.postDate)}</span>
         <span className="footer-spacer" />
         <button className={`icon-button ${saved ? 'saved' : ''}`} onClick={toggleSave} aria-label="Guardar">
