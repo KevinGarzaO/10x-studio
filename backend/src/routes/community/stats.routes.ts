@@ -69,16 +69,32 @@ async function countCommunityLegacy() {
   }
 }
 
+// Las vacantes abiertas (45 días, el mismo plazo que el resto del sitio) y cuántas llegaron en las últimas 24 horas: lo que dice
+// la cabecera del feed. Si falla, se omiten (la cabecera simplemente no las muestra).
+async function openVacancyNumbers() {
+  try {
+    const open = new Date(Date.now() - 45 * 86400000).toISOString()
+    const day = new Date(Date.now() - 86400000).toISOString()
+    const [opened, fresh] = await Promise.all([
+      supabase.from('community_posts').select('*', { count: 'exact', head: true }).eq('type', 'job').gte('created_at', open),
+      supabase.from('community_posts').select('*', { count: 'exact', head: true }).eq('type', 'job').gte('created_at', day),
+    ])
+    return { openVacancies: opened.error ? undefined : opened.count || 0, newVacanciesToday: fresh.error ? undefined : fresh.count || 0 }
+  } catch {
+    return {}
+  }
+}
+
 router.get('/', async (req: Request, res: Response) => {
   try {
     try {
       try {
-        return res.json(await countCommunity())
+        return res.json({ ...(await countCommunity()), ...(await openVacancyNumbers()) })
       } catch (error: any) {
         // Sin profile_completed (migración sin aplicar) se cuenta a todos los miembros reales.
         if (!/profile_completed/.test(String(error?.message))) throw error
         console.warn('[Stats] Falta users.profile_completed: se cuentan todos los miembros reales')
-        return res.json(await countCommunity(false))
+        return res.json({ ...(await countCommunity(false)), ...(await openVacancyNumbers()) })
       }
     } catch (error: any) {
       if (!/user_kind|is_test_account/.test(String(error?.message))) throw error

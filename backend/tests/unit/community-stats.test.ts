@@ -14,7 +14,7 @@ vi.mock('../../services/supabase.service', () => ({
         const entry = { table, filters: [] as string[] }
         calls.push(entry)
         const q: any = {}
-        for (const name of ['in', 'eq', 'neq', 'not']) {
+        for (const name of ['in', 'eq', 'neq', 'not', 'gte']) {
           q[name] = (...args: unknown[]) => { entry.filters.push(`${name}:${args.join(',')}`); return q }
         }
         q.then = (resolve: any, reject: any) => {
@@ -54,7 +54,17 @@ describe('GET /stats', () => {
   it('splits real members, companies and vacancies', async () => {
     const res = await request(app()).get('/api/community/stats').expect(200)
 
-    expect(res.body).toEqual({ members: 3, companies: 15, vacancies: 40, posts: 495 })
+    expect(res.body).toMatchObject({ members: 3, companies: 15, vacancies: 40, posts: 495 })
+  })
+
+  it('also says how many vacancies are open (45 days) and how many arrived in the last 24 hours, for the feed header', async () => {
+    const res = await request(app()).get('/api/community/stats').expect(200)
+
+    expect(res.body).toMatchObject({ openVacancies: 40, newVacanciesToday: 40 })
+    const since = calls.filter(c => c.table === 'community_posts' && c.filters.some(f => f.startsWith('gte:created_at,')))
+    expect(since).toHaveLength(2)
+    const days = since.map(c => Math.round((Date.now() - Date.parse(c.filters.find(f => f.startsWith('gte:created_at,'))!.split(',')[1])) / 86400000))
+    expect(days.sort()).toEqual([1, 45])
   })
 
   it('counts only real accounts: no test accounts and no scraper profiles', async () => {

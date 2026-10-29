@@ -20,6 +20,7 @@ import { ForYouCard } from './for-you-card'
 import { VacancyStats, type VacancyStatsData } from './vacancy-stats'
 import { PostStats } from './post-stats'
 import { compactStats } from '../lib/feed-stats'
+import { DEFAULT_FILTERS, applyFeedFilters, feedSummary, profileProgress, type FeedFilters, type FeedView } from '../lib/feed-filters'
 import { ProfileHoverCard } from './profile-hover-card'
 import { excerptOf } from '../lib/user-markdown'
 import { HeroBanner } from './hero-banner'
@@ -185,7 +186,7 @@ export function LeftSidebar({ activeTag, onTagClick }: { activeTag: string | nul
     fetch(`${API_URL}/api/community/stats/roles?limit=6`)
       .then(r => r.ok ? r.json() : null)
       .then(d => {
-        const fetched: SidebarRole[] = (d?.roles || []).map((r: { slug: string; label?: string }) => ({ slug: r.slug, label: r.label || r.slug }))
+        const fetched: SidebarRole[] = (d?.roles || []).map((r: { slug: string; label?: string; count?: number }) => ({ slug: r.slug, label: r.label || r.slug, count: typeof r.count === 'number' ? r.count : undefined }))
         if (fetched.length > 0) setRoles(fetched)
       })
       .catch(() => {})
@@ -216,7 +217,7 @@ export function LeftSidebar({ activeTag, onTagClick }: { activeTag: string | nul
             className={`tag-link tag-hue-${roleHues[role.slug]} ${pathname === href ? 'active' : ''}`}
             aria-current={pathname === href ? 'page' : undefined}
           >
-            <Hash size={14} />{role.label}
+            <span className="tag-label">{role.label}</span>{typeof role.count === 'number' && <span className="tag-count">{role.count}</span>}
           </Link>
         )
       })}
@@ -693,9 +694,14 @@ async function fetchJson(url: string, token?: string | null): Promise<any | null
 export function Feed() {
   const { search, activeTag, setActiveTag, requestAuth, user } = useShell()
 
-  const todayLabel = useMemo(() => {
-    const label = new Date().toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long' })
-    return label.charAt(0).toUpperCase() + label.slice(1)
+  const [filters, setFilters] = useState<FeedFilters>(DEFAULT_FILTERS)
+  const [headline, setHeadline] = useState<{ openVacancies?: number; newVacanciesToday?: number } | null>(null)
+
+  // Las cifras de la cabecera: vacantes abiertas y nuevas de hoy.
+  useEffect(() => {
+    let active = true
+    fetchJson(`${API_URL}/api/community/stats`).then(data => { if (active && data) setHeadline(data) })
+    return () => { active = false }
   }, [])
 
   // Quién ve el feed se decide por tener sesión, no por el usuario ya cargado:
@@ -845,14 +851,17 @@ export function Feed() {
       return true
     }
     const postText = (p: FeedPost) => `${(p as any).title || ''} ${(p as any).content || ''} ${(p.tags || []).join(' ')}`
-    return buildFeed<FeedPost>({
+    const visible = applyFeedFilters({
       articles: snapshot.articles.filter(p => matches(postText(p))),
       jobs: snapshot.jobs.filter(p => matches(postText(p))),
       forYou: snapshot.forYou.filter(item => matches(`${item.title} ${item.company || ''} ${item.skills.join(' ')}`)),
+    }, filters, user?.seniority)
+    return buildFeed<FeedPost>({
+      ...visible,
       moreArticles: snapshot.moreArticles,
       moreJobs: snapshot.moreJobs,
     })
-  }, [snapshot, search, activeTag])
+  }, [snapshot, search, activeTag, filters, user?.seniority])
 
   // Si lo mostrado no llena la pantalla no hay scroll que dispare la siguiente
   // página: se pide sola mientras falte contenido.
@@ -863,8 +872,38 @@ export function Feed() {
 
   const hasMore = !!snapshot && (snapshot.moreArticles || snapshot.moreJobs)
 
+  const firstName = user ? String(user.display_name || user.username || '').trim().split(/\s+/)[0] : ''
+  const summary = feedSummary({ open: headline?.openVacancies, newToday: headline?.newVacanciesToday, fit: user ? snapshot?.forYou.length : null })
+  const progress = profileProgress(user)
+  const views: [FeedView, string][] = user
+    ? [['all', 'Todo'], ['forYou', 'Para ti'], ['jobs', 'Vacantes'], ['posts', 'Discusiones']]
+    : [['all', 'Todo'], ['jobs', 'Vacantes'], ['posts', 'Discusiones']]
+  const filtersActive = filters.view !== 'all' || filters.remote || filters.myLevel
+
   return <main className="feed">
     {!user && <HeroBanner />}
+    <header className="feed-heading">
+      <h1>{firstName ? `Hola, ${firstName}` : 'Tu feed'}</h1>
+      {summary && <p className="feed-summary">{summary}</p>}
+      {activeTag && <span className="active-filter-chip"><Hash size={12} />{activeTag}<button onClick={() => setActiveTag(null)} aria-label="Quitar filtro de tema"><X size={12} /></button></span>}
+    </header>
+    <div className="feed-chips" role="group" aria-label="Filtros del feed">
+      {views.map(([key, label]) => (
+        <button key={key} type="button" className={`feed-chip${filters.view === key ? ' is-active' : ''}`} aria-pressed={filters.view === key} onClick={() => setFilters(current => ({ ...current, view: key }))}>{label}</button>
+      ))}
+      <span className="feed-chips-sep" aria-hidden="true" />
+      <button type="button" className={`feed-chip${filters.remote ? ' is-active' : ''}`} aria-pressed={filters.remote} onClick={() => setFilters(current => ({ ...current, remote: !current.remote }))}>Remoto</button>
+      {user?.seniority && (
+        <button type="button" className={`feed-chip${filters.myLevel ? ' is-active' : ''}`} aria-pressed={filters.myLevel} onClick={() => setFilters(current => ({ ...current, myLevel: !current.myLevel }))}>Mi nivel</button>
+      )}
+    </div>
+    {shouldNudgeSkills(user) && (
+      <div className="skills-nudge" role="note" title={progress.missing.length ? `Te falta: ${progress.missing.join(', ')}` : undefined}>
+        <span className="skills-nudge-label">Perfil al {progress.percent} %</span>
+        <span className="skills-nudge-bar" role="progressbar" aria-label="Avance de tu perfil" aria-valuemin={0} aria-valuemax={100} aria-valuenow={progress.percent}><i style={{ width: `${progress.percent}%` }} /></span>
+        <Link href="/settings">Agregar skills</Link>
+      </div>
+    )}
     {user && (
       <Link href="/publicar" className="feed-compose">
         <PenLine size={18} />
@@ -872,29 +911,15 @@ export function Feed() {
         <strong>Publicar</strong>
       </Link>
     )}
-    <div className="feed-heading">
-      <div>
-        <p className="eyebrow">{todayLabel}</p>
-        <h1>Tu feed <span className="live-dot" /></h1>
-        {activeTag && <span className="active-filter-chip"><Hash size={12} />{activeTag}<button onClick={() => setActiveTag(null)} aria-label="Quitar filtro de tema"><X size={12} /></button></span>}
-      </div>
-    </div>
-    {shouldNudgeSkills(user) && (
-      <div className="skills-nudge" role="note">
-        <span>
-          <strong>Con más skills te llegan más vacantes.</strong>{' '}
-          Te recomendamos tener al menos {RECOMMENDED_SKILLS}; ahora tienes {Array.isArray(user.skills) ? user.skills.length : 0}. No es obligatorio.
-        </span>
-        <Link href="/settings">Agregar skills</Link>
-      </div>
-    )}
     <div className="post-list">
       {entries.map(entry => entry.kind === 'forYou'
         ? <ForYouCard key={entry.key} item={entry.item} />
         : <PostCard key={entry.key} post={entry.post} onAuthRequired={requestAuth} />)}
     </div>
     {loading && <div style={{ textAlign: 'center', padding: 20, color: 'var(--text-muted)' }}><Sparkles size={16} className="spin" /> Cargando más posts...</div>}
-    {!loading && entries.length === 0 && <div style={{ textAlign: 'center', padding: 40, color: 'var(--text-muted)' }}><PenLine size={32} style={{ marginBottom: 12, opacity: 0.5 }} /><p>No hay posts disponibles</p></div>}
+    {!loading && entries.length === 0 && (filtersActive
+      ? <div className="feed-empty"><p>Nada con estos filtros.</p><button type="button" className="feed-chip" onClick={() => setFilters(DEFAULT_FILTERS)}>Quitar filtros</button></div>
+      : <div style={{ textAlign: 'center', padding: 40, color: 'var(--text-muted)' }}><PenLine size={32} style={{ marginBottom: 12, opacity: 0.5 }} /><p>No hay posts disponibles</p></div>)}
     {!loading && !hasMore && entries.length > 0 && <div style={{ textAlign: 'center', padding: 20, color: 'var(--text-muted)' }}>No hay más posts</div>}
   </main>
 }

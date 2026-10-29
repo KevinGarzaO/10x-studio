@@ -45,6 +45,8 @@ export const DEFAULT_TAGS: SidebarTag[] = ['python', 'sql', 'aws', 'react', 'ia'
 export interface SidebarRole {
   slug: string
   label: string
+  /** Vacantes abiertas de este puesto (si el servidor las trae). */
+  count?: number
 }
 
 /** Los puestos que se muestran mientras llegan los reales. */
