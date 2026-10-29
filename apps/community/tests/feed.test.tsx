@@ -63,7 +63,7 @@ describe('single feed', () => {
     expect(screen.getByText('Una vacante de prueba')).toBeTruthy()
     expect(container.querySelector('.post-type-badge.is-article')?.textContent).toBe('ARTÍCULO')
     expect(container.querySelector('.post-card.job-card .post-type-badge')?.textContent).toBe('VACANTE')
-    expect(screen.queryByText('PARA TI')).toBeNull()
+    expect(screen.queryByText('Para ti')).toBeNull()
     expect((global.fetch as any).mock.calls.some((c: any[]) => String(c[0]).includes('/feed/for-you'))).toBe(false)
   })
 
@@ -72,7 +72,7 @@ describe('single feed', () => {
     renderFeed({ id: 'u1', username: 'ana' })
 
     expect(await screen.findByText('Vacante que coincide')).toBeTruthy()
-    await waitFor(() => expect(screen.getByText('PARA TI')).toBeTruthy())
+    await waitFor(() => expect(screen.getByText('Para ti')).toBeTruthy())
     expect(screen.getByText('Un artículo de prueba')).toBeTruthy()
     expect(screen.getByText('Una vacante de prueba')).toBeTruthy()
     expect(screen.getByText(/1 skill en común/)).toBeTruthy()

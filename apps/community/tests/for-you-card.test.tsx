@@ -37,7 +37,7 @@ describe('ForYouCard', () => {
   it('is identifiable as Para ti and says how many skills match', () => {
     render(<ForYouCard item={community} />)
 
-    expect(screen.getByText('PARA TI')).toBeTruthy()
+    expect(screen.getByText('Para ti')).toBeTruthy()
     expect(screen.getByText(/2 skills en común/)).toBeTruthy()
     expect(screen.getByRole('article').className).toContain('is-for-you')
   })
@@ -45,13 +45,13 @@ describe('ForYouCard', () => {
   it('shows how well the vacancy fits, when the backend says so', () => {
     render(<ForYouCard item={{ ...community, matchScore: 82 }} />)
 
-    expect(screen.getByText('82% match')).toBeTruthy()
+    expect(screen.getByText('82 %')).toBeTruthy()
   })
 
   it('shows no percentage when the backend does not send one', () => {
     render(<ForYouCard item={community} />)
 
-    expect(screen.queryByText(/% match/)).toBeNull()
+    expect(screen.queryByText(/ %$/)).toBeNull()
   })
 
   it('puts the skills you have first and marks them', () => {
@@ -63,9 +63,29 @@ describe('ForYouCard', () => {
     expect(badges.map(b => b.classList.contains('is-shared'))).toEqual([true, true, false, false])
   })
 
-  it('shows views, saves and applies, zeros included, like the vacancy card', () => {
+  it('shows only the numbers that say something: no zeros', () => {
     const { container } = render(<ForYouCard item={{ ...community, stats: { views: 12, saves: 0, applies: 3 } }} />)
-    expect([...container.querySelectorAll('.vacancy-stats li')].map(li => li.getAttribute('title'))).toEqual(['12 vistas', '0 guardados', '3 postulaciones'])
+    expect(container.querySelector('.jc-stats-line')?.textContent).toBe('12 vistas · 3 postulaciones')
+  })
+
+  it('shows no numbers line at all when nobody has interacted yet', () => {
+    const { container } = render(<ForYouCard item={{ ...community, stats: { views: 1, saves: 0, applies: 0 } }} />)
+    expect(container.querySelector('.jc-stats-line')).toBeNull()
+  })
+
+  it('says why it fits in one line: what matches and what is missing', () => {
+    const item = { ...community, matchScore: 53, skills: ['aws', 'java', 'python', 'docker'], sharedSkills: ['python', 'docker'] }
+    const { container } = render(<ForYouCard item={item} />)
+
+    expect(container.querySelector('.jc-why-text')?.textContent).toBe('Coincide python, docker·te falta aws, java')
+  })
+
+  it('mentions a close role and the skills validated with an exam', () => {
+    const item = { ...community, roleFit: 'adjacent' as const, sharedSkills: ['python'], validatedSkills: [{ skill: 'python', level: 'basico' as const }] }
+    const { container } = render(<ForYouCard item={item} />)
+
+    expect(container.querySelector('.jc-why-text')?.textContent).toContain('rol cercano al tuyo')
+    expect(container.querySelector('.jc-why-text')?.textContent).toContain('1 validado con examen')
   })
 
   it('uses the singular for a single shared skill', () => {

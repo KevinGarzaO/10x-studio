@@ -3,14 +3,14 @@
 import { useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { BadgeCheck, Bookmark, Building, Target } from 'lucide-react'
+import { BadgeCheck, Bookmark } from 'lucide-react'
 import { getToken } from '../lib/session'
 import { formatCompanyName, companySlug } from '../lib/company'
 import { ROLE_CATEGORY_LABELS, SENIORITY_LABELS } from '../lib/profile-options'
 import type { MatchedItem } from '../lib/mixed-feed'
 import { CompanyAvatar, rememberFeedPosition } from './community-hub'
 import { ProfileHoverCard } from './profile-hover-card'
-import { VacancyStats } from './vacancy-stats'
+import { compactStats } from '../lib/feed-stats'
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'
 
@@ -105,6 +105,18 @@ export function ForYouCard({ item }: { item: MatchedItem }) {
     }
   }
 
+  // Por qué encaja, en una línea: qué skills coinciden, cuáles faltan, si es un puesto cercano y cuántos validó con examen.
+  const mine = item.skills.filter(skill => shared.has(skill.toLowerCase()))
+  const missing = item.skills.filter(skill => !shared.has(skill.toLowerCase()))
+  const why = [
+    mine.length > 0
+      ? <span key="mine">Coincide <b>{mine.slice(0, 3).join(', ')}</b></span>
+      : item.matchingSkills > 0 ? <span key="count">{item.matchingSkills} {item.matchingSkills === 1 ? 'skill' : 'skills'} en común</span> : null,
+    mine.length > 0 && missing.length > 0 ? <span key="missing">te falta {missing.slice(0, 2).join(', ')}</span> : null,
+    item.roleFit === 'adjacent' ? <span key="role">rol cercano al tuyo</span> : null,
+    validated.size > 0 ? <span key="validated"><BadgeCheck size={12} /> {validated.size} {validated.size === 1 ? 'validado' : 'validados'} con examen</span> : null,
+  ].filter(Boolean).flatMap((part, index) => (index === 0 ? [part] : [<span key={`dot-${index}`} className="jc-dot" aria-hidden="true">·</span>, part]))
+  const statsLine = compactStats(item.stats)
   const facts = [role, level, item.modalidad && !/no especificado|unknown/i.test(item.modalidad) ? item.modalidad : null].filter(Boolean) as string[]
   const sortedSkills = [...item.skills].sort((a, b) => Number(validated.has(b.toLowerCase())) - Number(validated.has(a.toLowerCase())) || Number(shared.has(b)) - Number(shared.has(a))).slice(0, 6)
 
@@ -113,13 +125,7 @@ export function ForYouCard({ item }: { item: MatchedItem }) {
       className="post-card job-card is-for-you"
       onClick={e => { if (e.target instanceof HTMLElement && e.target.closest('button, a')) return; open() }}
     >
-      <div className="jc-forme">
-        <span className="post-type-badge is-for-you"><Target size={11} /> PARA TI</span>
-        {typeof item.matchScore === 'number' && <span className="match-score" title={matchExplanation(item)}>{item.matchScore}% match</span>}
-        <span className="match-pill">{item.matchingSkills} {item.matchingSkills === 1 ? 'skill' : 'skills'} en común</span>
-        {validated.size > 0 && <span className="match-pill is-validated" title="Skills que pide la vacante y aprobaste con examen"><BadgeCheck size={11} /> {validated.size} {validated.size === 1 ? 'validado' : 'validados'} con examen</span>}
-        {item.roleFit === 'adjacent' && <span className="match-pill" title="No es exactamente tu puesto, pero es cercano y pide skills que tienes">Rol cercano al tuyo</span>}
-      </div>
+      <span className="sr-only">Para ti</span>
       <div className="jc-head">
         <ProfileHoverCard kind="company" id={company ? companySlug(company) : null} name={company || 'AvoTalent'} photoUrl={item.companyLogo} href={company ? `/empresas/${companySlug(company)}` : null}>
           <Link href={company ? `/empresas/${companySlug(company)}` : '#'} className="jc-company" onClick={e => !company && e.preventDefault()}>
@@ -135,6 +141,10 @@ export function ForYouCard({ item }: { item: MatchedItem }) {
       </div>
       <h2 className="jc-title">{item.title}</h2>
       {facts.length > 0 && <p className="jc-facts">{facts.join(' · ')}</p>}
+      <div className="jc-why">
+        {typeof item.matchScore === 'number' && <span className="match-score" title={matchExplanation(item)}>{item.matchScore} %</span>}
+        <span className="jc-why-text">{why}</span>
+      </div>
       {sortedSkills.length > 0 && (
         <div className="jc-tags">
           {/* Los skills que tú tienes van primero y resaltados. */}
@@ -147,7 +157,7 @@ export function ForYouCard({ item }: { item: MatchedItem }) {
         </div>
       )}
       <div className="jc-meta">
-        <VacancyStats stats={item.stats} />
+        {statsLine && <span className="jc-stats-line">{statsLine}</span>}
         <span className="footer-spacer" />
         <button className="jc-more jc-more-button" onClick={open} disabled={opening}>
           {opening ? 'Abriendo...' : 'Ver vacante →'}

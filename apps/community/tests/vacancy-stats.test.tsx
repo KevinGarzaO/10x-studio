@@ -59,13 +59,21 @@ describe('a vacancy card', () => {
     </ShellContext.Provider>,
   )
 
-  it('shows views, saves, applies and comments in one row, with no separate button or footer', () => {
+  it('shows the numbers in one quiet line, with no separate button or footer', () => {
     const { container } = renderCard({ ...job, commentsCount: 5, stats: { views: 40, saves: 3, applies: 2 } })
 
-    const titles = [...container.querySelectorAll('.vacancy-stats li')].map(li => li.getAttribute('title'))
-    expect(titles).toEqual(['40 vistas', '3 guardados', '2 postulaciones', '5 comentarios'])
+    expect(container.querySelector('.jc-stats-line')?.textContent).toBe('40 vistas · 3 guardados · 2 postulaciones · 5 comentarios')
     expect(container.querySelector('.jc-cta')).toBeNull()
     expect(container.querySelector('.engagement')).toBeNull()
+  })
+
+  it('leaves out the numbers that are zero, and the whole line when there is nothing to say', () => {
+    const some = renderCard({ ...job, commentsCount: 0, stats: { views: 40, saves: 0, applies: 0 } })
+    expect(some.container.querySelector('.jc-stats-line')?.textContent).toBe('40 vistas')
+    some.unmount()
+
+    const none = renderCard({ ...job, commentsCount: 0, stats: { views: 0, saves: 0, applies: 0 } })
+    expect(none.container.querySelector('.jc-stats-line')).toBeNull()
   })
 
   it('an article card has the same kind of row: votes, comments and reading time', () => {

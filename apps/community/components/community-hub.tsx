@@ -19,6 +19,7 @@ import { buildFeed, type MatchedItem } from '../lib/mixed-feed'
 import { ForYouCard } from './for-you-card'
 import { VacancyStats, type VacancyStatsData } from './vacancy-stats'
 import { PostStats } from './post-stats'
+import { compactStats } from '../lib/feed-stats'
 import { ProfileHoverCard } from './profile-hover-card'
 import { excerptOf } from '../lib/user-markdown'
 import { HeroBanner } from './hero-banner'
@@ -463,7 +464,7 @@ export function PostCard({ post, onAuthRequired }: { post: FeedPost; onAuthRequi
       )}
       {tags.length > 0 && <div className="jc-tags">{tags.map(tag => <span key={tag} className="jc-tag"><i>#</i>{tag}</span>)}</div>}
       <div className="jc-meta">
-        <VacancyStats stats={liveStats} comments={post.commentsCount} />
+        {compactStats(liveStats, post.commentsCount) && <span className="jc-stats-line">{compactStats(liveStats, post.commentsCount)}</span>}
         <span className="footer-spacer" />
         <span className="jc-more">Ver vacante →</span>
       </div>
