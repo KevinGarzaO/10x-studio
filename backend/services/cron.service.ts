@@ -121,6 +121,33 @@ export const initCron = () => {
     }
   })
 
+  // 3b-quater. BIENVENIDA POR CORREO. Cada 15 minutos: a quien se registró hace 10 minutos o más (después del
+  //     12:00 del 29-oct-2026) se le manda la bienvenida con sus primeros pasos. Corre APARTE del registro: si algo
+  //     falla aquí, el onboarding ni se entera. Apagado hasta que se active WELCOME_EMAILS=on en el servidor.
+  cron.schedule('*/15 * * * *', async () => {
+    if (process.env.WELCOME_EMAILS !== 'on') return
+    try {
+      const { runWelcomeBatch } = require('./email/welcome')
+      const outcome = await runWelcomeBatch('new')
+      if (outcome.status === 'skipped' || outcome.sent > 0 || outcome.failed > 0) console.log(`[Bienvenida] ${outcome.status === 'skipped' ? `omitido: ${outcome.reason}` : `enviados ${outcome.sent}, fallidos ${outcome.failed}, en espera ${outcome.waiting}`}`)
+    } catch (error) {
+      console.error('[Bienvenida] Error:', error)
+    }
+  })
+
+  //     "Gracias por ser de los primeros": 12:00 PM Monterrey (18:00 UTC), a quienes ya estaban antes y completaron su
+  //     perfil; una sola vez por persona. Apagado hasta WELCOME_FOUNDERS_EMAILS=on.
+  cron.schedule('0 18 * * *', async () => {
+    if (process.env.WELCOME_FOUNDERS_EMAILS !== 'on') return
+    try {
+      const { runWelcomeBatch } = require('./email/welcome')
+      const outcome = await runWelcomeBatch('founders')
+      console.log(`[BienvenidaPrimeros] ${outcome.status === 'skipped' ? `omitido: ${outcome.reason}` : `enviados ${outcome.sent}, fallidos ${outcome.failed}, en espera ${outcome.waiting}`}`)
+    } catch (error) {
+      console.error('[BienvenidaPrimeros] Error:', error)
+    }
+  })
+
   // 3c. ALARMAS: cada hora se revisan las reglas del panel (services/analytics/alerts.ts) y, si aparece
   //     una grave nueva, se deja en el registro del servidor. Es el único aviso fuera del panel.
   let lastAlerts = ''

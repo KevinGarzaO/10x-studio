@@ -17,7 +17,7 @@ export const REMINDER_KIND = 'perfil-pendiente-1'
 /** Nombre de la campaña en los enlaces (utm_campaign): así el panel cuenta quién llegó desde este correo. */
 export const REMINDER_CAMPAIGN = 'perfil-pendiente'
 /** A quien se registró hace menos que esto todavía no se le recuerda nada: puede estar llenándolo. */
-export const MIN_ACCOUNT_AGE_HOURS = 24
+export const MIN_ACCOUNT_AGE_HOURS = 72
 /** Una vacante cuenta como abierta durante este tiempo (igual que en el sitio). */
 const OPEN_DAYS = 45
 

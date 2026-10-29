@@ -27,7 +27,8 @@
     "import-invitations": "tsx scripts/import-invitations.ts",
     "invite": "tsx scripts/invite.ts",
     "invite-report": "tsx scripts/invite-report.ts",
-    "welcome-preview": "tsx scripts/welcome-preview.ts"
+    "welcome-preview": "tsx scripts/welcome-preview.ts",
+    "welcome": "tsx scripts/welcome.ts"
   },
   "dependencies": {
     "@avocado/schemas": "workspace:*",

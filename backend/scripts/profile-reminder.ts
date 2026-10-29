@@ -4,7 +4,7 @@
  *   npm run profile-reminder                                  ver a quién le llegaría y qué vacante iría (no envía nada)
  *   npm run profile-reminder -- --preview tu@correo.com       te manda UN correo igual al real, a ti
  *   npm run profile-reminder -- --send [--limit 20]           lo envía a las personas (solo si lo pides con --send)
- *   (cualquiera de los dos admite --include-recent: también a quien se registró hace menos de 24 h)
+ *   (cualquiera de los dos admite --include-recent: también a quien se registró hace menos de 3 días)
  *
  * Variables (del entorno o de backend/.env): RESEND_API_KEY y, si quieres, RESEND_FROM.
  * Para enviar necesita backend/sql/email-reminders-migration.sql aplicada (registro de envíos).
@@ -29,7 +29,7 @@ const EXCLUSION_LABEL: Record<Exclusion, string> = {
   'equipo-o-empresa': 'equipo o empresas',
   'sin-correo': 'sin correo válido',
   'dio-de-baja': 'se dieron de baja',
-  'muy-reciente': 'se registraron hace menos de 24 h',
+  'muy-reciente': 'se registraron hace menos de 3 días',
   'ya-enviado': 'ya recibieron este correo',
 }
 
@@ -44,7 +44,7 @@ async function main() {
   const send = has('--send')
   const limit = arg('--limit') ? Number(arg('--limit')) : undefined
 
-  // Por defecto no se escribe a quien se registró hace menos de 24 h (puede estar llenando el perfil); --include-recent lo permite.
+  // Por defecto no se escribe a quien se registró hace menos de 3 días (ya recibió la bienvenida); --include-recent lo permite.
   const audience = await loadAudience(REMINDER_KIND, new Date(), has('--include-recent') ? 0 : MIN_ACCOUNT_AGE_HOURS)
   const picked = await pickPopularVacancy()
 
