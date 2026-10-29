@@ -28,7 +28,8 @@
     "invite": "tsx scripts/invite.ts",
     "invite-report": "tsx scripts/invite-report.ts",
     "welcome-preview": "tsx scripts/welcome-preview.ts",
-    "welcome": "tsx scripts/welcome.ts"
+    "welcome": "tsx scripts/welcome.ts",
+    "para-ti-preview": "tsx scripts/para-ti-preview.ts"
   },
   "dependencies": {
     "@avocado/schemas": "workspace:*",
