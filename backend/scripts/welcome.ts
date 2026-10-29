@@ -31,7 +31,7 @@ async function main() {
       console.log(`  ${(user.display_name || user.name || '(sin nombre)').padEnd(30)} ${maskEmail(user.email!).padEnd(28)} ${(user.provider || '-').padEnd(9)} ${user.created_at.slice(0, 16).replace('T', ' ')} ${user.profile_completed ? 'perfil completo' : 'perfil sin completar'}`)
     }
   }
-  console.log(`\nCupo de correos que queda hoy: ${await remainingBudget()}`)
+  console.log(`\nCupo de correos que queda en estas 24 horas: ${await remainingBudget()}`)
 
   const target = arg('--send') as WelcomeAudience | undefined
   if (!target) { console.log('\n(Solo vista: no se envió nada. Usa --send founders o --send new.)'); return }

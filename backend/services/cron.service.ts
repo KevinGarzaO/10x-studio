@@ -106,11 +106,11 @@ export const initCron = () => {
     }
   })
 
-  // 3b-ter. INVITACIONES POR CORREO a la lista de contactos: una vez al día, 11:00 AM Monterrey (17:00 UTC), después del
-  //     recordatorio de perfil. Primera invitación en el orden de la cola y, a los 5 días, la segunda y última;
+  // 3b-ter. INVITACIONES POR CORREO a la lista de contactos: una vez al día, 1:00 PM Monterrey (19:00 UTC), DESPUÉS de las
+  //     bienvenidas y el recordatorio de perfil, que son más urgentes y usan el cupo primero. Primera invitación en el orden de la cola y, a los 5 días, la segunda y última;
   //     con calentamiento (20, 40, luego 70 al día) y dentro del cupo compartido de 100 correos de Resend. Apagado
   //     hasta que se active INVITE_EMAILS=on en el servidor (services/email/invitations.ts).
-  cron.schedule('0 17 * * *', async () => {
+  cron.schedule('0 19 * * *', async () => {
     if (process.env.INVITE_EMAILS !== 'on') return
     try {
       const { runInvitationBatch } = require('./email/invitations')

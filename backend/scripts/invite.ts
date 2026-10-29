@@ -9,7 +9,7 @@
  */
 import 'dotenv/config'
 import { activeDaysBefore, dailyCap, loadState, pickDue, runInvitationBatch } from '../services/email/invitations'
-import { remainingBudget, sentToday, TOTAL_DAILY_BUDGET } from '../services/email/budget'
+import { RESERVE, remainingBudget, sentLast24h, TOTAL_DAILY_BUDGET } from '../services/email/budget'
 
 const arg = (name: string): string | undefined => {
   const index = process.argv.indexOf(name)
@@ -26,7 +26,7 @@ async function main() {
   console.log(`  ya se registraron: ${invitations.filter(inv => inv.user_id).length} · fuera por rebote o spam: ${invitations.filter(inv => inv.suppressed).length}`)
   console.log(`  primera invitación enviada: ${count(1)} (falló ${count(1, 'failed')}) · última enviada: ${count(2)} (falló ${count(2, 'failed')})`)
   console.log(`Toca hoy: ${due.step2.length} última + ${due.step1.length} primera`)
-  console.log(`Tope de hoy por calentamiento: ${dailyCap(activeDaysBefore(sends, now))} · correos ya enviados hoy (todos los tipos): ${await sentToday(now)} de ${TOTAL_DAILY_BUDGET} · quedan ${await remainingBudget(now)}`)
+  console.log(`Tope de hoy por calentamiento: ${dailyCap(activeDaysBefore(sends, now))} · correos de las últimas 24 horas (todos los tipos): ${await sentLast24h(now)} de ${TOTAL_DAILY_BUDGET} · para invitaciones quedan ${await remainingBudget(now, RESERVE.invitations)}`)
 
   if (!process.argv.includes('--send')) { console.log('\n(Solo vista: no se envió nada. Usa --send para mandar la tanda de hoy.)'); return }
   const outcome = await runInvitationBatch(undefined, { limit: arg('--limit') ? Number(arg('--limit')) : undefined })

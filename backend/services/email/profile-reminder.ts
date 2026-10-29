@@ -2,7 +2,7 @@ import { Resend } from 'resend'
 import { supabase } from '../supabase.service'
 import { loadVacancyStats, popularityScore, rankByPopularity } from '../vacancies/popularity'
 import { modalityFromLabel } from '../vacancies/modality'
-import { remainingBudget } from './budget'
+import { isQuotaError, remainingBudget, sendTracked } from './budget'
 import { emailSiteUrl, trackedLink } from './links'
 import { renderProfileReminder, type RenderedEmail, type ReminderVacancy } from './templates/profile-reminder'
 
@@ -243,15 +243,20 @@ export async function sendReminders(users: AudienceUser[], picked: { vacancy: Pi
     if (claim.error) { result.skipped += 1; continue }
 
     const email = buildReminder(user, picked)
-    const { data, error } = await resend.emails.send({
+    const { data, error } = await sendTracked(resend, {
       from: config.from,
       replyTo: config.replyTo,
       to: user.email!,
       subject: email.subject,
       html: email.html,
       text: email.text,
-    })
+    }, 'recordatorio-perfil')
 
+    if (error && isQuotaError(error)) {
+      // Se acabó el cupo de 24 horas: no es un fallo de la persona. Se libera su lugar para la próxima corrida y se detiene el lote.
+      await supabase.from('email_sends').delete().eq('user_id', user.id).eq('kind', kind)
+      break
+    }
     if (error) {
       const message = `${error.name}: ${error.message}`
       await supabase.from('email_sends').update({ status: 'failed', error: message }).eq('user_id', user.id).eq('kind', kind)

@@ -9,6 +9,7 @@
  */
 import 'dotenv/config'
 import { Resend } from 'resend'
+import { sendTracked } from '../services/email/budget'
 import { supabase } from '../services/supabase.service'
 import { trackedLink } from '../services/email/links'
 import { DEFAULT_FROM, DEFAULT_REPLY_TO, firstName } from '../services/email/profile-reminder'
@@ -73,7 +74,7 @@ async function main() {
 
   const resend = new Resend(process.env.RESEND_API_KEY)
   for (const [label, email] of emails) {
-    const { data, error } = await resend.emails.send({ from: process.env.RESEND_FROM || DEFAULT_FROM, replyTo: process.env.RESEND_REPLY_TO || DEFAULT_REPLY_TO, to, subject: email.subject, html: email.html, text: email.text })
+    const { data, error } = await sendTracked(resend, { from: process.env.RESEND_FROM || DEFAULT_FROM, replyTo: process.env.RESEND_REPLY_TO || DEFAULT_REPLY_TO, to, subject: email.subject, html: email.html, text: email.text }, 'prueba')
     if (error) throw new Error(`Resend rechazó "${label}": ${error.name}: ${error.message}`)
     console.log(`${label} enviado (id ${data?.id}): ${email.subject}`)
     await new Promise(resolve => setTimeout(resolve, 600))

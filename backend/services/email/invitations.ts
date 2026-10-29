@@ -1,7 +1,7 @@
 import { randomBytes } from 'crypto'
 import { Resend } from 'resend'
 import { supabase } from '../supabase.service'
-import { monterreyDayStart, remainingBudget } from './budget'
+import { RESERVE, isQuotaError, monterreyDayStart, remainingBudget, sendTracked } from './budget'
 import { trackedLink } from './links'
 import { mailConfigFromEnv, pickTopVacancies, type MailConfig, type PickedVacancy } from './profile-reminder'
 import { renderInvitation1, renderInvitation2 } from './templates/invitation'
@@ -184,7 +184,7 @@ export interface InviteDeps {
   loadState: typeof loadState
   remainingBudget: () => Promise<number>
   loadVacancies: () => Promise<{ vacancies: PickedVacancy[]; openVacancies: number }>
-  deliver: (invitation: Invitation, step: 1 | 2, email: RenderedEmail, config: MailConfig) => Promise<{ ok: boolean; error?: string }>
+  deliver: (invitation: Invitation, step: 1 | 2, email: RenderedEmail, config: MailConfig) => Promise<{ ok: boolean; error?: string; quota?: boolean }>
   now: () => Date
 }
 
@@ -193,10 +193,15 @@ export type InviteOutcome =
   | { status: 'done'; sent: number; failed: number; step1: number; step2: number; cap: number; waiting: number }
 
 /** Manda un correo y lo anota: la fila 'pending' se crea ANTES de enviar, así dos corridas a la vez no mandan lo mismo. */
-export async function deliverInvitation(invitation: Invitation, step: 1 | 2, email: RenderedEmail, config: MailConfig): Promise<{ ok: boolean; error?: string }> {
+export async function deliverInvitation(invitation: Invitation, step: 1 | 2, email: RenderedEmail, config: MailConfig): Promise<{ ok: boolean; error?: string; quota?: boolean }> {
   const claim = await supabase.from('invitation_sends').insert({ invitation_id: invitation.id, step, status: 'pending' })
   if (claim.error) return { ok: false, error: 'ya tenía registro' }
-  const { data, error } = await new Resend(config.apiKey).emails.send({ from: config.from, replyTo: config.replyTo, to: invitation.email, subject: email.subject, html: email.html, text: email.text })
+  const { data, error } = await sendTracked(new Resend(config.apiKey), { from: config.from, replyTo: config.replyTo, to: invitation.email, subject: email.subject, html: email.html, text: email.text }, 'invitacion')
+  if (error && isQuotaError(error)) {
+    // Se acabó el cupo de 24 horas: se libera su lugar para la próxima corrida.
+    await supabase.from('invitation_sends').delete().eq('invitation_id', invitation.id).eq('step', step)
+    return { ok: false, error: 'sin cupo', quota: true }
+  }
   if (error) {
     const message = `${error.name}: ${error.message}`
     await supabase.from('invitation_sends').update({ status: 'failed', error: message }).eq('invitation_id', invitation.id).eq('step', step)
@@ -212,7 +217,7 @@ export const defaultInviteDeps: InviteDeps = {
   mailConfig: mailConfigFromEnv,
   prepare: async config => { await linkRegistrations(); await refreshEvents(config) },
   loadState,
-  remainingBudget: () => remainingBudget(),
+  remainingBudget: () => remainingBudget(new Date(), RESERVE.invitations),
   loadVacancies: async () => {
     const { vacancies, openVacancies } = await pickTopVacancies(3, 'invitacion', 'x', 'invitacion')
     return { vacancies, openVacancies }
@@ -248,7 +253,8 @@ export async function runInvitationBatch(deps: InviteDeps = defaultInviteDeps, o
   let step2 = 0
   for (const { inv, step } of queue.slice(0, budget)) {
     const result = await deps.deliver(inv, step, buildInvitation(inv, step, vacancies, openVacancies), config)
-    if (result.ok) { sent += 1; if (step === 1) step1 += 1; else step2 += 1 } else failed += 1
+    if (result.ok) { sent += 1; if (step === 1) step1 += 1; else step2 += 1 } else if (result.quota) break
+    else failed += 1
   }
   return { status: 'done', sent, failed, step1, step2, cap, waiting: Math.max(0, queue.length - budget) }
 }

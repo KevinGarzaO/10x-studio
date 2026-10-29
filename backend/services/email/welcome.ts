@@ -1,6 +1,6 @@
 import { Resend } from 'resend'
 import { supabase } from '../supabase.service'
-import { remainingBudget } from './budget'
+import { isQuotaError, remainingBudget, sendTracked } from './budget'
 import { trackedLink } from './links'
 import { firstName, mailConfigFromEnv, pickTopVacancies, type AudienceUser, type MailConfig, type PickedVacancy } from './profile-reminder'
 import { renderFounders, renderWelcome } from './templates/welcome'
@@ -108,14 +108,18 @@ export interface WelcomeDeps {
   loadCandidates: () => Promise<WelcomeCandidates>
   remainingBudget: () => Promise<number>
   loadVacancy: (audience: WelcomeAudience) => Promise<{ vacancy: PickedVacancy | null; openVacancies: number }>
-  deliver: (user: AudienceUser, kind: string, vacancyId: string | null, email: RenderedEmail, config: MailConfig) => Promise<{ ok: boolean; error?: string }>
+  deliver: (user: AudienceUser, kind: string, vacancyId: string | null, email: RenderedEmail, config: MailConfig) => Promise<{ ok: boolean; error?: string; quota?: boolean }>
 }
 
 /** Anota la fila ('pending') ANTES de enviar: el UNIQUE (persona, tipo) impide mandarlo dos veces aunque corran dos procesos a la vez. */
-export async function deliverWelcome(user: AudienceUser, kind: string, vacancyId: string | null, email: RenderedEmail, config: MailConfig): Promise<{ ok: boolean; error?: string }> {
+export async function deliverWelcome(user: AudienceUser, kind: string, vacancyId: string | null, email: RenderedEmail, config: MailConfig): Promise<{ ok: boolean; error?: string; quota?: boolean }> {
   const claim = await supabase.from('email_sends').insert({ user_id: user.id, kind, vacancy_id: vacancyId, status: 'pending' })
   if (claim.error) return { ok: false, error: 'ya tenía registro' }
-  const { data, error } = await new Resend(config.apiKey).emails.send({ from: config.from, replyTo: config.replyTo, to: user.email!, subject: email.subject, html: email.html, text: email.text })
+  const { data, error } = await sendTracked(new Resend(config.apiKey), { from: config.from, replyTo: config.replyTo, to: user.email!, subject: email.subject, html: email.html, text: email.text }, 'bienvenida')
+  if (error && isQuotaError(error)) {
+    await supabase.from('email_sends').delete().eq('user_id', user.id).eq('kind', kind)
+    return { ok: false, error: 'sin cupo', quota: true }
+  }
   if (error) {
     const message = `${error.name}: ${error.message}`
     await supabase.from('email_sends').update({ status: 'failed', error: message }).eq('user_id', user.id).eq('kind', kind)
@@ -163,6 +167,7 @@ export async function runWelcomeBatch(audience: WelcomeAudience, deps: WelcomeDe
   for (const user of people.slice(0, room)) {
     const result = await deps.deliver(user, kind, vacancy?.id ?? null, buildWelcome(audience, user, vacancy, openVacancies), config)
     if (result.ok) sent += 1
+    else if (result.quota) break
     else failed += 1
   }
   return { status: 'done', sent, failed, waiting: Math.max(0, people.length - room) }

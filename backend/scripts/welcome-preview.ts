@@ -9,6 +9,7 @@
  */
 import 'dotenv/config'
 import { Resend } from 'resend'
+import { sendTracked } from '../services/email/budget'
 import { DEFAULT_FROM, DEFAULT_REPLY_TO, pickTopVacancies } from '../services/email/profile-reminder'
 import { trackedLink } from '../services/email/links'
 import { renderFounders, renderWelcome } from '../services/email/templates/welcome'
@@ -32,7 +33,7 @@ async function main() {
   ] as const
 
   for (const [label, email] of emails) {
-    const { data, error } = await resend.emails.send({ from, replyTo, to, subject: email.subject, html: email.html, text: email.text })
+    const { data, error } = await sendTracked(resend, { from, replyTo, to, subject: email.subject, html: email.html, text: email.text }, 'prueba')
     if (error) throw new Error(`Resend rechazó "${label}": ${error.name}: ${error.message}`)
     console.log(`${label} enviado (id ${data?.id}): ${email.subject}`)
     await new Promise(resolve => setTimeout(resolve, 600))
