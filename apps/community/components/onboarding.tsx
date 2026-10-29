@@ -296,9 +296,12 @@ export function OnboardingPage() {
             </button>
           </div>
         ) : (
-          <button className="onboarding-submit" onClick={handleSubmit} disabled={saving || catalogFailed}>
-            {saving ? <><Loader2 size={16} style={{ animation: 'spin 1s linear infinite' }} /> Guardando...</> : 'Continuar a AvoTalent'}
-          </button>
+          <>
+            <button className="onboarding-submit" onClick={handleSubmit} disabled={saving || catalogFailed}>
+              {saving ? <><Loader2 size={16} style={{ animation: 'spin 1s linear infinite' }} /> Guardando...</> : 'Continuar a AvoTalent'}
+            </button>
+            <p className="muted" style={{ marginTop: 10, fontSize: 12, textAlign: 'center' }}>Te enviaremos un correo de bienvenida con tus primeros pasos.</p>
+          </>
         )}
       </div>
       <style>{`@keyframes spin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}`}</style>

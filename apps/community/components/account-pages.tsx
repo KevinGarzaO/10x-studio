@@ -131,7 +131,7 @@ const styles = `
 .auth-submit{width:100%;background:var(--brand);color:var(--bg);border:none;padding:12px;border-radius:8px;font-size:14px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;margin-top:4px}
 .auth-submit:hover{background:var(--accent-hover)}
 .auth-submit:disabled{opacity:.6;cursor:not-allowed}
-.auth-switch{margin-top:20px;text-align:center;font-size:13px;color:var(--text-muted)}
+.auth-note{margin:14px 0 0;text-align:center;font-size:12px;color:var(--text-muted)}.auth-switch{margin-top:20px;text-align:center;font-size:13px;color:var(--text-muted)}
 .auth-switch a{color:var(--brand);text-decoration:none;font-weight:600}
 .auth-switch a:hover{text-decoration:underline}
 .auth-pw-toggle{position:absolute;right:12px;top:50%;transform:translateY(-50%);background:none;border:none;color:var(--text-muted);cursor:pointer;padding:0}
@@ -535,6 +535,8 @@ export function AuthPage({ mode }: { mode: 'login' | 'signup' }) {
               {loading ? <><Loader2 size={16} style={{ animation: 'spin 1s linear infinite' }} /> Procesando...</> : signup ? 'Crear cuenta' : 'Iniciar sesión'}
             </button>
           </form>
+
+          {signup && <p className="auth-note">Al crear tu cuenta te enviaremos un correo de bienvenida con tus primeros pasos.</p>}
 
           <div className="auth-switch">
             {signup ? (

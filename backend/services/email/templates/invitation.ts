@@ -11,16 +11,16 @@ export interface InvitationData {
   vacancies: ReminderVacancy[]
 }
 
-const escapeHtml = (text: string): string =>
+export const escapeHtml = (text: string): string =>
   text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;')
 
 const FONT = "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif"
-const P = `margin: 0 0 16px 0; font-size: 15px; color: #4b5563 !important; line-height: 1.6;`
-const STRONG = `color: #111827 !important;`
+export const P = `margin: 0 0 16px 0; font-size: 15px; color: #4b5563 !important; line-height: 1.6;`
+export const STRONG = `color: #111827 !important;`
 
-const greeting = (name: string | null) => (name ? `Hola, <strong style="${STRONG}">${escapeHtml(name)}</strong> 👋` : 'Hola 👋')
+export const greeting = (name: string | null) => (name ? `Hola, <strong style="${STRONG}">${escapeHtml(name)}</strong> 👋` : 'Hola 👋')
 
-function vacancyCard(vacancy: ReminderVacancy, tag: string): string {
+export function vacancyCard(vacancy: ReminderVacancy, tag: string): string {
   return `
                     <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" bgcolor="#ffffff" style="background-color: #ffffff !important; border: 1px solid #e2e8f0; border-radius: 12px; margin-bottom: 12px;">
                       <tr>
@@ -33,7 +33,7 @@ function vacancyCard(vacancy: ReminderVacancy, tag: string): string {
                     </table>`
 }
 
-const button = (url: string, label: string) => `
+export const button = (url: string, label: string) => `
                     <table role="presentation" cellspacing="0" cellpadding="0" border="0" style="margin: 6px auto 8px auto;">
                       <tr>
                         <td align="center" bgcolor="#00a86b" style="border-radius: 8px; background-color: #00a86b !important;">
@@ -42,7 +42,7 @@ const button = (url: string, label: string) => `
                       </tr>
                     </table>`
 
-function shell(subject: string, preheader: string, body: string, footer: string): string {
+export function shell(subject: string, preheader: string, body: string, footer: string): string {
   return `<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
 <html dir="ltr" lang="es">
   <head>
