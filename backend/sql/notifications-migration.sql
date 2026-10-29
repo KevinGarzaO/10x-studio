@@ -20,14 +20,18 @@ CREATE INDEX IF NOT EXISTS idx_community_notifications_recent ON community_notif
 
 ALTER TABLE users ADD COLUMN IF NOT EXISTS email_prefs JSONB NOT NULL DEFAULT '{}';
 
+-- OJO: no usar PRIMARY KEY (user_id, vacancy_id). Con una llave compuesta entre users y community_posts, PostgREST la
+-- toma como tabla "puente" y el embed `author:users(...)` de community_posts se vuelve ambiguo (error PGRST201): se cae
+-- el feed y los perfiles. Por eso lleva su propio id y un UNIQUE aparte.
 CREATE TABLE IF NOT EXISTS match_alerts (
+  id         UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id    UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
   vacancy_id UUID NOT NULL REFERENCES community_posts(id) ON DELETE CASCADE,
   score      SMALLINT NOT NULL,
   -- Si además del aviso en la app se mandó por correo.
   emailed    BOOLEAN NOT NULL DEFAULT false,
   created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-  PRIMARY KEY (user_id, vacancy_id)
+  UNIQUE (user_id, vacancy_id)
 );
 
 CREATE TABLE IF NOT EXISTS match_emails (
