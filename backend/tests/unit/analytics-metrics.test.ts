@@ -301,12 +301,35 @@ describe('activePeople', () => {
     { user_id: 'lejos', day: '2026-08-01' }, // fuera de la ventana de 30 días
   ]
 
-  it('lists who was active in the window, most recent first, with their days', () => {
+  it('lists who was active in the window, the most active days first, with which days', () => {
     const list = activePeople({ activity, people, today: '2026-10-24' })
 
+    // ana: 2 días; admin y beto: 1 cada uno (admin entró más recientemente).
     expect(list.map(row => row.id)).toEqual(['ana', 'admin', 'beto'])
-    expect(list[0]).toMatchObject({ daysActive: 2, lastActive: '2026-10-24', activeToday: true })
+    expect(list[0]).toMatchObject({ daysActive: 2, lastActive: '2026-10-24', activeToday: true, activeDays: ['2026-10-23', '2026-10-24'] })
     expect(list[2]).toMatchObject({ activeToday: false, lastActive: '2026-10-22' })
+  })
+
+  it('sorts by days active, highest first, whatever the last visit was', () => {
+    const many = [
+      { user_id: 'poco', day: '2026-10-24' },
+      { user_id: 'mucho', day: '2026-10-10' }, { user_id: 'mucho', day: '2026-10-12' }, { user_id: 'mucho', day: '2026-10-15' },
+    ]
+    const list = activePeople({ activity: many, people: [person('poco'), person('mucho')], today: '2026-10-24' })
+    expect(list.map(row => row.id)).toEqual(['mucho', 'poco'])
+  })
+
+  it('says how many days they came back after the day they signed up', () => {
+    const list = activePeople({
+      activity: [
+        { user_id: 'nuevo', day: '2026-10-20' },
+        { user_id: 'vuelve', day: '2026-10-01' }, { user_id: 'vuelve', day: '2026-10-05' }, { user_id: 'vuelve', day: '2026-10-09' },
+      ],
+      people: [person('nuevo', { created_at: '2026-10-20T15:00:00Z' }), person('vuelve', { created_at: '2026-10-01T15:00:00Z' })],
+      today: '2026-10-24',
+    })
+    expect(list.find(row => row.id === 'nuevo')!.returnDays).toBe(0)
+    expect(list.find(row => row.id === 'vuelve')!.returnDays).toBe(2)
   })
 
   it('marks the team as not counted, so the table explains why the numbers do not include them', () => {

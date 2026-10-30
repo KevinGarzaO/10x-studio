@@ -461,6 +461,10 @@ export interface ActivePerson {
   daysActive: number
   lastActive: string
   activeToday: boolean
+  /** Los días (YYYY-MM-DD, de más viejo a más nuevo) en que estuvo activa: de ahí sale cuándo volvió. */
+  activeDays: string[]
+  /** Días distintos de actividad DESPUÉS del día de su registro: cuántas veces volvió. 0 = solo vino el día que se registró. */
+  returnDays: number
 }
 
 /** Las personas con actividad en los últimos `days` días: la lista detrás de "activos hoy / 7 / 30 días". */
@@ -478,6 +482,7 @@ export function activePeople(input: { activity: { user_id: string; day: string }
     .filter((person) => byUser.has(person.id))
     .map((person) => {
       const days = [...byUser.get(person.id)!].sort()
+      const signupDay = dayKey(person.created_at)
       return {
         id: person.id,
         username: person.username,
@@ -490,7 +495,10 @@ export function activePeople(input: { activity: { user_id: string; day: string }
         daysActive: days.length,
         lastActive: days[days.length - 1],
         activeToday: days[days.length - 1] === today,
+        activeDays: days,
+        returnDays: days.filter((day) => day > signupDay).length,
       }
     })
-    .sort((a, b) => b.lastActive.localeCompare(a.lastActive) || b.daysActive - a.daysActive)
+    // Primero quien más días ha estado activo; a igual número, quien entró más recientemente.
+    .sort((a, b) => b.daysActive - a.daysActive || b.lastActive.localeCompare(a.lastActive))
 }

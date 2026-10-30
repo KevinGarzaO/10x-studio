@@ -452,7 +452,7 @@ export async function syncAllPending(
     log("[Sync] Límite diario alcanzado, no se sincronizan más posts scraper");
     return { vacancies: 0, profiles: 0 };
   }
-  // Candidatas: vacantes sin sincronizar, con algún medio de contacto y de ≤30
+  // Candidatas: vacantes sin sincronizar, con algún medio de contacto y de ≤45
   // días — contados desde post_date (cuándo se publicó el puesto), no desde
   // created_at (cuándo lo scrapeamos): un puesto de hace 40 días que scrapeamos
   // ayer sigue siendo viejo.
@@ -462,7 +462,7 @@ export async function syncAllPending(
   // se scrapearon primero: las más nuevas ni siquiera entraban al grupo, y 20
   // vacantes al día salían de dos o tres empresas.
   const thirtyDaysAgo = new Date();
-  thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+  thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 45);
   const thirtyDaysAgoISO = thirtyDaysAgo.toISOString();
 
   const { data: vacancyPosts } = await supabase
