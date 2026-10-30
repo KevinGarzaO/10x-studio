@@ -1,6 +1,6 @@
 # Backlog de AvoTalent
 
-Estado al **30 de octubre de 2026**. Se trabaja **de a poco**: una cosa a la vez, en el orden de la tabla de la sección 2. Al terminar una, se marca aquí y se sube.
+Estado al **30 de octubre de 2026** (se agregó **V** el mismo día). Se trabaja **de a poco**: una cosa a la vez, en el orden de la tabla de la sección 2. Al terminar una, se marca aquí y se sube.
 
 - Detalle del plan original: [requirements/005-retention-and-engagement-roadmap.md](requirements/005-retention-and-engagement-roadmap.md) (usa las letras viejas; la columna "Antes" de abajo dice cuál es cuál).
 - Plan del CRM y el webhook de Resend: [requirements/006-resend-webhook-and-crm.md](requirements/006-resend-webhook-and-crm.md)
@@ -55,22 +55,23 @@ Estado al **30 de octubre de 2026**. Se trabaja **de a poco**: una cosa a la vez
 | 3 | **C** | Revisar las variables de entorno de Railway | P1 | S | cabo suelto |
 | 4 | **D** | Velocidad real: medir con tu base y revisar las secciones lentas del admin | P1 | M | cabo suelto |
 | 5 | **E** | Las 156 vacantes que no le sirven a nadie y el conteo de la cola | P2 | S | cabo suelto |
-| 6 | **F** | Confianza en las vacantes (reportar, cola de revisión, enlaces vivos) | P2 | M | B |
-| 7 | **G** | Webhook de Resend | P2 | M | plan nuevo |
-| 8 | **H** | Comunidad: seguir, likes, respuestas y menciones | P2 | L | D |
-| 9 | **I** | SEO y GEO (posición 0 en Google y citas de las IA) | P2 | M | H (parte SEO/GEO) |
-| 10 | **J** | CRM en el admin y termómetro "Valiosas" | P3 | L | plan nuevo |
-| 11 | **K** | Validación de skills: más preguntas de examen | P3 | M | E |
-| 12 | **L** | Mis postulaciones | P3 | M | F |
-| 13 | **M** | Filtro de señal humana en la analítica (en espera) | P3 | M | en espera |
-| 14 | **N** | Arreglar la prueba de retención que depende de la hora | P3 | S | cabo suelto |
-| 15 | **O** | Moderación y reportes | P4 | M | G |
-| 16 | **P** | Sembrar la comunidad con algunas discusiones | P4 | S | G |
-| 17 | **Q** | Perfil como CV y barra de qué tan completo está | P4 | M | G |
-| 18 | **R** | Privacidad de cuenta (contraseña, borrar, exportar) | P4 | M | G |
-| 19 | **S** | Medir las vistas de los artículos del equipo | P4 | S | cabo suelto |
-| 20 | **T** | Subir a git el documento de plan de monetización | P4 | S | cabo suelto |
-| 21 | **U** | Tener presente: la actividad se mide desde el 24 de octubre | Informativo | — | cabo suelto |
+| 6 | **V** | Feedback en cada sección y página de la app | P2 | M | nuevo (pedido 30 oct) |
+| 7 | **F** | Confianza en las vacantes (reportar, cola de revisión, enlaces vivos) | P2 | M | B |
+| 8 | **G** | Webhook de Resend | P2 | M | plan nuevo |
+| 9 | **H** | Comunidad: seguir, likes, respuestas y menciones | P2 | L | D |
+| 10 | **I** | SEO y GEO (posición 0 en Google y citas de las IA) | P2 | M | H (parte SEO/GEO) |
+| 11 | **J** | CRM en el admin y termómetro "Valiosas" | P3 | L | plan nuevo |
+| 12 | **K** | Validación de skills: más preguntas de examen | P3 | M | E |
+| 13 | **L** | Mis postulaciones | P3 | M | F |
+| 14 | **M** | Filtro de señal humana en la analítica (en espera) | P3 | M | en espera |
+| 15 | **N** | Arreglar la prueba de retención que depende de la hora | P3 | S | cabo suelto |
+| 16 | **O** | Moderación y reportes | P4 | M | G |
+| 17 | **P** | Sembrar la comunidad con algunas discusiones | P4 | S | G |
+| 18 | **Q** | Perfil como CV y barra de qué tan completo está | P4 | M | G |
+| 19 | **R** | Privacidad de cuenta (contraseña, borrar, exportar) | P4 | M | G |
+| 20 | **S** | Medir las vistas de los artículos del equipo | P4 | S | cabo suelto |
+| 21 | **T** | Subir a git el documento de plan de monetización | P4 | S | cabo suelto |
+| 22 | **U** | Tener presente: la actividad se mide desde el 24 de octubre | Informativo | — | cabo suelto |
 
 > El CRM (**J**) queda en P3 por tamaño y porque primero conviene el webhook (**G**), pero si quieres adelantarlo es una decisión tuya.
 
@@ -180,6 +181,19 @@ El 29 de octubre, de 10:15 a 12:50 (Monterrey), hubo 167 vistas de 167 visitante
 
 ### U. Tener presente — Informativo
 - La actividad de las personas se mide **desde el 24 de octubre**. Las cuentas más antiguas que no han vuelto a entrar no aparecen como activas, y ese dato no se puede reconstruir hacia atrás. No hay nada que hacer, solo tenerlo en cuenta al leer Retención.
+
+### V. Feedback en cada sección y página — P2 · M
+Pedido el 30 de octubre: que en cada sección y página de la app las personas puedan escribir su feedback. Hoy no hay forma de que nos digan qué falla o qué les gustaría; con una comunidad chica cada comentario vale mucho.
+- [ ] Botón fijo "Feedback" en todas las páginas de la comunidad (y en el admin), siempre al alcance y sin tapar el contenido en móvil.
+- [ ] Ventana corta: tipo (idea, problema, elogio), mensaje, y opcionalmente la captura o el correo para responder.
+- [ ] Contexto automático: la página donde estaba, la sección, la persona (si tiene sesión), el dispositivo y el navegador. Así nadie tiene que explicar "dónde estaba".
+- [ ] Secciones clave con su propia entrada ("¿Te sirvió esto?" o "Mejorar esto") que mande la etiqueta de esa sección: el feed, "Para ti", el detalle de la vacante, el perfil, el onboarding, Ajustes y las pantallas del admin.
+- [ ] Tabla `feedback` con RLS activo, y límite por persona (por ejemplo 5 al día) para que no se llene de basura.
+- [ ] Lo que escriben las personas es texto no confiable: se muestra siempre como texto, nunca como HTML.
+- [ ] Pantalla en el admin para leerlo: filtro por página y tipo, estado (nuevo, leído, atendido), y un aviso con el número de nuevos.
+- [ ] Más adelante, que aparezca en la ficha de la persona del CRM (**J**).
+- [ ] **Decisión tuya:** ¿también pueden dejar feedback los visitantes sin cuenta (con un correo opcional), o solo quien tiene sesión? Propuesta: solo con sesión al inicio, porque los visitantes solo ven el feed y así se evita el spam.
+- [ ] **Decisión tuya:** cómo quieres enterarte de los nuevos. Propuesta: contador en el admin y un resumen diario por correo solo si hay alguno (poco volumen, cabe en la cuota de Resend).
 
 ---
 
