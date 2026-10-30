@@ -193,6 +193,18 @@ export const initCron = () => {
     }
   })
 
+  // "Para ti": las coincidencias de cada persona se calculan de fondo (no al abrir el inicio). Las vacantes se leen
+  // una sola vez para toda la gente.
+  cron.schedule('*/30 * * * *', async () => {
+    try {
+      const { refreshAllMatches } = require('./matching/refresh')
+      const { people } = await refreshAllMatches()
+      console.log(`[Match] Coincidencias recalculadas para ${people} personas`)
+    } catch (error) {
+      console.error('[Match] No se pudieron recalcular las coincidencias:', error)
+    }
+  })
+
   // 4. Global Scheduler (Every 15 minutes for pending posts)
   const { SchedulerService } = require('./scheduler.service')
   cron.schedule('*/15 * * * *', async () => {

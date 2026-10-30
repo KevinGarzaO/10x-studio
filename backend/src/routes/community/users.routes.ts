@@ -5,6 +5,7 @@ import { uploadAvatar } from '../../../services/avatar'
 import { sameSkills } from '../../../lib/same-skills'
 import { buildCandidateProfileSchema, firstUnapprovedSkill, cvPayloadSchema, parseStoredCv } from '@avocado/schemas'
 import { requireAccountType } from '../../middleware/require-account-type.middleware'
+import { refreshUserMatches } from '../../../services/matching/refresh'
 
 const router = Router()
 
@@ -385,6 +386,9 @@ router.put(
         }
         throw error
       }
+
+      // "Para ti" se recalcula de fondo con el perfil nuevo; la respuesta no lo espera.
+      void refreshUserMatches(updated as never).catch((matchError) => console.warn('[Match] No se pudo recalcular al guardar el perfil:', matchError?.message))
 
       res.json({ user: updated })
     } catch (error) {

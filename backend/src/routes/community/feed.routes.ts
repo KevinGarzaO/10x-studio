@@ -2,150 +2,11 @@ import { Router, Response } from 'express'
 import { supabase } from '../../../services/supabase.service'
 import { communityAuthMiddleware, AuthRequest } from '../../../middleware/community-auth.middleware'
 import { syncVacancyToCommunity } from '../../../services/scraper/sync'
-import { scoreMatch, type ValidationLevel } from '../../../services/matching/score'
-import { loadValidatedSkills } from '../../../services/matching/validated'
+import { scoreForUser, type MatchedItem } from '../../../services/matching/compute'
+import { readStoredMatches, storeMatches, TOP_MATCHES } from '../../../services/matching/refresh'
 import { loadVacancyStats } from '../../../services/vacancies/popularity'
 
 const router = Router()
-
-interface MatchedItem {
-  sourceType: 'scraper' | 'community'
-  id: string
-  title: string
-  company: string | null
-  companyLogo: string | null
-  roleCategory: string | null
-  seniorityLevel: string | null
-  skills: string[]
-  url: string
-  postDate: string | null
-  /** Cuántos de tus skills pide la vacante. */
-  matchingSkills: number
-  /** Cuáles. */
-  sharedSkills: string[]
-  /** 0 a 100: qué tan bien encaja contigo (rol, skills, nivel y modalidad). */
-  matchScore: number
-  /** Tus skills que pide la vacante y validaste con examen, con su nivel. */
-  validatedSkills: { skill: string; level: ValidationLevel }[]
-  /** Qué tan cerca está el rol de la vacante del de la persona. */
-  roleFit: 'exact' | 'adjacent' | 'unknown' | 'none'
-  /** Cómo encajan nivel y modalidad (para explicar el porcentaje). */
-  seniorityFit: string
-  modalityFit: string
-  modalidad: string | null
-}
-
-function toSkillArray(raw: unknown): string[] {
-  if (Array.isArray(raw)) return raw.filter((s): s is string => typeof s === 'string')
-  return []
-}
-
-// "Para ti" — las vacantes que mejor encajan con una persona, tanto las que ya están
-// publicadas (community_posts) como las que siguen en el área de paso del scraper.
-//
-// Antes se pedía el mismo rol y el mismo nivel, exactos: se perdía quien busca algo
-// cercano y se mostraban vacantes sin un solo skill en común. Ahora cada vacante
-// reciente recibe un puntaje (services/matching/score.ts: rol, skills, nivel y
-// modalidad) y se muestran las que de verdad encajan, las mejores primero.
-const POOL_SIZE = 600
-
-// Puntuar ~1,200 vacantes contra una persona es lo más lento de "Para ti". Se guarda un minuto por persona (y se
-// descarta si cambió su perfil): recargar el inicio no repite el cálculo. Lo que sí se hace cada vez (historial,
-// guardados, vistas) corre después, sobre estas coincidencias.
-const SCORED_TTL_MS = 60_000
-const scoredCache = new Map<string, { at: number; fingerprint: string; items: MatchedItem[] }>()
-const fingerprintOf = (user: Record<string, unknown>) => JSON.stringify([user.role_category, user.seniority, user.skills, user.work_modality])
-
-async function scoreForUser(user: Record<string, any>): Promise<MatchedItem[]> {
-  const userId = user.id as string
-    // Las más recientes de cada fuente: se puntúan en memoria, así no depende de que
-    // la vacante tenga justo el mismo rol y nivel. Las tres consultas van a la vez (antes la de los skills
-    // validados esperaba a las demás y sumaba su tiempo).
-    const [validatedSkills, { data: scraperRows }, { data: communityRows }] = await Promise.all([
-      loadValidatedSkills(userId),
-      supabase
-        .from('scraper_posts')
-        .select('id, text, company, company_logo, role_category, seniority_level, skills, url, post_date, created_at, work_modality')
-        .eq('post_type', 'vacancy')
-        .eq('is_spam', false)
-        .order('post_date', { ascending: false })
-        .limit(POOL_SIZE),
-      supabase
-        .from('community_posts')
-        .select('id, title, company, company_logo, role_category, seniority_level, skills, slug, created_at, modalidad')
-        .eq('type', 'job')
-        .order('created_at', { ascending: false })
-        .limit(POOL_SIZE),
-    ])
-
-    const candidate = {
-      roleCategory: user.role_category as string,
-      seniority: (user.seniority as string | null) ?? null,
-      skills: ((user.skills || []) as string[]).map((skill) => skill.toLowerCase()),
-      workModality: (user.work_modality as string | null) ?? null,
-      validatedSkills,
-    }
-
-    const items: MatchedItem[] = []
-
-    const consider = (item: Omit<MatchedItem, 'matchingSkills' | 'sharedSkills' | 'matchScore' | 'validatedSkills' | 'roleFit' | 'seniorityFit' | 'modalityFit'>, modality: string | null) => {
-      const result = scoreMatch(candidate, {
-        roleCategory: item.roleCategory,
-        seniority: item.seniorityLevel,
-        skills: item.skills.map((skill) => skill.toLowerCase()),
-        workModality: modality,
-      })
-      if (!result.qualifies) return
-      items.push({ ...item, matchingSkills: result.sharedSkills.length, sharedSkills: result.sharedSkills, matchScore: result.score, validatedSkills: result.validatedSkills, roleFit: result.role, seniorityFit: result.seniority, modalityFit: result.modality })
-    }
-
-    for (const row of scraperRows || []) {
-      consider(
-        {
-          sourceType: 'scraper',
-          id: row.id,
-          title: row.text?.split('\n')[0]?.replace(/^##\s*/, '').substring(0, 150) || 'Vacante sin título',
-          company: row.company,
-          companyLogo: row.company_logo,
-          roleCategory: row.role_category,
-          seniorityLevel: row.seniority_level,
-          skills: toSkillArray(row.skills),
-          url: row.url || '',
-          postDate: row.post_date || row.created_at,
-          modalidad: row.work_modality ?? null,
-        },
-        row.work_modality ?? null,
-      )
-    }
-
-    for (const row of communityRows || []) {
-      consider(
-        {
-          sourceType: 'community',
-          id: row.id,
-          title: row.title,
-          company: row.company,
-          companyLogo: row.company_logo,
-          roleCategory: row.role_category,
-          seniorityLevel: row.seniority_level,
-          skills: toSkillArray(row.skills),
-          url: `/vacantes/${row.slug || row.id}`,
-          postDate: row.created_at,
-          modalidad: row.modalidad ?? null,
-        },
-        row.modalidad ?? null,
-      )
-    }
-
-    // Lo que mejor encaja primero; a igual puntaje, lo más reciente.
-    const matched = items
-    matched.sort((a, b) => {
-      if (b.matchScore !== a.matchScore) return b.matchScore - a.matchScore
-      if (b.validatedSkills.length !== a.validatedSkills.length) return b.validatedSkills.length - a.validatedSkills.length
-      return new Date(b.postDate ?? 0).getTime() - new Date(a.postDate ?? 0).getTime()
-    })
-  return matched
-}
 
 router.get('/for-you', communityAuthMiddleware, async (req: AuthRequest, res: Response) => {
   try {
@@ -163,14 +24,15 @@ router.get('/for-you', communityAuthMiddleware, async (req: AuthRequest, res: Re
       return res.status(400).json({ error: 'Completa tu perfil (tu puesto) para ver tu feed personalizado' })
     }
 
-    const cached = scoredCache.get(req.userId as string)
-    const matched = cached && process.env.NODE_ENV !== 'test' && Date.now() - cached.at < SCORED_TTL_MS && cached.fingerprint === fingerprintOf(user)
-      ? cached.items
-      : await scoreForUser(user)
-    scoredCache.set(req.userId as string, { at: Date.now(), fingerprint: fingerprintOf(user), items: matched })
-    if (scoredCache.size > 500) scoredCache.delete(scoredCache.keys().next().value as string)
+    // Lo que ya se calculó de fondo (al guardar el perfil y cada 30 minutos). Solo si aún no hay nada se calcula
+    // aquí, una vez; abrir el inicio nunca vuelve a puntuar todas las vacantes.
+    let matched: MatchedItem[] | null = await readStoredMatches(req.userId as string)
+    if (!matched) {
+      matched = await scoreForUser(user as never)
+      await storeMatches(req.userId as string, matched)
+    }
 
-    const page = matched.slice(0, 50)
+    const page = matched.slice(0, TOP_MATCHES)
 
     // Snapshot side effect — every vacancy shown gets (or refreshes) a
     // history row, so it survives even if scraper_posts later sweeps it.
