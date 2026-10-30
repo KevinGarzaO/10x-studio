@@ -4,7 +4,7 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useState, FormEvent, useEffect } from 'react'
 import {
-  ArrowLeft, Bell, Bookmark, Check, LockKeyhole, Mail, Moon,
+  ArrowLeft, Bell, Bookmark, Check, Mail, Moon,
   Save, Settings, UserRound, MapPin, ExternalLink,
   Eye, EyeOff, MessageCircle, Heart, Loader2, Tag
 } from 'lucide-react'
@@ -112,6 +112,9 @@ const styles = `
 .auth-aside-copy{max-width:360px}
 .auth-aside-copy h1{font-size:38px;line-height:1.06;letter-spacing:-.06em;margin:0 0 16px}
 .auth-aside-copy .muted{color:var(--text-faint)}
+.auth-benefits{list-style:none;margin:0;padding:18px 0 0;border-top:1px solid var(--accent-line);display:grid;gap:8px;font-size:13px;color:var(--text-muted)}
+.auth-benefits li{display:flex;gap:8px;align-items:center}
+.auth-benefits li::before{content:'';width:6px;height:6px;border-radius:50%;background:var(--brand);flex:none}
 .auth-proof{border-top:1px solid var(--accent-line);padding-top:18px}
 .proof-avatars{display:flex;margin-bottom:10px}
 .proof-avatars span{width:30px;height:30px;border-radius:50%;display:grid;place-items:center;background:var(--accent-soft);color:var(--accent-text);border:2px solid var(--accent-soft);margin-right:-7px;font:700 8px monospace}
@@ -459,21 +462,19 @@ export function AuthPage({ mode }: { mode: 'login' | 'signup' }) {
         <aside className="auth-aside">
           <Link href="/" className="auth-logo"><img className="brand-mark" src="/avotalent-logo.png" alt="" aria-hidden="true" /> <span className="brand-avo">Avo</span><span className="brand-accent">Talent</span></Link>
           <div className="auth-aside-copy">
-            <p className="page-kicker">Comunidad de developers</p>
-            <h1>{signup ? 'Construye tu siguiente gran idea.' : 'Las mejores conversaciones empiezan aquí.'}</h1>
-            <p className="muted">{signup ? 'Comparte lo que sabes, encuentra colaboradores y crece junto a la comunidad.' : 'Vuelve a tus conversaciones, proyectos y oportunidades en AvoTalent.'}</p>
+            <h1>{signup ? 'Encuentra vacantes que sí encajan contigo.' : 'Qué bueno verte de nuevo.'}</h1>
+            <p className="muted">{signup ? 'Vacantes de tecnología conectadas a tu puesto y tus skills, y una comunidad para conversar con otros developers.' : 'Vuelve a tus vacantes, tus conversaciones y lo que es para ti.'}</p>
           </div>
-          <div className="auth-proof">
-            <div className="proof-avatars"><span>JD</span><span>ML</span><span>AS</span><span>+2k</span></div>
-            <p><strong>2,400+</strong> developers construyendo juntos</p>
-          </div>
+          <ul className="auth-benefits">
+            <li>Vacantes ordenadas según tu perfil</li>
+            <li>Avisos cuando aparece una que encaja</li>
+            <li>Una comunidad para preguntar y compartir</li>
+          </ul>
         </aside>
         <main className="auth-card">
           <Link href="/" className="back-link"><ArrowLeft size={15} /> Volver al foro</Link>
           <div className="auth-heading">
-            <div className="auth-icon"><LockKeyhole size={21} /></div>
-            <p className="page-kicker">{signup ? 'Crear cuenta' : 'Acceso a la comunidad'}</p>
-            <h2>{signup ? 'Crea tu cuenta' : 'Bienvenido de nuevo'}</h2>
+            <h2>{signup ? 'Crea tu cuenta' : 'Inicia sesión'}</h2>
             <p className="muted">{signup ? 'Únete en menos de un minuto.' : 'Continúa donde lo dejaste.'}</p>
           </div>
 
