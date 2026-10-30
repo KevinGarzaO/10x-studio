@@ -268,24 +268,42 @@ describe('la carga del feed', () => {
     token = 'tok'
   })
 
-  it('muestra las publicaciones sin esperar a "Para ti", que llega después', async () => {
-    let releaseForYou: (v: unknown) => void = () => {}
-    global.fetch = vi.fn((url: string) => {
-      const u = String(url)
-      if (u.includes('/feed/for-you')) return new Promise(resolve => { releaseForYou = resolve })
-      if (u.includes('/posts/editorial')) return Promise.resolve({ ok: true, json: async () => ({ posts: [article] }) })
-      if (u.includes('type=social')) return Promise.resolve({ ok: true, json: async () => ({ posts: [] }) })
-      if (u.includes('type=job')) return Promise.resolve({ ok: true, json: async () => ({ posts: [job] }) })
-      return Promise.resolve({ ok: true, json: async () => ({}) })
-    }) as unknown as typeof fetch
+  const feedFetch = (forYou: (u: string) => Promise<unknown>) => vi.fn((url: string) => {
+    const u = String(url)
+    if (u.includes('/feed/for-you')) return forYou(u)
+    if (u.includes('/posts/editorial')) return Promise.resolve({ ok: true, json: async () => ({ posts: [article] }) })
+    if (u.includes('type=social')) return Promise.resolve({ ok: true, json: async () => ({ posts: [] }) })
+    if (u.includes('type=job')) return Promise.resolve({ ok: true, json: async () => ({ posts: [job] }) })
+    return Promise.resolve({ ok: true, json: async () => ({}) })
+  }) as unknown as typeof fetch
+
+  it('pinta el feed una sola vez, con las vacantes y "Para ti" juntas', async () => {
+    global.fetch = feedFetch(() => new Promise(resolve => setTimeout(() => resolve({ ok: true, json: async () => ({ items: [match] }) }), 300)))
 
     const { container } = renderFeed({ id: 'u1', username: 'ana' })
 
+    // Mientras "Para ti" no llega no hay feed a medias: solo esqueletos.
+    await new Promise(r => setTimeout(r, 100))
+    expect(screen.queryByText('Una vacante de prueba')).toBeNull()
+    expect(container.querySelector('.feed-skeleton')).toBeTruthy()
+
+    await waitFor(() => expect(container.querySelector('.post-card.is-for-you')).toBeTruthy())
+    expect(screen.getByText('Una vacante de prueba')).toBeTruthy()
+  })
+
+  it('si "Para ti" tarda demasiado, el feed sale sin ellas y se agregan al llegar', async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true })
+    let release: (v: unknown) => void = () => {}
+    global.fetch = feedFetch(() => new Promise(resolve => { release = resolve }))
+
+    const { container } = renderFeed({ id: 'u1', username: 'ana' })
+    await vi.advanceTimersByTimeAsync(3100)
     expect(await screen.findByText('Una vacante de prueba')).toBeTruthy()
     expect(container.querySelector('.is-for-you')).toBeNull()
 
-    releaseForYou({ ok: true, json: async () => ({ items: [match] }) })
+    release({ ok: true, json: async () => ({ items: [match] }) })
     await waitFor(() => expect(container.querySelector('.post-card.is-for-you')).toBeTruthy())
+    vi.useRealTimers()
   })
 
   it('si "Para ti" falla la primera vez, lo reintenta solo', async () => {
@@ -304,8 +322,8 @@ describe('la carga del feed', () => {
     }) as unknown as typeof fetch
 
     const { container } = renderFeed({ id: 'u1', username: 'ana' })
-    await screen.findByText('Una vacante de prueba')
     await vi.advanceTimersByTimeAsync(3000)
+    await screen.findByText('Una vacante de prueba')
     await waitFor(() => expect(container.querySelector('.post-card.is-for-you')).toBeTruthy())
     expect(calls).toBe(2)
     vi.useRealTimers()

@@ -673,6 +673,8 @@ export function AuthModal({ onClose, request, locked = false, gate = false }: { 
 // Páginas chicas: la primera pantalla llega rápido y el resto entra al bajar.
 const ARTICLES_PER_PAGE = 4
 const JOBS_PER_PAGE = 10
+// Cuánto se espera a "Para ti" antes de pintar el feed sin ellas.
+const FOR_YOU_WAIT_MS = 3000
 
 interface FeedSnapshot {
   articles: FeedPost[]
@@ -791,14 +793,30 @@ export function Feed() {
     let cancelled = false
     loadingRef.current = true
     const run = async () => {
-      // El feed sale en cuanto llegan las publicaciones: "Para ti" es la consulta más pesada y se pide aparte, para
-      // que ni la retrase ni, si falla, deje la tarjeta fuera hasta recargar.
+      // Las publicaciones y "Para ti" se piden a la vez y el feed se pinta UNA sola vez, con las dos cosas: antes
+      // salían las vacantes y después se colaban las tarjetas "Para ti", y todo se movía. "Para ti" es la consulta
+      // más pesada, así que solo se le espera un rato (FOR_YOU_WAIT_MS): si tarda más, el feed sale sin ellas y se
+      // agregan al llegar, antes que dejar a la persona viendo esqueletos.
+      const loadForYou = async (): Promise<MatchedItem[] | null> => {
+        if (!token) return []
+        // Un fallo (token vencido ya se renueva dentro; red lenta o servidor frío) se reintenta antes de rendirse.
+        let data = await fetchJsonWithSession(`${API_URL}/api/community/feed/for-you`)
+        if (!data && !cancelled) {
+          await new Promise(resolve => setTimeout(resolve, 2500))
+          if (!cancelled) data = await fetchJsonWithSession(`${API_URL}/api/community/feed/for-you`)
+        }
+        return data ? ((data.items || []) as MatchedItem[]).filter(item => item.matchingSkills > 0) : null
+      }
+      const forYouPromise = loadForYou()
+
       const batch = await fetchBatch(1)
+      if (cancelled) return
+      const early = await Promise.race([forYouPromise, new Promise<'late'>(resolve => setTimeout(() => resolve('late'), FOR_YOU_WAIT_MS))])
       if (cancelled) return
       commit({
         articles: batch.articles,
         jobs: batch.jobs,
-        forYou: [],
+        forYou: Array.isArray(early) ? early : [],
         page: 1,
         moreArticles: batch.moreArticles,
         moreJobs: batch.jobs.length === JOBS_PER_PAGE,
@@ -806,17 +824,10 @@ export function Feed() {
       loadingRef.current = false
       setLoading(false)
 
-      if (!token) return
-      // Un fallo (token vencido ya se renueva dentro; red lenta o servidor frío) se reintenta antes de rendirse.
-      let forYouData = await fetchJsonWithSession(`${API_URL}/api/community/feed/for-you`)
-      if (!forYouData && !cancelled) {
-        await new Promise(resolve => setTimeout(resolve, 2500))
-        if (!cancelled) forYouData = await fetchJsonWithSession(`${API_URL}/api/community/feed/for-you`)
-      }
-      if (cancelled || !forYouData) return
-      const forYou = ((forYouData.items || []) as MatchedItem[]).filter(item => item.matchingSkills > 0)
+      if (early !== 'late') return
+      const late = await forYouPromise
       const current = snapshotRef.current
-      if (current) commit({ ...current, forYou })
+      if (!cancelled && late && current) commit({ ...current, forYou: late })
     }
     run()
 
