@@ -465,6 +465,8 @@ export interface ActivePerson {
   activeDays: string[]
   /** Días distintos de actividad DESPUÉS del día de su registro: cuántas veces volvió. 0 = solo vino el día que se registró. */
   returnDays: number
+  /** El día de su registro en Monterrey (el mismo día que usa la actividad; `createdAt` está en UTC y puede caer un día después). */
+  signupDay: string
 }
 
 /** Las personas con actividad en los últimos `days` días: la lista detrás de "activos hoy / 7 / 30 días". */
@@ -497,6 +499,7 @@ export function activePeople(input: { activity: { user_id: string; day: string }
         activeToday: days[days.length - 1] === today,
         activeDays: days,
         returnDays: days.filter((day) => day > signupDay).length,
+        signupDay,
       }
     })
     // Primero quien más días ha estado activo; a igual número, quien entró más recientemente.

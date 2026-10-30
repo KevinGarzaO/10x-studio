@@ -339,8 +339,13 @@ router.get('/retention', handle('retención', async (_req, res) => {
   const counted = new Set(people.filter(countsAsPerson).map((person) => person.id))
   const users = await realUsers(since.toISOString())
 
+  // Cuántas cuentas reales hay en total: la diferencia con las que entraron desde que se mide es gente que no ha vuelto.
+  const { count: totalAccounts } = await supabase.from('users').select('*', { count: 'exact', head: true })
+    .eq('is_test_account', false).not('is_scraper_profile', 'is', true).in('user_kind', ['user', 'company'])
+
   res.json({
     ready: true,
+    totalAccounts: totalAccounts ?? null,
     ...retention({ activity: rows.filter((row) => counted.has(row.user_id)), users }),
     // La tabla muestra solo personas reales: ni el equipo, ni las pruebas, ni el scraper.
     people: activePeople({ activity: rows.filter((row) => counted.has(row.user_id)), people: people.filter(countsAsPerson) }),

@@ -16,6 +16,7 @@ interface ActivePerson {
   activeToday: boolean
   activeDays: string[]
   returnDays: number
+  signupDay: string
 }
 
 const KIND: Record<string, string> = { user: 'Candidato', company: 'Empresa', superadmin: 'Equipo' }
@@ -32,6 +33,7 @@ interface Retention {
   trackingSince?: string | null
   trackingDays?: number
   people?: ActivePerson[]
+  totalAccounts?: number | null
   cohorts?: { week: string; size: number; retained: (number | null)[] }[]
 }
 
@@ -50,7 +52,7 @@ function lastDays(today: string): string[] {
 function DaysStrip({ person, today }: { person: ActivePerson; today: string }) {
   const days = lastDays(today)
   const active = new Set(person.activeDays)
-  const signup = person.createdAt.slice(0, 10)
+  const signup = person.signupDay
   const shown = person.activeDays.filter(day => day >= days[0]).map(fmtDay).join(', ') || 'ninguno'
   return (
     <span className="panel-days" role="img" aria-label={`Días activo en las últimas dos semanas: ${shown}`}>
@@ -103,7 +105,7 @@ export default function RetencionPage() {
           <div className="panel-grid cols-4">
             <Stat label="Activos hoy" value={fmtNum(data.dau)} caption="Personas que entraron hoy con su sesión." />
             <Stat label="Activos en 7 días" value={fmtNum(data.wau)} caption="Personas distintas que entraron esta semana." />
-            <Stat label="Activos en 30 días" value={fmtNum(data.mau)} caption="Personas distintas que entraron este mes." />
+            <Stat label="Activos en 30 días" value={fmtNum(data.mau)} caption={data.totalAccounts ? `De ${fmtNum(data.totalAccounts)} cuentas reales: el resto no ha entrado desde el ${fmtDay(data.trackingSince!)}, cuando empezó a medirse.` : 'Personas distintas que entraron este mes.'} />
             <Stat
               label="Volvieron"
               value={counted.length ? `${returned.length} de ${counted.length}` : '—'}
@@ -137,7 +139,7 @@ export default function RetencionPage() {
                               </span>
                             </span>
                           </td>
-                          <td>{fmtDay(person.createdAt.slice(0, 10))}</td>
+                          <td>{fmtDay(person.signupDay)}</td>
                           <td className="num"><b>{person.daysActive}</b></td>
                           <td>
                             {person.returnDays > 0
