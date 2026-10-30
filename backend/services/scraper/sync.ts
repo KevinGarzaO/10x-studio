@@ -1,3 +1,4 @@
+import { loadPeopleProfiles, servesSomeone, type PersonProfile } from "../vacancies/serves-someone";
 import { dailyQuota, daysUntilNextBatch, nextBatchFrom, MAX_PER_DAY } from "./quota";
 import { getCycleState } from "./cycle";
 import { pickDailyVacancies } from "./daily-selection";
@@ -492,7 +493,7 @@ export async function syncAllPending(
   const catalog = new Set((await loadSkillMatchers()).map((matcher) => matcher.name));
   const verdicts: PublishVerdict[] = [];
   const unlinked: string[] = [];
-  const publishable = postsWithContact.filter((post) => {
+  const linked = postsWithContact.filter((post) => {
     const verdict = evaluateVacancy(
       {
         title: vacancyTitle(post.text),
@@ -512,6 +513,16 @@ export async function syncAllPending(
     }
     return verdict.valid;
   });
+
+  // REGLA DE NEGOCIO (services/vacancies/serves-someone.ts): además, solo salen las que le sirven a alguien. Las que
+  // no, se quedan en la cola (no se borran): mañana puede haber gente nueva o skills nuevos que las hagan servir.
+  const people = await loadPeopleProfiles().catch(() => [] as PersonProfile[]);
+  const publishable = linked.filter((post) =>
+    servesSomeone({ role_category: post.role_category, seniority_level: post.seniority_level, skills: post.skills, work_modality: post.work_modality }, people),
+  );
+  if (linked.length !== publishable.length) {
+    log(`[Sync] ${linked.length - publishable.length} de ${linked.length} vacantes no le sirven a ninguna de las ${people.length} personas y esperan en la cola`);
+  }
 
   for (let i = 0; i < unlinked.length; i += 100) {
     await supabase.from("scraper_posts").delete().in("id", unlinked.slice(i, i + 100));

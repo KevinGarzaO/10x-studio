@@ -119,7 +119,8 @@ export function buildMatchingOverview(input: { candidates: PanelCandidate[]; vac
         skills: vacancy.skills.map((skill) => skill.toLowerCase()),
         workModality: vacancy.workModality,
       })
-      if (!result.qualifies) continue
+      // La misma regla que la publicación (services/vacancies/serves-someone.ts): encaja y comparte al menos un skill.
+      if (!result.qualifies || result.sharedSkills.length === 0) continue
       scores.push(result.score)
       const entry = perVacancy.get(vacancy.slug) ?? { candidates: 0, best: 0 }
       perVacancy.set(vacancy.slug, { candidates: entry.candidates + 1, best: Math.max(entry.best, result.score) })
