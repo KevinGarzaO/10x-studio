@@ -20,6 +20,7 @@ import { ForYouCard } from './for-you-card'
 import { VacancyStats, type VacancyStatsData } from './vacancy-stats'
 import { PostStats } from './post-stats'
 import { compactStats } from '../lib/feed-stats'
+import { fetchJsonWithSession } from '../lib/session'
 import { DEFAULT_FILTERS, applyFeedFilters, feedSummary, profileProgress, type FeedFilters, type FeedView } from '../lib/feed-filters'
 import { ProfileHoverCard } from './profile-hover-card'
 import { excerptOf } from '../lib/user-markdown'
@@ -669,9 +670,9 @@ export function AuthModal({ onClose, request, locked = false, gate = false }: { 
 // (vacantes que coinciden con tus skills, solo con sesión), de lo más nuevo a lo
 // más antiguo. buildFeed() decide el orden; aquí solo se traen las fuentes y se
 // pagina.
-const ARTICLES_PER_PAGE = 10
-// Entran unas 20 vacantes nuevas al día: una página de 20 cubre más o menos un día.
-const JOBS_PER_PAGE = 20
+// Páginas chicas: la primera pantalla llega rápido y el resto entra al bajar.
+const ARTICLES_PER_PAGE = 4
+const JOBS_PER_PAGE = 10
 
 interface FeedSnapshot {
   articles: FeedPost[]
@@ -790,22 +791,32 @@ export function Feed() {
     let cancelled = false
     loadingRef.current = true
     const run = async () => {
-      const [batch, forYouData] = await Promise.all([
-        fetchBatch(1),
-        token ? fetchJson(`${API_URL}/api/community/feed/for-you`, token) : Promise.resolve(null),
-      ])
+      // El feed sale en cuanto llegan las publicaciones: "Para ti" es la consulta más pesada y se pide aparte, para
+      // que ni la retrase ni, si falla, deje la tarjeta fuera hasta recargar.
+      const batch = await fetchBatch(1)
       if (cancelled) return
-      const forYou = ((forYouData?.items || []) as MatchedItem[]).filter(item => item.matchingSkills > 0)
       commit({
         articles: batch.articles,
         jobs: batch.jobs,
-        forYou,
+        forYou: [],
         page: 1,
         moreArticles: batch.moreArticles,
         moreJobs: batch.jobs.length === JOBS_PER_PAGE,
       })
       loadingRef.current = false
       setLoading(false)
+
+      if (!token) return
+      // Un fallo (token vencido ya se renueva dentro; red lenta o servidor frío) se reintenta antes de rendirse.
+      let forYouData = await fetchJsonWithSession(`${API_URL}/api/community/feed/for-you`)
+      if (!forYouData && !cancelled) {
+        await new Promise(resolve => setTimeout(resolve, 2500))
+        if (!cancelled) forYouData = await fetchJsonWithSession(`${API_URL}/api/community/feed/for-you`)
+      }
+      if (cancelled || !forYouData) return
+      const forYou = ((forYouData.items || []) as MatchedItem[]).filter(item => item.matchingSkills > 0)
+      const current = snapshotRef.current
+      if (current) commit({ ...current, forYou })
     }
     run()
 
@@ -916,8 +927,13 @@ export function Feed() {
         ? <ForYouCard key={entry.key} item={entry.item} />
         : <PostCard key={entry.key} post={entry.post} onAuthRequired={requestAuth} />)}
     </div>
-    {loading && <div style={{ textAlign: 'center', padding: 20, color: 'var(--text-muted)' }}><Sparkles size={16} className="spin" /> Cargando más posts...</div>}
-    {!loading && entries.length === 0 && (filtersActive
+    {loading && !snapshot && (
+      <div className="feed-skeletons" aria-busy="true" aria-label="Cargando el feed">
+        {[0, 1, 2, 3].map(i => <div key={i} className="feed-skeleton"><i className="sk-line sk-short" /><i className="sk-line sk-title" /><i className="sk-line" /></div>)}
+      </div>
+    )}
+    {loading && snapshot && <div style={{ textAlign: 'center', padding: 20, color: 'var(--text-muted)' }}><Sparkles size={16} className="spin" /> Cargando más posts...</div>}
+    {!loading && snapshot && entries.length === 0 && (filtersActive
       ? <div className="feed-empty"><p>Nada con estos filtros.</p><button type="button" className="feed-chip" onClick={() => setFilters(DEFAULT_FILTERS)}>Quitar filtros</button></div>
       : <div style={{ textAlign: 'center', padding: 40, color: 'var(--text-muted)' }}><PenLine size={32} style={{ marginBottom: 12, opacity: 0.5 }} /><p>No hay posts disponibles</p></div>)}
     {!loading && !hasMore && entries.length > 0 && <div style={{ textAlign: 'center', padding: 20, color: 'var(--text-muted)' }}>No hay más posts</div>}

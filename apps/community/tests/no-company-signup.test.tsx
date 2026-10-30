@@ -16,6 +16,7 @@ vi.mock('next/navigation', () => ({
 vi.mock('@/lib/session', () => ({
   getToken: () => 'token',
   captureSessionFromUrl: () => false,
+  getCachedUser: () => null,
   fetchCurrentUser: vi.fn(async () => NEW_USER),
   saveSession: vi.fn(),
 }))

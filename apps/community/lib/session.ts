@@ -101,3 +101,23 @@ export async function fetchCurrentUser(): Promise<any | null> {
   const data = await res.json()
   return data.user || null
 }
+
+/**
+ * GET con la sesión de la persona. Si el token venció (401) lo renueva y reintenta una vez: sin esto, quien
+ * entraba con un token viejo recibía respuestas vacías hasta recargar. Devuelve null si no hay sesión o falla.
+ */
+export async function fetchJsonWithSession(url: string): Promise<any | null> {
+  let token = getToken()
+  if (!token) return null
+  try {
+    let res = await fetch(url, { headers: { Authorization: `Bearer ${token}` } })
+    if (res.status === 401) {
+      token = await refreshSession()
+      if (!token) return null
+      res = await fetch(url, { headers: { Authorization: `Bearer ${token}` } })
+    }
+    return res.ok ? await res.json() : null
+  } catch {
+    return null
+  }
+}

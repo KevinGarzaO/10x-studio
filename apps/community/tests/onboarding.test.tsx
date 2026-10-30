@@ -39,6 +39,7 @@ vi.mock('next/navigation', () => {
 vi.mock('@/lib/session', () => ({
   getToken: () => 'token',
   captureSessionFromUrl: () => false,
+  getCachedUser: () => null,
   fetchCurrentUser: () => mocks.fetchCurrentUser(),
 }))
 
@@ -94,5 +95,13 @@ describe('OnboardingPage (T042)', () => {
     })
     expect(screen.queryByLabelText(/puesto/i)).toBeNull()
     expect(screen.getByRole('button', { name: 'Siguiente' })).toBeTruthy()
+  })
+})
+
+describe('onboarding con conexión lenta o caída', () => {
+  it('ofrece reintentar si el servidor no responde y no hay usuario guardado', async () => {
+    mocks.fetchCurrentUser.mockRejectedValue(new Error('network'))
+    render(<OnboardingPage />)
+    expect(await screen.findByRole('button', { name: 'Reintentar' })).toBeTruthy()
   })
 })

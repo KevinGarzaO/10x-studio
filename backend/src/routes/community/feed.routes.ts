@@ -65,17 +65,11 @@ router.get('/for-you', communityAuthMiddleware, async (req: AuthRequest, res: Re
       return res.status(400).json({ error: 'Completa tu perfil (tu puesto) para ver tu feed personalizado' })
     }
 
-    const candidate = {
-      roleCategory: user.role_category as string,
-      seniority: (user.seniority as string | null) ?? null,
-      skills: ((user.skills || []) as string[]).map((skill) => skill.toLowerCase()),
-      workModality: (user.work_modality as string | null) ?? null,
-      validatedSkills: await loadValidatedSkills(req.userId),
-    }
-
     // Las más recientes de cada fuente: se puntúan en memoria, así no depende de que
-    // la vacante tenga justo el mismo rol y nivel.
-    const [{ data: scraperRows }, { data: communityRows }] = await Promise.all([
+    // la vacante tenga justo el mismo rol y nivel. Las tres consultas van a la vez (antes la de los skills
+    // validados esperaba a las demás y sumaba su tiempo).
+    const [validatedSkills, { data: scraperRows }, { data: communityRows }] = await Promise.all([
+      loadValidatedSkills(req.userId),
       supabase
         .from('scraper_posts')
         .select('id, text, company, company_logo, role_category, seniority_level, skills, url, post_date, created_at, work_modality')
@@ -90,6 +84,14 @@ router.get('/for-you', communityAuthMiddleware, async (req: AuthRequest, res: Re
         .order('created_at', { ascending: false })
         .limit(POOL_SIZE),
     ])
+
+    const candidate = {
+      roleCategory: user.role_category as string,
+      seniority: (user.seniority as string | null) ?? null,
+      skills: ((user.skills || []) as string[]).map((skill) => skill.toLowerCase()),
+      workModality: (user.work_modality as string | null) ?? null,
+      validatedSkills,
+    }
 
     const items: MatchedItem[] = []
 

@@ -14,6 +14,7 @@ let token: string | null = null
 vi.mock('@/lib/session', () => ({
   getToken: () => token,
   getCachedUser: () => null,
+  fetchJsonWithSession: async (url: string) => { const res = await (global.fetch as any)(url, { headers: { Authorization: `Bearer ${token}` } }); return res.ok ? res.json() : null },
   clearSession: vi.fn(),
 }))
 
@@ -259,5 +260,63 @@ describe('la cabecera y los filtros del feed', () => {
     expect(await screen.findByText('Perfil al 83 %')).toBeTruthy()
     expect(screen.getByRole('progressbar', { name: 'Avance de tu perfil' })).toHaveAttribute('aria-valuenow', '83')
     expect(screen.getByRole('link', { name: 'Agregar skills' })).toHaveAttribute('href', '/settings')
+  })
+})
+
+describe('la carga del feed', () => {
+  beforeEach(() => {
+    token = 'tok'
+  })
+
+  it('muestra las publicaciones sin esperar a "Para ti", que llega después', async () => {
+    let releaseForYou: (v: unknown) => void = () => {}
+    global.fetch = vi.fn((url: string) => {
+      const u = String(url)
+      if (u.includes('/feed/for-you')) return new Promise(resolve => { releaseForYou = resolve })
+      if (u.includes('/posts/editorial')) return Promise.resolve({ ok: true, json: async () => ({ posts: [article] }) })
+      if (u.includes('type=social')) return Promise.resolve({ ok: true, json: async () => ({ posts: [] }) })
+      if (u.includes('type=job')) return Promise.resolve({ ok: true, json: async () => ({ posts: [job] }) })
+      return Promise.resolve({ ok: true, json: async () => ({}) })
+    }) as unknown as typeof fetch
+
+    const { container } = renderFeed({ id: 'u1', username: 'ana' })
+
+    expect(await screen.findByText('Una vacante de prueba')).toBeTruthy()
+    expect(container.querySelector('.is-for-you')).toBeNull()
+
+    releaseForYou({ ok: true, json: async () => ({ items: [match] }) })
+    await waitFor(() => expect(container.querySelector('.post-card.is-for-you')).toBeTruthy())
+  })
+
+  it('si "Para ti" falla la primera vez, lo reintenta solo', async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true })
+    let calls = 0
+    global.fetch = vi.fn(async (url: string) => {
+      const u = String(url)
+      if (u.includes('/feed/for-you')) {
+        calls += 1
+        return calls === 1 ? { ok: false, status: 500, json: async () => ({}) } : { ok: true, json: async () => ({ items: [match] }) }
+      }
+      if (u.includes('/posts/editorial')) return { ok: true, json: async () => ({ posts: [] }) }
+      if (u.includes('type=social')) return { ok: true, json: async () => ({ posts: [] }) }
+      if (u.includes('type=job')) return { ok: true, json: async () => ({ posts: [job] }) }
+      return { ok: true, json: async () => ({}) }
+    }) as unknown as typeof fetch
+
+    const { container } = renderFeed({ id: 'u1', username: 'ana' })
+    await screen.findByText('Una vacante de prueba')
+    await vi.advanceTimersByTimeAsync(3000)
+    await waitFor(() => expect(container.querySelector('.post-card.is-for-you')).toBeTruthy())
+    expect(calls).toBe(2)
+    vi.useRealTimers()
+  })
+
+  it('pide páginas chicas para que la primera pantalla llegue rápido', async () => {
+    global.fetch = vi.fn(async () => ({ ok: true, json: async () => ({ posts: [] }) })) as unknown as typeof fetch
+    renderFeed(null)
+    await waitFor(() => expect((global.fetch as any).mock.calls.length).toBeGreaterThan(0))
+    const urls = (global.fetch as any).mock.calls.map((c: unknown[]) => String(c[0]))
+    expect(urls.find((u: string) => u.includes('type=job'))).toContain('limit=10')
+    expect(urls.find((u: string) => u.includes('/posts/editorial'))).toContain('limit=4')
   })
 })

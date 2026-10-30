@@ -20,7 +20,7 @@ import { clearReturnTo } from '../lib/return-to'
  */
 export function ProfileGate() {
   const router = useRouter()
-  const { catalog, loading } = useSkillCatalog()
+  const { catalog } = useSkillCatalog()
   const [user, setUser] = useState<unknown>(null)
 
   useEffect(() => {
@@ -35,8 +35,9 @@ export function ProfileGate() {
   }, [])
 
   useEffect(() => {
-    // Se espera el catálogo: sin él no se sabe qué skills son válidos.
-    if (!user || loading) return
+    // No se espera el catálogo para lo básico (foto o campos que faltan): con mala conexión llegaba tarde y la
+    // persona veía el feed en vez de su onboarding. Mientras llega, profileGateReason no juzga los skills.
+    if (!user) return
     if (profileGateReason(user as never, catalog)) {
       router.replace('/onboarding')
     } else {
@@ -44,7 +45,7 @@ export function ProfileGate() {
       // mandarlo a una vacante en su próximo registro.
       clearReturnTo()
     }
-  }, [user, catalog, loading, router])
+  }, [user, catalog, router])
 
   return null
 }

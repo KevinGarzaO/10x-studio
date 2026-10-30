@@ -3,7 +3,7 @@
 import { useRouter } from 'next/navigation'
 import { useEffect, useRef, useState } from 'react'
 import { Loader2, MapPin, Tag } from 'lucide-react'
-import { getToken, fetchCurrentUser, captureSessionFromUrl } from '../lib/session'
+import { getToken, getCachedUser, fetchCurrentUser, captureSessionFromUrl } from '../lib/session'
 import { SENIORITY_OPTIONS, MODALITY_OPTIONS, ROLE_CATEGORY_OPTIONS } from '../lib/profile-options'
 import { PhotoPicker, SegmentedControl, SkillsInput, RoleCategorySelect } from './profile-form-fields'
 import { useSkillCatalog } from '../lib/skill-catalog'
@@ -66,6 +66,7 @@ export function OnboardingPage() {
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
   const [checkingSession, setCheckingSession] = useState(true)
+  const [sessionFailed, setSessionFailed] = useState(false)
   const [step, setStep] = useState(0)
   // true cuando la cuenta ya traía foto al entrar (subida antes o tomada de la
   // red social): entonces el paso de foto no existe y el flujo tiene solo 2 pasos.
@@ -85,27 +86,45 @@ export function OnboardingPage() {
     // no session in this browser yet — Supabase appended one as a URL hash
     // fragment instead, which captureSessionFromUrl() picks up and saves.
     captureSessionFromUrl()
+
+    // Se precarga TODO lo que la cuenta ya tenga, no solo la foto (FR-026):
+    // a quien vuelve aquí por un campo nuevo no se le vuelve a pedir lo que
+    // ya había capturado. Solo se llenan campos vacíos: lo que la persona ya
+    // escribió mientras llegaba la respuesta del servidor no se pisa.
+    const preload = (user: any) => {
+      if (user.photo_url) {
+        setPhotoPreview(prev => prev || user.photo_url)
+        // Ese paso ya está: se empieza en el puesto (quien vino de GitHub/LinkedIn
+        // llega aquí con su avatar y ni ve el paso de foto).
+        setPhotoPrefilled(true)
+        setStep(current => (current === 0 ? 1 : current))
+      }
+      if (user.role_category) setRoleCategory(prev => prev || user.role_category)
+      if (user.seniority) setSeniority(prev => prev || user.seniority)
+      if (Array.isArray(user.skills)) setSkills(prev => (prev.length ? prev : user.skills))
+      if (user.location) setLocation(prev => prev || user.location)
+      if (user.work_modality) setWorkModality(prev => prev || user.work_modality)
+    }
+
+    // La pantalla no espera a la red: si ya hay un usuario guardado en este
+    // navegador se muestra el formulario al instante y el servidor confirma
+    // después. Con mala conexión antes se quedaba un "Verificando..." sin fin.
+    const cached = getToken() ? getCachedUser() : null
+    if (cached?.username) {
+      preload(cached)
+      setCheckingSession(false)
+    }
+
     fetchCurrentUser().then(user => {
       if (!user) {
         router.replace('/login')
         return
       }
-      // Se precarga TODO lo que la cuenta ya tenga, no solo la foto (FR-026):
-      // a quien vuelve aquí por un campo nuevo no se le vuelve a pedir lo que
-      // ya había capturado.
-      if (user.photo_url) {
-        setPhotoPreview(user.photo_url)
-        // Ese paso ya está: se empieza en el puesto (quien vino de GitHub/LinkedIn
-        // llega aquí con su avatar y ni ve el paso de foto).
-        setPhotoPrefilled(true)
-        setStep(1)
-      }
-      if (user.role_category) setRoleCategory(user.role_category)
-      if (user.seniority) setSeniority(user.seniority)
-      if (Array.isArray(user.skills)) setSkills(user.skills)
-      if (user.location) setLocation(user.location)
-      if (user.work_modality) setWorkModality(user.work_modality)
+      preload(user)
       setCheckingSession(false)
+    }).catch(() => {
+      // Sin respuesta del servidor: si ya hay formulario se deja trabajar; si no, se ofrece reintentar.
+      if (!cached?.username) setSessionFailed(true)
     })
   }, [router])
 
@@ -202,8 +221,17 @@ export function OnboardingPage() {
       <div className="onboarding-page">
         <style>{styles}</style>
         <div className="onboarding-card" style={{ textAlign: 'center', padding: '60px 38px' }}>
-          <Loader2 size={22} style={{ animation: 'spin 1s linear infinite', color: 'var(--brand)' }} />
-          <p className="muted" style={{ marginTop: 12 }}>Verificando tu sesión...</p>
+          {sessionFailed ? (
+            <>
+              <p className="muted">No pudimos conectar. Revisa tu internet e intenta de nuevo.</p>
+              <button type="button" className="onboarding-submit" style={{ marginTop: 16 }} onClick={() => window.location.reload()}>Reintentar</button>
+            </>
+          ) : (
+            <>
+              <Loader2 size={22} style={{ animation: 'spin 1s linear infinite', color: 'var(--brand)' }} />
+              <p className="muted" style={{ marginTop: 12 }}>Verificando tu sesión...</p>
+            </>
+          )}
         </div>
         <style>{`@keyframes spin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}`}</style>
       </div>
