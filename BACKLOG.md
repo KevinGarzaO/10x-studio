@@ -1,19 +1,17 @@
 # Backlog de AvoTalent
 
-Estado al **30 de octubre de 2026**. Se trabaja **de a poco**: una cosa a la vez, se marca aquí al terminarla y se sube.
+Estado al **30 de octubre de 2026**. Se trabaja **de a poco**: una cosa a la vez, en el orden de la tabla de la sección 2. Al terminar una, se marca aquí y se sube.
 
-- Detalle del plan original: [requirements/005-retention-and-engagement-roadmap.md](requirements/005-retention-and-engagement-roadmap.md)
+- Detalle del plan original: [requirements/005-retention-and-engagement-roadmap.md](requirements/005-retention-and-engagement-roadmap.md) (usa las letras viejas; la columna "Antes" de abajo dice cuál es cuál).
 - Plan del CRM y el webhook de Resend: [requirements/006-resend-webhook-and-crm.md](requirements/006-resend-webhook-and-crm.md)
-- Reglas que ya están decididas y no se rehacen: ver `CLAUDE.md` (registro de empresas pausado, proyectos pausados, sin enlace de baja en correos, etc.).
+- Reglas ya decididas que no se rehacen: sección 3 y `CLAUDE.md`.
 - **Funciones nuevas (monetización, planes de pago, comisiones) solo empiezan cuando termine este backlog.** Meta: enero de 2027.
-
-Orden sugerido: **A → B → D → E → F → G**, con **H (GEO)** en paralelo. El CRM entra cuando tú lo indiques.
 
 ---
 
 ## 1. Ya hecho
 
-### C. Retención por correo y avisos
+### Retención por correo y avisos (antes C)
 - [x] Recordatorio de perfil incompleto (a las 72 h, una vez por persona).
 - [x] Invitaciones a tu lista de contactos (máximo 2 correos por persona).
 - [x] Correos de bienvenida (personas nuevas y fundadores).
@@ -21,7 +19,7 @@ Orden sugerido: **A → B → D → E → F → G**, con **H (GEO)** en paralelo
 - [x] Campana con avisos en la app, página de notificaciones y preferencias en Ajustes.
 - [x] Cuota de correos de Resend: 100 por 24 horas móviles (tope propio de 90, con reservas).
 
-### H. Diseño (etapas 1 a 4)
+### Diseño, etapas 1 a 4 (antes H, parte de diseño)
 - [x] Etapa 1: tarjetas del feed (borde suave, una sola barra verde para "Para ti", una línea de por qué, números compactos).
 - [x] Etapa 2: cabecera del feed con saludo y cifras reales, filtros (Todo, Para ti, Vacantes, Discusiones, Remoto, Mi nivel) y barra de avance del perfil.
 - [x] Etapa 3: login y registro (sin el dato inventado de "2,400+ developers"), barra superior más baja, onboarding más limpio. El perfil público ya estaba alineado.
@@ -46,21 +44,74 @@ Orden sugerido: **A → B → D → E → F → G**, con **H (GEO)** en paralelo
 
 ---
 
-## 2. Pendiente del backlog original
+## 2. Pendiente (todo, con letra, prioridad y orden)
 
-### A. Cerrar la API (recomendado: siguiente)
+**Prioridad:** **P1** urgente (seguridad, fugas, que lo que ya existe funcione) · **P2** alta (valor claro, se hace pronto) · **P3** media · **P4** después. **Tamaño** estimado con Claude Code: **S** unas horas o menos · **M** medio día a un día · **L** varios días.
+
+| Orden | Letra | Pendiente | Prioridad | Tamaño | Antes |
+|---|---|---|---|---|---|
+| 1 | **A** | Cerrar la API (que no entregue vacantes sin sesión) | P1 | M | A |
+| 2 | **B** | Llave de Resend con acceso completo y rotar el token pegado en el chat | P1 | S | cabo suelto |
+| 3 | **C** | Revisar las variables de entorno de Railway | P1 | S | cabo suelto |
+| 4 | **D** | Velocidad real: medir con tu base y revisar las secciones lentas del admin | P1 | M | cabo suelto |
+| 5 | **E** | Las 156 vacantes que no le sirven a nadie y el conteo de la cola | P2 | S | cabo suelto |
+| 6 | **F** | Confianza en las vacantes (reportar, cola de revisión, enlaces vivos) | P2 | M | B |
+| 7 | **G** | Webhook de Resend | P2 | M | plan nuevo |
+| 8 | **H** | Comunidad: seguir, likes, respuestas y menciones | P2 | L | D |
+| 9 | **I** | SEO y GEO (posición 0 en Google y citas de las IA) | P2 | M | H (parte SEO/GEO) |
+| 10 | **J** | CRM en el admin y termómetro "Valiosas" | P3 | L | plan nuevo |
+| 11 | **K** | Validación de skills: más preguntas de examen | P3 | M | E |
+| 12 | **L** | Mis postulaciones | P3 | M | F |
+| 13 | **M** | Filtro de señal humana en la analítica (en espera) | P3 | M | en espera |
+| 14 | **N** | Arreglar la prueba de retención que depende de la hora | P3 | S | cabo suelto |
+| 15 | **O** | Moderación y reportes | P4 | M | G |
+| 16 | **P** | Sembrar la comunidad con algunas discusiones | P4 | S | G |
+| 17 | **Q** | Perfil como CV y barra de qué tan completo está | P4 | M | G |
+| 18 | **R** | Privacidad de cuenta (contraseña, borrar, exportar) | P4 | M | G |
+| 19 | **S** | Medir las vistas de los artículos del equipo | P4 | S | cabo suelto |
+| 20 | **T** | Subir a git el documento de plan de monetización | P4 | S | cabo suelto |
+| 21 | **U** | Tener presente: la actividad se mide desde el 24 de octubre | Informativo | — | cabo suelto |
+
+> El CRM (**J**) queda en P3 por tamaño y porque primero conviene el webhook (**G**), pero si quieres adelantarlo es una decisión tuya.
+
+### A. Cerrar la API — P1 · M
 `/api/community/posts`, `/feed` y `/stats` todavía entregan vacantes a quien no tiene sesión.
 - [ ] Exigir sesión en esas rutas.
 - [ ] Mantener abiertas las rutas `/seo/*` (las usan las páginas públicas y Google).
 - [ ] Revisar qué datos necesita ver un visitante (por ejemplo, las cifras de la página de inicio) y qué no.
 - [ ] Pruebas de que sin sesión no se entrega nada.
 
-### B. Confianza en las vacantes
+### B. Llave de Resend y token — P1 · S
+- [ ] Crear en Resend una llave con **acceso completo** (sin ella no se pueden leer aperturas ni rebotes; el webhook de **G** quitaría esa necesidad).
+- [ ] **Rotar el token** de Resend que se pegó en el chat y ponerlo en Railway.
+
+### C. Variables de Railway — P1 · S
+- [ ] Revisar que estén bien puestas: `RESEND_API_KEY`, `INVITE_EMAILS`, `WELCOME_EMAILS`, `WELCOME_FOUNDERS_EMAILS`, `MATCH_ALERTS`, `MATCH_DIGEST`, `PROFILE_REMINDER_EMAILS`, `LINKEDIN_VACANCY_POSTS`, `COMMUNITY_APP_URL`.
+
+### D. Velocidad real — P1 · M
+Ya se aceleró la capa común del admin y "Para ti"; falta comprobarlo con datos de verdad.
+- [ ] Medir los tiempos de carga con tu base y tu conexión, en las dos apps.
+- [ ] Revisar una por una las demás secciones lentas del admin (hasta ahora solo se aceleró la capa común).
+- [ ] Corregir lo que siga lento.
+
+### E. Vacantes que no le sirven a nadie y conteo de la cola — P2 · S
+- [ ] Decidir si se retiran del feed las **156 vacantes** publicadas que no le sirven a nadie (elegiste aplicar la regla solo a las nuevas). Se propone no retirar las que tengan comentarios o guardados.
+- [ ] Hacer que "En cola" y el cupo diario del panel cuenten solo las vacantes que sí sirven (hoy cuentan la cola completa y se leen más altos que lo real).
+
+### F. Confianza en las vacantes — P2 · M
 - [ ] Botón "Reportar vacante" para los miembros.
 - [ ] Cola de revisión para ti en el admin.
 - [ ] Revisar que los enlaces de postulación sigan vivos.
 
-### D. Comunidad (seguir, likes, respuestas)
+### G. Webhook de Resend — P2 · M
+Detalle en [requirements/006-resend-webhook-and-crm.md](requirements/006-resend-webhook-and-crm.md).
+- [ ] **Decisión tuya:** las aperturas de correo son solo dato orientativo (poco confiables: Apple Mail y otros cargan el pixel solos); las etapas se basan en clics y registros.
+- [ ] Ruta firmada `POST /api/webhooks/resend` (se monta antes de `express.json`; solo acepta lo firmado).
+- [ ] Tabla `email_events` sin duplicados.
+- [ ] Estado de cada envío actualizado con cada evento; un rebote o una queja suprime a la persona de futuros envíos.
+- [ ] Reemplaza la consulta periódica que exige la llave de acceso completo (**B**).
+
+### H. Comunidad: seguir, likes, respuestas — P2 · L
 Necesita una tabla compartida de "follows" que también alimente los avisos.
 - [ ] Seguir personas.
 - [ ] Seguir empresas (avisar de vacantes nuevas).
@@ -71,22 +122,8 @@ Necesita una tabla compartida de "follows" que también alimente los avisos.
 - [ ] Respuestas y menciones entre usuarios.
 - [ ] Botón "Seguir" en las tarjetas flotantes (hoy existen, pero sin botón porque seguir no existe).
 
-### E. Validación de skills
-- [ ] Banco de preguntas más grande: hoy el examen tiene pocas preguntas. Plan: preguntas redactadas con IA para los 15 skills más pedidos y aprobadas por ti en el admin.
-
-### F. "Mis postulaciones"
-- [ ] Marcar "ya me postulé".
-- [ ] Estado sencillo de cada postulación.
-- [ ] Recordatorios.
-
-### G. Más adelante
-- [ ] Moderación y reportes.
-- [ ] Sembrar la comunidad con algunas discusiones.
-- [ ] Botón "usar mi perfil como CV" y barra de qué tan completo está.
-- [ ] Privacidad de cuenta: cambiar contraseña, borrar cuenta, exportar datos.
-
-### H. SEO y GEO (el diseño ya está hecho)
-Meta: posición 0 en Google (fragmentos destacados, preguntas frecuentes).
+### I. SEO y GEO — P2 · M
+Meta: posición 0 en Google (fragmentos destacados, preguntas frecuentes). El diseño ya está hecho.
 - [ ] Archivo `llms.txt`.
 - [ ] Páginas con respuestas cortas y citables.
 - [ ] Más datos estructurados (discusiones, perfiles, empresas).
@@ -94,49 +131,59 @@ Meta: posición 0 en Google (fragmentos destacados, preguntas frecuentes).
 - [ ] Medir cuántas veces nos citan.
 - [ ] Mejorar el SEO de discusiones, perfiles y empresas.
 
----
-
-## 3. Planeado, sin construir
-
-### Webhook de Resend + módulo CRM + termómetro "Valiosas"
-Plan completo en [requirements/006-resend-webhook-and-crm.md](requirements/006-resend-webhook-and-crm.md).
-- [ ] **Decisión tuya 1:** las aperturas de correo se muestran como dato orientativo (poco confiables: Apple Mail y otros cargan el pixel solos); las etapas se basan en clics y registros.
-- [ ] **Decisión tuya 2:** los datos del CRM los ven solo los superadmins y nunca salen por la API pública.
-- [ ] **Decisión tuya 3:** primera versión de solo lectura, más notas y etiquetas; sin enviar correos desde el CRM.
-- [ ] Fase 1, webhook (medio día): ruta firmada `POST /api/webhooks/resend`, tabla `email_events` sin duplicados, y estado de cada envío actualizado (un rebote o una queja suprime a la persona). Reemplaza la consulta periódica que exige la llave de Resend con acceso completo.
-- [ ] Fase 2, datos por persona (medio día): vista `person_timeline` con registro, origen, visitas, vacantes vistas/guardadas, actividad, exámenes, avisos y correos.
-- [ ] Fase 3, admin en dos módulos (un día): el menú actual pasa a ser el módulo **Analítica** y se crea el módulo **CRM** con las pantallas Personas y Ficha de persona.
+### J. CRM en el admin y termómetro "Valiosas" — P3 · L
+Plan completo en [requirements/006-resend-webhook-and-crm.md](requirements/006-resend-webhook-and-crm.md). Va después del webhook (**G**).
+- [ ] **Decisión tuya:** los datos del CRM los ven solo los superadmins y nunca salen por la API pública.
+- [ ] **Decisión tuya:** primera versión de solo lectura, más notas y etiquetas; sin enviar correos desde el CRM.
+- [ ] Datos por persona (medio día): vista `person_timeline` con registro, origen, visitas, vacantes vistas y guardadas, actividad, exámenes, avisos y correos.
+- [ ] Admin en dos módulos (un día): el menú actual pasa a ser el módulo **Analítica** y se crea el módulo **CRM** con las pantallas Personas y Ficha de persona.
 - [ ] Termómetro "Valiosas" (medio día): puntuación de 0 a 100 por persona, con etapa (fría, tibia, caliente), el porqué de cada punto y la tendencia frente a 30 días antes. Los pesos se calibran con datos reales.
 - [ ] Resto de pantallas del CRM: Correos, Invitaciones, Segmentos (listas guardadas y exportables) y Empresas.
 
----
+### K. Validación de skills — P3 · M
+- [ ] Banco de preguntas más grande: hoy el examen tiene pocas preguntas. Plan: preguntas redactadas con IA para los 15 skills más pedidos y aprobadas por ti en el admin.
 
-## 4. En espera
+### L. Mis postulaciones — P3 · M
+- [ ] Marcar "ya me postulé".
+- [ ] Estado sencillo de cada postulación.
+- [ ] Recordatorios.
 
-### Filtro de señal humana en la analítica
-El 29 de octubre, de 10:15 a 12:50 (Monterrey), hubo 167 vistas de 167 visitantes nuevos, en 150 vacantes distintas, sin origen y sin ninguna acción (0 postulaciones, guardados ni registros). Casi seguro fue un navegador automático: distorsiona visitantes, conversión y la popularidad del feed.
+### M. Filtro de señal humana en la analítica — P3 · M · en espera
+El 29 de octubre, de 10:15 a 12:50 (Monterrey), hubo 167 vistas de 167 visitantes nuevos, en 150 vacantes distintas, sin origen y sin ninguna acción (0 postulaciones, guardados ni registros). Casi seguro fue un navegador automático: distorsiona visitantes, conversión y la popularidad del feed. Lo pusiste en espera.
 - [ ] Confirmar la causa con los registros de Vercel (User-Agent) y Google Search Console del 29 de octubre.
 - [ ] Contar una vista o visita solo si la página estuvo visible unos segundos **y** hubo un movimiento, scroll, tecla o toque.
 - [ ] Opcional: SQL para marcar esa ráfaga.
 
+### N. Prueba de retención que depende de la hora — P3 · S
+- [ ] `analytics-routes.test.ts` (retención) falla según la hora por la zona horaria (UTC frente a Monterrey). No es un error del producto; hay que arreglar la prueba.
+
+### O. Moderación y reportes — P4 · M
+- [ ] Reportar publicaciones y comentarios, y una cola para revisarlos.
+
+### P. Sembrar la comunidad — P4 · S
+- [ ] Publicar algunas discusiones para que la comunidad no se vea vacía.
+
+### Q. Perfil como CV — P4 · M
+- [ ] Botón "usar mi perfil como CV".
+- [ ] Barra de qué tan completo está el perfil.
+
+### R. Privacidad de cuenta — P4 · M
+- [ ] Cambiar contraseña.
+- [ ] Borrar la cuenta.
+- [ ] Exportar los datos.
+
+### S. Vistas de los artículos — P4 · S
+- [ ] Medir las vistas de los artículos del equipo (hoy no se miden).
+
+### T. Documento de monetización — P4 · S
+- [ ] Subir a git `docs/AvoTalent-Plan-de-Producto-y-Monetizacion` (Word y PDF), que sigue sin commit.
+
+### U. Tener presente — Informativo
+- La actividad de las personas se mide **desde el 24 de octubre**. Las cuentas más antiguas que no han vuelto a entrar no aparecen como activas, y ese dato no se puede reconstruir hacia atrás. No hay nada que hacer, solo tenerlo en cuenta al leer Retención.
+
 ---
 
-## 5. Cabos sueltos
-
-- [ ] Crear en Resend una llave con **acceso completo** y **rotar el token** que se pegó en el chat (sin la llave completa no se pueden leer aperturas ni rebotes; el webhook quitaría esa necesidad).
-- [ ] Revisar en Railway las variables de entorno: `INVITE_EMAILS`, `WELCOME_EMAILS`, `WELCOME_FOUNDERS_EMAILS`, `MATCH_ALERTS`, `MATCH_DIGEST`, `PROFILE_REMINDER_EMAILS`, `LINKEDIN_VACANCY_POSTS`, `RESEND_API_KEY`.
-- [ ] Las **156 vacantes** que hoy no le sirven a nadie siguen en el feed (elegiste aplicar la regla solo a las nuevas). Decidir si se retiran, salvo las que tengan comentarios o guardados.
-- [ ] El panel (tarjeta "En cola" y cupo diario) cuenta la cola completa, así que se lee un poco más alto que lo que realmente saldrá. Ajustar para que cuente solo las que sirven.
-- [ ] La actividad se mide desde el 24 de octubre: las cuentas más antiguas que no han vuelto no aparecen como activas. No se puede reconstruir hacia atrás.
-- [ ] El documento `docs/AvoTalent-Plan-de-Producto-y-Monetizacion` (Word y PDF) sigue sin commit.
-- [ ] Revisar una por una las demás secciones lentas del admin (hasta ahora solo se aceleró la capa común).
-- [ ] Probar los tiempos de carga con tu base real y tu conexión.
-- [ ] Las vistas de los artículos del equipo no se miden.
-- [ ] La prueba `analytics-routes.test.ts` (retención) falla según la hora por la zona horaria (UTC frente a Monterrey). No es un error del producto; conviene arreglarla.
-
----
-
-## 6. Decisiones ya tomadas (no se rehacen)
+## 3. Decisiones ya tomadas (no se rehacen)
 
 - El registro de empresas está **pausado**: AvoTalent solo atiende a personas por ahora.
 - Los proyectos (`showcase`) están **pausados**: solo se publican discusiones.
@@ -146,3 +193,4 @@ El 29 de octubre, de 10:15 a 12:50 (Monterrey), hubo 167 vistas de 167 visitante
 - Equipo, cuentas de prueba y robots no cuentan en las cifras públicas ni del panel.
 - Resend gratis: 100 correos por 24 horas móviles; el tope propio es 90.
 - El umbral de los avisos "Para ti" es de 80 %.
+- El diseño de la comunidad ya está unificado con el del admin; no se rehace.
