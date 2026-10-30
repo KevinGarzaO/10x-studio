@@ -1339,3 +1339,12 @@ button { cursor: pointer; }
 :root .topbar .icon-button { width: 36px; height: 36px; border-radius: 10px; }
 :root .topbar .notification { position: relative; }
 :root .topbar .notification span { position: absolute; top: 7px; right: 8px; width: 8px; height: 8px; border-radius: 50%; background: #f43f5e; box-shadow: 0 0 0 2px #0f172a; }
+
+/* ---- Modo oscuro y móvil (etapa 4) ---- */
+/* En oscuro el "navy" desaparecía contra el fondo (chip activo, tarjeta Para ti, barra de la tarjeta flotante): se usa el verde de marca. */
+:root[data-theme='dark'] { --navy: #10b981; --on-navy: #052e1f; }
+@media (max-width: 700px) {
+  :root .topbar .brand { min-width: 0; flex: none; }
+  :root .topbar .brand-avo, :root .topbar .brand-accent { font-size: 16px; }
+  :root .topbar { gap: 8px; padding: 6px 12px; }
+}
