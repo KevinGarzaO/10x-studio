@@ -1,5 +1,6 @@
 'use client'
 
+import { DetailSkeleton } from '@/components/skeletons'
 import { useParams, useRouter } from 'next/navigation'
 import { ConfirmDialog } from '../../../../components/confirm-dialog'
 import { renderUserMarkdown } from '../../../../lib/user-markdown'
@@ -145,9 +146,7 @@ export default function PostPage() {
     return (
       <div className="detail-page">
         <button onClick={goBack} className="detail-back">Volver al feed</button>
-        <p style={{ color: 'var(--text-muted)' }}>
-          {loading ? 'Cargando publicación...' : 'Publicación no encontrada'}
-        </p>
+        {loading ? <DetailSkeleton label="Cargando la publicación" /> : <p style={{ color: 'var(--text-muted)' }}>Publicación no encontrada</p>}
       </div>
     )
   }

@@ -1,5 +1,6 @@
 'use client'
 
+import { EmptyState, ListSkeleton } from './skeletons'
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { Bookmark, Building, ExternalLink, Trash2 } from 'lucide-react'
@@ -93,16 +94,10 @@ export function SavedVacancies() {
 
         {error && <p className="muted">No pudimos cargar tus guardados. Intenta de nuevo en un momento.</p>}
 
-        {signedIn && !error && items === null && <p className="muted">Cargando tus guardados...</p>}
+        {signedIn && !error && items === null && <ListSkeleton rows={3} label="Cargando tus guardados" />}
 
         {items && items.length === 0 && (
-          <div className="saved-tip">
-            <Bookmark size={17} />
-            <div>
-              <strong>Aún no guardas ninguna vacante</strong>
-              <span>Usa el botón Guardar en cualquier vacante y la encontrarás aquí. <Link href="/">Ver vacantes</Link></span>
-            </div>
-          </div>
+          <EmptyState icon={<Bookmark size={20} />} title="Aún no guardas ninguna vacante" text="Usa el botón Guardar en cualquier vacante y la encontrarás aquí." action={{ href: '/', label: 'Ver vacantes' }} />
         )}
 
         {items && items.length > 0 && (

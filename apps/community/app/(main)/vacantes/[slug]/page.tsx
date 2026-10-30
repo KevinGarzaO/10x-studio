@@ -1,5 +1,6 @@
 'use client'
 
+import { DetailSkeleton } from '@/components/skeletons'
 import Link from 'next/link'
 import { useParams, useRouter } from 'next/navigation'
 import { useState, useEffect, useRef } from 'react'
@@ -327,7 +328,7 @@ export default function VacancyPage() {
     return (
       <div className="detail-page">
         <button onClick={goBack} className="detail-back">Volver al feed</button>
-        <p style={{ color: 'var(--text-muted)' }}>{loading ? 'Cargando vacante...' : 'Vacante no encontrada'}</p>
+        {loading ? <DetailSkeleton label="Cargando la vacante" /> : <p style={{ color: 'var(--text-muted)' }}>Vacante no encontrada</p>}
       </div>
     )
   }

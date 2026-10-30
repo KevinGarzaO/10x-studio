@@ -1348,3 +1348,11 @@ button { cursor: pointer; }
   :root .topbar .brand-avo, :root .topbar .brand-accent { font-size: 16px; }
   :root .topbar { gap: 8px; padding: 6px 12px; }
 }
+
+/* ---- Estados vacíos: qué pasa y qué hacer, con una sola acción ---- */
+.empty-state { display: flex; flex-direction: column; align-items: center; text-align: center; gap: 6px; padding: 40px 20px; border: 1px dashed var(--line); border-radius: 14px; background: var(--surface); }
+.empty-state-icon { display: grid; place-items: center; width: 44px; height: 44px; border-radius: 50%; background: var(--accent-soft); color: var(--accent-text); margin-bottom: 6px; }
+.empty-state strong { font-size: 15px; color: var(--text); }
+.empty-state p { margin: 0; max-width: 360px; font-size: 13px; line-height: 1.5; color: var(--text-muted); }
+.empty-state-action { margin-top: 10px; padding: 8px 16px; border-radius: 999px; background: var(--brand); color: var(--on-accent); font-size: 13px; font-weight: 700; text-decoration: none; }
+.empty-state-action:hover { background: var(--accent-hover); }

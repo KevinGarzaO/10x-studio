@@ -1,5 +1,6 @@
 'use client'
 
+import { DetailSkeleton } from '@/components/skeletons'
 import { useParams, useRouter } from 'next/navigation'
 import { useState, useEffect } from 'react'
 import { PublicProfileView, type PublicProfile } from '../../../../components/public-profile-view'
@@ -28,8 +29,8 @@ export default function UserProfilePage() {
 
   if (loading) {
     return (
-      <div className="post-detail-wrap" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '60vh' }}>
-        <p style={{ color: 'var(--text-muted)' }}>Cargando perfil...</p>
+      <div className="post-detail-wrap">
+        <DetailSkeleton label="Cargando el perfil" />
       </div>
     )
   }

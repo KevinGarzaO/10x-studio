@@ -2,7 +2,8 @@
 
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
-import { Award, Bell, Briefcase, Check, Loader2, MessageCircle, Settings2 } from 'lucide-react'
+import { Award, Bell, Briefcase, Check, MessageCircle, Settings2 } from 'lucide-react'
+import { EmptyState, ListSkeleton } from './skeletons'
 import { fetchNotifications, markAllNotificationsRead, markNotificationRead, timeAgo, type AppNotification } from '../lib/notifications'
 
 const ICONS: Record<string, { icon: typeof Bell; className: string }> = {
@@ -46,13 +47,11 @@ export function NotificationsList() {
         {unread > 0 && <button className="outline-btn notification-action" onClick={readAll}><Check size={14} /> Marcar todo leído</button>}
       </div>
 
-      {items === null && <p className="muted" style={{ padding: '24px 0', textAlign: 'center' }}><Loader2 size={18} className="animate-spin" /> Cargando…</p>}
+      {items === null && <ListSkeleton rows={3} label="Cargando tus avisos" />}
 
-      {items !== null && items.length === 0 && (
-        <p className="muted" style={{ padding: '28px 0', textAlign: 'center' }}>
-          {failed ? 'No pudimos cargar tus avisos. Intenta de nuevo en un momento.' : 'Todavía no tienes avisos. Aquí te contaremos cuando alguien comente tus publicaciones o aparezca una vacante que encaje mucho contigo.'}
-        </p>
-      )}
+      {items !== null && items.length === 0 && (failed
+        ? <EmptyState icon={<Bell size={20} />} title="No pudimos cargar tus avisos" text="Intenta de nuevo en un momento." />
+        : <EmptyState icon={<Bell size={20} />} title="Todavía no tienes avisos" text="Te avisaremos cuando alguien comente tus publicaciones o aparezca una vacante que encaje mucho contigo." action={{ href: '/', label: 'Ver vacantes' }} />)}
 
       <div className="notification-list">
         {(items ?? []).map(item => {
