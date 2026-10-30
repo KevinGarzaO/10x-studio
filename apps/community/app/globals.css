@@ -1356,3 +1356,9 @@ button { cursor: pointer; }
 .empty-state p { margin: 0; max-width: 360px; font-size: 13px; line-height: 1.5; color: var(--text-muted); }
 .empty-state-action { margin-top: 10px; padding: 8px 16px; border-radius: 999px; background: var(--brand); color: var(--on-accent); font-size: 13px; font-weight: 700; text-decoration: none; }
 .empty-state-action:hover { background: var(--accent-hover); }
+
+/* ---- Columnas laterales en tarjetas (reemplaza el diseño sin cajas de la etapa 2): menú, usuarios y oportunidades ---- */
+:root .left-sidebar { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 12px; align-self: start; box-shadow: none; }
+:root .right-sidebar .widget { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 16px 18px; box-shadow: none; }
+:root .right-sidebar .widget + .widget { padding-top: 16px; border-top: 1px solid var(--line); border-radius: 14px; }
+:root .mobile-drawer .left-sidebar { background: transparent; border: 0; padding: 0; }

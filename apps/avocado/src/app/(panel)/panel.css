@@ -157,3 +157,22 @@
 
 .panel-link-button { display: inline-block; padding: 9px 14px; border: 1px solid var(--p-line); background: #fff; border-radius: 10px; font: inherit; font-size: 13px; font-weight: 600; color: var(--p-text); text-decoration: none; cursor: pointer; }
 .panel-link-button:hover { background: #f1f5f9; }
+
+/* Carga: bloques que reservan el lugar de las tarjetas mientras llegan los datos */
+.panel-skeleton { display: grid; gap: 12px; }
+.panel-skeleton i { display: block; height: 96px; border-radius: 14px; background: linear-gradient(90deg, #eef2f6 25%, #e2e8f0 50%, #eef2f6 75%); background-size: 200% 100%; animation: panel-shimmer 1.3s linear infinite; }
+.panel-skeleton i:first-child { height: 120px; }
+@keyframes panel-shimmer { from { background-position: 200% 0; } to { background-position: -200% 0; } }
+@media (prefers-reduced-motion: reduce) { .panel-skeleton i { animation: none; } }
+
+/* Barra de la tabla de cuentas: búsqueda, filtro y páginas */
+.panel-toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin-bottom: 14px; }
+.panel-search { flex: 1; min-width: 200px; max-width: 360px; padding: 9px 12px; border: 1px solid var(--p-line); border-radius: 9px; font-size: 14px; background: #fff; color: var(--p-text); }
+.panel-search:focus { outline: 2px solid #34d399; outline-offset: 1px; }
+.panel-filter { display: inline-flex; flex-wrap: wrap; gap: 6px; }
+.panel-filter button { border: 1px solid var(--p-line); background: #fff; color: var(--p-text); padding: 6px 12px; border-radius: 999px; font-size: 13px; font-weight: 600; cursor: pointer; }
+.panel-filter button[aria-pressed='true'] { background: #0f172a; border-color: #0f172a; color: #fff; }
+.panel-pager { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 14px; font-size: 13px; color: #64748b; }
+.panel-pager div { display: flex; gap: 8px; }
+.panel-pager button { border: 1px solid var(--p-line); background: #fff; padding: 7px 14px; border-radius: 9px; font-size: 13px; font-weight: 600; cursor: pointer; color: var(--p-text); }
+.panel-pager button:disabled { opacity: .45; cursor: not-allowed; }

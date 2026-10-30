@@ -3,6 +3,7 @@ import { supabase } from '../../../services/supabase.service'
 import { siteUrl } from '../../../services/linkedin/vacancy-publisher'
 import { nextPublication } from '../../../services/analytics/schedule'
 import { readAll } from '../../../services/analytics/read'
+import { ttlCache } from '../../../services/analytics/cache'
 import { loadAlerts } from '../../../services/analytics/alerts-data'
 import { loadMatchingOverview } from '../../../services/analytics/matching-data'
 import {
@@ -29,6 +30,9 @@ import {
 } from '../../../services/analytics/metrics'
 
 const router = Router()
+
+// Cada consulta lee miles de filas: se guarda un minuto (y `?fresh=1` la vuelve a calcular).
+router.use(ttlCache(60_000, (path) => path === '/me'))
 
 /**
  * El panel de analítica de AvoTalent. Todo lo que cuelga de aquí se monta detrás de
@@ -247,17 +251,38 @@ router.get('/acquisition', handle('adquisición', async (req, res) => {
   })
 }))
 
-/** Usuarios: las cuentas reales, con su origen y su última actividad. */
+/** Usuarios: las cuentas reales, con su origen, cómo entraron y su última actividad. Con búsqueda y páginas. */
+const PROVIDERS = ['email', 'github', 'linkedin']
+
 router.get('/users', handle('usuarios', async (req, res) => {
-  const limit = Math.min(Math.max(parseInt(String(req.query.limit ?? '200'), 10) || 200, 1), 500)
-  const { data, error } = await supabase
-    .from('users')
-    .select('id, username, display_name, email, photo_url, user_kind, profile_completed, role_category, seniority, location, signup_source, signup_content, created_at')
+  const pageSize = Math.min(Math.max(parseInt(String(req.query.pageSize ?? '25'), 10) || 25, 1), 100)
+  const page = Math.max(parseInt(String(req.query.page ?? '1'), 10) || 1, 1)
+  const provider = PROVIDERS.includes(String(req.query.provider)) ? String(req.query.provider) : null
+  // Lo que se teclea va dentro de un filtro de PostgREST: sin comas, paréntesis ni comodines que lo rompan.
+  const q = String(req.query.q ?? "").replace(/[,()%*]/g, ' ').replace(/\\/g, ' ').trim().slice(0, 60)
+
+  const real = () => supabase.from('users')
+
+  // Los totales y los desgloses salen de TODAS las cuentas reales (solo las columnas necesarias); la tabla, de una página.
+  const everyone = readAll<{ user_kind: string; role_category: string | null; signup_source: string | null; profile_completed: boolean | null; provider: string | null }>((from, to) =>
+    real()
+      .select('user_kind, role_category, signup_source, profile_completed, provider')
+      .eq('is_test_account', false)
+      .not('is_scraper_profile', 'is', true)
+      .in('user_kind', ['user', 'company'])
+      .range(from, to),
+  )
+
+  let pageQuery = real()
+    .select('id, username, display_name, email, photo_url, user_kind, profile_completed, role_category, seniority, location, provider, signup_source, signup_content, created_at', { count: 'exact' })
     .eq('is_test_account', false)
     .not('is_scraper_profile', 'is', true)
     .in('user_kind', ['user', 'company'])
-    .order('created_at', { ascending: false })
-    .limit(limit)
+  if (provider) pageQuery = pageQuery.eq('provider', provider)
+  if (q) pageQuery = pageQuery.or(`display_name.ilike.%${q}%,username.ilike.%${q}%,email.ilike.%${q}%`)
+  const pageRows = pageQuery.order('created_at', { ascending: false }).range((page - 1) * pageSize, page * pageSize - 1)
+
+  const [all, { data, error, count }] = await Promise.all([everyone, pageRows])
   if (error) throw new Error(error.message)
 
   const users = data ?? []
@@ -265,9 +290,9 @@ router.get('/users', handle('usuarios', async (req, res) => {
   const lastActive = new Map<string, string>()
   for (const row of activity.data ?? []) if (row.day > (lastActive.get(row.user_id) ?? '')) lastActive.set(row.user_id, row.day)
 
-  const count = (key: (user: (typeof users)[number]) => string | null) => {
+  const count_ = (key: (user: (typeof all)[number]) => string | null) => {
     const counts = new Map<string, number>()
-    for (const user of users) {
+    for (const user of all) {
       const value = key(user)
       if (value) counts.set(value, (counts.get(value) ?? 0) + 1)
     }
@@ -275,11 +300,16 @@ router.get('/users', handle('usuarios', async (req, res) => {
   }
 
   res.json({
-    total: users.length,
+    total: all.length,
+    completed: all.filter((user) => user.profile_completed).length,
+    matching: count ?? users.length,
+    page,
+    pageSize,
     activityTracked: !activity.error,
-    byKind: count((user) => user.user_kind),
-    byRole: count((user) => user.role_category),
-    bySource: count((user) => user.signup_source ?? '(directo)'),
+    byKind: count_((user) => user.user_kind),
+    byRole: count_((user) => user.role_category),
+    bySource: count_((user) => user.signup_source ?? '(directo)'),
+    byProvider: count_((user) => user.provider ?? 'email'),
     users: users.map((user) => ({ ...user, lastActive: lastActive.get(user.id) ?? null })),
   })
 }))

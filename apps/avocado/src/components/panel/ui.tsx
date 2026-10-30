@@ -14,19 +14,27 @@ export interface PanelData<T> {
   reload: () => void
 }
 
+// Lo último que se vio de cada consulta: al volver a una pantalla (o cambiar de periodo y regresar) se muestra
+// al instante y se actualiza por detrás, en lugar de empezar cada vez desde un "Cargando".
+const seen = new Map<string, unknown>()
+
 /** Pide un dato del panel al backend y lo vuelve a pedir cuando cambia la ruta (por ejemplo, el periodo). */
 export function usePanelData<T>(path: string): PanelData<T> {
-  const [data, setData] = useState<T | null>(null)
-  const [loading, setLoading] = useState(true)
+  const [data, setData] = useState<T | null>(() => (seen.get(path) as T | undefined) ?? null)
+  const [loading, setLoading] = useState(!seen.has(path))
   const [error, setError] = useState<string | null>(null)
   const [tick, setTick] = useState(0)
 
   useEffect(() => {
     let cancelled = false
-    setLoading(true)
+    const known = seen.get(path) as T | undefined
+    setData(known ?? null)
+    setLoading(known === undefined)
     setError(null)
-    api<T>(path)
-      .then(result => { if (!cancelled) setData(result) })
+    // Recargar a mano se salta lo que el servidor guarda unos segundos.
+    const url = tick > 0 ? `${path}${path.includes('?') ? '&' : '?'}fresh=1` : path
+    api<T>(url)
+      .then(result => { seen.set(path, result); if (!cancelled) setData(result) })
       .catch(err => { if (!cancelled) setError(err instanceof Error ? err.message : 'No se pudo cargar') })
       .finally(() => { if (!cancelled) setLoading(false) })
     return () => { cancelled = true }
@@ -136,7 +144,11 @@ export function Stat({ label, value, caption, delta, tone }: { label: string; va
 }
 
 export function Loading() {
-  return <p className="panel-muted" role="status">Cargando…</p>
+  return (
+    <div className="panel-skeleton" role="status" aria-label="Cargando">
+      <i /><i /><i />
+    </div>
+  )
 }
 
 export function ErrorBox({ message, onRetry }: { message: string; onRetry?: () => void }) {

@@ -49,27 +49,20 @@ function toSkillArray(raw: unknown): string[] {
 // modalidad) y se muestran las que de verdad encajan, las mejores primero.
 const POOL_SIZE = 600
 
-router.get('/for-you', communityAuthMiddleware, async (req: AuthRequest, res: Response) => {
-  try {
-    const { data: user, error: userError } = await supabase
-      .from('users')
-      .select('id, role_category, seniority, skills, work_modality')
-      .eq('id', req.userId)
-      .single()
+// Puntuar ~1,200 vacantes contra una persona es lo más lento de "Para ti". Se guarda un minuto por persona (y se
+// descarta si cambió su perfil): recargar el inicio no repite el cálculo. Lo que sí se hace cada vez (historial,
+// guardados, vistas) corre después, sobre estas coincidencias.
+const SCORED_TTL_MS = 60_000
+const scoredCache = new Map<string, { at: number; fingerprint: string; items: MatchedItem[] }>()
+const fingerprintOf = (user: Record<string, unknown>) => JSON.stringify([user.role_category, user.seniority, user.skills, user.work_modality])
 
-    if (userError || !user) {
-      return res.status(404).json({ error: 'Usuario no encontrado' })
-    }
-
-    if (!user.role_category) {
-      return res.status(400).json({ error: 'Completa tu perfil (tu puesto) para ver tu feed personalizado' })
-    }
-
+async function scoreForUser(user: Record<string, any>): Promise<MatchedItem[]> {
+  const userId = user.id as string
     // Las más recientes de cada fuente: se puntúan en memoria, así no depende de que
     // la vacante tenga justo el mismo rol y nivel. Las tres consultas van a la vez (antes la de los skills
     // validados esperaba a las demás y sumaba su tiempo).
     const [validatedSkills, { data: scraperRows }, { data: communityRows }] = await Promise.all([
-      loadValidatedSkills(req.userId),
+      loadValidatedSkills(userId),
       supabase
         .from('scraper_posts')
         .select('id, text, company, company_logo, role_category, seniority_level, skills, url, post_date, created_at, work_modality')
@@ -151,6 +144,31 @@ router.get('/for-you', communityAuthMiddleware, async (req: AuthRequest, res: Re
       if (b.validatedSkills.length !== a.validatedSkills.length) return b.validatedSkills.length - a.validatedSkills.length
       return new Date(b.postDate ?? 0).getTime() - new Date(a.postDate ?? 0).getTime()
     })
+  return matched
+}
+
+router.get('/for-you', communityAuthMiddleware, async (req: AuthRequest, res: Response) => {
+  try {
+    const { data: user, error: userError } = await supabase
+      .from('users')
+      .select('id, role_category, seniority, skills, work_modality')
+      .eq('id', req.userId)
+      .single()
+
+    if (userError || !user) {
+      return res.status(404).json({ error: 'Usuario no encontrado' })
+    }
+
+    if (!user.role_category) {
+      return res.status(400).json({ error: 'Completa tu perfil (tu puesto) para ver tu feed personalizado' })
+    }
+
+    const cached = scoredCache.get(req.userId as string)
+    const matched = cached && process.env.NODE_ENV !== 'test' && Date.now() - cached.at < SCORED_TTL_MS && cached.fingerprint === fingerprintOf(user)
+      ? cached.items
+      : await scoreForUser(user)
+    scoredCache.set(req.userId as string, { at: Date.now(), fingerprint: fingerprintOf(user), items: matched })
+    if (scoredCache.size > 500) scoredCache.delete(scoredCache.keys().next().value as string)
 
     const page = matched.slice(0, 50)
 

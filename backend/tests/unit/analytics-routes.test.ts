@@ -16,7 +16,7 @@ vi.mock('../../services/supabase.service', () => ({
       select: () => {
         let single = false
         const q: any = {}
-        for (const name of ['eq', 'not', 'in', 'gte', 'order', 'limit', 'range']) {
+        for (const name of ['eq', 'not', 'in', 'gte', 'order', 'limit', 'range', 'or']) {
           q[name] = (...args: unknown[]) => { seen.filters.push(`${table}:${name}:${args.join(',')}`); return q }
         }
         q.maybeSingle = () => { single = true; return q }
@@ -202,9 +202,34 @@ describe('GET /analytics/users', () => {
     expect(res.body.users[0].lastActive).toBe('2026-10-23')
   })
 
-  it('never returns more than 500', async () => {
-    await request(app()).get('/analytics/users?limit=99999')
-    expect(seen.filters).toContain('users:limit:500')
+  it('never returns more than 100 per page, and asks only for that page', async () => {
+    await request(app()).get('/analytics/users?pageSize=99999&page=3')
+    expect(seen.filters).toContain('users:range:200,299')
+  })
+
+  it('searches by name, username or email, without letting what is typed break the filter', async () => {
+    await request(app()).get('/analytics/users?q=ana),id.eq.1%25').expect(200)
+    const filter = seen.filters.find((entry) => entry.startsWith('users:or:'))
+    expect(filter).toBeTruthy()
+    expect(filter).toContain('display_name.ilike.%ana')
+    expect(filter).not.toContain('),id')
+    expect(filter).not.toContain('%25')
+  })
+
+  it('filters by how they signed up and ignores unknown providers', async () => {
+    await request(app()).get('/analytics/users?provider=github').expect(200)
+    expect(seen.filters).toContain('users:eq:provider,github')
+    seen.filters.length = 0
+    await request(app()).get('/analytics/users?provider=hacker').expect(200)
+    expect(seen.filters).not.toContain('users:eq:provider,hacker')
+  })
+
+  it('says how each person signed up, and counts them', async () => {
+    data.tables.users[0] = { ...data.tables.users[0], provider: 'github' }
+    const res = await request(app()).get('/analytics/users').expect(200)
+    expect(res.body.users[0].provider).toBe('github')
+    expect(res.body.byProvider).toEqual([{ name: 'github', total: 1 }])
+    expect(res.body).toMatchObject({ total: 1, completed: 1, page: 1, pageSize: 25 })
   })
 })
 
