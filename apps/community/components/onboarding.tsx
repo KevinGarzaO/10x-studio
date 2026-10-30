@@ -15,14 +15,14 @@ import { SkillProposalsList } from './skill-proposals-list'
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'
 
 const styles = `
-.onboarding-page{min-height:100vh;background:var(--bg);color:var(--text);display:grid;place-items:center;padding:40px 20px;background-image:linear-gradient(#322f2916 1px,transparent 1px),linear-gradient(90deg,#322f2916 1px,transparent 1px);background-size:48px 48px}
-.onboarding-card{width:min(100%,560px);background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:38px;box-shadow:0 26px 90px #00000055;box-sizing:border-box}
+.onboarding-page{min-height:100vh;background:var(--bg);color:var(--text);display:grid;place-items:center;padding:40px 20px;}
+.onboarding-card{width:min(100%,560px);background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:38px;box-shadow:0 8px 30px rgba(15,23,42,.08);box-sizing:border-box}
 .onboarding-brand{display:flex;align-items:center;gap:8px;font-weight:800;letter-spacing:-.04em;font-size:19px;margin-bottom:22px}
 .onboarding-brand .brand-mark{display:grid;place-items:center;width:30px;height:30px;border-radius:9px;background:var(--brand);color:var(--on-accent);font-weight:800}
 .onboarding-brand .brand-avo{color:var(--text)}
 .onboarding-brand .brand-accent{color:var(--brand)}
-.onboarding-kicker{color:var(--brand);font:11px monospace;text-transform:uppercase;letter-spacing:.08em;margin:0 0 8px}
-.onboarding-card h1{font-size:26px;letter-spacing:-.03em;margin:0 0 8px}
+
+.onboarding-card h1{font-size:26px;letter-spacing:-.02em;margin:0 0 8px}
 .onboarding-card > p.muted{margin:0 0 26px;color:var(--text-muted);font-size:13px;line-height:1.6}
 .onboarding-card .field{display:flex;flex-direction:column;gap:6px;margin-bottom:18px}
 .onboarding-card .field label{font-size:12px;color:var(--text-muted);font-weight:500}
@@ -33,13 +33,13 @@ const styles = `
 .onboarding-submit{width:100%;background:var(--brand);color:var(--bg);border:none;padding:13px;border-radius:8px;font-size:14px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;margin-top:6px}
 .onboarding-submit:hover{background:var(--accent-hover)}
 .onboarding-submit:disabled{opacity:.55;cursor:not-allowed}
-.onboarding-progress{display:flex;gap:6px;margin-bottom:18px}
-.onboarding-progress i{flex:1;height:3px;border-radius:2px;background:var(--line)}
+.onboarding-progress{display:flex;gap:6px;margin:4px 0 10px}
+.onboarding-progress i{flex:1;height:5px;border-radius:999px;background:var(--line);transition:background .2s}
 .onboarding-progress i.on{background:var(--brand)}
-.onboarding-step-label{color:#58636f;font:10px monospace;text-transform:uppercase;letter-spacing:.1em;margin-bottom:8px}
+.onboarding-step-label{color:var(--text-muted);font:600 13px var(--font-sans);margin:0 0 20px}
 .onboarding-avatar-row{display:flex;align-items:center;gap:10px;margin-bottom:10px}
 .onboarding-avatar{width:48px;height:48px;border-radius:50%;object-fit:cover;border:2px solid var(--accent-line)}
-.onboarding-avatar-row span{color:var(--accent-text);font:11px monospace}
+.onboarding-avatar-row span{color:var(--accent-text);font:500 13px var(--font-sans)}
 .onboarding-nav{display:flex;gap:10px;margin-top:6px}
 .onboarding-nav .back{background:transparent;color:var(--text-muted);border:1px solid var(--line);padding:13px;border-radius:8px;font-size:14px;cursor:pointer;font-family:inherit}
 .onboarding-nav .back:hover{border-color:var(--text-muted)}
@@ -252,7 +252,6 @@ export function OnboardingPage() {
       <style>{styles}</style>
       <div className="onboarding-card">
         {brand}
-        <p className="onboarding-kicker">Un último paso</p>
         <h1>Completa tu perfil</h1>
         <p className="muted">Esta información nos ayuda a mostrarte vacantes relevantes y a que tu perfil se vea real ante otros miembros de la comunidad.</p>
 
