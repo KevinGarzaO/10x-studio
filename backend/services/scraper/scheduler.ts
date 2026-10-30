@@ -48,8 +48,8 @@ export function initScraperCron(): void {
     }
   });
 
-  // Sync: once daily, weekdays only.
-  cron.schedule("0 9 * * 1-5", async () => {
+  // Sync: una vez al día, todos los días: el cupo reparte la cola entre los 15 días del ciclo (quota.ts).
+  cron.schedule("0 9 * * *", async () => {
     console.log(`[ScraperCron] Sync iniciado: ${new Date().toISOString()}`);
 
     try {
@@ -59,5 +59,5 @@ export function initScraperCron(): void {
     }
   });
 
-  console.log("[ScraperCron] Crons inicializados (Production=ciclo 15 días, Sync=diario L-V 9am) — ATS only");
+  console.log("[ScraperCron] Crons inicializados (Production=ciclo 15 días, Sync=diario 9am) — ATS only");
 }

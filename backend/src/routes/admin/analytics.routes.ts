@@ -4,6 +4,7 @@ import { siteUrl } from '../../../services/linkedin/vacancy-publisher'
 import { nextPublication } from '../../../services/analytics/schedule'
 import { readAll } from '../../../services/analytics/read'
 import { ttlCache } from '../../../services/analytics/cache'
+import { dailyQuota, daysUntilNextBatch, nextBatchFrom } from '../../../services/scraper/quota'
 import { loadAlerts } from '../../../services/analytics/alerts-data'
 import { loadMatchingOverview } from '../../../services/analytics/matching-data'
 import {
@@ -167,12 +168,17 @@ router.get('/overview', handle('resumen', async (req, res) => {
     supabase.from('scraper_cycle_state').select('cycle_started_at').eq('id', 1).limit(1),
   ])
 
+  const nextBatch = nextBatchFrom(cycle?.[0]?.cycle_started_at ? new Date(cycle[0].cycle_started_at) : null)
+
   res.json({
     ...overview,
     totals: { users: totalUsers ?? 0, activeVacancies: activeVacancies ?? 0, queuedVacancies: queued ?? 0, lastIngestedAt: lastIngested?.[0]?.created_at ?? null,
-      // La última que salió al feed (el scraper trae lotes cada 15 días y el feed los publica 20 por día) y cuándo toca el siguiente lote.
+      // La última que salió al feed (el scraper trae lotes cada 15 días y el feed los publica repartidos entre esos 15 días) y cuándo toca el siguiente lote.
       lastPublishedAt: lastPublished?.[0]?.created_at ?? null,
-      nextScrapeAt: cycle?.[0]?.cycle_started_at ? new Date(Date.parse(cycle[0].cycle_started_at) + 15 * 86400000).toISOString() : null },
+      nextScrapeAt: nextBatch ? nextBatch.toISOString() : null,
+      // Cuántas saldrán por día para que la cola se vacíe justo cuando llegue el próximo lote.
+      dailyQuota: dailyQuota({ pending: queued ?? 0, now: new Date(), nextBatchAt: nextBatch }),
+      daysToNextBatch: daysUntilNextBatch(new Date(), nextBatch) },
   })
 }))
 

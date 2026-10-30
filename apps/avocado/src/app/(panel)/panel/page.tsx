@@ -13,7 +13,7 @@ interface Overview {
   vs: { visitors: number | null; signups: number | null }
   linkedin: { visitors: number; signups: number; posts: number; failedPosts: number }
   series: { day: string; visitors: number; signups: number }[]
-  totals: { users: number; activeVacancies: number; queuedVacancies: number; lastIngestedAt: string | null; lastPublishedAt: string | null; nextScrapeAt: string | null }
+  totals: { users: number; activeVacancies: number; queuedVacancies: number; lastIngestedAt: string | null; lastPublishedAt: string | null; nextScrapeAt: string | null; dailyQuota?: number; daysToNextBatch?: number }
 }
 
 export default function ResumenPage() {
@@ -59,8 +59,8 @@ export default function ResumenPage() {
               <div className="panel-grid cols-2">
                 <Stat label="Usuarios" value={fmtNum(data.totals.users)} caption="Cuentas reales en total." />
                 <Stat label="Vacantes abiertas" value={fmtNum(data.totals.activeVacancies)} caption="Publicadas en los últimos 45 días." />
-                <Stat label="En cola" value={fmtNum(data.totals.queuedVacancies)} caption="Esperando salir al feed (20 por día)." />
-                <Stat label="Última publicada en el feed" value={fmtDate(data.totals.lastPublishedAt, true)} caption="El feed publica 20 por día, de lunes a viernes, de la cola." />
+                <Stat label="En cola" value={fmtNum(data.totals.queuedVacancies)} caption={data.totals.dailyQuota ? `Esperando salir al feed: unas ${data.totals.dailyQuota} por día hasta el próximo lote (${data.totals.daysToNextBatch} días).` : 'Esperando salir al feed.'} />
+                <Stat label="Última publicada en el feed" value={fmtDate(data.totals.lastPublishedAt, true)} caption="El feed publica cada día una parte de la cola, repartida entre los 15 días del lote." />
                 <Stat label="Último lote del scraper" value={fmtDate(data.totals.lastIngestedAt, true)} caption={`El scraper trae un lote cada 15 días${data.totals.nextScrapeAt ? `; el siguiente toca hacia el ${fmtDate(data.totals.nextScrapeAt)}` : ''}.`} />
               </div>
             </Card>

@@ -1,3 +1,5 @@
+import { dailyQuota, daysUntilNextBatch, nextBatchFrom, MAX_PER_DAY } from "./quota";
+import { getCycleState } from "./cycle";
 import { pickDailyVacancies } from "./daily-selection";
 import { evaluateVacancy, locationFromText, describeRejections, tallyRejections, type PublishVerdict } from "../vacancies/publish-rule";
 import { loadSkillMatchers } from "../vacancies/catalog";
@@ -413,7 +415,7 @@ async function getTodayScraperPostCount(): Promise<number> {
 
 /**
  * Sincroniza todos los posts nuevos (no sincronizados aún).
- * Respeta la regla de volumen diario: máximo 20 posts/día (nativas + scraper).
+ * Respeta el cupo diario (services/scraper/quota.ts): lo que hay por publicar entre los días que faltan para el próximo lote.
  */
 /**
  * Cuántas personas reales hay por rol, para que el reparto del día siga a la comunidad.
@@ -437,17 +439,16 @@ async function loadRoleDemand(): Promise<Record<string, number> | undefined> {
 export async function syncAllPending(
   log: (msg: string) => void = () => {}
 ): Promise<{ vacancies: number; profiles: number }> {
-  const DAILY_LIMIT = 20;
   const PER_COMPANY_CAP = 2;
   const PER_COMBO_CAP = 3;
 
   const nativeCount = await getTodayNativePostCount();
   const scraperCount = await getTodayScraperPostCount();
-  const remainingSlots = Math.max(0, DAILY_LIMIT - nativeCount - scraperCount);
 
-  log(`[Sync] Hoy: ${nativeCount} nativas, ${scraperCount} scraper, ${remainingSlots} slots restantes`);
+  log(`[Sync] Hoy: ${nativeCount} nativas, ${scraperCount} scraper`);
 
-  if (remainingSlots === 0) {
+  // Tope absoluto del día, antes de leer nada: ya salió todo lo que se puede publicar en un día.
+  if (nativeCount + scraperCount >= MAX_PER_DAY) {
     log("[Sync] Límite diario alcanzado, no se sincronizan más posts scraper");
     return { vacancies: 0, profiles: 0 };
   }
@@ -518,6 +519,16 @@ export async function syncAllPending(
   if (unlinked.length > 0) {
     log(`[Sync] ${unlinked.length} vacantes no cumplen la regla de vacantes y se eliminaron del área de paso (${describeRejections(tallyRejections(verdicts))})`);
   }
+
+  // El cupo del día reparte lo que hay por publicar entre los días que faltan para el próximo lote del scraper
+  // (services/scraper/quota.ts). Lo que ya salió hoy cuenta como parte de lo "por publicar" de esta mañana, para que
+  // una segunda corrida el mismo día no baje el cupo.
+  const { cycleStartedAt } = await getCycleState().catch(() => ({ cycleStartedAt: null as Date | null }));
+  const nextBatchAt = nextBatchFrom(cycleStartedAt);
+  const planned = dailyQuota({ pending: publishable.length + scraperCount, now: new Date(), nextBatchAt });
+  const remainingSlots = Math.max(0, planned - nativeCount - scraperCount);
+  log(`[Sync] Cupo de hoy: ${planned} (${publishable.length} por publicar entre ${daysUntilNextBatch(new Date(), nextBatchAt)} días hasta el próximo lote); quedan ${remainingSlots}`);
+  if (remainingSlots === 0) return { vacancies: 0, profiles: 0 };
 
   // Reparto del día: varias empresas distintas (máx PER_COMPANY_CAP cada una
   // mientras alcance) y sin llenarlo de un solo tipo de puesto (PER_COMBO_CAP por
