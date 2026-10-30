@@ -59,7 +59,7 @@ export default function UsuariosPage() {
   const params = new URLSearchParams({ page: String(page), pageSize: String(PAGE_SIZE) })
   if (q) params.set('q', q)
   if (provider) params.set('provider', provider)
-  const { data, loading, error, reload } = usePanelData<UsersData>(`/api/admin/analytics/users?${params}`)
+  const { data, loading, refreshing, error, reload } = usePanelData<UsersData>(`/api/admin/analytics/users?${params}`, { keepPrevious: true })
 
   const pages = data ? Math.max(1, Math.ceil(data.matching / data.pageSize)) : 1
   const firstShown = data && data.matching > 0 ? (data.page - 1) * data.pageSize + 1 : 0
@@ -107,6 +107,7 @@ export default function UsuariosPage() {
               </div>
             </div>
 
+            <div className={refreshing ? 'panel-refreshing' : undefined} aria-busy={refreshing}>
             {data.users.length === 0 ? <Empty>{q || provider ? 'Ninguna cuenta coincide con la búsqueda.' : 'Aún no hay cuentas.'}</Empty> : (
               <div className="panel-table-wrap">
                 <table className="panel-table">
@@ -138,6 +139,8 @@ export default function UsuariosPage() {
                 </table>
               </div>
             )}
+
+            </div>
 
             <div className="panel-pager">
               <span>{data.matching > 0 ? `${firstShown}–${lastShown} de ${fmtNum(data.matching)}` : 'Sin resultados'}</span>

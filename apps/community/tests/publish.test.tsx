@@ -264,6 +264,29 @@ describe('the toolbar', () => {
 
     expect(body.value).toBe('- uno\n- dos')
   })
+
+  it('keeps the selection on the formatted text and the scroll where it was (it used to jump to the end)', async () => {
+    const scrollTo = vi.spyOn(window, 'scrollTo').mockImplementation(() => {})
+    render(<PublishForm />)
+    const body = screen.getByLabelText('Contenido') as HTMLTextAreaElement
+    fireEvent.change(body, { target: { value: 'hola mundo' } })
+    body.scrollTop = 120
+    body.setSelectionRange(5, 10)
+
+    await userEvent.click(screen.getByRole('button', { name: 'Negritas' }))
+
+    expect(body.selectionStart).toBe(7)
+    expect(body.selectionEnd).toBe(12)
+    expect(body.scrollTop).toBe(120)
+    expect(scrollTo).toHaveBeenCalledWith(0, expect.any(Number))
+    scrollTo.mockRestore()
+  })
+
+  it('does not take the focus away from the text when a toolbar button is pressed', () => {
+    render(<PublishForm />)
+    // preventDefault en mousedown: el textarea conserva el foco y el navegador no mueve el scroll.
+    expect(fireEvent.mouseDown(screen.getByRole('button', { name: 'Negritas' }))).toBe(false)
+  })
 })
 
 describe('the draft', () => {

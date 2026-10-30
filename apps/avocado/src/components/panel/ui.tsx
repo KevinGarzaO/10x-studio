@@ -10,6 +10,8 @@ import { api } from '@/lib/api'
 export interface PanelData<T> {
   data: T | null
   loading: boolean
+  /** Hay datos en pantalla y se está pidiendo otra versión (otra página, búsqueda o filtro): solo se atenúa la tabla. */
+  refreshing: boolean
   error: string | null
   reload: () => void
 }
@@ -19,7 +21,7 @@ export interface PanelData<T> {
 const seen = new Map<string, unknown>()
 
 /** Pide un dato del panel al backend y lo vuelve a pedir cuando cambia la ruta (por ejemplo, el periodo). */
-export function usePanelData<T>(path: string): PanelData<T> {
+export function usePanelData<T>(path: string, options: { keepPrevious?: boolean } = {}): PanelData<T> {
   const [data, setData] = useState<T | null>(() => (seen.get(path) as T | undefined) ?? null)
   const [loading, setLoading] = useState(!seen.has(path))
   const [error, setError] = useState<string | null>(null)
@@ -28,7 +30,9 @@ export function usePanelData<T>(path: string): PanelData<T> {
   useEffect(() => {
     let cancelled = false
     const known = seen.get(path) as T | undefined
-    setData(known ?? null)
+    // Con `keepPrevious` (tablas con búsqueda, filtros y páginas) no se vacía la pantalla al pedir otra consulta: se
+    // queda lo que había mientras llega lo nuevo, y la página no se "recarga" entera.
+    if (known !== undefined || !options.keepPrevious) setData(known ?? null)
     setLoading(known === undefined)
     setError(null)
     // Recargar a mano se salta lo que el servidor guarda unos segundos.
@@ -41,7 +45,7 @@ export function usePanelData<T>(path: string): PanelData<T> {
   }, [path, tick])
 
   const reload = useCallback(() => setTick(value => value + 1), [])
-  return { data, loading, error, reload }
+  return { data, loading, refreshing: loading && data !== null, error, reload }
 }
 
 /* ------------------------------------------------------------------ */

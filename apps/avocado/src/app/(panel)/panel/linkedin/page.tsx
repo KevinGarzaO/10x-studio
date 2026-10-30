@@ -1,5 +1,6 @@
 'use client'
 
+import { DataTable } from '@/components/panel/DataTable'
 import { useState } from 'react'
 import { backendBase } from '@/lib/admin-auth'
 import { Card, Empty, ErrorBox, fmtDate, fmtNum, fmtPct, InlineBar, Loading, PageHeader, PeriodPicker, roleLabel, Stat, usePanelData } from '@/components/panel/ui'
@@ -23,21 +24,21 @@ function Groups({ title, hint, rows, label }: { title: string; hint: string; row
   return (
     <Card title={title} hint={hint}>
       {rows.length === 0 ? <Empty>Aún no hay publicaciones para comparar.</Empty> : (
-        <div className="panel-table-wrap">
-          <table className="panel-table">
-            <thead><tr><th>{title.replace('Por ', '')}</th><th className="num">Posts</th><th>Visitantes por post</th><th className="num">Registros</th></tr></thead>
-            <tbody>
-              {rows.map(row => (
-                <tr key={row.key}>
-                  <td>{label(row.key)}</td>
-                  <td className="num">{row.posts}</td>
-                  <td style={{ minWidth: 150 }}><InlineBar value={row.visitorsPerPost} max={max} /> <span className="panel-muted">{fmtNum(row.visitorsPerPost)}</span></td>
-                  <td className="num">{row.signups}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+        <DataTable
+          rows={rows}
+          rowKey={row => row.key}
+          searchText={row => label(row.key)}
+          searchLabel={`Buscar ${title.replace('Por ', '').toLowerCase()}`}
+          head={<tr><th>{title.replace('Por ', '')}</th><th className="num">Posts</th><th>Visitantes por post</th><th className="num">Registros</th></tr>}
+          renderRow={row => (
+            <tr>
+              <td>{label(row.key)}</td>
+              <td className="num">{row.posts}</td>
+              <td style={{ minWidth: 150 }}><InlineBar value={row.visitorsPerPost} max={max} /> <span className="panel-muted">{fmtNum(row.visitorsPerPost)}</span></td>
+              <td className="num">{row.signups}</td>
+            </tr>
+          )}
+        />
       )}
     </Card>
   )
@@ -98,24 +99,24 @@ export default function LinkedInPage() {
 
           <Card title="Cada publicación" hint="La más reciente primero">
             {data.posts.length === 0 ? <Empty>Todavía no hay publicaciones en este periodo.</Empty> : (
-              <div className="panel-table-wrap">
-                <table className="panel-table">
-                  <thead><tr><th>Fecha</th><th>Empresa</th><th>Rol</th><th className="num">Visitantes</th><th className="num">Registros</th><th className="num">Conversión</th><th /></tr></thead>
-                  <tbody>
-                    {data.posts.map(post => (
-                      <tr key={`${post.slug}-${post.publishedAt}`}>
-                        <td>{fmtDate(post.publishedAt, true)}</td>
-                        <td>{post.company ?? '—'}</td>
-                        <td><span className="panel-chip">{roleLabel(post.role)}</span></td>
-                        <td className="num">{fmtNum(post.visitors)}</td>
-                        <td className="num">{fmtNum(post.signups)}</td>
-                        <td className="num">{fmtPct(post.conversionPct)}</td>
-                        <td>{post.linkedinPostId && <a href={`https://www.linkedin.com/feed/update/${post.linkedinPostId}`} target="_blank" rel="noopener noreferrer">Ver en LinkedIn ↗</a>}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+              <DataTable
+                rows={data.posts}
+                rowKey={post => `${post.slug}-${post.publishedAt}`}
+                searchText={post => `${post.company ?? ''} ${roleLabel(post.role)}`}
+                searchLabel="Buscar empresa o rol"
+                head={<tr><th>Fecha</th><th>Empresa</th><th>Rol</th><th className="num">Visitantes</th><th className="num">Registros</th><th className="num">Conversión</th><th /></tr>}
+                renderRow={post => (
+                  <tr>
+                    <td>{fmtDate(post.publishedAt, true)}</td>
+                    <td>{post.company ?? '—'}</td>
+                    <td><span className="panel-chip">{roleLabel(post.role)}</span></td>
+                    <td className="num">{fmtNum(post.visitors)}</td>
+                    <td className="num">{fmtNum(post.signups)}</td>
+                    <td className="num">{fmtPct(post.conversionPct)}</td>
+                    <td>{post.linkedinPostId && <a href={`https://www.linkedin.com/feed/update/${post.linkedinPostId}`} target="_blank" rel="noopener noreferrer">Ver en LinkedIn ↗</a>}</td>
+                  </tr>
+                )}
+              />
             )}
           </Card>
 

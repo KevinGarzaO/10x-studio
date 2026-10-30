@@ -41,6 +41,9 @@ Estado al **30 de octubre de 2026** (se agregó **V** el mismo día). Se trabaja
 ### Admin
 - [x] Usuarios: buscador, páginas de 25, filtro y columna "Registro con" (Correo, GitHub, LinkedIn) y totales de todas las cuentas reales.
 - [x] Retención: tabla ordenada por días activos, "¿Volvió?", cajitas de los últimos 14 días, tarjeta "Volvieron", día de registro en hora de Monterrey, y total de cuentas reales frente a las que han entrado desde que se mide.
+- [x] Todas las tablas del admin son como la de Usuarios: buscador, páginas de 10 y, donde aplica, filtro (`DataTable`). Cubre Adquisición (2), LinkedIn (4), Match (5), Retención (quién usa AvoTalent) y Vacantes (ahora las 100 más abiertas). La tabla de cohortes de Retención no, porque es un mapa de calor y no una lista.
+- [x] Usuarios: cambiar de filtro o de página ya no recarga toda la pantalla; solo se atenúa la tabla mientras llega.
+- [x] Editor de publicaciones: dar clic en una letra de la barra de Markdown ya no manda el texto hasta abajo (se conserva la selección y el scroll).
 
 ---
 

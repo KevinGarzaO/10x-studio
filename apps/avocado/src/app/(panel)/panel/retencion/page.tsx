@@ -1,5 +1,6 @@
 'use client'
 
+import { DataTable } from '@/components/panel/DataTable'
 import { Avatar, Card, Empty, ErrorBox, fmtDay, fmtNum, fmtPct, Loading, PageHeader, Stat, usePanelData } from '@/components/panel/ui'
 
 interface ActivePerson {
@@ -116,44 +117,45 @@ export default function RetencionPage() {
 
           <Card title="Quién usa AvoTalent" hint="Últimos 30 días · primero quien más días ha entrado">
             {!data.people || data.people.length === 0 ? <Empty>Nadie ha entrado con sesión todavía.</Empty> : (
-              <div className="panel-table-wrap">
-                <table className="panel-table">
-                  <thead>
-                    <tr>
-                      <th>Persona</th><th>Se registró</th><th className="num">Días activo ↓</th><th>¿Volvió?</th><th>Últimos 14 días</th><th>Última vez</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {data.people.map(person => {
-                      const name = person.display_name || person.username || 'Sin nombre'
-                      return (
-                        <tr key={person.id} style={person.counted ? undefined : { opacity: 0.6 }}>
-                          <td>
-                            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 10 }}>
-                              <Avatar name={name} photo={person.photo_url} />
-                              <span>
-                                {person.username ? <a href={`https://avotalent.app/users/${person.username}`} target="_blank" rel="noreferrer">{name}</a> : name}
-                                <span className="panel-muted" style={{ display: 'block', fontSize: 12 }}>
-                                  {!person.counted ? `${KIND[person.kind] ?? person.kind} · no cuenta en las cifras` : person.profileCompleted ? 'Perfil completo' : 'Perfil sin completar'}
-                                </span>
-                              </span>
+              <DataTable
+                rows={data.people}
+                rowKey={person => person.id}
+                searchText={person => `${person.display_name ?? ''} ${person.username ?? ''}`}
+                searchLabel="Buscar persona"
+                filter={{
+                  label: 'Si volvió',
+                  options: [{ value: 'volvio', label: 'Volvieron' }, { value: 'solo', label: 'Solo el día del registro' }],
+                  test: (person, value) => (value === 'volvio' ? person.returnDays > 0 : person.returnDays === 0),
+                }}
+                head={<tr><th>Persona</th><th>Se registró</th><th className="num">Días activo ↓</th><th>¿Volvió?</th><th>Últimos 14 días</th><th>Última vez</th></tr>}
+                renderRow={person => {
+                  const name = person.display_name || person.username || 'Sin nombre'
+                  return (
+                    <tr style={person.counted ? undefined : { opacity: 0.6 }}>
+                      <td>
+                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 10 }}>
+                          <Avatar name={name} photo={person.photo_url} />
+                          <span>
+                            {person.username ? <a href={`https://avotalent.app/users/${person.username}`} target="_blank" rel="noreferrer">{name}</a> : name}
+                            <span className="panel-muted" style={{ display: 'block', fontSize: 12 }}>
+                              {!person.counted ? `${KIND[person.kind] ?? person.kind} · no cuenta en las cifras` : person.profileCompleted ? 'Perfil completo' : 'Perfil sin completar'}
                             </span>
-                          </td>
-                          <td>{fmtDay(person.signupDay)}</td>
-                          <td className="num"><b>{person.daysActive}</b></td>
-                          <td>
-                            {person.returnDays > 0
-                              ? <span className="panel-chip good">Volvió {person.returnDays} {person.returnDays === 1 ? 'día' : 'días'}</span>
-                              : <span className="panel-chip">Solo el día del registro</span>}
-                          </td>
-                          <td><DaysStrip person={person} today={today} /></td>
-                          <td>{person.activeToday ? 'Hoy' : fmtDay(person.lastActive)}</td>
-                        </tr>
-                      )
-                    })}
-                  </tbody>
-                </table>
-              </div>
+                          </span>
+                        </span>
+                      </td>
+                      <td>{fmtDay(person.signupDay)}</td>
+                      <td className="num"><b>{person.daysActive}</b></td>
+                      <td>
+                        {person.returnDays > 0
+                          ? <span className="panel-chip good">Volvió {person.returnDays} {person.returnDays === 1 ? 'día' : 'días'}</span>
+                          : <span className="panel-chip">Solo el día del registro</span>}
+                      </td>
+                      <td><DaysStrip person={person} today={today} /></td>
+                      <td>{person.activeToday ? 'Hoy' : fmtDay(person.lastActive)}</td>
+                    </tr>
+                  )
+                }}
+              />
             )}
             <p className="panel-defs" style={{ marginTop: 12 }}>
               Cada cajita de <b>Últimos 14 días</b> es un día (la de la derecha es hoy): verde si esa persona entró; con borde oscuro, el día en que se registró.

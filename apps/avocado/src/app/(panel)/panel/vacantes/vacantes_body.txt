@@ -1,0 +1,17 @@
+<thead><tr><th>Vacante</th><th>Rol</th><th>Personas que la abrieron</th><th className="num">Postularse</th><th className="num">Tasa</th><th className="num">Guardadas</th></tr></thead>
+                  <tbody>
+                    {top.map(row => (
+                      <tr key={row.slug}>
+                        <td>
+                          <b>{row.title}</b>
+                          <div className="panel-muted" style={{ fontSize: 12 }}>{row.company ?? '—'}</div>
+                        </td>
+                        <td><span className="panel-chip">{roleLabel(row.role)}</span></td>
+                        <td style={{ minWidth: 170 }}><InlineBar value={row.views} max={max} /> <span className="panel-muted">{fmtNum(row.views)}</span></td>
+                        <td className="num">{fmtNum(row.applies)}</td>
+                        <td className="num">{fmtPct(row.applyRatePct)}</td>
+                        <td className="num">{fmtNum(row.saved)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                

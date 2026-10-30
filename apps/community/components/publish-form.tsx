@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useMemo, useRef, useState, type ChangeEvent } from 'react'
+import { useEffect, useLayoutEffect, useMemo, useRef, useState, type ChangeEvent } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { Bold, Code, Heading2, ImagePlus, Italic, Link as LinkIcon, List, ListOrdered, Quote, SquareCode, X } from 'lucide-react'
@@ -77,6 +77,8 @@ export function PublishForm() {
   const [note, setNote] = useState('')
   const [restored, setRestored] = useState(false)
   const textarea = useRef<HTMLTextAreaElement>(null)
+  // Dónde queda la selección (y cuánto llevaba de scroll) después de aplicar un formato; se restaura antes de pintar.
+  const pendingSelection = useRef<{ start: number; end: number; top: number; pageY: number } | null>(null)
   const coverInput = useRef<HTMLInputElement>(null)
   const bodyInput = useRef<HTMLInputElement>(null)
   const loaded = useRef(false)
@@ -165,10 +167,22 @@ export function PublishForm() {
     const element = textarea.current
     if (!element) return
     const edit = applyFormat(content, element.selectionStart, element.selectionEnd, action)
+    // Al cambiar el valor de un textarea el navegador manda el cursor y el scroll hasta el final: se guardan los de
+    // antes y se restauran en useLayoutEffect, para que dar clic en una letra de la barra no lleve el texto hasta abajo.
+    pendingSelection.current = { start: edit.start, end: edit.end, top: element.scrollTop, pageY: window.scrollY }
     setContent(edit.value)
-    // la selección se restaura cuando React ya pintó el texto nuevo
-    requestAnimationFrame(() => { element.focus(); element.setSelectionRange(edit.start, edit.end) })
   }
+
+  useLayoutEffect(() => {
+    const pending = pendingSelection.current
+    const element = textarea.current
+    if (!pending || !element) return
+    pendingSelection.current = null
+    element.focus({ preventScroll: true })
+    element.setSelectionRange(pending.start, pending.end)
+    element.scrollTop = pending.top
+    window.scrollTo(0, pending.pageY)
+  }, [content])
 
   async function submit() {
     if (!ready || busy || uploading) return
@@ -264,7 +278,7 @@ export function PublishForm() {
 
                 <div className="editor-toolbar" role="toolbar" aria-label="Formato">
                   {TOOLS.map(tool => (
-                    <button key={tool.action} type="button" title={tool.label} aria-label={tool.label} onClick={() => format(tool.action)}>{tool.icon}</button>
+                    <button key={tool.action} type="button" title={tool.label} aria-label={tool.label} onMouseDown={event => event.preventDefault()} onClick={() => format(tool.action)}>{tool.icon}</button>
                   ))}
                   <button type="button" title="Insertar imagen" aria-label="Insertar imagen" onClick={() => bodyInput.current?.click()} disabled={uploading}><ImagePlus size={18} /></button>
                   <input ref={bodyInput} type="file" accept="image/png,image/jpeg,image/webp,image/gif" hidden onChange={onBodyImagePicked} aria-label="Elegir imagen para el texto" />

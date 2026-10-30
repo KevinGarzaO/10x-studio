@@ -130,7 +130,7 @@ router.get('/vacancies', handle('vacantes', async (req, res) => {
   const shown = await supabase.from('user_vacancy_history').select('*', { count: 'exact', head: true }).gte('seen_at', since)
 
   const engagement = vacancyEngagement(events)
-  const top = engagement.byVacancy.slice(0, 15)
+  const top = engagement.byVacancy.slice(0, 100)
 
   const { data: posts } = top.length > 0
     ? await supabase.from('community_posts').select('id, slug, title, company, role_category').in('slug', top.map((row) => row.slug))

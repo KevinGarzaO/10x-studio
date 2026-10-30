@@ -1,5 +1,6 @@
 'use client'
 
+import { DataTable } from '@/components/panel/DataTable'
 import { useState } from 'react'
 import { Card, Empty, ErrorBox, fmtNum, fmtPct, InlineBar, Loading, PageHeader, PeriodPicker, roleLabel, Stat, usePanelData } from '@/components/panel/ui'
 
@@ -43,28 +44,28 @@ export default function VacantesPage() {
             <Stat label="Guardadas" value={fmtNum(data.totals.saved)} caption={`Vacantes que alguien marcó con Guardar. Se mostraron ${fmtNum(data.totals.recommendationsShown)} recomendaciones “Para ti”.`} />
           </div>
 
-          <Card title="Las vacantes más abiertas" hint="Las 15 con más personas distintas">
+          <Card title="Las vacantes más abiertas" hint="Las 100 con más personas distintas">
             {top.length === 0 ? <Empty>Aún nadie abre vacantes en este periodo.</Empty> : (
-              <div className="panel-table-wrap">
-                <table className="panel-table">
-                  <thead><tr><th>Vacante</th><th>Rol</th><th>Personas que la abrieron</th><th className="num">Postularse</th><th className="num">Tasa</th><th className="num">Guardadas</th></tr></thead>
-                  <tbody>
-                    {top.map(row => (
-                      <tr key={row.slug}>
-                        <td>
-                          <b>{row.title}</b>
-                          <div className="panel-muted" style={{ fontSize: 12 }}>{row.company ?? '—'}</div>
-                        </td>
-                        <td><span className="panel-chip">{roleLabel(row.role)}</span></td>
-                        <td style={{ minWidth: 170 }}><InlineBar value={row.views} max={max} /> <span className="panel-muted">{fmtNum(row.views)}</span></td>
-                        <td className="num">{fmtNum(row.applies)}</td>
-                        <td className="num">{fmtPct(row.applyRatePct)}</td>
-                        <td className="num">{fmtNum(row.saved)}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+              <DataTable
+                rows={top}
+                rowKey={row => row.slug}
+                searchText={row => `${row.title} ${row.company ?? ''} ${roleLabel(row.role)}`}
+                searchLabel="Buscar vacante, empresa o rol"
+                head={<tr><th>Vacante</th><th>Rol</th><th>Personas que la abrieron</th><th className="num">Postularse</th><th className="num">Tasa</th><th className="num">Guardadas</th></tr>}
+                renderRow={row => (
+                  <tr>
+                    <td>
+                      <b>{row.title}</b>
+                      <div className="panel-muted" style={{ fontSize: 12 }}>{row.company ?? '—'}</div>
+                    </td>
+                    <td><span className="panel-chip">{roleLabel(row.role)}</span></td>
+                    <td style={{ minWidth: 170 }}><InlineBar value={row.views} max={max} /> <span className="panel-muted">{fmtNum(row.views)}</span></td>
+                    <td className="num">{fmtNum(row.applies)}</td>
+                    <td className="num">{fmtPct(row.applyRatePct)}</td>
+                    <td className="num">{fmtNum(row.saved)}</td>
+                  </tr>
+                )}
+              />
             )}
           </Card>
 

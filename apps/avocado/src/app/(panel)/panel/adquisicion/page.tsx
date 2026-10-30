@@ -1,5 +1,6 @@
 'use client'
 
+import { DataTable } from '@/components/panel/DataTable'
 import { useState } from 'react'
 import { Card, Empty, ErrorBox, fmtNum, fmtPct, InlineBar, Loading, PageHeader, PeriodPicker, usePanelData } from '@/components/panel/ui'
 
@@ -41,42 +42,42 @@ export default function AdquisicionPage() {
 
           <Card title="Por origen" hint="Origen, medio y campaña del enlace">
             {data.sources.length === 0 ? <Empty>Sin visitas en este periodo.</Empty> : (
-              <div className="panel-table-wrap">
-                <table className="panel-table">
-                  <thead><tr><th>Origen</th><th>Medio</th><th>Campaña</th><th className="num">Visitantes</th><th className="num">Entradas</th><th className="num">Registros</th><th className="num">Conversión</th></tr></thead>
-                  <tbody>
-                    {data.sources.map(row => (
-                      <tr key={`${row.source}|${row.medium}|${row.campaign}`}>
-                        <td><span className="panel-chip">{row.source}</span></td>
-                        <td>{row.medium}</td>
-                        <td>{row.campaign}</td>
-                        <td className="num">{fmtNum(row.visitors)}</td>
-                        <td className="num">{fmtNum(row.visits)}</td>
-                        <td className="num">{fmtNum(row.signups)}</td>
-                        <td className="num">{fmtPct(row.conversionPct)}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+              <DataTable
+                rows={data.sources}
+                rowKey={row => `${row.source}|${row.medium}|${row.campaign}`}
+                searchText={row => `${row.source} ${row.medium} ${row.campaign}`}
+                searchLabel="Buscar origen, medio o campaña"
+                head={<tr><th>Origen</th><th>Medio</th><th>Campaña</th><th className="num">Visitantes</th><th className="num">Entradas</th><th className="num">Registros</th><th className="num">Conversión</th></tr>}
+                renderRow={row => (
+                  <tr>
+                    <td><span className="panel-chip">{row.source}</span></td>
+                    <td>{row.medium}</td>
+                    <td>{row.campaign}</td>
+                    <td className="num">{fmtNum(row.visitors)}</td>
+                    <td className="num">{fmtNum(row.visits)}</td>
+                    <td className="num">{fmtNum(row.signups)}</td>
+                    <td className="num">{fmtPct(row.conversionPct)}</td>
+                  </tr>
+                )}
+              />
             )}
           </Card>
 
           <Card title="Por dónde entran" hint="Las páginas con más visitantes nuevos">
             {data.landingPages.length === 0 ? <Empty>Sin visitas en este periodo.</Empty> : (
-              <div className="panel-table-wrap">
-                <table className="panel-table">
-                  <thead><tr><th>Página</th><th>Visitantes</th></tr></thead>
-                  <tbody>
-                    {data.landingPages.map(page => (
-                      <tr key={page.path}>
-                        <td><code>{page.path}</code></td>
-                        <td style={{ minWidth: 200 }}><InlineBar value={page.visitors} max={data.landingPages[0].visitors} /> <span className="panel-muted">{fmtNum(page.visitors)}</span></td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+              <DataTable
+                rows={data.landingPages}
+                rowKey={page => page.path}
+                searchText={page => page.path}
+                searchLabel="Buscar página"
+                head={<tr><th>Página</th><th>Visitantes</th></tr>}
+                renderRow={page => (
+                  <tr>
+                    <td><code>{page.path}</code></td>
+                    <td style={{ minWidth: 200 }}><InlineBar value={page.visitors} max={data.landingPages[0].visitors} /> <span className="panel-muted">{fmtNum(page.visitors)}</span></td>
+                  </tr>
+                )}
+              />
             )}
           </Card>
 

@@ -1,5 +1,6 @@
 'use client'
 
+import { DataTable } from '@/components/panel/DataTable'
 import { Avatar, Card, Empty, ErrorBox, fmtNum, fmtPct, InlineBar, Loading, PageHeader, roleLabel, Stat, usePanelData } from '@/components/panel/ui'
 
 interface Bucket { label: string; count: number }
@@ -77,46 +78,47 @@ export default function MatchPage() {
 
           <Card title="Persona por persona" hint={needAttention > 0 ? `${needAttention} con pocas ofertas buenas, primero` : 'Las de menos ofertas buenas, primero'}>
             {data.people.length === 0 ? <Empty>Aún no hay personas con puesto elegido.</Empty> : (
-              <div className="panel-table-wrap">
-                <table className="panel-table">
-                  <thead><tr><th>Persona</th><th>Puesto</th><th>Nivel</th><th className="num">Skills</th><th className="num">Validados</th><th className="num">Califican</th><th className="num">Buenas (70%+)</th><th className="num">Mejor</th><th>Estado</th></tr></thead>
-                  <tbody>
-                    {data.people.map(person => (
-                      <tr key={person.id}>
-                        <td><div className="panel-person"><Avatar name={person.name} photo={person.photo} /><b>{person.name}</b></div></td>
-                        <td>{roleLabel(person.role)}</td>
-                        <td>{LEVEL[person.seniority ?? ''] ?? '—'}</td>
-                        <td className="num">{person.skills}</td>
-                        <td className="num">{person.validatedSkills || '—'}</td>
-                        <td className="num">{fmtNum(person.matches)}</td>
-                        <td className="num"><b>{fmtNum(person.goodMatches)}</b></td>
-                        <td className="num">{person.bestScore === null ? '—' : `${person.bestScore}%`}</td>
-                        <td><span className={`panel-chip ${STATE[person.state].tone}`}>{STATE[person.state].label}</span></td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+              <DataTable
+                rows={data.people}
+                rowKey={person => person.id}
+                searchText={person => `${person.name} ${roleLabel(person.role)}`}
+                searchLabel="Buscar persona o puesto"
+                filter={{ label: 'Estado', options: Object.entries(STATE).map(([value, state]) => ({ value, label: state.label })), test: (person, value) => person.state === value }}
+                head={<tr><th>Persona</th><th>Puesto</th><th>Nivel</th><th className="num">Skills</th><th className="num">Validados</th><th className="num">Califican</th><th className="num">Buenas (70%+)</th><th className="num">Mejor</th><th>Estado</th></tr>}
+                renderRow={person => (
+                  <tr>
+                    <td><div className="panel-person"><Avatar name={person.name} photo={person.photo} /><b>{person.name}</b></div></td>
+                    <td>{roleLabel(person.role)}</td>
+                    <td>{LEVEL[person.seniority ?? ''] ?? '—'}</td>
+                    <td className="num">{person.skills}</td>
+                    <td className="num">{person.validatedSkills || '—'}</td>
+                    <td className="num">{fmtNum(person.matches)}</td>
+                    <td className="num"><b>{fmtNum(person.goodMatches)}</b></td>
+                    <td className="num">{person.bestScore === null ? '—' : `${person.bestScore}%`}</td>
+                    <td><span className={`panel-chip ${STATE[person.state].tone}`}>{STATE[person.state].label}</span></td>
+                  </tr>
+                )}
+              />
             )}
           </Card>
 
           <div className="panel-grid cols-2">
             <Card title="Por puesto" hint="Gente contra vacantes abiertas">
-              <div className="panel-table-wrap">
-                <table className="panel-table">
-                  <thead><tr><th>Puesto</th><th className="num">Personas</th><th className="num">Vacantes</th><th className="num">Califican por persona</th></tr></thead>
-                  <tbody>
-                    {data.byRole.map(row => (
-                      <tr key={row.role}>
-                        <td>{roleLabel(row.role)}</td>
-                        <td className="num">{row.candidates}</td>
-                        <td className="num">{row.vacancies}</td>
-                        <td className="num">{row.averageMatches === null ? '—' : fmtNum(row.averageMatches)}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+              <DataTable
+                rows={data.byRole}
+                rowKey={row => row.role}
+                searchText={row => roleLabel(row.role)}
+                searchLabel="Buscar puesto"
+                head={<tr><th>Puesto</th><th className="num">Personas</th><th className="num">Vacantes</th><th className="num">Califican por persona</th></tr>}
+                renderRow={row => (
+                  <tr>
+                    <td>{roleLabel(row.role)}</td>
+                    <td className="num">{row.candidates}</td>
+                    <td className="num">{row.vacancies}</td>
+                    <td className="num">{row.averageMatches === null ? '—' : fmtNum(row.averageMatches)}</td>
+                  </tr>
+                )}
+              />
             </Card>
 
             <Card title="Las vacantes" hint="Del otro lado: ¿a alguien le sirven?">
@@ -139,29 +141,37 @@ export default function MatchPage() {
 
           <div className="panel-grid cols-3">
             <Card title="Lo que declara la gente" hint="Skills más comunes y cuántas vacantes los piden">
-              <table className="panel-table">
-                <thead><tr><th>Skill</th><th className="num">Personas</th><th className="num">Vacantes</th></tr></thead>
-                <tbody>
-                  {data.skills.declared.map(row => (
-                    <tr key={row.skill}><td>{row.skill}</td><td className="num">{row.candidates}</td><td className="num">{row.vacancies}</td></tr>
-                  ))}
-                </tbody>
-              </table>
+              <DataTable
+                rows={data.skills.declared}
+                rowKey={row => row.skill}
+                searchText={row => row.skill}
+                searchLabel="Buscar skill"
+                head={<tr><th>Skill</th><th className="num">Personas</th><th className="num">Vacantes</th></tr>}
+                renderRow={row => <tr><td>{row.skill}</td><td className="num">{row.candidates}</td><td className="num">{row.vacancies}</td></tr>}
+              />
             </Card>
             <Card title="Se piden y nadie tiene" hint="Skills de las vacantes sin una sola persona">
               {data.skills.demandedWithoutSupply.length === 0 ? <Empty>No hay.</Empty> : (
-                <table className="panel-table">
-                  <thead><tr><th>Skill</th><th className="num">Vacantes</th></tr></thead>
-                  <tbody>{data.skills.demandedWithoutSupply.map(row => <tr key={row.skill}><td>{row.skill}</td><td className="num">{row.vacancies}</td></tr>)}</tbody>
-                </table>
+                <DataTable
+                  rows={data.skills.demandedWithoutSupply}
+                  rowKey={row => row.skill}
+                  searchText={row => row.skill}
+                  searchLabel="Buscar skill"
+                  head={<tr><th>Skill</th><th className="num">Vacantes</th></tr>}
+                  renderRow={row => <tr><td>{row.skill}</td><td className="num">{row.vacancies}</td></tr>}
+                />
               )}
             </Card>
             <Card title="Los tienen y nadie los pide" hint="Skills de la gente que ninguna vacante abierta menciona">
               {data.skills.declaredWithoutDemand.length === 0 ? <Empty>No hay.</Empty> : (
-                <table className="panel-table">
-                  <thead><tr><th>Skill</th><th className="num">Personas</th></tr></thead>
-                  <tbody>{data.skills.declaredWithoutDemand.slice(0, 12).map(row => <tr key={row.skill}><td>{row.skill}</td><td className="num">{row.candidates}</td></tr>)}</tbody>
-                </table>
+                <DataTable
+                  rows={data.skills.declaredWithoutDemand}
+                  rowKey={row => row.skill}
+                  searchText={row => row.skill}
+                  searchLabel="Buscar skill"
+                  head={<tr><th>Skill</th><th className="num">Personas</th></tr>}
+                  renderRow={row => <tr><td>{row.skill}</td><td className="num">{row.candidates}</td></tr>}
+                />
               )}
             </Card>
           </div>
