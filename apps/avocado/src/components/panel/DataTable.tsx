@@ -37,7 +37,9 @@ export function DataTable<T>({ rows, rowKey, head, renderRow, searchText, search
   const [filterValue, setFilterValue] = useState('')
   const [page, setPage] = useState(1)
 
-  useEffect(() => { setPage(1) }, [query, filterValue, rows.length])
+  // Volver a la primera página solo cuando cambia la búsqueda o el filtro; con datos nuevos (la actualización en vivo) la página
+  // elegida se queda (si ya no existe, abajo se ajusta a la última).
+  useEffect(() => { setPage(1) }, [query, filterValue])
 
   const filtered = useMemo(() => {
     const needle = fold(query.trim())

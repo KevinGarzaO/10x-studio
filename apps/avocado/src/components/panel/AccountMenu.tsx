@@ -16,7 +16,7 @@ export const SITE_URL = 'https://avotalent.app'
 /** La cuenta de quien mira el panel: foto y nombre en la barra, con configuración y cerrar sesión. */
 export function AccountMenu() {
   const router = useRouter()
-  const { data } = usePanelData<AdminMe>('/api/admin/analytics/me')
+  const { data } = usePanelData<AdminMe>('/api/admin/analytics/me', { refreshMs: false })
   const [open, setOpen] = useState(false)
   const ref = useRef<HTMLDivElement>(null)
 

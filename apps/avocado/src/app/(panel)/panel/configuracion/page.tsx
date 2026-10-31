@@ -16,7 +16,7 @@ const DEFINITIONS: { term: string; text: string }[] = [
 
 export default function ConfiguracionPage() {
   const router = useRouter()
-  const { data, loading, error, reload } = usePanelData<AdminMe>('/api/admin/analytics/me')
+  const { data, loading, error, reload } = usePanelData<AdminMe>('/api/admin/analytics/me', { refreshMs: false })
   const name = data?.user?.displayName || data?.user?.username || 'Administrador'
 
   return (

@@ -6,6 +6,7 @@ import { usePathname, useRouter } from 'next/navigation'
 import { api } from '@/lib/api'
 import { clearSession, getToken } from '@/lib/admin-auth'
 import { AccountMenu } from './AccountMenu'
+import { isLivePaused, LIVE_MS, markLiveUpdate, useLive } from './ui'
 
 interface NavItem {
   href: string
@@ -65,6 +66,30 @@ export const NAV_GROUPS: NavGroup[] = [
 
 const GROUPS_KEY = 'avo_panel_groups'
 
+/** "● En vivo · hace 4 s": las pantallas se actualizan solas cada 10 segundos; un clic las pausa (por ejemplo, para leer con calma). */
+function LiveToggle() {
+  const { paused, updatedAt, toggle } = useLive()
+  const [now, setNow] = useState(() => Date.now())
+  useEffect(() => {
+    const clock = setInterval(() => setNow(Date.now()), 1000)
+    return () => clearInterval(clock)
+  }, [])
+  const ago = updatedAt === null ? null : Math.max(0, Math.round((now - updatedAt) / 1000))
+  return (
+    <button
+      type="button"
+      className={`panel-live${paused ? ' is-paused' : ''}`}
+      onClick={toggle}
+      aria-pressed={!paused}
+      title={paused ? 'Actualización pausada: haz clic para reanudarla' : 'Las pantallas se actualizan solas cada 10 segundos: haz clic para pausar'}
+    >
+      <i aria-hidden="true" />
+      <span>{paused ? 'Pausado' : 'En vivo'}</span>
+      {!paused && ago !== null && <small>hace {ago < 60 ? `${ago} s` : `${Math.floor(ago / 60)} min`}</small>}
+    </button>
+  )
+}
+
 export const isActive = (item: NavItem, pathname: string) => (item.exact ? pathname === item.href : pathname === item.href || pathname.startsWith(`${item.href}/`))
 
 interface Alert {
@@ -118,6 +143,16 @@ export function PanelShell({ children }: { children: React.ReactNode }) {
       .catch(() => setAlerts([]))
   }, [ready, pathname])
 
+  // ...y se vuelven a revisar con el resto de la pantalla (si falla una vez, se quedan las que había).
+  useEffect(() => {
+    if (!ready) return
+    const timer = setInterval(() => {
+      if (document.visibilityState !== 'visible' || isLivePaused()) return
+      api<{ alerts: Alert[] }>('/api/admin/analytics/alerts?fresh=1').then(result => { setAlerts(result.alerts); markLiveUpdate() }).catch(() => undefined)
+    }, LIVE_MS)
+    return () => clearInterval(timer)
+  }, [ready])
+
   // En el celular el menú es un cajón: se cierra al elegir una sección.
   useEffect(() => { setMenuOpen(false) }, [pathname])
 
@@ -170,6 +205,7 @@ export function PanelShell({ children }: { children: React.ReactNode }) {
             <span>Avo<em>Talent</em> <small>Telemetry</small></span>
           </Link>
           <span className="panel-top-title">{activeItem ? `${activeGroup?.label} · ${activeItem.label}` : 'Panel'}</span>
+          <LiveToggle />
           <AccountMenu />
         </header>
       <main className="panel-main">

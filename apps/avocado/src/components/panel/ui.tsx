@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
+import { useCallback, useEffect, useRef, useState, useSyncExternalStore, type ReactNode } from 'react'
 import { api } from '@/lib/api'
 
 /* ------------------------------------------------------------------ */
@@ -20,8 +20,54 @@ export interface PanelData<T> {
 // al instante y se actualiza por detrás, en lugar de empezar cada vez desde un "Cargando".
 const seen = new Map<string, unknown>()
 
-/** Pide un dato del panel al backend y lo vuelve a pedir cuando cambia la ruta (por ejemplo, el periodo). */
-export function usePanelData<T>(path: string, options: { keepPrevious?: boolean } = {}): PanelData<T> {
+/* ------------------------------------------------------------------ */
+/* En vivo: todas las pantallas se actualizan solas                    */
+/* ------------------------------------------------------------------ */
+
+/** Cada cuánto se vuelve a pedir lo que hay en pantalla. */
+export const LIVE_MS = 10_000
+const LIVE_KEY = 'avo_panel_live'
+
+interface LiveState { paused: boolean; updatedAt: number | null }
+
+let liveState: LiveState = { paused: false, updatedAt: null }
+const liveListeners = new Set<() => void>()
+try { liveState = { ...liveState, paused: localStorage.getItem(LIVE_KEY) === 'off' } } catch { /* sin almacenamiento: siempre en vivo */ }
+
+function setLive(next: Partial<LiveState>) {
+  liveState = { ...liveState, ...next }
+  liveListeners.forEach(listener => listener())
+}
+
+const subscribeLive = (listener: () => void) => { liveListeners.add(listener); return () => { liveListeners.delete(listener) } }
+const SERVER_LIVE: LiveState = { paused: false, updatedAt: null }
+
+/** El estado de la actualización en vivo (pausada o no, y cuándo fue la última vez), y cómo pausarla o reanudarla. */
+export function useLive() {
+  const state = useSyncExternalStore(subscribeLive, () => liveState, () => SERVER_LIVE)
+  const toggle = useCallback(() => {
+    const paused = !liveState.paused
+    try { localStorage.setItem(LIVE_KEY, paused ? 'off' : 'on') } catch { /* no pasa nada */ }
+    setLive({ paused })
+  }, [])
+  return { ...state, toggle }
+}
+
+/** ¿Está pausada la actualización en vivo? (para lo que se actualiza fuera de usePanelData, como las alarmas) */
+export const isLivePaused = () => liveState.paused
+
+/** Avisa que se acaba de actualizar algo (lo que mueve el "hace X segundos" del interruptor). */
+export const markLiveUpdate = () => setLive({ updatedAt: Date.now() })
+
+/**
+ * Pide un dato del panel al backend y lo vuelve a pedir cuando cambia la ruta (por ejemplo, el periodo).
+ *
+ * En vivo: cada `refreshMs` (10 s por defecto; `false` lo apaga) lo vuelve a pedir por detrás, sin recargar la página ni mostrar
+ * "Cargando": solo cambia lo que cambió. Pide siempre la versión fresca (`fresh=1`, que se salta lo que el servidor guarda un minuto),
+ * no empieza otra petición si la anterior no ha vuelto, se detiene con la pestaña escondida (y al volver actualiza al instante) y
+ * se pausa con el interruptor del encabezado. Si una actualización falla, se queda lo que había y se vuelve a intentar.
+ */
+export function usePanelData<T>(path: string, options: { keepPrevious?: boolean; refreshMs?: number | false } = {}): PanelData<T> {
   const [data, setData] = useState<T | null>(() => (seen.get(path) as T | undefined) ?? null)
   const [loading, setLoading] = useState(!seen.has(path))
   const [error, setError] = useState<string | null>(null)
@@ -43,6 +89,35 @@ export function usePanelData<T>(path: string, options: { keepPrevious?: boolean 
       .finally(() => { if (!cancelled) setLoading(false) })
     return () => { cancelled = true }
   }, [path, tick])
+
+  const every = options.refreshMs === undefined ? LIVE_MS : options.refreshMs
+  useEffect(() => {
+    if (!every) return
+    let cancelled = false
+    let busy = false
+    const poll = async () => {
+      if (cancelled || busy || liveState.paused || document.visibilityState !== 'visible') return
+      busy = true
+      try {
+        const result = await api<T>(`${path}${path.includes('?') ? '&' : '?'}fresh=1`)
+        if (cancelled) return
+        const before = seen.get(path)
+        seen.set(path, result)
+        // Solo se vuelve a dibujar si algo cambió: así una tabla abierta, una página elegida o un detalle desplegado no se mueven.
+        if (JSON.stringify(before) !== JSON.stringify(result)) setData(result)
+        setError(null)
+        markLiveUpdate()
+      } catch {
+        // se queda lo que había en pantalla; el siguiente intento lo vuelve a pedir
+      } finally {
+        busy = false
+      }
+    }
+    const timer = setInterval(poll, every)
+    const onVisible = () => { if (document.visibilityState === 'visible') void poll() }
+    document.addEventListener('visibilitychange', onVisible)
+    return () => { cancelled = true; clearInterval(timer); document.removeEventListener('visibilitychange', onVisible) }
+  }, [path, every])
 
   const reload = useCallback(() => setTick(value => value + 1), [])
   return { data, loading, refreshing: loading && data !== null, error, reload }
@@ -182,10 +257,12 @@ export function fmtPoint(key: string): string {
 export function BarSeries({ points, series }: { points: { day: string; [key: string]: number | string }[]; series: { key: string; label: string; color: string }[] }) {
   const max = Math.max(1, ...points.flatMap(point => series.map(item => Number(point[item.key]) || 0)))
   const scroller = useRef<HTMLDivElement>(null)
+  // La gráfica arranca en lo más reciente y lo sigue cuando llegan datos nuevos, salvo que la persona se haya movido a ver lo anterior.
+  const followLatest = useRef(true)
 
   useEffect(() => {
     const element = scroller.current
-    if (element) element.scrollLeft = element.scrollWidth
+    if (element && followLatest.current) element.scrollLeft = element.scrollWidth
   }, [points])
 
   const summary = points.map(point => `${fmtPoint(point.day)} ${series.map(item => `${item.label} ${point[item.key]}`).join(', ')}`).join('; ')
@@ -195,7 +272,11 @@ export function BarSeries({ points, series }: { points: { day: string; [key: str
       <div className="panel-chart-legend">
         {series.map(item => <span key={item.key}><i style={{ background: item.color }} />{item.label}</span>)}
       </div>
-      <div className="panel-chart-scroll" ref={scroller}>
+      <div
+        className="panel-chart-scroll"
+        ref={scroller}
+        onScroll={event => { const el = event.currentTarget; followLatest.current = el.scrollWidth - el.scrollLeft - el.clientWidth < 48 }}
+      >
         <div className="panel-chart-bars" role="img" aria-label={`Gráfica de ${series.map(item => item.label).join(' y ')}: ${summary}`}>
           {points.map(point => (
             <div key={point.day} className="panel-chart-day">

@@ -12,7 +12,6 @@ interface Live {
   sessions?: SessionRow[]
 }
 
-const REFRESH_MS = 10_000
 const WINDOWS = [5, 15, 30]
 
 export default function EnVivoPage() {
@@ -21,12 +20,11 @@ export default function EnVivoPage() {
   const [tick, setTick] = useState(0)
   const { data, loading, error, reload } = usePanelData<Live>(`/api/admin/analytics/web/live?minutes=${minutes}`, { keepPrevious: true })
 
-  // Se actualiza sola cada 10 segundos mientras la pestaña está a la vista; el reloj de "hace X" corre cada segundo.
+  // Los datos se actualizan solos cada 10 segundos (ver usePanelData); aquí solo corre el reloj de "hace X", cada segundo.
   useEffect(() => {
-    const refresh = setInterval(() => { if (document.visibilityState === 'visible') reload() }, REFRESH_MS)
     const clock = setInterval(() => setTick(value => value + 1), 1000)
-    return () => { clearInterval(refresh); clearInterval(clock) }
-  }, [reload])
+    return () => clearInterval(clock)
+  }, [])
 
   void tick
   const sessions = data?.sessions ?? []
