@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { DEFAULT_FILTERS, applyFeedFilters, feedSummary, isRemote, profileProgress } from '@/lib/feed-filters'
+import { DEFAULT_FILTERS, applyFeedFilters, feedHasMore, feedSummary, isRemote, profileProgress } from '@/lib/feed-filters'
 
 const article = (id: string) => ({ id })
 const job = (id: string, modalidad: string | null, seniority_level: string | null) => ({ id, modalidad, seniority_level })
@@ -84,5 +84,32 @@ describe('el resumen de la cabecera', () => {
     expect(feedSummary({ open: 462 })).toBe('462 vacantes abiertas')
     expect(feedSummary({ open: 1, newToday: 1, fit: 1 })).toBe('1 vacante abierta · 1 nueva hoy · 1 encaja contigo')
     expect(feedSummary({ open: 0, newToday: null, fit: undefined })).toBe('')
+  })
+})
+
+describe('feedHasMore', () => {
+  const more = { moreArticles: true, moreJobs: true }
+  const none = { moreArticles: false, moreJobs: false }
+
+  it('"Discusiones" only cares about articles: hidden vacancies must not keep it paging', () => {
+    expect(feedHasMore({ moreArticles: false, moreJobs: true }, { ...DEFAULT_FILTERS, view: 'posts' })).toBe(false)
+    expect(feedHasMore({ moreArticles: true, moreJobs: false }, { ...DEFAULT_FILTERS, view: 'posts' })).toBe(true)
+  })
+
+  it('"Vacantes" only cares about vacancies', () => {
+    expect(feedHasMore({ moreArticles: true, moreJobs: false }, { ...DEFAULT_FILTERS, view: 'jobs' })).toBe(false)
+    expect(feedHasMore({ moreArticles: false, moreJobs: true }, { ...DEFAULT_FILTERS, view: 'jobs' })).toBe(true)
+  })
+
+  it('"Para ti" has no more pages: it is the precomputed list', () => {
+    expect(feedHasMore(more, { ...DEFAULT_FILTERS, view: 'forYou' })).toBe(false)
+  })
+
+  it('"Todo" cares about both; with a vacancy filter (Remoto, Mi nivel) the articles are hidden so only vacancies count', () => {
+    expect(feedHasMore({ moreArticles: true, moreJobs: false }, DEFAULT_FILTERS)).toBe(true)
+    expect(feedHasMore({ moreArticles: true, moreJobs: false }, { ...DEFAULT_FILTERS, remote: true })).toBe(false)
+    expect(feedHasMore({ moreArticles: false, moreJobs: true }, { ...DEFAULT_FILTERS, myLevel: true })).toBe(true)
+    expect(feedHasMore({ moreArticles: true, moreJobs: true }, { ...DEFAULT_FILTERS, view: 'posts', remote: true })).toBe(false)
+    expect(feedHasMore(none, DEFAULT_FILTERS)).toBe(false)
   })
 })

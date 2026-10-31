@@ -22,7 +22,8 @@ import { VacancyStats, type VacancyStatsData } from './vacancy-stats'
 import { PostStats } from './post-stats'
 import { compactStats } from '../lib/feed-stats'
 import { fetchJsonWithSession } from '../lib/session'
-import { DEFAULT_FILTERS, applyFeedFilters, feedSummary, profileProgress, type FeedFilters, type FeedView } from '../lib/feed-filters'
+import { DEFAULT_FILTERS, applyFeedFilters, feedHasMore, feedSummary, profileProgress, type FeedFilters, type FeedView } from '../lib/feed-filters'
+import { reportApiError, reportError } from '../lib/error-reporter'
 import { ProfileHoverCard } from './profile-hover-card'
 import { excerptOf } from '../lib/user-markdown'
 import { HeroBanner } from './hero-banner'
@@ -689,16 +690,28 @@ interface FeedSnapshot {
 async function fetchJson(url: string, token?: string | null): Promise<any | null> {
   try {
     const res = await fetch(url, token ? { headers: { Authorization: `Bearer ${token}` } } : undefined)
+    // Un fallo del servidor no debe pasar callado: queda en la pantalla de Errores (antes el feed solo se veía vacío).
+    if (res.status >= 500) reportApiError({ url, status: res.status })
     return res.ok ? await res.json() : null
   } catch {
+    // Sin respuesta (el servidor no contestó): se reporta salvo que la persona simplemente no tenga internet.
+    if (typeof navigator === 'undefined' || navigator.onLine !== false) reportApiError({ url, message: 'El servidor no respondió' })
     return null
   }
 }
+
+/** Páginas seguidas que el feed pide solo para llenar la pantalla antes de rendirse (y avisar que algo no cuadra). */
+const MAX_AUTO_PAGES = 8
+/** Cuánto puede estar el feed cargando sin parar antes de reportarlo como atascado. */
+const STUCK_LOADING_MS = 20_000
 
 export function Feed() {
   const { search, activeTag, setActiveTag, requestAuth, user } = useShell()
 
   const [filters, setFilters] = useState<FeedFilters>(DEFAULT_FILTERS)
+  // Los manejadores que se registran una sola vez (el scroll) leen los filtros de aquí, no de su primera copia.
+  const filtersRef = useRef(filters)
+  filtersRef.current = filters
   // Telemetría: cambiar un filtro del feed es empezar a buscar (el flujo se cierra al abrir una vacante).
   const filtersTouched = useRef(false)
   useEffect(() => {
@@ -844,7 +857,8 @@ export function Feed() {
 
   const loadMore = async () => {
     const current = snapshotRef.current
-    if (!current || loadingRef.current || (!current.moreArticles && !current.moreJobs)) return
+    // Solo se pide lo que la vista actual muestra (ver feedHasMore).
+    if (!current || loadingRef.current || !feedHasMore(current, filtersRef.current)) return
     loadingRef.current = true
     setLoading(true)
     const nextPage = current.page + 1
@@ -895,12 +909,34 @@ export function Feed() {
 
   // Si lo mostrado no llena la pantalla no hay scroll que dispare la siguiente
   // página: se pide sola mientras falte contenido.
+  // Con tope: si tras MAX_AUTO_PAGES páginas seguidas la pantalla no se llena, se deja de pedir (el resto lo pide el scroll) y se
+  // REPORTA, porque algo no cuadra (antes esto era un ciclo sin fin que nadie veía).
+  const autoPages = useRef(0)
+  const autoReported = useRef(false)
+  useEffect(() => { autoPages.current = 0; autoReported.current = false }, [filters])
   useEffect(() => {
     if (loading || !snapshot) return
-    if (document.body.offsetHeight <= window.innerHeight + 800) loadMore()
+    if (document.body.offsetHeight > window.innerHeight + 800) { autoPages.current = 0; return }
+    if (!feedHasMore(snapshot, filters)) return
+    if (autoPages.current >= MAX_AUTO_PAGES) {
+      if (!autoReported.current) {
+        autoReported.current = true
+        reportError(new Error(`El feed pidió ${MAX_AUTO_PAGES} páginas seguidas y la pantalla sigue sin llenarse`), { surface: 'feed', view: filters.view, remote: filters.remote, myLevel: filters.myLevel, page: snapshot.page })
+      }
+      return
+    }
+    autoPages.current += 1
+    loadMore()
   }, [entries, loading, snapshot])
 
-  const hasMore = !!snapshot && (snapshot.moreArticles || snapshot.moreJobs)
+  // Un perfil atascado en "Cargando" sin parar también es un error, aunque ninguna petición haya fallado.
+  useEffect(() => {
+    if (!loading) return
+    const timer = setTimeout(() => reportError(new Error('El feed lleva más de 20 segundos cargando'), { surface: 'feed', view: filtersRef.current.view, page: snapshotRef.current?.page ?? 0 }), STUCK_LOADING_MS)
+    return () => clearTimeout(timer)
+  }, [loading])
+
+  const hasMore = !!snapshot && feedHasMore(snapshot, filters)
 
   const firstName = user ? String(user.display_name || user.username || '').trim().split(/\s+/)[0] : ''
   const summary = feedSummary({ open: headline?.openVacancies, newToday: headline?.newVacanciesToday, fit: user ? snapshot?.forYou.length : null })

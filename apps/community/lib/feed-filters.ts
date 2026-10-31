@@ -42,6 +42,21 @@ export function applyFeedFilters<A, J extends VacancyLike, F extends ForYouLike>
   }
 }
 
+/**
+ * ¿Tiene sentido pedir más páginas con estos filtros? Solo cuentan las fuentes que la vista muestra: en "Discusiones" las vacantes
+ * están escondidas, y seguir pidiendo página tras página de vacantes que no se ven mantenía el feed "Cargando" para siempre
+ * (cientos de vacantes, de 10 en 10). "Para ti" son las coincidencias ya calculadas: no tiene más páginas.
+ */
+export function feedHasMore(more: { moreArticles: boolean; moreJobs: boolean }, filters: FeedFilters): boolean {
+  const vacancyFilters = filters.remote || filters.myLevel
+  switch (filters.view) {
+    case 'forYou': return false
+    case 'jobs': return more.moreJobs
+    case 'posts': return !vacancyFilters && more.moreArticles
+    default: return (!vacancyFilters && more.moreArticles) || more.moreJobs
+  }
+}
+
 interface ProfileLike {
   photo_url?: string | null
   role_category?: string | null

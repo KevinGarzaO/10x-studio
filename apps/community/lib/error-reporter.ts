@@ -129,8 +129,55 @@ export function installGlobalErrorHandlers(): () => void {
   }
 }
 
+const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'
+let fetchMonitorOn = false
+let originalFetch: typeof fetch | null = null
+
+/** ¿Es una llamada a NUESTRO servidor (no a la telemetría del propio sitio ni a un tercero)? */
+function isOurApi(input: unknown): string | null {
+  const url = typeof input === 'string' ? input : input instanceof URL ? input.href : (input as { url?: string } | null)?.url
+  if (!url || url.startsWith('/api/a/')) return null
+  return url.startsWith(`${API_BASE}/api/`) ? url : null
+}
+
+/**
+ * Vigila TODAS las llamadas al servidor de AvoTalent y reporta las que fallan: respuestas 5xx y llamadas que no llegan (salvo que la
+ * persona no tenga internet o la propia pantalla las cancele). Antes solo se veían los errores que alguien lanzaba a propósito; muchas
+ * pantallas atrapan el fallo y siguen como si nada ("fetch(...).catch(() => {})"), y de ese fallo nadie se enteraba. No cambia lo que
+ * recibe quien llamó: devuelve la misma respuesta y vuelve a lanzar el mismo error. Devuelve cómo quitarlo.
+ */
+export function installFetchMonitor(): () => void {
+  if (typeof window === 'undefined' || fetchMonitorOn) return () => {}
+  fetchMonitorOn = true
+  const original = window.fetch
+  originalFetch = original
+
+  const monitored = async function (this: unknown, input: RequestInfo | URL, init?: RequestInit): Promise<Response> {
+    const url = isOurApi(input)
+    try {
+      const response = await original.call(window, input, init)
+      if (url && response.status >= 500) reportApiError({ method: init?.method ?? (input as Request)?.method ?? 'GET', url, status: response.status })
+      return response
+    } catch (error) {
+      const aborted = (error as { name?: string } | null)?.name === 'AbortError'
+      if (url && !aborted && navigator.onLine !== false) reportApiError({ method: init?.method ?? 'GET', url, message: 'El servidor no respondió' })
+      throw error
+    }
+  }
+  window.fetch = monitored as typeof fetch
+
+  return () => {
+    if (window.fetch === (monitored as typeof fetch)) window.fetch = original
+    fetchMonitorOn = false
+    originalFetch = null
+  }
+}
+
 /** Solo para pruebas. */
 export function resetErrorReporterForTests(): void {
   reported = 0
   recent.clear()
+  if (originalFetch && typeof window !== 'undefined') window.fetch = originalFetch
+  fetchMonitorOn = false
+  originalFetch = null
 }

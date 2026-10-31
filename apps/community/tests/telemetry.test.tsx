@@ -6,7 +6,7 @@ vi.mock('@/lib/session', () => ({
   getCachedUser: vi.fn(() => null as { id?: string } | null),
 }))
 
-import { normalizeError, isIgnored, reportError, reportApiError, installGlobalErrorHandlers, resetErrorReporterForTests, MAX_REPORTS_PER_PAGE } from '@/lib/error-reporter'
+import { normalizeError, isIgnored, reportError, reportApiError, installGlobalErrorHandlers, installFetchMonitor, resetErrorReporterForTests, MAX_REPORTS_PER_PAGE } from '@/lib/error-reporter'
 import { rageCount, startRageClickDetector } from '@/lib/rage-clicks'
 import { flowFor, resetFlowTrackerForTests, measure, FLOW_IDLE_MS } from '@/lib/flow-tracker'
 import { resetWebAnalyticsForTests, SESSION_KEY } from '@/lib/web-analytics'
@@ -113,6 +113,74 @@ describe('error reporter', () => {
     window.removeEventListener('error', swallow)
     await flush()
     expect(errors()).toHaveLength(2)
+  })
+})
+
+describe('fetch monitor', () => {
+  const API = 'http://localhost:3001'
+
+  /** Un servidor de mentira: lo que se manda a la telemetría del sitio se anota en `sent`, lo demás lo contesta `handler`. */
+  const stubServer = (handler: (url: string) => unknown) => {
+    ;(global.fetch as any) = vi.fn(async (url: string, init?: RequestInit) => {
+      if (String(url).startsWith('/api/a/')) {
+        sent.push({ url: String(url), body: init?.body ? JSON.parse(String(init.body)) : null })
+        return { ok: true, status: 204 }
+      }
+      return handler(String(url))
+    })
+  }
+
+  it('reports a 5xx of our server even when the caller swallows it, and gives the caller the same response', async () => {
+    const response = { ok: false, status: 503, json: async () => ({}) }
+    stubServer(() => response)
+    const stop = installFetchMonitor()
+
+    const result = await fetch(`${API}/api/community/posts?page=1`)
+    expect(result).toBe(response)
+    await flush()
+    const [body] = errors()
+    expect(body).toMatchObject({ name: 'ApiError', source: 'api', context: { endpoint: '/api/community/posts', status: 503 } })
+    stop()
+  })
+
+  it('reports a call that never arrives, and throws the same error again', async () => {
+    stubServer(() => { throw new TypeError('Failed to fetch') })
+    const stop = installFetchMonitor()
+
+    await expect(fetch(`${API}/api/community/feed/for-you`)).rejects.toThrow('Failed to fetch')
+    await flush()
+    expect(errors()[0].message).toContain('El servidor no respondió')
+    stop()
+  })
+
+  it('ignores what is not ours or not a failure: 4xx, third parties, the telemetry itself, aborted calls and a person who is offline', async () => {
+    stubServer(u => {
+      if (u.includes('aborted')) throw Object.assign(new Error('x'), { name: 'AbortError' })
+      if (u.includes('offline')) throw new TypeError('Failed to fetch')
+      return { ok: false, status: u.includes('tercero') ? 500 : 401 }
+    })
+    const stop = installFetchMonitor()
+
+    await fetch(`${API}/api/community/auth/me`)               // 401: es una respuesta normal
+    await fetch('https://tercero.example.com/x')              // de un tercero
+    await fetch('/api/a/collect', { method: 'POST' })         // la propia telemetría
+    await expect(fetch(`${API}/api/aborted`)).rejects.toThrow()
+    Object.defineProperty(navigator, 'onLine', { configurable: true, value: false })
+    await expect(fetch(`${API}/api/offline`)).rejects.toThrow()
+    Object.defineProperty(navigator, 'onLine', { configurable: true, value: true })
+    await flush()
+    expect(errors()).toHaveLength(0)
+    stop()
+  })
+
+  it('installs once and can be removed, leaving fetch as it was', () => {
+    const before = global.fetch
+    const stop = installFetchMonitor()
+    expect(global.fetch).not.toBe(before)
+    const again = installFetchMonitor() // la segunda vez no apila otra capa
+    again()
+    stop()
+    expect(global.fetch).toBe(before)
   })
 })
 
