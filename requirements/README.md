@@ -15,6 +15,7 @@ de notas al inicio del archivo, nunca reescribiendo el texto original.
 | 003 | [Cuentas de candidato y empresa](003-candidate-and-company-accounts.md) | [specs/003-account-foundation](../specs/003-account-foundation/spec.md) (parte 1 de 7) | Parte 1 implementada; falta verificación manual |
 | 004 | [Rediseño del foro](004-forum-redesign.md) | Sin spec: implementación directa | Feed rediseñado; faltan detalle, perfil y crear |
 | 005 | [Retención y engagement: qué falta para amarrar la app](005-retention-and-engagement-roadmap.md) | Sin spec todavía | Plan acordado, sin empezar |
+| 008 | [Microsoft Clarity + servidor MCP de analítica](008-clarity-and-mcp.md) | Sin spec: implementación directa | Construido; falta activarlo |
 
 ## Cómo agregar uno nuevo
 

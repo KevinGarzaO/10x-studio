@@ -74,6 +74,20 @@ export const initCron = () => {
     if (users) await AutoPublisherService.publishScheduledEnglishContent(users.id)
   })
 
+  // Microsoft Clarity: una llamada al día (23:55 Monterrey = 05:55 UTC) trae las métricas de frustración por página de las
+  //     últimas 24 h y las guarda con la fecha de hoy (services/analytics/clarity.ts). La API de Clarity permite 10 llamadas
+  //     al día, así que no se repite. Apagado hasta que se active CLARITY_SYNC=on y CLARITY_API_KEY en el servidor.
+  cron.schedule('55 5 * * *', async () => {
+    if (process.env.CLARITY_SYNC !== 'on') return
+    try {
+      const { syncClarity } = require('./analytics/clarity')
+      const outcome = await syncClarity()
+      console.log(`[Clarity] ${outcome.status}${outcome.reason ? `: ${outcome.reason}` : ''} (páginas ${outcome.paths})`)
+    } catch (error) {
+      console.error('[Clarity] Falló la sincronización:', error)
+    }
+  })
+
   // 3b. VACANTES EN LINKEDIN: 2 al día, de lunes a viernes, 8:30 AM y 1:30 PM Monterrey
   //     (el sábado rindió 2.3 visitantes por publicación y ningún registro: se quitó)
   //     (14:30 y 19:30 UTC). Una vacante del feed, texto de plantilla (sin IA). Está

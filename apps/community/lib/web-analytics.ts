@@ -331,3 +331,8 @@ export function resetWebAnalyticsForTests(): void {
   lastPage = null
   queue = Promise.resolve()
 }
+
+/** El id de la sesión de analítica de esta pestaña (el mismo que se guarda en `analytics_sessions`), o null si aún no hay. */
+export function currentSessionId(): string | null {
+  return current?.id ?? readSession()?.id ?? null
+}

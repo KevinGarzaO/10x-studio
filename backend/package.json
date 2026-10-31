@@ -8,6 +8,7 @@
     "dev": "ts-node index.ts",
     "lint": "eslint . --ext .ts",
     "test": "vitest run tests/unit",
+    "clarity-sync": "tsx scripts/clarity-sync.ts",
     "test:integration": "vitest run tests/integration",
     "migrate-history": "tsx scripts/migrate-history.ts",
     "sync-to-community": "tsx scripts/sync-to-community.ts",

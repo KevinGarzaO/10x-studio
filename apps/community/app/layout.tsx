@@ -1,6 +1,7 @@
 import { Analytics } from '@vercel/analytics/next'
 import type { Metadata, Viewport } from 'next'
 import { AttributionCapture } from '@/components/attribution-capture'
+import { ClarityIntegration } from '@/components/clarity-integration'
 import { SessionCapture } from '@/components/session-capture'
 import { WebAnalytics } from '@/components/web-analytics'
 import { Inter } from 'next/font/google'
@@ -51,6 +52,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
         <SessionCapture />
         <AttributionCapture />
         <WebAnalytics />
+        <ClarityIntegration />
         {children}
         {process.env.NODE_ENV === 'production' && <Analytics />}
       </body>
