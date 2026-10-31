@@ -96,7 +96,7 @@ describe('buildAlerts', () => {
 })
 
 describe('expectedPublicationsToday', () => {
-  // 23 de octubre de 2026 es viernes; el 24, sábado. Monterrey es UTC-6.
+  // 23 de octubre de 2026 es viernes; el 24, sábado; el 25, domingo. Monterrey es UTC-6. Se publica 4 al día, todos los días.
   const at = (isoUtc: string) => expectedPublicationsToday(new Date(isoUtc))
 
   it('is none before the first post time', () => {
@@ -108,13 +108,17 @@ describe('expectedPublicationsToday', () => {
     expect(at('2026-10-23T14:55:00Z')).toBe(1) // 8:55
   })
 
-  it('is two after the second post time', () => {
-    expect(at('2026-10-23T20:00:00Z')).toBe(2) // 2:00 pm
+  it('goes up with every post time of the day, up to four', () => {
+    expect(at('2026-10-23T17:35:00Z')).toBe(1) // 11:35: la de las 11:30 aún está en su margen
+    expect(at('2026-10-23T17:55:00Z')).toBe(2) // 11:55
+    expect(at('2026-10-23T21:00:00Z')).toBe(3) // 15:00
+    expect(at('2026-10-24T00:55:00Z')).toBe(4) // 18:55 del viernes
+    expect(at('2026-10-24T05:00:00Z')).toBe(4) // 23:00: ya salieron las cuatro
   })
 
-  it('is none at the weekend', () => {
-    expect(at('2026-10-24T20:00:00Z')).toBe(0) // sábado
-    expect(at('2026-10-25T20:00:00Z')).toBe(0) // domingo
+  it('counts on Saturday and Sunday too', () => {
+    expect(at('2026-10-24T21:00:00Z')).toBe(3) // sábado 15:00
+    expect(at('2026-10-25T18:00:00Z')).toBe(2) // domingo 12:00
   })
 })
 

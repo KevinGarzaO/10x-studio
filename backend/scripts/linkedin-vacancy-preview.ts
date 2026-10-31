@@ -1,8 +1,8 @@
 /**
  * Muestra las próximas publicaciones de vacantes en LinkedIn, sin publicar nada.
  *
- *   npm run linkedin-vacancy-preview              las próximas 4 (dos días de publicaciones)
- *   npm run linkedin-vacancy-preview -- --count 12
+ *   npm run linkedin-vacancy-preview              las próximas 4 (un día de publicaciones)
+ *   npm run linkedin-vacancy-preview -- --count 28   una semana (4 al día, todos los días)
  *   npm run linkedin-vacancy-preview -- --publish-now   publica UNA ahora (prueba real)
  *   npm run linkedin-vacancy-preview -- --publish-now --slug <slug>   publica esa vacante
  *

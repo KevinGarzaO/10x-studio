@@ -1,4 +1,5 @@
 import cron from 'node-cron'
+import { publicationCronExpressions } from './analytics/schedule'
 import { supabase } from './supabase.service'
 import { SubstackService } from './substack.service'
 
@@ -88,12 +89,14 @@ export const initCron = () => {
     }
   })
 
-  // 3b. VACANTES EN LINKEDIN: 2 al día, de lunes a viernes, 8:30 AM y 1:30 PM Monterrey
-  //     (el sábado rindió 2.3 visitantes por publicación y ningún registro: se quitó)
-  //     (14:30 y 19:30 UTC). Una vacante del feed, texto de plantilla (sin IA). Está
+  // 3b. VACANTES EN LINKEDIN: 4 al día, todos los días (lunes a domingo), 8:30, 11:30, 14:30 y 18:30 Monterrey.
+  //     Las horas y los días están en UN solo lugar, services/analytics/schedule.ts (de ahí salen también la próxima
+  //     publicación del panel y la alarma de "debían haber salido"). Decisión del dueño del 31 de octubre de 2026: antes
+  //     eran 2 al día de lunes a viernes, porque el sábado rindió 2.3 visitantes por publicación y ningún registro.
+  //     Una vacante del feed, siempre de las mejor puntuadas (vacancy-post.ts), texto de plantilla (sin IA). Está
   //     apagado hasta que se active LINKEDIN_VACANCY_POSTS=on en el servidor: antes se
   //     revisan los textos con `npm run linkedin-vacancy-preview`.
-  for (const expression of ['30 14 * * 1-5', '30 19 * * 1-5']) {
+  for (const expression of publicationCronExpressions()) {
     cron.schedule(expression, async () => {
       if (process.env.LINKEDIN_VACANCY_POSTS !== 'on') return
       try {

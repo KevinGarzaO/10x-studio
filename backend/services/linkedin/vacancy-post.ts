@@ -44,6 +44,11 @@ export const COMPANY_COOLDOWN_DAYS = 7
 export const ROLE_MEMORY = 3
 /** Cuántos skills caben en el post. */
 export const MAX_SKILLS = 5
+/**
+ * Qué tan lejos del mejor puntaje se busca variedad (en puntos de `publishScore`): primero entre las que están a 2 puntos de la mejor,
+ * y solo si ahí no hay una que cumpla las reglas de variedad se abre a 4 y luego a 8. Así siempre se publica una de las mejores.
+ */
+export const TOP_BANDS = [2, 4, 8]
 
 const known = (value: string | null | undefined): value is string =>
   !!value && value.trim() !== '' && !/no especificado|unknown/i.test(value)
@@ -81,12 +86,13 @@ const companyKey = (company: string | null) => (company ?? '').trim().toLowerCas
 /**
  * Elige la vacante de este turno entre las que aún no se publicaron.
  *
- * Reglas, en este orden:
- *  1. No se repite empresa dentro de COMPANY_COOLDOWN_DAYS (si no quedara ninguna otra,
- *     se relaja: es mejor publicar que quedarse callado).
- *  2. Se evita el rol de las últimas ROLE_MEMORY publicaciones, para que el perfil no
- *     parezca un canal de un solo tipo de puesto (también se relaja si no hay opción).
+ * SIEMPRE una de las mejores: se parte del mejor `publishScore` y se mira primero a las vacantes que están a TOP_BANDS[0] puntos
+ * de él; solo si ahí no hay ninguna que cumpla las reglas, se abre la banda (a 4 y luego a 8 puntos), nunca antes. Dentro de la banda:
+ *  1. No se repite empresa dentro de COMPANY_COOLDOWN_DAYS (esta regla es la más firme: se abre la banda antes de repetir empresa).
+ *  2. Se prefiere no repetir el rol de las últimas ROLE_MEMORY publicaciones, para que el perfil no parezca un canal de un solo
+ *     tipo de puesto; si todas las mejores son de ese rol, gana la mejor (con 4 al día, ser top pesa más que alternar el rol).
  *  3. Gana la de mayor `publishScore`; a igual puntaje, la más reciente.
+ * Si ni abriendo las bandas hay una que cumpla, se relajan las reglas: es mejor publicar que quedarse callado.
  *
  * Y antes de todo: solo entran las vacantes de los roles del foco (`ROLE_FOCUS`).
  */
@@ -106,14 +112,26 @@ export function pickVacancy(
   )
   const recentRoles = new Set(ordered.slice(0, ROLE_MEMORY).map((posted) => posted.role_category))
 
-  const byCompany = usable.filter((vacancy) => !recentCompanies.has(companyKey(vacancy.company)))
-  const pool1 = byCompany.length > 0 ? byCompany : usable
-  const byRole = pool1.filter((vacancy) => !recentRoles.has(vacancy.role_category))
-  const pool = byRole.length > 0 ? byRole : pool1
+  const score = (vacancy: LinkedInVacancy) => publishScore(vacancy, focus)
+  const best = (list: LinkedInVacancy[]) =>
+    [...list].sort((a, b) => score(b) - score(a) || Date.parse(b.created_at ?? '') - Date.parse(a.created_at ?? ''))[0]
+  const companyOk = (vacancy: LinkedInVacancy) => !recentCompanies.has(companyKey(vacancy.company))
+  const roleOk = (vacancy: LinkedInVacancy) => !recentRoles.has(vacancy.role_category)
 
-  return [...pool].sort(
-    (a, b) => publishScore(b, focus) - publishScore(a, focus) || Date.parse(b.created_at ?? '') - Date.parse(a.created_at ?? ''),
-  )[0]
+  const topScore = Math.max(...usable.map(score))
+  for (const band of TOP_BANDS) {
+    const near = usable.filter((vacancy) => score(vacancy) >= topScore - band)
+    const varied = near.filter((vacancy) => companyOk(vacancy) && roleOk(vacancy))
+    if (varied.length > 0) return best(varied)
+    const newCompany = near.filter(companyOk)
+    if (newCompany.length > 0) return best(newCompany)
+  }
+
+  // Ninguna cumple ni en la banda más ancha: se relaja (primero el rol, luego la empresa).
+  const byCompany = usable.filter(companyOk)
+  const pool1 = byCompany.length > 0 ? byCompany : usable
+  const byRole = pool1.filter(roleOk)
+  return best(byRole.length > 0 ? byRole : pool1)
 }
 
 /** El enlace de la vacante, con el origen marcado para saber qué registros trae LinkedIn. */

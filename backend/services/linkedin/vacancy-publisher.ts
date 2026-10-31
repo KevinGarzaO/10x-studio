@@ -11,14 +11,20 @@ import {
 
 /**
  * Publica en el LinkedIn de la persona dueña de la cuenta una vacante del feed, sin IA:
- * el texto sale de una plantilla (vacancy-post.ts). Corre dos veces al día, de lunes a
- * sábado, desde cron.service.ts.
+ * el texto sale de una plantilla (vacancy-post.ts). Corre 4 veces al día, todos los días, desde
+ * cron.service.ts (las horas están en services/analytics/schedule.ts).
  */
 
 /** Cuántos días hacia atrás se buscan vacantes: una vieja puede estar ya cerrada. */
 const MAX_AGE_DAYS = 45
 /** Un intento fallido bloquea la vacante este tiempo, para no reintentar a ciegas. */
 const FAILED_RETRY_HOURS = 24
+/**
+ * Si ya salió (o se está publicando) una hace menos de esto, no se publica otra. Las horas están separadas por 3 horas o más, así que
+ * dos publicaciones tan juntas son un disparo doble (por ejemplo dos copias del servidor encendidas a la vez durante un despliegue),
+ * no un turno: con 4 al día un doble disparo se notaría en el perfil.
+ */
+const MIN_GAP_MINUTES = 90
 
 export interface PublishResult {
   status: 'published' | 'preview' | 'skipped'
@@ -102,6 +108,18 @@ export async function loadPool(): Promise<{ candidates: LinkedInVacancy[]; histo
 export async function publishVacancyPost(options: { dryRun?: boolean; slug?: string } = {}): Promise<PublishResult> {
   const base = siteUrl()
   if (!base) return { status: 'skipped', reason: 'COMMUNITY_APP_URL no está configurada con la dirección pública del sitio' }
+
+  // Solo en los turnos automáticos: una prueba a propósito (--slug) o una vista previa no se bloquean.
+  if (!options.slug && !options.dryRun) {
+    const since = new Date(Date.now() - MIN_GAP_MINUTES * 60000).toISOString()
+    const { data: recent } = await supabase
+      .from('linkedin_vacancy_posts')
+      .select('id')
+      .in('status', ['pending', 'published'])
+      .gte('created_at', since)
+      .limit(1)
+    if (recent && recent.length > 0) return { status: 'skipped', reason: `ya salió o se está publicando otra hace menos de ${MIN_GAP_MINUTES} minutos` }
+  }
 
   const { candidates, history, posted, skillLabels } = await loadPool()
   const vacancy = options.slug ? candidates.find((candidate) => candidate.slug === options.slug) ?? null : pickVacancy(candidates, history)

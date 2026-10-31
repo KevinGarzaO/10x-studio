@@ -10,6 +10,7 @@ import {
   vacancyUrl,
   COMPANY_COOLDOWN_DAYS,
   ROLE_FOCUS,
+  TOP_BANDS,
   publishScore,
   type LinkedInVacancy,
   type PostedVacancy,
@@ -148,8 +149,10 @@ describe('pickVacancy', () => {
 
   it('avoids the role of the last posts, so the profile is not one kind of job', () => {
     const history: PostedVacancy[] = ['backend', 'backend', 'backend'].map((role, i) => ({ company: `X${i}`, role_category: role, published_at: daysAgo(i + 10) }))
-    const another = vacancy({ role_category: 'backend', budget: 'USD 1', skills: ['a', 'b', 'c'] })
-    const different = vacancy({ role_category: 'frontend' })
+    // Casi igual de buenas (dentro de la banda de los mejores): se alterna el rol. Si una fuera mucho mejor, ganaría ella
+    // (ver "always one of the best").
+    const another = vacancy({ role_category: 'backend', skills: ['a', 'b'] })
+    const different = vacancy({ role_category: 'frontend', skills: ['a', 'b'] })
     expect(pickVacancy([another, different], history, NOW)).toBe(different)
   })
 
@@ -157,6 +160,69 @@ describe('pickVacancy', () => {
     const history: PostedVacancy[] = [{ company: 'Stripe', role_category: 'backend', published_at: daysAgo(1) }]
     const only = vacancy({ company: 'Stripe', role_category: 'backend' })
     expect(pickVacancy([only], history, NOW)).toBe(only)
+  })
+
+  describe('always one of the best (4 posts a day)', () => {
+    // Una vacante con el puntaje que se pida: se arma con datos reales para no depender de cómo se calcula por dentro.
+    const strong = (patch: Partial<LinkedInVacancy> = {}) => vacancy({ skills: ['a', 'b', 'c', 'd', 'e'], budget: 'USD 100k', ...patch })
+
+    it('between two good ones prefers the one that does not repeat the role, but never drops far for it', () => {
+      const history: PostedVacancy[] = ['backend', 'backend', 'backend'].map((role, i) => ({ company: `X${i}`, role_category: role, published_at: daysAgo(i + 10) }))
+      const topSameRole = strong({ role_category: 'backend' })
+      const closeOtherRole = strong({ role_category: 'fullstack', skills: ['a', 'b', 'c', 'd'] }) // un punto menos
+      expect(publishScore(topSameRole) - publishScore(closeOtherRole)).toBeLessThanOrEqual(TOP_BANDS[0])
+      expect(pickVacancy([topSameRole, closeOtherRole], history, NOW)).toBe(closeOtherRole)
+    })
+
+    it('does NOT trade a top vacancy for a mediocre one just to change the role', () => {
+      const history: PostedVacancy[] = ['backend', 'backend', 'backend'].map((role, i) => ({ company: `X${i}`, role_category: role, published_at: daysAgo(i + 10) }))
+      const top = strong({ role_category: 'backend' })
+      const weak = vacancy({ role_category: 'data_scientist', skills: [], budget: null, seniority_level: 'junior', modalidad: 'Presencial' })
+      expect(publishScore(top) - publishScore(weak)).toBeGreaterThan(TOP_BANDS[0])
+      // el rol se repite, pero la mejor no se cambia por una que está muy por debajo
+      expect(pickVacancy([top, weak], history, NOW)).toBe(top)
+    })
+
+    it('still never repeats a company inside the cooldown if another good one exists, opening the band before repeating it', () => {
+      const history: PostedVacancy[] = [{ company: 'Stripe', role_category: 'ventas', published_at: daysAgo(1) }]
+      const stripe = strong({ company: 'Stripe' })
+      const other = vacancy({ company: 'Twilio', skills: ['a', 'b'], budget: null })
+      expect(publishScore(stripe) - publishScore(other)).toBeGreaterThan(TOP_BANDS[0])
+      expect(pickVacancy([stripe, other], history, NOW)).toBe(other)
+    })
+
+    it('always takes the best of the pool when nothing needs varying', () => {
+      const pool = [vacancy({ skills: [] }), strong(), vacancy({ skills: ['a', 'b'] })]
+      expect(pickVacancy(pool, [], NOW)).toBe(pool[1])
+    })
+
+    it('over a whole week of 4 a day the choices stay among the best and no company repeats inside the cooldown', () => {
+      const pool: LinkedInVacancy[] = []
+      const roles = Object.keys(ROLE_FOCUS)
+      for (let i = 0; i < 120; i++) {
+        pool.push(vacancy({
+          company: `Empresa-${i % 60}`,
+          role_category: roles[i % roles.length],
+          skills: Array.from({ length: (i * 7) % 6 }, (_, k) => `s${k}`),
+          budget: i % 3 === 0 ? 'USD 80k' : null,
+        }))
+      }
+      const best28 = pool.map((v) => publishScore(v)).sort((a, b) => b - a).slice(0, 28)
+      const average = (list: number[]) => list.reduce((sum, value) => sum + value, 0) / list.length
+
+      const history: PostedVacancy[] = []
+      const chosen: LinkedInVacancy[] = []
+      const remaining = [...pool]
+      for (let turn = 0; turn < 28; turn++) {
+        const when = new Date(NOW.getTime() + turn * 3.5 * 3600000)
+        const pick = pickVacancy(remaining, history, when)!
+        remaining.splice(remaining.indexOf(pick), 1)
+        history.push({ company: pick.company, role_category: pick.role_category, published_at: when.toISOString() })
+        chosen.push(pick)
+      }
+      expect(average(chosen.map((v) => publishScore(v)))).toBeGreaterThan(average(best28) - 3)
+      expect(new Set(chosen.map((v) => v.company)).size).toBe(28) // ninguna empresa dos veces en la semana
+    })
   })
 
   it('skips vacancies without a company or a page', () => {
