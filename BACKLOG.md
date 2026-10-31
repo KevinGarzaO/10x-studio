@@ -12,7 +12,7 @@ Estado al **31 de octubre de 2026**. Se trabaja **de a poco**: una cosa a la vez
 | Sprint | Qué entra | Dónde está |
 |---|---|---|
 | **Noviembre 2026** | Todo lo pendiente que había hasta el 31 de octubre: las letras **A a V** | Sección 2 |
-| **Diciembre 2026** | Letras propias del sprint, otra vez desde la **A**: **A** inicio de sesión con Google · **B** Pixel de Meta y su API · **C** compartir vacantes y discusiones con OG bien hecho | Sección 2B |
+| **Diciembre 2026** | Letras propias del sprint, otra vez desde la **A**: **A** inicio de sesión con Google · **B** Pixel de Meta y su API · **C** compartir vacantes y discusiones con OG bien hecho · **D** pantallas legales, de privacidad y de cookies · **E** agente experto en producto con nuestros datos | Sección 2B |
 
 > **Las letras empiezan de nuevo en cada sprint.** Cuando haga falta distinguirlas se dice "A de noviembre" o "A de diciembre".
 
@@ -220,7 +220,7 @@ Pedido el 30 de octubre: que en cada sección y página de la app las personas p
 
 ---
 
-## 2B. Sprint de diciembre (letras A a C)
+## 2B. Sprint de diciembre (letras A a E)
 
 **Prioridad:** igual que arriba (P1 urgente · P2 alta · P3 media · P4 después). **Tamaño:** S unas horas · M medio día a un día · L varios días.
 
@@ -229,8 +229,10 @@ Pedido el 30 de octubre: que en cada sección y página de la app las personas p
 | 1 | **A** | Inicio de sesión con Google | P2 | M |
 | 2 | **B** | Pixel de Meta y su API de conversiones | P3 | M |
 | 3 | **C** | Compartir vacantes y discusiones con OG bien hecho | P2 | M |
+| 4 | **D** | Pantallas legales, de privacidad y de cookies | P2 | L |
+| 5 | **E** | Agente experto en producto con nuestros datos (Claude) | P3 | L |
 
-> Las prioridades son una propuesta mía: A y C ayudan a que llegue y se comparta más gente (P2); B solo rinde cuando se anuncie en Meta, y además depende del tema de cookies (P3). Cámbialas si quieres.
+> Las prioridades son una propuesta mía: A y C ayudan a que llegue y se comparta más gente (P2); B solo rinde cuando se anuncie en Meta, y además depende del tema de cookies (P3). D es P2 por orden de diciembre, pero **conviene adelantarla**: desde que Clarity se enciende, el sitio graba sesiones sin aviso de cookies (ver la nota de D). E (P3) rinde cuando ya haya unas semanas de datos de la medición nueva. Cámbialas si quieres.
 
 ### A (diciembre). Inicio de sesión con Google — P2 · M
 Hoy se entra con correo, GitHub o LinkedIn. Falta Google, que es la cuenta que casi todos tienen.
@@ -264,6 +266,34 @@ Que al pegar un enlace de AvoTalent en WhatsApp, LinkedIn, X o Facebook salga un
 - [ ] Botones de compartir en vacantes y discusiones: copiar enlace, WhatsApp, LinkedIn, X, Facebook y el menú de compartir del celular.
 - [ ] El enlace compartido lleva su origen (`utm_source=compartido` y el medio) para medir cuánto trae compartir.
 - [ ] Probar en el depurador de Facebook, el inspector de LinkedIn y WhatsApp, y dejar una lista de revisión.
+
+### D (diciembre). Pantallas legales, de privacidad y de cookies — P2 · L
+Hoy hay dos páginas, `/privacy` y `/terms` (76 líneas cada una, genéricas, con fecha del 5 de septiembre de 2026). **No dicen** que medimos con nuestra analítica propia y con Google Analytics, que Clarity graba sesiones, que mandamos correos, ni qué cookies usamos, cuánto guardamos los datos ni a quién se los damos (Supabase, Vercel, Railway, Resend, Microsoft, Google). Tampoco hay aviso de cookies ni forma de elegir.
+> **Nota (recomendación mía):** el sitio ya mide con Google Analytics, con la analítica propia y, desde que se subió Clarity, graba sesiones, sin que la persona pueda aceptar o rechazar. Por eso sugiero **adelantar al menos el aviso de cookies y la actualización de la política de privacidad a noviembre**, y dejar para diciembre el resto. Esto es una lista de trabajo técnico, **no asesoría legal**: los textos los debe revisar un abogado (para México, el "aviso de privacidad" y los derechos ARCO de la LFPDPPP; si hay personas en la UE, el RGPD).
+- [ ] **Decisión tuya:** en qué países se va a cumplir (México primero; si se anuncia en Europa o Brasil hay más reglas) y quién del lado legal revisa los textos.
+- [ ] **Política de privacidad** reescrita con lo que de verdad pasa: qué datos se guardan (cuenta, perfil, CV, skills, postulaciones, visitas, errores), para qué, con quién se comparten (los servicios de arriba), dónde se guardan, cuánto tiempo, y cómo ejercer los derechos de acceder, corregir, borrar y llevarse los datos (con un correo o formulario real y un plazo de respuesta).
+- [ ] **Aviso de privacidad** corto en el registro (integral y simplificado, como pide la ley mexicana) y enlazado en el pie de todas las páginas y en los correos.
+- [ ] **Términos y condiciones** reescritos: edad mínima (Clarity no debe usarse con menores de 18, así que 18+), reglas de la comunidad, qué pasa con lo que publican, vacantes (AvoTalent reúne vacantes de otros sitios y no es la empresa), baja de cuentas y límites de responsabilidad.
+- [ ] **Reglas de la comunidad** (uso aceptable y moderación) y cómo reportar un contenido (se conecta con "Moderación y reportes" de noviembre).
+- [ ] **Política de cookies**: una tabla con cada cookie y almacenamiento (`_avo_cid`, `avo_ws`, `avocado_token`, las de Clarity `_clck` y `_clsk`, las de Google Analytics), para qué sirve, quién la pone y cuánto dura.
+- [ ] **Aviso de cookies** (aceptar, rechazar y elegir): categorías necesarias, de medición y de publicidad; lo no necesario **no se carga hasta aceptar**; se recuerda la elección; accesible con teclado y sin tapar el contenido.
+- [ ] **Preferencias de cookies** en el pie y en Ajustes para cambiar la decisión cuando quiera.
+- [ ] Conectar el aviso con lo que ya existe: Clarity (su API de consentimiento), Google Analytics (modo de consentimiento), la analítica propia (decidir si cuenta como necesaria o de medición) y el Pixel de Meta de B (solo con aceptación).
+- [ ] Al registrarse, aceptar términos y privacidad con una casilla, y **guardar qué versión y cuándo** (`terms_accepted_at`, `terms_version`); si cambian de forma importante, avisar y pedir aceptar otra vez.
+- [ ] Borrar mi cuenta y descargar mis datos (es lo mismo que "Privacidad de cuenta" de noviembre: hacerlo una sola vez).
+- [ ] Pruebas: sin aceptar no se carga ningún script de medición ni de publicidad; la elección se recuerda; retirar el consentimiento los detiene; los textos legales aparecen en el pie de todas las páginas y en los correos.
+
+### E (diciembre). Agente experto en producto con nuestros datos (Claude) — P3 · L
+Que desde la app de Claude puedas preguntarle cosas de AvoTalent (por qué baja el registro, qué vacantes funcionan, quién vuelve) y que, con la información histórica, **proponga features que tengan sustento**, no ocurrencias.
+**Dónde vive (respuesta corta):** no es Claude Code. Claude Code sirve para programar dentro del repositorio. Lo que quieres es **la app de Claude** (Claude Desktop) con **un Proyecto** (las instrucciones y el contexto de "experto en producto") **conectado al servidor MCP** que ya hicimos (`packages/mcp-analytics`). Claude Desktop sí corre servidores MCP locales; la versión web y la del celular necesitarían un servidor MCP **en internet con acceso protegido**, que es otra decisión (y otro costo de cuidado).
+- [ ] **Decisión tuya:** solo en la computadora con Claude Desktop (sin hosting, lo más sencillo) o también desde web y celular (hay que publicar el MCP y protegerlo bien, porque es acceso a tus datos).
+- [ ] **El Proyecto**: instrucciones de un jefe de producto que entiende datos. Reglas: separar lo que dicen los números de lo que es suposición, citar siempre de qué consulta sale cada cifra y el periodo, avisar cuando la muestra es pequeña (hoy son decenas de personas), no confundir correlación con causa, no inventar datos, no mostrar datos personales.
+- [ ] **Más herramientas en el MCP** para poder responder de producto y no solo de tráfico: personas nuevas y recurrentes (`analytics_segments`), retención y cohortes, desempeño de cada vacante (vistas, postulaciones, guardados), calidad de las coincidencias de "Para ti", oferta y demanda de skills y puestos, resultados de los correos (abiertos, clics, registros que trajeron) y de las publicaciones de LinkedIn, y lo que dice el botón de feedback (V de noviembre).
+- [ ] **Bitácora de lanzamientos** (fecha y qué se cambió, en una tabla propia): sin saber **cuándo** salió cada cosa, el agente no puede comparar antes y después ni decir si una feature funcionó. Es lo que vuelve útil el "historial".
+- [ ] **Formato de cada propuesta de feature**: qué problema ve, la evidencia (cifras con periodo y tamaño de muestra), la hipótesis, qué métrica debería moverse, cuánto cuesta (S/M/L), el riesgo y cómo se mediría después. Con un nivel de confianza honesto.
+- [ ] **Seguridad**: solo lectura, rol de base de datos con permisos mínimos (como el del MCP actual), sin correos ni nombres, y revisar qué se manda a Claude (los datos salen de nuestra base hacia la conversación).
+- [ ] **Evaluarlo**: una lista de 10 preguntas con respuesta conocida (por ejemplo "¿cuántas personas se registraron el mes pasado?") para comprobar que no inventa, y revisar sus primeras propuestas contra tu criterio antes de confiar en ellas.
+- [ ] Esperar a tener unas semanas de datos de la medición nueva (analítica propia, Clarity, errores y flujos): antes de eso solo podría proponer con muy poca evidencia.
 
 ---
 
