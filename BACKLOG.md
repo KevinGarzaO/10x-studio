@@ -1,11 +1,20 @@
 # Backlog de AvoTalent
 
-Estado al **30 de octubre de 2026** (se agregó **V** el mismo día). Se trabaja **de a poco**: una cosa a la vez, en el orden de la tabla de la sección 2. Al terminar una, se marca aquí y se sube.
+Estado al **31 de octubre de 2026**. Se trabaja **de a poco**: una cosa a la vez, en el orden de la tabla de la sección 2. Al terminar una, se marca aquí y se sube.
 
 - Detalle del plan original: [requirements/005-retention-and-engagement-roadmap.md](requirements/005-retention-and-engagement-roadmap.md) (usa las letras viejas; la columna "Antes" de abajo dice cuál es cuál).
 - Plan del CRM y el webhook de Resend: [requirements/006-resend-webhook-and-crm.md](requirements/006-resend-webhook-and-crm.md)
 - Reglas ya decididas que no se rehacen: sección 3 y `CLAUDE.md`.
 - **Funciones nuevas (monetización, planes de pago, comisiones) solo empiezan cuando termine este backlog.** Meta: enero de 2027.
+
+## Sprints
+
+| Sprint | Qué entra | Dónde está |
+|---|---|---|
+| **Noviembre 2026** | Todo lo pendiente que había hasta el 31 de octubre: las letras **A a V** | Sección 2 |
+| **Diciembre 2026** | **W** inicio de sesión con Google · **X** Pixel de Meta y su API · **Y** compartir vacantes y discusiones con OG bien hecho | Sección 2B |
+
+Lo que no alcance en noviembre se **recorre a diciembre** (empezando por lo de prioridad P4) y diciembre se vuelve a ordenar al arrancar. Diciembre sigue creciendo: se agrega aquí cuando lo pases.
 
 ---
 
@@ -41,13 +50,17 @@ Estado al **30 de octubre de 2026** (se agregó **V** el mismo día). Se trabaja
 ### Admin
 - [x] Usuarios: buscador, páginas de 25, filtro y columna "Registro con" (Correo, GitHub, LinkedIn) y totales de todas las cuentas reales.
 - [x] Retención: tabla ordenada por días activos, "¿Volvió?", cajitas de los últimos 14 días, tarjeta "Volvieron", día de registro en hora de Monterrey, y total de cuentas reales frente a las que han entrado desde que se mide.
+- [x] **Analítica web propia con las reglas de GA4**, corriendo en paralelo a la anterior: sesiones, tiempo activo con la pestaña visible, eventos, unión de visitas anónimas con la cuenta, y el módulo **Tráfico web** del admin (en vivo, sesión por sesión con su detalle, mapa, audiencia, páginas, canales, embudo, cohortes). Detalle en `requirements/007-web-analytics-ga4.md`.
+- [x] El menú del admin son módulos que se pliegan: **Analítica** y **Tráfico web**.
+- [x] El Resumen del admin cuenta solo **visitantes activos**, separados en nuevos y recurrentes, y mide la conversión sobre los nuevos.
+- [x] Celular: el feed va primero, sin el menú encima, y el menú hamburguesa se abre bien y se cierra al navegar.
 - [x] Todas las tablas del admin son como la de Usuarios: buscador, páginas de 10 y, donde aplica, filtro (`DataTable`). Cubre Adquisición (2), LinkedIn (4), Match (5), Retención (quién usa AvoTalent) y Vacantes (ahora las 100 más abiertas). La tabla de cohortes de Retención no, porque es un mapa de calor y no una lista.
 - [x] Usuarios: cambiar de filtro o de página ya no recarga toda la pantalla; solo se atenúa la tabla mientras llega.
 - [x] Editor de publicaciones: dar clic en una letra de la barra de Markdown ya no manda el texto hasta abajo (se conserva la selección y el scroll).
 
 ---
 
-## 2. Pendiente (todo, con letra, prioridad y orden)
+## 2. Pendiente: sprint de noviembre (todo, con letra, prioridad y orden)
 
 **Prioridad:** **P1** urgente (seguridad, fugas, que lo que ya existe funcione) · **P2** alta (valor claro, se hace pronto) · **P3** media · **P4** después. **Tamaño** estimado con Claude Code: **S** unas horas o menos · **M** medio día a un día · **L** varios días.
 
@@ -197,6 +210,55 @@ Pedido el 30 de octubre: que en cada sección y página de la app las personas p
 - [ ] Más adelante, que aparezca en la ficha de la persona del CRM (**J**).
 - [ ] **Decisión tuya:** ¿también pueden dejar feedback los visitantes sin cuenta (con un correo opcional), o solo quien tiene sesión? Propuesta: solo con sesión al inicio, porque los visitantes solo ven el feed y así se evita el spam.
 - [ ] **Decisión tuya:** cómo quieres enterarte de los nuevos. Propuesta: contador en el admin y un resumen diario por correo solo si hay alguno (poco volumen, cabe en la cuota de Resend).
+
+---
+
+---
+
+## 2B. Sprint de diciembre
+
+**Prioridad:** igual que arriba (P1 urgente · P2 alta · P3 media · P4 después). **Tamaño:** S unas horas · M medio día a un día · L varios días.
+
+| Orden | Letra | Pendiente | Prioridad | Tamaño |
+|---|---|---|---|---|
+| 1 | **W** | Inicio de sesión con Google | P2 | M |
+| 2 | **X** | Pixel de Meta y su API de conversiones | P3 | M |
+| 3 | **Y** | Compartir vacantes y discusiones con OG bien hecho | P2 | M |
+
+> Las prioridades son una propuesta mía: W y Y ayudan a que llegue y se comparta más gente (P2); X solo rinde cuando se anuncie en Meta, y además depende del tema de cookies (P3). Cámbialas si quieres.
+
+### W. Inicio de sesión con Google — P2 · M
+Hoy se entra con correo, GitHub o LinkedIn. Falta Google, que es la cuenta que casi todos tienen.
+- [ ] Crear el cliente OAuth en Google Cloud (pantalla de consentimiento, dominios autorizados y la dirección de regreso de Supabase) y activar Google como proveedor en Supabase.
+- [ ] Backend: agregar `google` a los proveedores permitidos (`OAUTH_PROVIDERS` y `AUTHORIZE_KEYS` en `auth.routes.ts`) y guardarlo como `users.provider = 'google'`.
+- [ ] Botón "Continuar con Google" en login, registro y en la ventana de acceso (`AuthModal`), con su ícono.
+- [ ] La foto de Google se copia a nuestro almacenamiento como las de GitHub y LinkedIn (sus enlaces también vencen).
+- [ ] Cuentas con el mismo correo en distintos proveedores: que no se dupliquen ni se confundan.
+- [ ] El admin muestra "Google" en "Registro con" (tabla de Usuarios, filtro y desglose).
+- [ ] Medirlo: el registro y el inicio de sesión con Google llegan a la analítica con su método (`method: google`).
+- [ ] Pruebas, incluido el regreso del proveedor y la cuenta nueva contra la existente.
+
+### X. Pixel de Meta y su API de conversiones — P3 · M
+Para medir y optimizar anuncios en Facebook e Instagram. "API de tracking" lo entendí como el Pixel en el navegador **más** la API de conversiones desde el servidor (la que no se pierde con los bloqueadores).
+- [ ] **Decisión tuya (cookies):** el Pixel usa cookies de publicidad. Lo normal es no cargarlo hasta que la persona acepte, lo que obliga a hacer el aviso de cookies que dejamos para después. Decidir si el aviso entra con esto.
+- [ ] Pixel base en la comunidad (no en el admin) con el ID en una variable de entorno, apagado en navegadores con `?notrack=1`.
+- [ ] Mapa de eventos, reusando los de la analítica propia: `PageView`, `ViewContent` (detalle de una vacante), `Lead` o `InitiateCheckout` (empezar a postular), `CompleteRegistration` (registro) y un evento propio para perfil completo.
+- [ ] API de conversiones desde el backend con el mismo `event_id` que el navegador, para que Meta no cuente dos veces el mismo evento.
+- [ ] Datos de la persona (correo) solo con consentimiento y siempre cifrados (hash) antes de salir.
+- [ ] Un interruptor para apagarlo todo sin desplegar.
+- [ ] Revisar con el "Test Events" de Meta que cada evento llega una sola vez, y documentarlo.
+- [ ] Pruebas de que no se manda nada sin consentimiento ni en cuentas del equipo o de prueba.
+
+### Y. Compartir vacantes y discusiones con OG bien hecho — P2 · M
+Que al pegar un enlace de AvoTalent en WhatsApp, LinkedIn, X o Facebook salga una tarjeta bonita y correcta. Hoy las vacantes tienen una tarjeta básica y las discusiones **no tienen ninguna** (la página de una publicación se arma en el navegador y las redes no la ven).
+- [ ] Discusiones: que la dirección de cada publicación tenga su propia tarjeta (título, resumen, autor y portada), con la misma técnica que ya usan las vacantes (parte de servidor).
+- [ ] Vacantes: mejorar la tarjeta que ya hay (empresa, puesto, modalidad y nivel) y pasarla a imagen grande.
+- [ ] Imagen de la tarjeta (1200x630) generada para cada vacante y cada discusión, con la marca de AvoTalent; con imagen de respaldo cuando no hay portada ni logo.
+- [ ] Etiquetas completas: `og:title`, `og:description`, `og:image` (con dirección absoluta), `og:url`, `og:type`, tarjeta grande de X y dirección canónica.
+- [ ] Qué sale cuando la vacante ya venció o no existe, y que **nunca** salga un correo, teléfono ni dato de contacto en la tarjeta.
+- [ ] Botones de compartir en vacantes y discusiones: copiar enlace, WhatsApp, LinkedIn, X, Facebook y el menú de compartir del celular.
+- [ ] El enlace compartido lleva su origen (`utm_source=compartido` y el medio) para medir cuánto trae compartir.
+- [ ] Probar en el depurador de Facebook, el inspector de LinkedIn y WhatsApp, y dejar una lista de revisión.
 
 ---
 
