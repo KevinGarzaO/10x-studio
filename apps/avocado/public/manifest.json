@@ -1,6 +1,6 @@
 {
-  "name": "AvoTalent Admin",
-  "short_name": "Admin",
+  "name": "AvoTalent Telemetry",
+  "short_name": "Telemetry",
   "description": "Panel de administración de AvoTalent",
   "start_url": "/",
   "display": "standalone",

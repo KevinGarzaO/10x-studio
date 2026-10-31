@@ -9,7 +9,7 @@ export const viewport: Viewport = {
 }
 
 export const metadata: Metadata = {
-  title: 'AvoTalent Admin',
+  title: 'AvoTalent Telemetry',
   description: 'Panel de administración de AvoTalent',
   manifest: '/manifest.json',
   icons: { 
@@ -19,7 +19,7 @@ export const metadata: Metadata = {
   appleWebApp: {
     capable: true,
     statusBarStyle: 'default',
-    title: 'AvoTalent Admin',
+    title: 'AvoTalent Telemetry',
   }
 }
 

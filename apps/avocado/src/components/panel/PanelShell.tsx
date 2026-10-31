@@ -130,7 +130,7 @@ export function PanelShell({ children }: { children: React.ReactNode }) {
       <aside className={`panel-side${menuOpen ? ' open' : ''}`}>
         <Link href="/panel" className="panel-brand">
           <img src="/icon-192.png" alt="" width={32} height={32} />
-          <span>Avo<em>Talent</em> <small>Admin</small></span>
+          <span>Avo<em>Talent</em> <small>Telemetry</small></span>
         </Link>
         <nav className="panel-nav" aria-label="Secciones del panel">
           {NAV_GROUPS.map(group => {
@@ -165,7 +165,7 @@ export function PanelShell({ children }: { children: React.ReactNode }) {
           </button>
           <Link href="/panel" className="panel-top-brand">
             <img src="/icon-192.png" alt="" width={30} height={30} />
-            <span>Avo<em>Talent</em> <small>Admin</small></span>
+            <span>Avo<em>Talent</em> <small>Telemetry</small></span>
           </Link>
           <span className="panel-top-title">{activeItem ? `${activeGroup?.label} · ${activeItem.label}` : 'Panel'}</span>
           <AccountMenu />
