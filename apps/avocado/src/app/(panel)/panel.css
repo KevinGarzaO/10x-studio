@@ -249,3 +249,21 @@
   .panel-fields { grid-template-columns: 1fr; }
   .panel-timeline li { grid-template-columns: 96px 12px 1fr; }
 }
+
+/* La distinción de personas: entradas -> personas -> activas, y nuevas / recurrentes / cuenta */
+.panel-seg-flow { display: flex; align-items: stretch; gap: 10px; flex-wrap: wrap; margin-bottom: 18px; }
+.panel-seg-flow .panel-seg-tile { flex: 1 1 160px; }
+.panel-seg-arrow { align-self: center; color: #94a3b8; font-size: 20px; }
+.panel-seg-groups { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 18px; }
+.panel-seg-groups h3 { margin: 0 0 8px; font-size: 13px; font-weight: 700; }
+.panel-seg-groups h3 small { font-weight: 500; color: var(--p-muted); margin-left: 6px; }
+.panel-seg-row { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+.panel-seg-tile { display: flex; flex-direction: column; gap: 3px; padding: 11px 13px; border: 1px solid var(--p-line); border-radius: 12px; background: #fff; min-width: 0; }
+.panel-seg-tile strong { font-size: 24px; letter-spacing: -.02em; line-height: 1.1; }
+.panel-seg-label { font-size: 11px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--p-muted); }
+.panel-seg-sub { font-size: 12px; color: var(--p-muted); line-height: 1.35; }
+.panel-seg-tile.good { background: #ecfdf5; border-color: #a7f3d0; }
+.panel-seg-tile.good strong { color: #047857; }
+.panel-seg-tile.muted { background: #f8fafc; }
+.panel-seg-pair { font-size: 12px; }
+@media (max-width: 640px) { .panel-seg-row { grid-template-columns: 1fr; } .panel-seg-arrow { display: none; } }

@@ -2,8 +2,9 @@
 
 import { useState } from 'react'
 import { DataTable } from '@/components/panel/DataTable'
-import { Card, Empty, ErrorBox, fmtNum, fmtPct, InlineBar, Loading, PageHeader, PeriodPicker, usePanelData } from '@/components/panel/ui'
+import { Card, Empty, ErrorBox, fmtNum, InlineBar, Loading, PageHeader, PeriodPicker, usePanelData } from '@/components/panel/ui'
 import { TrafficNotReady } from '@/components/panel/traffic'
+import { SegmentSummary, SegmentTable, type SegmentCounts } from '@/components/panel/segments'
 
 interface Pages {
   ready: boolean
@@ -12,29 +13,41 @@ interface Pages {
 
 interface Landing {
   ready: boolean
-  landingPages?: { entry_path: string; sessions: number; active_users: number; engagement_rate: number | null; conversions: number; conversion_rate: number | null }[]
+  trackingSince?: string | null
+  partial?: boolean
+  groups?: Record<string, SegmentCounts[]>
 }
 
 export default function PaginasPage() {
   const [days, setDays] = useState(30)
   const pages = usePanelData<Pages>(`/api/admin/analytics/web/pages?days=${days}`, { keepPrevious: true })
-  const landing = usePanelData<Landing>(`/api/admin/analytics/web?days=${days}`, { keepPrevious: true })
+  const landing = usePanelData<Landing>(`/api/admin/analytics/web/segments?list=all,landing&days=${days}`, { keepPrevious: true })
   const error = pages.error ?? landing.error
   const rows = pages.data?.pages ?? []
   const maxViews = Math.max(1, ...rows.map(row => row.views))
+  const groups = landing.data?.groups
 
   return (
     <>
-      <PageHeader title="Páginas" subtitle="Cada página que se ve, por dónde empiezan las sesiones y por dónde terminan. Las de vacantes son el SEO programático.">
+      <PageHeader title="Páginas" subtitle="Por dónde empiezan las sesiones y cada página que se ve. Las de vacantes son el SEO programático. En las páginas de entrada, las personas nuevas y las recurrentes, las activas y las que solo visitaron.">
         <PeriodPicker days={days} onChange={setDays} />
       </PageHeader>
 
       {error && <ErrorBox message={error} onRetry={() => { pages.reload(); landing.reload() }} />}
-      {pages.loading && !pages.data && <Loading />}
-      {pages.data && !pages.data.ready && <TrafficNotReady migration="web-analytics-detail-migration.sql" />}
+      {landing.loading && !landing.data && <Loading />}
+      {landing.data && !landing.data.ready && <TrafficNotReady migration="web-analytics-segments-migration.sql" />}
+
+      {landing.data?.ready && groups && (
+        <>
+          {groups.all?.[0] && <SegmentSummary segments={groups.all[0]} trackingSince={landing.data.trackingSince} partial={landing.data.partial} />}
+          <Card title="Páginas de entrada" hint="Cómo rinde cada página como primera parada">
+            <SegmentTable rows={groups.landing ?? []} labelHeader="Página de entrada" searchLabel="Buscar página de entrada" labelRender={label => <code>{label}</code>} />
+          </Card>
+        </>
+      )}
 
       {pages.data?.ready && (
-        <Card title="Todas las páginas vistas" hint="Vistas, sesiones y personas; cuántas sesiones entraron y salieron por ahí">
+        <Card title="Todas las páginas vistas" hint="Vistas de página (no personas): cuántas sesiones entraron y salieron por ahí">
           {rows.length === 0 ? <Empty>Aún no hay páginas vistas en este periodo.</Empty> : (
             <DataTable
               rows={rows}
@@ -50,30 +63,6 @@ export default function PaginasPage() {
                   <td className="num">{fmtNum(row.people)}</td>
                   <td className="num">{fmtNum(row.entries)}</td>
                   <td className="num">{fmtNum(row.exits)}</td>
-                </tr>
-              )}
-            />
-          )}
-        </Card>
-      )}
-
-      {landing.data?.ready && (
-        <Card title="Páginas de entrada" hint="Cómo rinde cada página como primera parada: engagement y conversión">
-          {!landing.data.landingPages || landing.data.landingPages.length === 0 ? <Empty>Aún no hay visitas en este periodo.</Empty> : (
-            <DataTable
-              rows={landing.data.landingPages}
-              rowKey={row => row.entry_path}
-              searchText={row => row.entry_path}
-              searchLabel="Buscar página de entrada"
-              head={<tr><th>Página</th><th className="num">Sesiones</th><th className="num">Activos</th><th className="num">Engagement</th><th className="num">Conversiones</th><th className="num">Conversión</th></tr>}
-              renderRow={row => (
-                <tr>
-                  <td><code>{row.entry_path}</code></td>
-                  <td className="num">{fmtNum(row.sessions)}</td>
-                  <td className="num">{fmtNum(row.active_users)}</td>
-                  <td className="num">{fmtPct(row.engagement_rate)}</td>
-                  <td className="num">{fmtNum(row.conversions)}</td>
-                  <td className="num">{fmtPct(row.conversion_rate)}</td>
                 </tr>
               )}
             />

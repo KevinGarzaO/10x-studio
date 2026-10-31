@@ -12,7 +12,7 @@ import { PGlite } from '@electric-sql/pglite'
 const sql = fs.readFileSync(path.join(__dirname, '../../sql/web-analytics-migration.sql'), 'utf8')
 const detailSql = fs.readFileSync(path.join(__dirname, '../../sql/web-analytics-detail-migration.sql'), 'utf8')
 const summarySql = fs.readFileSync(path.join(__dirname, '../../sql/web-analytics-summary-migration.sql'), 'utf8')
-const activePeopleSql = fs.readFileSync(path.join(__dirname, '../../sql/web-analytics-active-people-migration.sql'), 'utf8')
+const segmentsSql = fs.readFileSync(path.join(__dirname, '../../sql/web-analytics-segments-migration.sql'), 'utf8')
 const uuid = (n: number) => `00000000-0000-4000-8000-${String(n).padStart(12, '0')}`
 const S = (n: number) => uuid(n)
 
@@ -39,8 +39,8 @@ describe('web-analytics-migration.sql (Postgres real)', () => {
     await c.query(detailSql)
     await c.query(summarySql)
     await c.query(summarySql)
-    await c.query(activePeopleSql)
-    await c.query(activePeopleSql)
+    await c.query(segmentsSql)
+    await c.query(segmentsSql)
   }, 60000)
 
 
@@ -420,83 +420,150 @@ describe('web-analytics-migration.sql (Postgres real)', () => {
       assert.deepStrictEqual(row, { a: false, b: true })
     })
 
-    // ---------- vacantes en personas activas ----------
-    it('vacantes: solo cuentan las personas ACTIVAS, una vez por vacante, aunque abran o pulsen varias veces', async () => {
+    // ---------- LA distinción: nuevas / recurrentes, activas / solo visita, registradas / anónimas ----------
+    const seg = async (group: string, from = "now() - interval '7 days'") =>
+      q(`SELECT * FROM analytics_segments(${from}, now() + interval '1 minute', $1)`, [group])
+
+    it('segmentos: separa nuevas de recurrentes y, dentro de cada una, activas de solo visita', async () => {
       await c.query(`DELETE FROM analytics_events; DELETE FROM analytics_page_views; DELETE FROM analytics_sessions; DELETE FROM users;`)
-      const mk = (n: number, client: string, engaged: boolean) => c.query(`INSERT INTO analytics_sessions (session_id, client_id, entry_path, is_engaged) VALUES ($1,$2,'/',$3)`, [S(n), client, engaged])
-      const ev = (n: number, name: string, slug: string | null) => c.query(`INSERT INTO analytics_events (session_id, event_name, event_params) VALUES ($1,$2,$3::jsonb)`, [S(n), name, JSON.stringify(slug ? { slug } : {})])
-      await mk(61, 'vac-ana', true); await mk(62, 'vac-beto', true); await mk(63, 'vac-rebote', false)
-      // ana abre dos veces la vacante A, y pulsa Postularse dos veces
-      await ev(61, 'click_view_job_detail', 'vac-a'); await ev(61, 'click_view_job_detail', 'vac-a')
-      await ev(61, 'click_start_apply', 'vac-a'); await ev(61, 'click_start_apply', 'vac-a')
-      // beto abre A y B, y no postula
-      await ev(62, 'click_view_job_detail', 'vac-a'); await ev(62, 'click_view_job_detail', 'vac-b')
-      // el rebote (sesión sin actividad) abre A y B: NO cuenta
-      await ev(63, 'click_view_job_detail', 'vac-a'); await ev(63, 'click_view_job_detail', 'vac-b')
-      // un evento sin vacante y otro tipo de evento no cuentan
-      await ev(61, 'click_view_job_detail', null); await ev(61, 'scroll', 'vac-a')
-      const rows = await q(`SELECT * FROM analytics_vacancy_people(now() - interval '1 day', now() + interval '1 minute')`)
-      assert.deepStrictEqual(rows.map((r: any) => [r.slug, r.viewers, r.applicants]), [['vac-a', 2, 1], ['vac-b', 1, 0]])
+      const mk = (n: number, client: string, daysAgo: number, engaged: boolean, o: Record<string, any> = {}) =>
+        c.query(
+          `INSERT INTO analytics_sessions (session_id, client_id, user_id, entry_path, utm_source, utm_medium, utm_campaign, utm_content, country, language, is_engaged, created_at)
+           VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11, now() - ($12 || ' days')::interval)`,
+          [S(n), client, o.user ?? null, o.path ?? '/', o.source ?? null, o.medium ?? null, o.campaign ?? null, o.content ?? null, o.country ?? 'MX', o.language ?? 'es-MX', engaged, String(daysAgo)],
+        )
+      // Periodo: últimos 7 días.
+      await mk(81, 'sg-nueva-activa', 2, true)
+      await mk(82, 'sg-nueva-visita', 1, false)
+      await mk(83, 'sg-nueva-visita2', 1, false)
+      await mk(84, 'sg-rec-activa', 30, false)
+      await mk(85, 'sg-rec-activa', 1, true)
+      await mk(86, 'sg-rec-visita', 40, true)
+      await mk(87, 'sg-rec-visita', 1, false)
+      const [all] = await seg('all')
+      assert.strictEqual(all.grp, 'Todo el sitio')
+      assert.strictEqual(all.visits, 5, 'solo las sesiones DEL periodo')
+      assert.strictEqual(all.people, 5)
+      assert.deepStrictEqual([all.new_people, all.new_active], [3, 1])
+      assert.deepStrictEqual([all.returning_people, all.returning_active], [2, 1])
+      assert.strictEqual(all.active, 2)
+      // nueva = nueva activa + nueva solo visita; ninguna persona se cuenta dos veces
+      assert.strictEqual(all.new_people + all.returning_people, all.people)
     })
 
-    it('vacantes: los totales son personas distintas en todo el periodo, no la suma de las vacantes', async () => {
-      const [row] = await q(`SELECT * FROM analytics_vacancy_totals(now() - interval '1 day', now() + interval '1 minute')`)
-      // ana y beto abrieron alguna vacante (2 personas; beto abrió dos pero cuenta una vez); solo ana postuló.
-      assert.deepStrictEqual([row.viewers, row.applicants, row.vacancies], [2, 1, 2])
-      assert.ok(row.tracking_since)
+    it('segmentos: registradas vs anónimas, y la conversión se mide sobre las NUEVAS ACTIVAS', async () => {
+      // una nueva activa que se registra en el periodo
+      const nueva = uuid(801)
+      await c.query(`INSERT INTO users (id, created_at) VALUES ($1, now() - interval '1 day')`, [nueva])
+      await c.query(`UPDATE analytics_sessions SET user_id = $1 WHERE client_id = 'sg-nueva-activa'`, [nueva])
+      // una recurrente que se registra en el periodo: NO entra en la conversión
+      const rec = uuid(802)
+      await c.query(`INSERT INTO users (id, created_at) VALUES ($1, now() - interval '1 day')`, [rec])
+      await c.query(`UPDATE analytics_sessions SET user_id = $1 WHERE client_id = 'sg-rec-activa'`, [rec])
+      const [all] = await seg('all')
+      assert.deepStrictEqual([all.registered, all.registered_active], [2, 2])
+      assert.deepStrictEqual([all.anonymous, all.anonymous_active], [3, 0])
+      assert.strictEqual(all.registered_new, 1, 'solo la nueva que se registró')
+      assert.strictEqual(all.registered + all.anonymous, all.people)
     })
 
-    it('vacantes: lo que pasó fuera del periodo no cuenta', async () => {
-      const [row] = await q(`SELECT * FROM analytics_vacancy_totals(now() + interval '1 hour', now() + interval '2 hours')`)
-      assert.deepStrictEqual([row.viewers, row.applicants, row.vacancies], [0, 0, 0])
-    })
-
-    it('vacantes: nadie del equipo cuenta como persona que abrió una vacante', async () => {
-      const team = uuid(710)
-      await c.query(`INSERT INTO users (id, user_kind) VALUES ($1, 'superadmin')`, [team])
-      await c.query(`INSERT INTO analytics_sessions (session_id, client_id, user_id, entry_path, is_engaged) VALUES ($1,'vac-team',$2,'/',true)`, [S(64), team])
-      await c.query(`INSERT INTO analytics_events (session_id, event_name, event_params) VALUES ($1,'click_view_job_detail','{"slug":"vac-a"}')`, [S(64)])
-      const [row] = await q(`SELECT * FROM analytics_vacancy_totals(now() - interval '1 day', now() + interval '1 minute')`)
-      assert.strictEqual(row.viewers, 2)
-    })
-
-    it('vacantes: las funciones no se pueden llamar con la llave pública', async () => {
-      const row = (await q(`SELECT has_function_privilege('anon','analytics_vacancy_people(timestamptz,timestamptz,int)','EXECUTE') a, has_function_privilege('service_role','analytics_vacancy_totals(timestamptz,timestamptz)','EXECUTE') b`))[0]
-      assert.deepStrictEqual(row, { a: false, b: true })
-    })
-
-    // ---------- visitas activas para Adquisición y LinkedIn ----------
-    it('visitas activas: una por sesión activa, con su origen y si la persona es nueva', async () => {
-      await c.query(`DELETE FROM analytics_events; DELETE FROM analytics_page_views; DELETE FROM analytics_sessions; DELETE FROM users;`)
-      const mk = (n: number, client: string, daysAgo: number, engaged: boolean, source: string | null = null) =>
-        c.query(`INSERT INTO analytics_sessions (session_id, client_id, entry_path, utm_source, utm_content, is_engaged, created_at) VALUES ($1,$2,'/vacantes/x',$3,'vac-x',$4, now() - ($5 || ' days')::interval)`, [S(n), client, source, engaged, String(daysAgo)])
-      await mk(71, 'av-nuevo', 1, true, 'linkedin')
-      await mk(72, 'av-rebote', 1, false, 'linkedin')
-      await mk(73, 'av-recurrente', 30, false)
-      await mk(74, 'av-recurrente', 1, true, 'linkedin')
-      const rows = await q(`SELECT * FROM analytics_active_visits(now() - interval '7 days', now() + interval '1 minute')`)
-      assert.strictEqual(rows.length, 2, 'el rebote no es una visita')
-      const nuevo = rows.find((r: any) => r.person_key === 'av-nuevo')
-      const recurrente = rows.find((r: any) => r.person_key === 'av-recurrente')
-      assert.strictEqual(nuevo.is_new, true)
-      assert.strictEqual(recurrente.is_new, false)
-      assert.deepStrictEqual([nuevo.utm_source, nuevo.utm_content, nuevo.entry_path], ['linkedin', 'vac-x', '/vacantes/x'])
-    })
-
-    it('visitas activas: una cuenta anterior a la medición es recurrente y el equipo no cuenta', async () => {
-      const old = uuid(720)
+    it('segmentos: una cuenta anterior a la medición es recurrente, y el equipo no cuenta', async () => {
+      const old = uuid(803)
       await c.query(`INSERT INTO users (id, created_at) VALUES ($1, now() - interval '90 days')`, [old])
-      await c.query(`INSERT INTO analytics_sessions (session_id, client_id, user_id, entry_path, is_engaged) VALUES ($1,'av-vieja',$2,'/',true)`, [S(75), old])
-      const team = uuid(721)
+      await c.query(`INSERT INTO analytics_sessions (session_id, client_id, user_id, entry_path, is_engaged) VALUES ($1,'sg-vieja',$2,'/',true)`, [S(88), old])
+      const team = uuid(804)
       await c.query(`INSERT INTO users (id, user_kind) VALUES ($1, 'superadmin')`, [team])
-      await c.query(`INSERT INTO analytics_sessions (session_id, client_id, user_id, entry_path, is_engaged) VALUES ($1,'av-team',$2,'/',true)`, [S(76), team])
-      const rows = await q(`SELECT * FROM analytics_active_visits(now() - interval '7 days', now() + interval '1 minute')`)
-      assert.strictEqual(rows.find((r: any) => r.person_key === old)?.is_new, false)
-      assert.ok(!rows.some((r: any) => r.person_key === team))
+      await c.query(`INSERT INTO analytics_sessions (session_id, client_id, user_id, entry_path, is_engaged) VALUES ($1,'sg-team',$2,'/',true)`, [S(89), team])
+      const [all] = await seg('all')
+      assert.deepStrictEqual([all.people, all.returning_people, all.returning_active], [6, 3, 2])
     })
 
-    it('visitas activas: la función no se puede llamar con la llave pública', async () => {
-      const row = (await q(`SELECT has_function_privilege('anon','analytics_active_visits(timestamptz,timestamptz)','EXECUTE') a, has_function_privilege('service_role','analytics_active_visits(timestamptz,timestamptz)','EXECUTE') b`))[0]
-      assert.deepStrictEqual(row, { a: false, b: true })
+    it('segmentos: por canal, con el origen, el medio y la campaña, y la misma distinción en cada fila', async () => {
+      await c.query(`DELETE FROM analytics_sessions WHERE client_id IN ('sg-vieja', 'sg-team')`)
+      await c.query(`UPDATE analytics_sessions SET utm_source = 'linkedin', utm_medium = 'social', utm_campaign = 'vacante-auto', utm_content = 'vac-1' WHERE client_id IN ('sg-nueva-activa', 'sg-nueva-visita')`)
+      const rows = await seg('channel')
+      const linkedin = rows.find((r: any) => r.grp === 'linkedin / social / vacante-auto')
+      assert.deepStrictEqual([linkedin.people, linkedin.new_people, linkedin.new_active, linkedin.registered_new], [2, 2, 1, 1])
+      const direct = rows.find((r: any) => r.grp === '(direct) / (none) / (not set)')
+      assert.ok(direct)
+      // por canal una persona puede contarse en dos canales: los grupos no suman el total
+      const [all] = await seg('all')
+      assert.ok(rows.reduce((sum: number, r: any) => sum + r.people, 0) >= all.people)
+    })
+
+    it('segmentos: por publicación de LinkedIn solo cuentan las visitas de LinkedIn, agrupadas por la vacante', async () => {
+      const rows = await seg('linkedin_post')
+      assert.deepStrictEqual(rows.map((r: any) => [r.grp, r.people, r.new_active]), [['vac-1', 2, 1]])
+      const [linkedin] = await seg('linkedin')
+      assert.deepStrictEqual([linkedin.grp, linkedin.people], ['LinkedIn', 2])
+    })
+
+    it('segmentos: por página de entrada, país, idioma y dispositivo', async () => {
+      for (const group of ['landing', 'country', 'language', 'device_category', 'operating_system', 'browser_version', 'screen_resolution', 'timezone', 'region', 'city', 'referrer_host', 'exit_path']) {
+        const rows = await seg(group)
+        assert.ok(Array.isArray(rows), group)
+      }
+      const country = await seg('country')
+      assert.strictEqual(country[0].grp, 'MX')
+      const language = await seg('language')
+      assert.strictEqual(language[0].grp, 'es-MX')
+    })
+
+    it('segmentos: un grupo que no está en la lista cerrada no devuelve nada (no se arma SQL con lo que llegue)', async () => {
+      assert.strictEqual((await seg("user_id; DROP TABLE users")).length, 0)
+      assert.strictEqual((await seg('client_id')).length, 0)
+    })
+
+    it('segmentos: el periodo manda: lo de antes no cuenta', async () => {
+      const rows = await q(`SELECT * FROM analytics_segments(now() + interval '1 hour', now() + interval '2 hours', 'all')`)
+      assert.strictEqual(rows.length, 0)
+    })
+
+    // ---------- vacantes con la misma distinción ----------
+    it('vacantes: personas que ABRIERON cada vacante (activas o solo visita), nuevas, recurrentes, registradas y anónimas; una vez por vacante', async () => {
+      await c.query(`DELETE FROM analytics_events; DELETE FROM analytics_page_views; DELETE FROM analytics_sessions; DELETE FROM users;`)
+      const mk = (n: number, client: string, daysAgo: number, engaged: boolean, user: string | null = null) =>
+        c.query(`INSERT INTO analytics_sessions (session_id, client_id, user_id, entry_path, is_engaged, created_at) VALUES ($1,$2,$3,'/',$4, now() - ($5 || ' days')::interval)`, [S(n), client, user, engaged, String(daysAgo)])
+      const ev = (n: number, name: string, slug: string | null) => c.query(`INSERT INTO analytics_events (session_id, event_name, event_params) VALUES ($1,$2,$3::jsonb)`, [S(n), name, JSON.stringify(slug ? { slug } : {})])
+      const cuenta = uuid(810)
+      await c.query(`INSERT INTO users (id, created_at) VALUES ($1, now() - interval '60 days')`, [cuenta])
+      await mk(91, 'vs-nueva-activa', 1, true)
+      await mk(92, 'vs-nueva-visita', 1, false)
+      await mk(93, 'vs-recurrente', 30, false)
+      await mk(94, 'vs-recurrente', 1, true)
+      await mk(95, 'vs-cuenta', 1, true, cuenta)
+      // A: abren las 5 personas (la activa nueva dos veces); B: abre la cuenta y la visita nueva; postulan la nueva activa y la cuenta
+      for (const n of [91, 91, 92, 94, 95]) await ev(n, 'click_view_job_detail', 'vac-a')
+      for (const n of [95, 92]) await ev(n, 'click_view_job_detail', 'vac-b')
+      for (const n of [91, 95]) await ev(n, 'click_start_apply', 'vac-a')
+      await ev(91, 'click_view_job_detail', null)
+      const rows = await q(`SELECT * FROM analytics_vacancy_segments(now() - interval '7 days', now() + interval '1 minute')`)
+      const total = rows.find((r: any) => r.slug === null)
+      const a = rows.find((r: any) => r.slug === 'vac-a')
+      const b = rows.find((r: any) => r.slug === 'vac-b')
+      // vac-a: 4 personas distintas abrieron (la nueva activa dos veces cuenta una)
+      assert.deepStrictEqual([a.viewers, a.viewers_active, a.viewers_new, a.viewers_new_active, a.viewers_returning], [4, 3, 2, 1, 2])
+      assert.deepStrictEqual([a.viewers_registered, a.viewers_anonymous], [1, 3])
+      assert.deepStrictEqual([a.applicants, a.applicants_active], [2, 2])
+      assert.deepStrictEqual([b.viewers, b.viewers_new, b.viewers_new_active, b.viewers_registered], [2, 1, 0, 1])
+      // el total son personas distintas, no la suma de las vacantes (95 y 92 abrieron las dos)
+      assert.strictEqual(total.viewers, 4)
+      assert.strictEqual(rows[0].slug, null, 'la fila del total va primero')
+    })
+
+    it('vacantes: nadie del equipo cuenta, y lo de fuera del periodo tampoco', async () => {
+      const team = uuid(811)
+      await c.query(`INSERT INTO users (id, user_kind) VALUES ($1, 'superadmin')`, [team])
+      await c.query(`INSERT INTO analytics_sessions (session_id, client_id, user_id, entry_path, is_engaged) VALUES ($1,'vs-team',$2,'/',true)`, [S(96), team])
+      await c.query(`INSERT INTO analytics_events (session_id, event_name, event_params) VALUES ($1,'click_view_job_detail','{"slug":"vac-a"}')`, [S(96)])
+      const rows = await q(`SELECT * FROM analytics_vacancy_segments(now() - interval '7 days', now() + interval '1 minute')`)
+      assert.strictEqual(rows.find((r: any) => r.slug === 'vac-a').viewers, 4)
+      const none = await q(`SELECT * FROM analytics_vacancy_segments(now() + interval '1 hour', now() + interval '2 hours')`)
+      assert.strictEqual(none.length, 0)
+    })
+
+    it('segmentos: las funciones no se pueden llamar con la llave pública', async () => {
+      const row = (await q(`SELECT has_function_privilege('anon','analytics_segments(timestamptz,timestamptz,text,int)','EXECUTE') a, has_function_privilege('service_role','analytics_segments(timestamptz,timestamptz,text,int)','EXECUTE') b, has_function_privilege('authenticated','analytics_vacancy_segments(timestamptz,timestamptz,int)','EXECUTE') c`))[0]
+      assert.deepStrictEqual(row, { a: false, b: true, c: false })
     })
 })

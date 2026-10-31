@@ -274,158 +274,204 @@ describe('GET /analytics/retention', () => {
 })
 
 
-describe('GET /analytics/overview: active visitors, new and returning', () => {
-  const summary = (patch: Record<string, unknown> = {}) => ({
-    tracking_since: new Date(Date.now() - 60 * 86400000).toISOString(), active: 40, new_active: 25, returning_active: 15, registered_new: 5,
-    linkedin_active: 12, sessions: 90, engaged_sessions: 55, ...patch,
+describe('LA distinción de personas en el panel (nuevas/recurrentes, activas/solo visita, registradas/anónimas)', () => {
+  /** Una fila de analytics_segments como la devuelve la base. */
+  const sql = (grp: string, patch: Record<string, unknown> = {}) => ({
+    grp, visits: 120, people: 60, new_people: 40, new_active: 25, returning_people: 20, returning_active: 15, registered: 12, registered_active: 12,
+    anonymous: 48, anonymous_active: 28, registered_new: 5, active: 40, ...patch,
+  })
+  const groups = (extra: Record<string, any[]> = {}) => async (name: string, args: any) => {
+    if (name === 'analytics_visitors_series') return { data: [], error: null }
+    if (name === 'analytics_segments') return { data: extra[args.p_group] ?? [sql(args.p_group === 'all' ? 'Todo el sitio' : args.p_group)], error: null }
+    return { data: null, error: { message: `function ${name} does not exist` } }
+  }
+
+  describe('overview', () => {
+    it('says the measurement is not ready (instead of zeros) when the SQL functions do not exist yet', async () => {
+      const res = await request(app()).get('/analytics/overview?days=7').expect(200)
+      expect(res.body.traffic).toEqual({ ready: false })
+      expect(res.body.totals).toBeDefined()
+    })
+
+    it('splits the people: new and returning, active and visit only, registered and anonymous, and measures conversion over the new ACTIVE ones', async () => {
+      rpcState.impl = groups()
+      const res = await request(app()).get('/analytics/overview?days=7').expect(200)
+
+      expect(res.body.traffic.ready).toBe(true)
+      expect(res.body.traffic.segments).toMatchObject({
+        visits: 120, people: 60, active: 40,
+        newPeople: 40, newActive: 25, newVisitOnly: 15,
+        returningPeople: 20, returningActive: 15, returningVisitOnly: 5,
+        registered: 12, anonymous: 48, registeredNew: 5,
+      })
+      // 5 registros de gente nueva entre 25 nuevas ACTIVAS = 20 %: no entre las 40 activas, ni entre las 40 nuevas, ni entre las visitas.
+      expect(res.body.traffic.segments.conversionPct).toBe(20)
+    })
+
+    it('compares with the previous period only if the measurement already existed then', async () => {
+      data.tables.analytics_sessions = [{ created_at: new Date(Date.now() - 60 * 86400000).toISOString() }]
+      rpcState.impl = async (name, args) => {
+        if (name === 'analytics_segments' && args.p_group === 'all' && new Date(args.p_to).getTime() < Date.now() - 86400000) return { data: [sql('Todo el sitio', { active: 20, new_active: 10 })], error: null }
+        return groups()(name, args)
+      }
+      const covered = (await request(app()).get('/analytics/overview?days=7').expect(200)).body.traffic
+      expect(covered.partial).toBe(false)
+      expect(covered.vs).toEqual({ active: 100, newActive: 150 })
+
+      data.tables.analytics_sessions = [{ created_at: new Date(Date.now() - 3 * 86400000).toISOString() }]
+      const recent = (await request(app()).get('/analytics/overview?days=7').expect(200)).body.traffic
+      expect(recent.partial).toBe(true)
+      expect(recent.vs).toEqual({ active: null, newActive: null })
+    })
+
+    it('asks for hours when the period is the last 24 hours, and fills the series with every bucket', async () => {
+      const calls: any[] = []
+      rpcState.impl = async (name, args) => { calls.push([name, args]); return groups()(name, args) }
+      const res = await request(app()).get('/analytics/overview?days=1').expect(200)
+      expect(calls.find(([name]) => name === 'analytics_visitors_series')![1].p_bucket).toBe('hour')
+      expect(res.body.traffic.series).toHaveLength(24)
+    })
+
+    it('nobody came: zeros are real zeros, and the conversion has no division by zero', async () => {
+      rpcState.impl = groups({ all: [] })
+      const res = await request(app()).get('/analytics/overview?days=7').expect(200)
+      expect(res.body.traffic.segments).toMatchObject({ people: 0, newActive: 0, conversionPct: null })
+    })
+
+    it('a real database error is a 500, not a silent zero', async () => {
+      rpcState.impl = async () => ({ data: null, error: { message: 'canceling statement due to statement timeout' } })
+      vi.spyOn(console, 'error').mockImplementation(() => {})
+      await request(app()).get('/analytics/overview?days=7').expect(500)
+    })
   })
 
-  it('says the measurement is not ready (instead of zeros) when the SQL functions do not exist yet', async () => {
-    const res = await request(app()).get('/analytics/overview?days=7').expect(200)
-    expect(res.body.traffic).toEqual({ ready: false })
-    // lo demás del resumen sigue respondiendo
-    expect(res.body.totals).toBeDefined()
+  describe('vacancies', () => {
+    const vac = (slug: string | null, patch: Record<string, unknown> = {}) => ({
+      slug, viewers: 20, viewers_active: 12, viewers_new: 14, viewers_new_active: 6, viewers_returning: 6, viewers_registered: 5, viewers_anonymous: 15, applicants: 5, applicants_active: 5, ...patch,
+    })
+
+    it('segments the people who opened each vacancy: registered vs anonymous, new vs returning, and of the new ones who are active', async () => {
+      data.tables.community_posts = [{ id: 'p1', slug: 'vac-1', title: 'Backend en Stripe', company: 'Stripe', role_category: 'backend' }]
+      data.tables.user_vacancy_history = [{ source_id: 'p1' }, { source_id: 'p1' }]
+      rpcState.impl = async (name) => (name === 'analytics_vacancy_segments' ? { data: [vac(null, { viewers: 30 }), vac('vac-1'), vac('vac-2', { viewers: 10, viewers_active: 4 })], error: null } : { data: null, error: { message: 'function does not exist' } })
+
+      const res = await request(app()).get('/analytics/vacancies?days=30').expect(200)
+
+      expect(res.body).toMatchObject({ ready: true, source: 'segments' })
+      expect(res.body.totals).toMatchObject({ viewers: 30, vacancies: 2, saved: 2 })
+      expect(res.body.top[0]).toMatchObject({
+        slug: 'vac-1', title: 'Backend en Stripe', viewers: 20, viewersActive: 12, viewersVisitOnly: 8,
+        viewersNew: 14, viewersNewActive: 6, viewersNewVisitOnly: 8, viewersReturning: 6, viewersRegistered: 5, viewersAnonymous: 15, applicants: 5, saved: 2,
+      })
+      // la tasa de postulación es de las personas ACTIVAS que abrieron: 5 de 12
+      expect(res.body.top[0].applyRatePct).toBe(41.7)
+      expect(res.body.top[1]).toMatchObject({ slug: 'vac-2', title: 'vac-2', saved: 0 })
+    })
+
+    it('says the period is incomplete when the measurement started after it began', async () => {
+      data.tables.analytics_sessions = [{ created_at: new Date(Date.now() - 2 * 86400000).toISOString() }]
+      rpcState.impl = async (name) => (name === 'analytics_vacancy_segments' ? { data: [], error: null } : { data: null, error: { message: 'function does not exist' } })
+      const res = await request(app()).get('/analytics/vacancies?days=30').expect(200)
+      expect(res.body.partial).toBe(true)
+    })
+
+    it('falls back to the old per-browser count, saying so, when the SQL functions do not exist yet', async () => {
+      data.tables.vacancy_events = [{ vacancy_slug: 'vac-1', event: 'view', visitor_id: 'a' }]
+      const res = await request(app()).get('/analytics/vacancies?days=30').expect(200)
+      expect(res.body.source).toBe('legacy')
+    })
+
+    it('no one opened a vacancy yet: zeros and no division by zero', async () => {
+      rpcState.impl = async (name) => (name === 'analytics_vacancy_segments' ? { data: [], error: null } : { data: null, error: { message: 'function does not exist' } })
+      const res = await request(app()).get('/analytics/vacancies?days=30').expect(200)
+      expect(res.body.totals).toMatchObject({ viewers: 0, applicants: 0, applyRatePct: null })
+      expect(res.body.top).toEqual([])
+    })
+
+    it('a real database error is a 500, not a silent zero', async () => {
+      rpcState.impl = async () => ({ data: null, error: { message: 'canceling statement due to statement timeout' } })
+      vi.spyOn(console, 'error').mockImplementation(() => {})
+      await request(app()).get('/analytics/vacancies?days=30').expect(500)
+    })
   })
 
-  it('counts only active people, split in new and returning, and measures conversion over the NEW ones', async () => {
-    rpcState.impl = async (name) => (name === 'analytics_visitors_series' ? { data: [], error: null } : { data: [summary()], error: null })
-    const res = await request(app()).get('/analytics/overview?days=7').expect(200)
+  describe('acquisition', () => {
+    it('gives every channel and entry page the same distinction, and a funnel in people', async () => {
+      rpcState.impl = groups({
+        channel: [sql('linkedin / social / vacante-auto', { people: 30 }), sql('(direct) / (none) / (not set)', { people: 25 })],
+        landing: [sql('/vacantes/react')],
+      })
+      const res = await request(app()).get('/analytics/acquisition?days=30').expect(200)
 
-    expect(res.body.traffic).toMatchObject({ ready: true, active: 40, newActive: 25, returningActive: 15, registeredNew: 5, linkedinActive: 12, sessions: 90, bounces: 35 })
-    // 5 registros de gente nueva entre 25 nuevos activos = 20 %, no entre las 40 activas ni entre las 90 entradas.
-    expect(res.body.traffic.conversionPct).toBe(20)
+      expect(res.body.source).toBe('segments')
+      expect(res.body.channels[0]).toMatchObject({ label: 'linkedin / social / vacante-auto', people: 30, newPeople: 40, newActive: 25, newVisitOnly: 15, registeredNew: 5, conversionPct: 20 })
+      expect(res.body.landing[0].label).toBe('/vacantes/react')
+      expect(res.body.funnel.slice(0, 4)).toEqual([
+        { step: 'Personas que entraron', count: 60, pctOfPrevious: null },
+        { step: 'Activas (hicieron algo)', count: 40, pctOfPrevious: 66.7 },
+        { step: 'Nuevas activas', count: 25, pctOfPrevious: 62.5 },
+        { step: 'Se registraron (de las nuevas activas)', count: 5, pctOfPrevious: 20 },
+      ])
+    })
+
+    it('falls back to the old count, saying so, when the SQL function does not exist', async () => {
+      const res = await request(app()).get('/analytics/acquisition?days=30').expect(200)
+      expect(res.body.source).toBe('legacy')
+      expect(res.body.funnel[0].step).toBe('Visitantes')
+    })
+
+    it('a real database error is a 500, not a silent zero', async () => {
+      rpcState.impl = async () => ({ data: null, error: { message: 'canceling statement due to statement timeout' } })
+      vi.spyOn(console, 'error').mockImplementation(() => {})
+      await request(app()).get('/analytics/acquisition?days=30').expect(500)
+    })
   })
 
-  it('compares with the previous period only if the measurement already existed then', async () => {
-    rpcState.impl = async (name, args) => {
-      if (name === 'analytics_visitors_series') return { data: [], error: null }
-      const isPrevious = new Date(args.p_to).getTime() < Date.now() - 86400000
-      return { data: [summary(isPrevious ? { active: 20, new_active: 10 } : {})], error: null }
-    }
-    const covered = (await request(app()).get('/analytics/overview?days=7').expect(200)).body.traffic
-    expect(covered.partial).toBe(false)
-    expect(covered.vs).toEqual({ active: 100, newActive: 150 })
+  describe('linkedin', () => {
+    const post = (slug: string, role: string, company: string) => ({ vacancy_slug: slug, company, role_category: role, linkedin_post_id: `urn:${slug}`, status: 'published', published_at: new Date(Date.now() - 7200000).toISOString(), created_at: new Date(Date.now() - 7200000).toISOString() })
 
-    // la medición empezó hace 3 días: ni el periodo ni el anterior están completos
-    rpcState.impl = async (name) => (name === 'analytics_visitors_series' ? { data: [], error: null } : { data: [summary({ tracking_since: new Date(Date.now() - 3 * 86400000).toISOString() })], error: null })
-    const recent = (await request(app()).get('/analytics/overview?days=7').expect(200)).body.traffic
-    expect(recent.partial).toBe(true)
-    expect(recent.vs).toEqual({ active: null, newActive: null })
+    it('gives each post and the whole of LinkedIn the same distinction', async () => {
+      data.tables.linkedin_vacancy_posts = [post('vac-1', 'backend', 'Stripe'), post('vac-2', 'backend', 'Twilio')]
+      rpcState.impl = groups({
+        linkedin_post: [sql('vac-1', { people: 30, new_people: 20, new_active: 10, registered_new: 2 })],
+        linkedin: [sql('LinkedIn', { people: 55 })],
+      })
+      const res = await request(app()).get('/analytics/linkedin?days=30').expect(200)
+
+      expect(res.body.source).toBe('segments')
+      expect(res.body.posts.find((row: any) => row.slug === 'vac-1').segments).toMatchObject({ people: 30, newPeople: 20, newActive: 10, newVisitOnly: 10, registeredNew: 2, conversionPct: 20 })
+      // una publicación que nadie visitó sigue saliendo, en cero real
+      expect(res.body.posts.find((row: any) => row.slug === 'vac-2').segments).toMatchObject({ people: 0, newActive: 0, conversionPct: null })
+      expect(res.body.totals.segments.people).toBe(55)
+      // los grupos suman las personas de sus publicaciones y comparan por personas por publicación
+      expect(res.body.byRole[0]).toMatchObject({ key: 'backend', posts: 2, peoplePerPost: 15 })
+    })
+
+    it('falls back to the old count, saying so, when the SQL function does not exist', async () => {
+      const res = await request(app()).get('/analytics/linkedin?days=30').expect(200)
+      expect(res.body.source).toBe('legacy')
+    })
   })
 
-  it('fills the series with every day of the period, and zeros where nobody was active', async () => {
-    const today = new Date(Date.now() - 6 * 3600000).toISOString().slice(0, 10)
-    rpcState.impl = async (name) => (name === 'analytics_visitors_series' ? { data: [{ bucket: today, active: 7, new_active: 3 }], error: null } : { data: [summary()], error: null })
-    const res = await request(app()).get('/analytics/overview?days=7').expect(200)
+  describe('web segments (Tráfico web)', () => {
+    it('asks for several breakdowns at once, each with the distinction', async () => {
+      rpcState.impl = groups()
+      const res = await request(app()).get('/analytics/web/segments?list=language,device_category&days=7').expect(200)
+      expect(Object.keys(res.body.groups)).toEqual(['language', 'device_category'])
+      expect(res.body.groups.language[0]).toMatchObject({ newActive: 25, registeredNew: 5 })
+    })
 
-    expect(res.body.traffic.series).toHaveLength(7)
-    expect(res.body.traffic.series[6]).toEqual({ day: today, active: 7, newActive: 3 })
-    expect(res.body.traffic.series[0]).toMatchObject({ active: 0, newActive: 0 })
-  })
+    it('refuses a breakdown that is not on the closed list, without touching the database', async () => {
+      rpcState.impl = groups()
+      await request(app()).get('/analytics/web/segments?list=client_id').expect(400)
+      await request(app()).get('/analytics/web/segments?list=' + encodeURIComponent('language; DROP TABLE users')).expect(400)
+      await request(app()).get('/analytics/web/segments').expect(400)
+    })
 
-  it('asks for hours when the period is the last 24 hours', async () => {
-    const calls: any[] = []
-    rpcState.impl = async (name, args) => { calls.push([name, args]); return { data: name === 'analytics_visitors_series' ? [] : [summary()], error: null } }
-    await request(app()).get('/analytics/overview?days=1').expect(200)
-    expect(calls.find(([name]) => name === 'analytics_visitors_series')![1].p_bucket).toBe('hour')
-  })
-
-  it('a real database error is a 500, not a silent zero', async () => {
-    rpcState.impl = async () => ({ data: null, error: { message: 'canceling statement due to statement timeout' } })
-    vi.spyOn(console, 'error').mockImplementation(() => {})
-    await request(app()).get('/analytics/overview?days=7').expect(500)
-  })
-
-  it('has no one active yet: zeros are real zeros and the conversion has no division by zero', async () => {
-    rpcState.impl = async (name) => (name === 'analytics_visitors_series' ? { data: [], error: null } : { data: [summary({ active: 0, new_active: 0, returning_active: 0, registered_new: 0, linkedin_active: 0, sessions: 0, engaged_sessions: 0 })], error: null })
-    const res = await request(app()).get('/analytics/overview?days=7').expect(200)
-    expect(res.body.traffic).toMatchObject({ active: 0, newActive: 0, conversionPct: null, bounces: 0 })
-  })
-})
-
-describe('GET /analytics/vacancies: active people', () => {
-  const totals = (patch: Record<string, unknown> = {}) => ({ tracking_since: new Date(Date.now() - 60 * 86400000).toISOString(), viewers: 30, applicants: 6, vacancies: 4, ...patch })
-
-  it('counts active PEOPLE per vacancy (who opened it and who pressed Postularse), not views', async () => {
-    data.tables.community_posts = [{ id: 'p1', slug: 'vac-1', title: 'Backend en Stripe', company: 'Stripe', role_category: 'backend' }]
-    data.tables.user_vacancy_history = [{ source_id: 'p1' }, { source_id: 'p1' }]
-    rpcState.impl = async (name) => (name === 'analytics_vacancy_people'
-      ? { data: [{ slug: 'vac-1', viewers: 20, applicants: 5 }, { slug: 'vac-2', viewers: 10, applicants: 1 }], error: null }
-      : { data: [totals()], error: null })
-
-    const res = await request(app()).get('/analytics/vacancies?days=30').expect(200)
-
-    expect(res.body).toMatchObject({ ready: true, source: 'people', partial: false })
-    expect(res.body.totals).toMatchObject({ viewers: 30, applicants: 6, applyRatePct: 20, vacancies: 4, saved: 2 })
-    expect(res.body.top[0]).toMatchObject({ slug: 'vac-1', title: 'Backend en Stripe', viewers: 20, applicants: 5, applyRatePct: 25, saved: 2 })
-    // una vacante sin página conocida sigue saliendo, con su slug como título
-    expect(res.body.top[1]).toMatchObject({ slug: 'vac-2', title: 'vac-2', saved: 0 })
-  })
-
-  it('says the period is incomplete when the measurement started after it began', async () => {
-    rpcState.impl = async (name) => (name === 'analytics_vacancy_people' ? { data: [], error: null } : { data: [totals({ tracking_since: new Date(Date.now() - 2 * 86400000).toISOString() })], error: null })
-    const res = await request(app()).get('/analytics/vacancies?days=30').expect(200)
-    expect(res.body.partial).toBe(true)
-  })
-
-  it('falls back to the old per-browser count, saying so, when the SQL functions do not exist yet', async () => {
-    data.tables.vacancy_events = [{ vacancy_slug: 'vac-1', event: 'view', visitor_id: 'a' }]
-    const res = await request(app()).get('/analytics/vacancies?days=30').expect(200)
-    expect(res.body.source).toBe('legacy')
-    expect(res.body.totals.views).toBe(1)
-  })
-
-  it('a real database error is a 500, not a silent zero', async () => {
-    rpcState.impl = async () => ({ data: null, error: { message: 'canceling statement due to statement timeout' } })
-    vi.spyOn(console, 'error').mockImplementation(() => {})
-    await request(app()).get('/analytics/vacancies?days=30').expect(500)
-  })
-
-  it('no one active opened a vacancy yet: zeros and no division by zero', async () => {
-    rpcState.impl = async (name) => (name === 'analytics_vacancy_people' ? { data: [], error: null } : { data: [totals({ viewers: 0, applicants: 0, vacancies: 0 })], error: null })
-    const res = await request(app()).get('/analytics/vacancies?days=30').expect(200)
-    expect(res.body.totals).toMatchObject({ viewers: 0, applicants: 0, applyRatePct: null })
-    expect(res.body.top).toEqual([])
-  })
-})
-
-describe('GET /analytics/acquisition and /linkedin: active visitors', () => {
-  const row = (person: string, isNew: boolean, patch: Record<string, unknown> = {}) => ({
-    person_key: person, is_new: isNew, utm_source: 'linkedin', utm_medium: 'social', utm_campaign: 'vacante-auto', utm_content: 'vac-1', entry_path: '/vacantes/vac-1', created_at: new Date(Date.now() - 3600000).toISOString(), ...patch,
-  })
-
-  it('acquisition counts active people, splits the new ones and measures the funnel over them', async () => {
-    rpcState.impl = async () => ({ data: [row('n1', true), row('n2', true), row('r1', false), row('r1', false)], error: null })
-    const res = await request(app()).get('/analytics/acquisition?days=30').expect(200)
-
-    expect(res.body.active).toBe(true)
-    expect(res.body.funnel.slice(0, 2)).toEqual([
-      { step: 'Visitantes activos', count: 3, pctOfPrevious: null },
-      { step: 'Nuevos', count: 2, pctOfPrevious: 66.7 },
-    ])
-    expect(res.body.sources[0]).toMatchObject({ source: 'linkedin', visitors: 3, newVisitors: 2 })
-  })
-
-  it('acquisition falls back to the old per-browser count, saying so, when the SQL function does not exist', async () => {
-    const res = await request(app()).get('/analytics/acquisition?days=30').expect(200)
-    expect(res.body.active).toBe(false)
-    expect(res.body.funnel[0].step).toBe('Visitantes')
-  })
-
-  it('linkedin counts the active people that came through each post and says so', async () => {
-    data.tables.linkedin_vacancy_posts = [{ vacancy_slug: 'vac-1', company: 'Stripe', role_category: 'backend', linkedin_post_id: 'urn:1', status: 'published', published_at: new Date(Date.now() - 7200000).toISOString(), created_at: new Date(Date.now() - 7200000).toISOString() }]
-    rpcState.impl = async () => ({ data: [row('n1', true), row('n2', true), row('r1', false)], error: null })
-    const res = await request(app()).get('/analytics/linkedin?days=30').expect(200)
-
-    expect(res.body.active).toBe(true)
-    expect(res.body.posts[0]).toMatchObject({ slug: 'vac-1', visitors: 3, newVisitors: 2 })
-    expect(res.body.totals).toMatchObject({ visitors: 3, newVisitors: 2 })
-  })
-
-  it('a real database error is a 500, not a silent zero', async () => {
-    rpcState.impl = async () => ({ data: null, error: { message: 'canceling statement due to statement timeout' } })
-    vi.spyOn(console, 'error').mockImplementation(() => {})
-    await request(app()).get('/analytics/acquisition?days=30').expect(500)
+    it('says it is not ready when the migration was not applied', async () => {
+      const res = await request(app()).get('/analytics/web/segments?list=language').expect(200)
+      expect(res.body).toEqual({ ready: false })
+    })
   })
 })
 

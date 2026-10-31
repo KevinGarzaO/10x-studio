@@ -4,11 +4,14 @@ import { useState } from 'react'
 import Link from 'next/link'
 import { BarSeries, Card, Empty, ErrorBox, fmtNum, fmtPct, Loading, PageHeader, PeriodPicker, Stat, usePanelData } from '@/components/panel/ui'
 import { TrafficNotReady } from '@/components/panel/traffic'
+import { SegmentSummary, type SegmentCounts } from '@/components/panel/segments'
 
 interface WebTraffic {
   ready: boolean
   days?: number
   summary?: { dau: number; wau: number; mau: number; sessions: number; engagementRatePct: number | null; conversions: number; conversionRatePct: number | null }
+
+
   daily?: { day: string; dau: number; wau: number; mau: number }[]
 }
 
@@ -26,6 +29,8 @@ const SCREENS = [
 export default function TraficoPage() {
   const [days, setDays] = useState(30)
   const { data, loading, error, reload } = usePanelData<WebTraffic>(`/api/admin/analytics/web?days=${days}`, { keepPrevious: true })
+  const people = usePanelData<{ ready: boolean; trackingSince?: string | null; partial?: boolean; groups?: Record<string, SegmentCounts[]> }>(`/api/admin/analytics/web/segments?list=all&days=${days}`, { keepPrevious: true })
+  const all = people.data?.groups?.all?.[0]
 
   return (
     <>
@@ -39,16 +44,15 @@ export default function TraficoPage() {
 
       {data?.ready && data.summary && (
         <>
-          <div className="panel-grid cols-4">
+          <div className="panel-grid cols-3">
             <Stat label="Activos hoy" value={fmtNum(data.summary.dau)} caption="Personas distintas con al menos una sesión activa hoy (DAU)." />
             <Stat label="Activos en 7 días" value={fmtNum(data.summary.wau)} caption="Personas distintas con una sesión activa en los últimos 7 días (WAU)." />
             <Stat label="Activos en 30 días" value={fmtNum(data.summary.mau)} caption="Personas distintas con una sesión activa en los últimos 30 días (MAU)." />
-            <Stat label="Sesiones" value={fmtNum(data.summary.sessions)} caption={`En el periodo. ${fmtPct(data.summary.engagementRatePct)} fueron activas (10 s con la pestaña visible, 2 páginas o un evento clave).`} />
           </div>
-          <div className="panel-grid cols-2">
-            <Stat label="Conversiones" value={fmtNum(data.summary.conversions)} caption="Sesiones con un evento clave: registro, clic en postularse o perfil completo." />
-            <Stat label="Tasa de conversión" value={fmtPct(data.summary.conversionRatePct)} caption="Sesiones con conversión entre todas las sesiones." />
-          </div>
+
+          {all
+            ? <SegmentSummary segments={all} trackingSince={people.data?.trackingSince} partial={people.data?.partial} />
+            : <Card title="Quién entra"><p className="panel-muted">Falta aplicar la migración <b>web-analytics-segments-migration.sql</b> en Supabase para separar a las personas nuevas de las recurrentes, las activas de las que solo visitaron y las registradas de las anónimas.</p></Card>}
 
           <Card title="Personas activas por día" hint="DAU, WAU y MAU">
             {!data.daily || data.daily.length === 0 ? <Empty>Aún no hay visitas.</Empty> : (

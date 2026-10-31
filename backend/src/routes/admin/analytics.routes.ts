@@ -4,6 +4,7 @@ import { siteUrl } from '../../../services/linkedin/vacancy-publisher'
 import { nextPublication } from '../../../services/analytics/schedule'
 import { readAll } from '../../../services/analytics/read'
 import { ttlCache } from '../../../services/analytics/cache'
+import { emptySegment, isMissingMigration, loadSegments, trackingSince, SEGMENT_GROUPS, type SegmentCounts, type SegmentGroup } from '../../../services/analytics/segments'
 import { dailyQuota, daysUntilNextBatch, nextBatchFrom } from '../../../services/scraper/quota'
 import { loadAlerts } from '../../../services/analytics/alerts-data'
 import { loadMatchingOverview } from '../../../services/analytics/matching-data'
@@ -73,28 +74,11 @@ const visitsSince = (since: string) =>
       .range(from, to),
   )
 
-/**
- * Las visitas de personas ACTIVAS del periodo (una por sesión activa, con su origen y si la persona es nueva), de la analítica
- * web propia. Es lo que cuentan Adquisición y LinkedIn: así un "visitante" es una persona que hizo algo en el sitio y la conversión
- * se mide sobre las nuevas. `null` si esa medición aún no existe (falta backend/sql/web-analytics-active-people-migration.sql).
- */
-async function activeVisits(from: Date, to: Date): Promise<VisitRow[] | null> {
-  const rows: VisitRow[] = []
-  for (let start = 0; start < 20000; start += 1000) {
-    const { data, error } = await supabase
-      .rpc('analytics_active_visits', { p_from: from.toISOString(), p_to: to.toISOString() })
-      .range(start, start + 999)
-    if (error) {
-      if (/function|does not exist|schema cache|analytics_|relation/i.test(error.message)) return null
-      throw new Error(error.message)
-    }
-    for (const row of (data ?? []) as { person_key: string; is_new: boolean; utm_source: string | null; utm_medium: string | null; utm_campaign: string | null; utm_content: string | null; entry_path: string | null; created_at: string }[]) {
-      rows.push({ visitor_id: row.person_key, source: row.utm_source, medium: row.utm_medium, campaign: row.utm_campaign, content: row.utm_content, landing_path: row.entry_path, created_at: row.created_at, is_new: row.is_new })
-    }
-    if (!data || data.length < 1000) break
-  }
-  return rows
-}
+/** Una fila de segmentos del periodo [from, to), o ceros si nadie entró (un periodo sin gente es un cero real). */
+const segmentOf = (rows: SegmentCounts[] | null, label: string): SegmentCounts | null => (rows === null ? null : rows[0] ?? emptySegment(label))
+
+/** Si la medición empezó después de que el periodo arrancó, las cifras están incompletas: lo de antes no se puede recuperar. */
+const isPartial = (since: string | null, from: Date) => since === null || Date.parse(since) > from.getTime()
 
 const linkedinPosts = (since: string) =>
   readAll<LinkedInPostRow>((from, to) =>
@@ -135,67 +119,64 @@ router.get('/alerts', handle('alarmas', async (_req, res) => {
 }))
 
 /**
- * Vacantes en PERSONAS ACTIVAS: cuántas personas con una sesión activa abrieron cada vacante y cuántas pulsaron "Postularse"
- * (una persona cuenta una sola vez por vacante). Sale de la analítica web propia (backend/sql/web-analytics-active-people-migration.sql).
- * `null` si esa medición todavía no existe: entonces se cae a la cuenta anterior, por navegador, y se avisa.
+ * Vacantes con LA distinción: de las personas que abrieron cada vacante, cuántas están registradas y cuántas no, cuántas son nuevas o
+ * recurrentes, y cuántas de las nuevas son activas o solo pasaron (backend/sql/web-analytics-segments-migration.sql). La fila con
+ * `slug: null` es el total (personas distintas). `null` si esa medición aún no existe: entonces se cae a la cuenta anterior.
  */
-async function vacanciesByActivePeople(days: number) {
+async function vacanciesBySegments(days: number) {
   const now = new Date()
   const from = periodStart(days, now)
   const to = new Date(now.getTime() + 1)
-  const [people, totals] = await Promise.all([
-    supabase.rpc('analytics_vacancy_people', { p_from: from.toISOString(), p_to: to.toISOString(), p_limit: 100 }),
-    supabase.rpc('analytics_vacancy_totals', { p_from: from.toISOString(), p_to: to.toISOString() }),
-  ])
-  const failed = [people, totals].find((result) => result.error)
-  if (failed?.error) {
-    if (/function|does not exist|schema cache|analytics_|relation/i.test(failed.error.message)) return null
-    throw new Error(failed.error.message)
+  const { data, error } = await supabase.rpc('analytics_vacancy_segments', { p_from: from.toISOString(), p_to: to.toISOString(), p_limit: 100 })
+  if (error) {
+    if (isMissingMigration(error.message)) return null
+    throw new Error(error.message)
   }
 
-  const rows = (people.data ?? []) as { slug: string; viewers: number; applicants: number }[]
-  const total = ((totals.data ?? [])[0] ?? { tracking_since: null, viewers: 0, applicants: 0, vacancies: 0 }) as { tracking_since: string | null; viewers: number; applicants: number; vacancies: number }
+  type Row = { slug: string | null; viewers: number; viewers_active: number; viewers_new: number; viewers_new_active: number; viewers_returning: number; viewers_registered: number; viewers_anonymous: number; applicants: number; applicants_active: number }
+  const rows = (data ?? []) as Row[]
+  const total = rows.find((row) => row.slug === null)
+  const perVacancy = rows.filter((row) => row.slug !== null) as (Row & { slug: string })[]
 
   const since = from.toISOString()
   const saved = await readAll<{ source_id: string }>((start, end) =>
     supabase.from('user_vacancy_history').select('source_id').eq('is_saved', true).gte('saved_at', since).range(start, end),
   )
   const shown = await supabase.from('user_vacancy_history').select('*', { count: 'exact', head: true }).gte('seen_at', since)
-  const { data: posts } = rows.length > 0
-    ? await supabase.from('community_posts').select('id, slug, title, company, role_category').in('slug', rows.map((row) => row.slug))
+  const { data: posts } = perVacancy.length > 0
+    ? await supabase.from('community_posts').select('id, slug, title, company, role_category').in('slug', perVacancy.map((row) => row.slug))
     : { data: [] as { id: string; slug: string; title: string; company: string | null; role_category: string | null }[] }
   const bySlug = new Map((posts ?? []).map((post) => [post.slug, post]))
   const savedCount = new Map<string, number>()
   for (const row of saved) savedCount.set(row.source_id, (savedCount.get(row.source_id) ?? 0) + 1)
 
-  const trackingSince = total.tracking_since
+  const shape = (row: Row | undefined) => ({
+    viewers: row?.viewers ?? 0,
+    viewersActive: row?.viewers_active ?? 0,
+    viewersVisitOnly: (row?.viewers ?? 0) - (row?.viewers_active ?? 0),
+    viewersNew: row?.viewers_new ?? 0,
+    viewersNewActive: row?.viewers_new_active ?? 0,
+    viewersNewVisitOnly: (row?.viewers_new ?? 0) - (row?.viewers_new_active ?? 0),
+    viewersReturning: row?.viewers_returning ?? 0,
+    viewersRegistered: row?.viewers_registered ?? 0,
+    viewersAnonymous: row?.viewers_anonymous ?? 0,
+    applicants: row?.applicants ?? 0,
+    applicantsActive: row?.applicants_active ?? 0,
+    // De las personas ACTIVAS que abrieron, cuántas pulsaron Postularse.
+    applyRatePct: pct(row?.applicants_active ?? 0, row?.viewers_active ?? 0),
+  })
+
+  const trackedSince = await trackingSince()
   return {
     ready: true as const,
-    source: 'people' as const,
+    source: 'segments' as const,
     days,
-    trackingSince,
-    // Si la medición empezó después de que el periodo arrancó, las cifras están incompletas.
-    partial: !trackingSince || Date.parse(trackingSince) > from.getTime(),
-    totals: {
-      viewers: total.viewers,
-      applicants: total.applicants,
-      vacancies: total.vacancies,
-      applyRatePct: pct(total.applicants, total.viewers),
-      saved: saved.length,
-      recommendationsShown: shown.count ?? 0,
-    },
-    top: rows.map((row) => {
+    trackingSince: trackedSince,
+    partial: isPartial(trackedSince, from),
+    totals: { ...shape(total), vacancies: perVacancy.length, saved: saved.length, recommendationsShown: shown.count ?? 0 },
+    top: perVacancy.map((row) => {
       const post = bySlug.get(row.slug)
-      return {
-        slug: row.slug,
-        title: post?.title ?? row.slug,
-        company: post?.company ?? null,
-        role: post?.role_category ?? null,
-        viewers: row.viewers,
-        applicants: row.applicants,
-        applyRatePct: pct(row.applicants, row.viewers),
-        saved: post ? savedCount.get(post.id) ?? 0 : 0,
-      }
+      return { slug: row.slug, title: post?.title ?? row.slug, company: post?.company ?? null, role: post?.role_category ?? null, ...shape(row), saved: post ? savedCount.get(post.id) ?? 0 : 0 }
     }),
   }
 }
@@ -203,8 +184,8 @@ async function vacanciesByActivePeople(days: number) {
 /** Vacantes: cuánta gente activa abre cada una, cuánta pulsa "Postularse" y cuánta la guarda. */
 router.get('/vacancies', handle('vacantes', async (req, res) => {
   const days = periodOf(req)
-  const byPeople = await vacanciesByActivePeople(days)
-  if (byPeople) return res.json(byPeople)
+  const bySegments = await vacanciesBySegments(days)
+  if (bySegments) return res.json(bySegments)
 
   // Sin la analítica propia: la cuenta anterior, por navegador y sin saber si hizo algo. El panel lo avisa.
   const since = periodStart(days).toISOString()
@@ -246,53 +227,43 @@ router.get('/vacancies', handle('vacantes', async (req, res) => {
 }))
 
 /**
- * Los visitantes del resumen: SOLO personas con una sesión activa (10 s con la pestaña visible, 2 páginas o un evento clave),
- * separadas en nuevas y recurrentes, y la conversión medida sobre las NUEVAS. Salen de la analítica web propia
- * (backend/sql/web-analytics-summary-migration.sql). Si esa medición aún no existe, `ready: false` y el panel lo dice.
+ * Los visitantes del resumen, con LA distinción (nuevas / recurrentes, activas / solo visita, registradas / anónimas) y la conversión
+ * sobre las nuevas activas. Salen de la analítica web propia (backend/sql/web-analytics-segments-migration.sql). Si esa medición aún
+ * no existe, `ready: false` y el panel lo dice.
  *
- * Una comparación contra el periodo anterior solo se da si la medición ya existía entonces: si no, sería comparar contra ceros.
+ * La comparación contra el periodo anterior solo se da si la medición ya existía entonces: si no, sería comparar contra ceros.
  */
 async function visitorsTraffic(days: number, bucketDays: string[]) {
   const now = new Date()
+  const to = new Date(now.getTime() + 1)
   const from = periodStart(days, now)
-  const span = periodSpanMs(days)
-  const previousFrom = new Date(from.getTime() - span)
-  const hourly = days === 1
+  const previousFrom = new Date(from.getTime() - periodSpanMs(days))
 
-  const [current, previous, series] = await Promise.all([
-    supabase.rpc('analytics_visitors_summary', { p_from: from.toISOString(), p_to: new Date(now.getTime() + 1).toISOString() }),
-    supabase.rpc('analytics_visitors_summary', { p_from: previousFrom.toISOString(), p_to: from.toISOString() }),
-    supabase.rpc('analytics_visitors_series', { p_from: from.toISOString(), p_to: new Date(now.getTime() + 1).toISOString(), p_bucket: hourly ? 'hour' : 'day' }),
+  const [current, previous, linkedin, series, since] = await Promise.all([
+    loadSegments('all', from, to, 1),
+    loadSegments('all', previousFrom, from, 1),
+    loadSegments('linkedin', from, to, 1),
+    supabase.rpc('analytics_visitors_series', { p_from: from.toISOString(), p_to: to.toISOString(), p_bucket: days === 1 ? 'hour' : 'day' }),
+    trackingSince(),
   ])
-  const failed = [current, previous, series].find((result) => result.error)
-  if (failed?.error) {
-    if (/function|does not exist|schema cache|analytics_|relation/i.test(failed.error.message)) return { ready: false as const }
-    throw new Error(failed.error.message)
+  if (series.error) {
+    if (isMissingMigration(series.error.message)) return { ready: false as const }
+    throw new Error(series.error.message)
   }
-
-  type Summary = { tracking_since: string | null; active: number; new_active: number; returning_active: number; registered_new: number; linkedin_active: number; sessions: number; engaged_sessions: number }
-  const now_ = ((current.data ?? [])[0] ?? null) as Summary | null
-  const before = ((previous.data ?? [])[0] ?? null) as Summary | null
-  const trackingSince = now_?.tracking_since ?? null
-  const since = trackingSince ? Date.parse(trackingSince) : null
+  const now_ = segmentOf(current, 'Todo el sitio')
+  if (!now_) return { ready: false as const }
+  const before = segmentOf(previous, 'Todo el sitio')
 
   const byBucket = new Map(((series.data ?? []) as { bucket: string; active: number; new_active: number }[]).map((row) => [row.bucket, row]))
   return {
     ready: true as const,
-    trackingSince,
+    trackingSince: since,
     // El periodo está incompleto si la medición empezó después de que el periodo arrancó.
-    partial: since === null || since > from.getTime(),
-    active: now_?.active ?? 0,
-    newActive: now_?.new_active ?? 0,
-    returningActive: now_?.returning_active ?? 0,
-    registeredNew: now_?.registered_new ?? 0,
-    // Registros de gente nueva entre gente nueva activa: un recurrente que se registra no engorda la conversión.
-    conversionPct: pct(now_?.registered_new ?? 0, now_?.new_active ?? 0),
-    linkedinActive: now_?.linkedin_active ?? 0,
-    sessions: now_?.sessions ?? 0,
-    bounces: Math.max(0, (now_?.sessions ?? 0) - (now_?.engaged_sessions ?? 0)),
-    vs: since !== null && since <= previousFrom.getTime() && before
-      ? { active: change(now_?.active ?? 0, before.active), newActive: change(now_?.new_active ?? 0, before.new_active) }
+    partial: isPartial(since, from),
+    segments: now_,
+    linkedinActive: segmentOf(linkedin, 'LinkedIn')?.active ?? 0,
+    vs: since !== null && Date.parse(since) <= previousFrom.getTime() && before
+      ? { active: change(now_.active, before.active), newActive: change(now_.newActive, before.newActive) }
       : { active: null, newActive: null },
     series: bucketDays.map((day) => ({ day, active: byBucket.get(day)?.active ?? 0, newActive: byBucket.get(day)?.new_active ?? 0 })),
   }
@@ -332,61 +303,117 @@ router.get('/overview', handle('resumen', async (req, res) => {
   })
 }))
 
-/** LinkedIn: el estado del publicador y el rendimiento de cada publicación. */
+/** Suma varias filas de segmentos (por ejemplo, las publicaciones de un mismo rol). Una persona que visitó dos publicaciones cuenta en las dos. */
+function sumSegments(label: string, rows: SegmentCounts[]): SegmentCounts {
+  const total = emptySegment(label)
+  for (const row of rows) {
+    total.visits += row.visits; total.people += row.people; total.active += row.active
+    total.newPeople += row.newPeople; total.newActive += row.newActive; total.newVisitOnly += row.newVisitOnly
+    total.returningPeople += row.returningPeople; total.returningActive += row.returningActive; total.returningVisitOnly += row.returningVisitOnly
+    total.registered += row.registered; total.registeredActive += row.registeredActive
+    total.anonymous += row.anonymous; total.anonymousActive += row.anonymousActive; total.registeredNew += row.registeredNew
+  }
+  total.conversionPct = pct(total.registeredNew, total.newActive)
+  return total
+}
+
+/** LinkedIn: el estado del publicador y el rendimiento de cada publicación, con LA distinción de personas. */
 router.get('/linkedin', handle('linkedin', async (req, res) => {
   const days = periodOf(req)
   const since = new Date(periodStart(days).getTime()).toISOString()
-
   const now = new Date()
-  const active = await activeVisits(periodStart(days, now), new Date(now.getTime() + 1))
+  const from = periodStart(days, now)
+  const to = new Date(now.getTime() + 1)
+
+  const [perPost, whole, trackedSince] = await Promise.all([loadSegments('linkedin_post', from, to, 500), loadSegments('linkedin', from, to, 1), trackingSince()])
+  const segmented = perPost !== null && whole !== null
   const [posts, visits, users, { data: profile }] = await Promise.all([
     linkedinPosts(since),
-    active ? Promise.resolve(active) : visitsSince(since),
+    // Sin la medición nueva: la cuenta anterior, por navegador y sin saber si hizo algo. El panel lo avisa.
+    segmented ? Promise.resolve([] as VisitRow[]) : visitsSince(since),
     realUsers(since),
     supabase.from('linkedin_profiles').select('first_name, last_name, headline, photo_url, connected_at, expires_at').not('access_token', 'is', null).order('connected_at', { ascending: false }).limit(1).maybeSingle(),
   ])
 
-  const performance = postPerformance({ posts, visits, users })
   const expiresAt = profile?.expires_at ?? null
   const failed = posts.filter((post) => post.status === 'failed').length
+  const status = {
+    connected: !!profile,
+    name: profile ? `${profile.first_name ?? ''} ${profile.last_name ?? ''}`.trim() : null,
+    headline: profile?.headline ?? null,
+    photo: profile?.photo_url ?? null,
+    expiresAt,
+    daysLeft: expiresAt ? Math.floor((Date.parse(expiresAt) - Date.now()) / 86400000) : null,
+    // El interruptor vive en el servidor: si está apagado, el cron corre pero no publica.
+    publishing: process.env.LINKEDIN_VACANCY_POSTS === 'on',
+    siteUrlConfigured: siteUrl() !== null,
+    nextPublicationAt: nextPublication().toISOString(),
+  }
+
+  if (!segmented) {
+    const performance = postPerformance({ posts, visits, users })
+    return res.json({
+      days,
+      source: 'legacy',
+      status,
+      totals: { published: performance.length, failed, visitors: performance.reduce((sum, post) => sum + post.visitors, 0), signups: performance.reduce((sum, post) => sum + post.signups, 0) },
+      posts: performance,
+      byRole: groupPerformance(performance, (post) => post.role),
+      byHour: groupPerformance(performance, (post) => (post.publishedAt ? `${String(hourOf(post.publishedAt)).padStart(2, '0')}:00` : null)),
+      byCompany: groupPerformance(performance, (post) => post.company).slice(0, 10),
+    })
+  }
+
+  const bySlug = new Map(perPost.map((row) => [row.label, row]))
+  const published = posts
+    .filter((post) => post.status === 'published')
+    .map((post) => ({
+      slug: post.vacancy_slug,
+      company: post.company,
+      role: post.role_category,
+      publishedAt: post.published_at,
+      linkedinPostId: post.linkedin_post_id,
+      segments: (post.vacancy_slug ? bySlug.get(post.vacancy_slug) : undefined) ?? emptySegment(post.vacancy_slug ?? '—'),
+    }))
+    .sort((a, b) => Date.parse(b.publishedAt ?? '') - Date.parse(a.publishedAt ?? ''))
+
+  // Comparar grupos de distinto tamaño: personas por publicación.
+  const group = (keyOf: (post: (typeof published)[number]) => string | null) => {
+    const groups = new Map<string, typeof published>()
+    for (const post of published) {
+      const key = keyOf(post)
+      if (key !== null) groups.set(key, [...(groups.get(key) ?? []), post])
+    }
+    return [...groups.entries()]
+      .map(([key, rows]) => ({ key, posts: rows.length, segments: sumSegments(key, rows.map((row) => row.segments)), peoplePerPost: Math.round((rows.reduce((sum, row) => sum + row.segments.people, 0) / rows.length) * 10) / 10 }))
+      .sort((a, b) => b.peoplePerPost - a.peoplePerPost)
+  }
 
   res.json({
     days,
-    status: {
-      connected: !!profile,
-      name: profile ? `${profile.first_name ?? ''} ${profile.last_name ?? ''}`.trim() : null,
-      headline: profile?.headline ?? null,
-      photo: profile?.photo_url ?? null,
-      expiresAt,
-      daysLeft: expiresAt ? Math.floor((Date.parse(expiresAt) - Date.now()) / 86400000) : null,
-      // El interruptor vive en el servidor: si está apagado, el cron corre pero no publica.
-      publishing: process.env.LINKEDIN_VACANCY_POSTS === 'on',
-      siteUrlConfigured: siteUrl() !== null,
-      nextPublicationAt: nextPublication().toISOString(),
-    },
-    // `active: true` = los visitantes son personas activas y la conversión se mide sobre las nuevas.
-    active: active !== null,
-    totals: {
-      published: performance.length,
-      failed,
-      visitors: performance.reduce((sum, post) => sum + post.visitors, 0),
-      newVisitors: active ? performance.reduce((sum, post) => sum + (post.newVisitors ?? 0), 0) : null,
-      signups: performance.reduce((sum, post) => sum + post.signups, 0),
-    },
-    posts: performance,
-    byRole: groupPerformance(performance, (post) => post.role),
-    byHour: groupPerformance(performance, (post) => (post.publishedAt ? `${String(hourOf(post.publishedAt)).padStart(2, '0')}:00` : null)),
-    byCompany: groupPerformance(performance, (post) => post.company).slice(0, 10),
+    source: 'segments',
+    trackingSince: trackedSince,
+    partial: isPartial(trackedSince, from),
+    status,
+    totals: { published: published.length, failed, segments: segmentOf(whole, 'LinkedIn') },
+    posts: published,
+    byRole: group((post) => post.role),
+    byHour: group((post) => (post.publishedAt ? `${String(hourOf(post.publishedAt)).padStart(2, '0')}:00` : null)),
+    byCompany: group((post) => post.company).slice(0, 10),
   })
 }))
 
-/** Adquisición: de dónde llega la gente y por dónde avanza hasta quedarse. */
+/** Adquisición: de dónde llega la gente y por dónde avanza hasta quedarse, con LA distinción de personas. */
 router.get('/acquisition', handle('adquisición', async (req, res) => {
   const days = periodOf(req)
   const since = periodStart(days).toISOString()
   const now = new Date()
-  const active = await activeVisits(periodStart(days, now), new Date(now.getTime() + 1))
-  const [visits, users] = await Promise.all([active ? Promise.resolve(active) : visitsSince(since), realUsers(since)])
+  const from = periodStart(days, now)
+  const to = new Date(now.getTime() + 1)
+
+  const [channels, landing, whole, trackedSince] = await Promise.all([loadSegments('channel', from, to, 200), loadSegments('landing', from, to, 50), loadSegments('all', from, to, 1), trackingSince()])
+  const segmented = channels !== null && landing !== null && whole !== null
+  const [visits, users] = await Promise.all([segmented ? Promise.resolve([] as VisitRow[]) : visitsSince(since), realUsers(since)])
 
   // "Volvió": estuvo activa en un día posterior al de su registro. Solo se sabe si la tabla existe.
   let returned: number | null = null
@@ -398,35 +425,43 @@ router.get('/acquisition', handle('adquisición', async (req, res) => {
       returned = new Set((activity.data ?? []).filter((row) => row.day > (signupDay.get(row.user_id) ?? '9999')).map((row) => row.user_id)).size
     }
   }
-
-  const visitors = uniqueVisitors(visits)
   const completed = users.filter((user) => user.profile_completed).length
-  const newVisits = visits.filter((visit) => visit.is_new)
-  const newVisitors = uniqueVisitors(newVisits)
-  // Quienes entraron por primera vez en el periodo Y se registraron en él: la conversión se mide sobre los nuevos.
-  const registeredIds = new Set(users.map((user) => user.id))
-  const registeredNew = new Set(newVisits.filter((visit) => registeredIds.has(visit.visitor_id)).map((visit) => visit.visitor_id)).size
 
+  if (!segmented) {
+    // Sin la medición nueva: la cuenta anterior, por navegador y sin saber si hizo algo. El panel lo avisa.
+    const visitors = uniqueVisitors(visits)
+    return res.json({
+      days,
+      source: 'legacy',
+      sources: acquisitionBySource({ visits, users }),
+      landingPages: topLandingPages(visits, 10),
+      funnel: [
+        { step: 'Visitantes', count: visitors, pctOfPrevious: null },
+        { step: 'Se registraron', count: users.length, pctOfPrevious: pct(users.length, visitors) },
+        { step: 'Completaron su perfil', count: completed, pctOfPrevious: pct(completed, users.length) },
+        { step: 'Volvieron otro día', count: returned, pctOfPrevious: returned === null ? null : pct(returned, completed || users.length) },
+      ],
+    })
+  }
+
+  const all = segmentOf(whole, 'Todo el sitio')!
   res.json({
     days,
-    // `active: true` = las cifras son de personas activas (analítica propia); si no, de navegadores (la cuenta anterior).
-    active: active !== null,
-    sources: acquisitionBySource({ visits, users }),
-    landingPages: topLandingPages(visits, 10),
-    funnel: active
-      ? [
-          { step: 'Visitantes activos', count: visitors, pctOfPrevious: null },
-          { step: 'Nuevos', count: newVisitors, pctOfPrevious: pct(newVisitors, visitors) },
-          { step: 'Se registraron (de los nuevos)', count: registeredNew, pctOfPrevious: pct(registeredNew, newVisitors) },
-          { step: 'Completaron su perfil', count: completed, pctOfPrevious: pct(completed, users.length) },
-          { step: 'Volvieron otro día', count: returned, pctOfPrevious: returned === null ? null : pct(returned, completed || users.length) },
-        ]
-      : [
-          { step: 'Visitantes', count: visitors, pctOfPrevious: null },
-          { step: 'Se registraron', count: users.length, pctOfPrevious: pct(users.length, visitors) },
-          { step: 'Completaron su perfil', count: completed, pctOfPrevious: pct(completed, users.length) },
-          { step: 'Volvieron otro día', count: returned, pctOfPrevious: returned === null ? null : pct(returned, completed || users.length) },
-        ],
+    source: 'segments',
+    trackingSince: trackedSince,
+    partial: isPartial(trackedSince, from),
+    totals: all,
+    channels,
+    landing,
+    // Cada paso en PERSONAS: de todas las que entraron, a las activas, a las nuevas activas, a las que se registraron.
+    funnel: [
+      { step: 'Personas que entraron', count: all.people, pctOfPrevious: null },
+      { step: 'Activas (hicieron algo)', count: all.active, pctOfPrevious: pct(all.active, all.people) },
+      { step: 'Nuevas activas', count: all.newActive, pctOfPrevious: pct(all.newActive, all.active) },
+      { step: 'Se registraron (de las nuevas activas)', count: all.registeredNew, pctOfPrevious: pct(all.registeredNew, all.newActive) },
+      { step: 'Completaron su perfil (cuentas del periodo)', count: completed, pctOfPrevious: pct(completed, users.length) },
+      { step: 'Volvieron otro día (cuentas del periodo)', count: returned, pctOfPrevious: returned === null ? null : pct(returned, completed || users.length) },
+    ],
   })
 }))
 
@@ -552,63 +587,58 @@ router.get('/web', handle('tráfico web', async (req, res) => {
   })
 }))
 
-/** Los desgloses que se pueden pedir (la misma lista cerrada que la función SQL `analytics_dimension`). */
-const WEB_DIMENSIONS = [
-  'language', 'device_category', 'operating_system', 'browser', 'browser_version', 'screen_resolution', 'timezone',
-  'country', 'region', 'city', 'referrer_host', 'exit_path', 'visitor_type',
-]
-
 const webPeriod = (req: Request) => {
   const requested = parseInt(String(req.query.days ?? '30'), 10)
   return WEB_PERIODS.includes(requested) ? requested : 30
 }
 
 /** Si las funciones SQL aún no existen (falta una migración) se dice, en lugar de mostrar ceros que parecerían reales. */
-const missingMigration = (message: string) => /function|does not exist|schema cache|analytics_|relation|column/i.test(message)
+const missingMigration = isMissingMigration
 
-/** Un desglose: idioma, dispositivo, sistema, navegador, pantalla, zona horaria, país, región, ciudad, sitio de origen... */
-router.get('/web/dimension', handle('desglose web', async (req, res) => {
-  const dimension = String(req.query.dimension ?? '')
-  if (!WEB_DIMENSIONS.includes(dimension)) return res.status(400).json({ error: 'Desglose no válido', allowed: WEB_DIMENSIONS })
-  const limit = Math.min(Math.max(parseInt(String(req.query.limit ?? '50'), 10) || 50, 1), 500)
-  const { data, error } = await supabase.rpc('analytics_dimension', { p_days: webPeriod(req), p_dimension: dimension, p_limit: limit })
-  if (error) {
-    if (missingMigration(error.message)) return res.json({ ready: false })
-    throw new Error(error.message)
-  }
-  res.json({ ready: true, days: webPeriod(req), dimension, rows: data ?? [] })
-}))
+/** El rango de un periodo pedido: desde su inicio hasta ahora. */
+const webRange = (days: number) => {
+  const now = new Date()
+  return { from: periodStart(days, now), to: new Date(now.getTime() + 1) }
+}
 
-/** Varios desgloses de una vez (una pantalla suele necesitar cuatro o cinco). */
-router.get('/web/dimensions', handle('desgloses web', async (req, res) => {
-  const wanted = String(req.query.list ?? '').split(',').map((item) => item.trim()).filter(Boolean)
-  if (wanted.length === 0 || wanted.length > 8 || wanted.some((item) => !WEB_DIMENSIONS.includes(item))) {
-    return res.status(400).json({ error: 'Desgloses no válidos', allowed: WEB_DIMENSIONS })
+/**
+ * Un desglose (canal, página de entrada, idioma, dispositivo, sistema, navegador, pantalla, zona horaria, país, región, ciudad, sitio
+ * de origen...) con LA distinción de personas en cada fila. Pueden pedirse varios de una vez: `?list=language,device_category`.
+ */
+router.get('/web/segments', handle('desgloses web', async (req, res) => {
+  const wanted = String(req.query.list ?? req.query.group ?? '').split(',').map((item) => item.trim()).filter(Boolean)
+  if (wanted.length === 0 || wanted.length > 8 || wanted.some((item) => !(SEGMENT_GROUPS as readonly string[]).includes(item))) {
+    return res.status(400).json({ error: 'Desgloses no válidos', allowed: SEGMENT_GROUPS })
   }
   const days = webPeriod(req)
-  const results = await Promise.all(wanted.map((dimension) => supabase.rpc('analytics_dimension', { p_days: days, p_dimension: dimension, p_limit: 50 })))
-  const failed = results.find((result) => result.error)
-  if (failed?.error) {
-    if (missingMigration(failed.error.message)) return res.json({ ready: false })
-    throw new Error(failed.error.message)
-  }
-  res.json({ ready: true, days, dimensions: Object.fromEntries(wanted.map((dimension, index) => [dimension, results[index].data ?? []])) })
+  const { from, to } = webRange(days)
+  const limit = Math.min(Math.max(parseInt(String(req.query.limit ?? '100'), 10) || 100, 1), 500)
+  const [results, trackedSince] = await Promise.all([Promise.all(wanted.map((group) => loadSegments(group as SegmentGroup, from, to, limit))), trackingSince()])
+  if (results.some((result) => result === null)) return res.json({ ready: false })
+  res.json({
+    ready: true,
+    days,
+    trackingSince: trackedSince,
+    partial: isPartial(trackedSince, from),
+    groups: Object.fromEntries(wanted.map((group, index) => [group, results[index]])),
+  })
 }))
 
-/** Mapa: las ciudades con sus coordenadas y los países. */
+/** Mapa: las ciudades con sus coordenadas, y los países y regiones con la misma distinción. */
 router.get('/web/geo', handle('geografía web', async (req, res) => {
   const days = webPeriod(req)
+  const { from, to } = webRange(days)
   const [points, countries, regions] = await Promise.all([
     supabase.rpc('analytics_geo_points', { p_days: days }),
-    supabase.rpc('analytics_dimension', { p_days: days, p_dimension: 'country', p_limit: 250 }),
-    supabase.rpc('analytics_dimension', { p_days: days, p_dimension: 'region', p_limit: 250 }),
+    loadSegments('country', from, to, 250),
+    loadSegments('region', from, to, 250),
   ])
-  const failed = [points, countries, regions].find((result) => result.error)
-  if (failed?.error) {
-    if (missingMigration(failed.error.message)) return res.json({ ready: false })
-    throw new Error(failed.error.message)
+  if (points.error) {
+    if (missingMigration(points.error.message)) return res.json({ ready: false })
+    throw new Error(points.error.message)
   }
-  res.json({ ready: true, days, points: points.data ?? [], countries: countries.data ?? [], regions: regions.data ?? [] })
+  if (countries === null || regions === null) return res.json({ ready: false })
+  res.json({ ready: true, days, points: points.data ?? [], countries, regions })
 }))
 
 /** Cada página vista, con sus entradas y salidas. */

@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { BarSeries, Card, Empty, ErrorBox, fmtDate, fmtNum, fmtPct, Loading, PageHeader, PeriodPicker, periodPhrase, Stat, usePanelData } from '@/components/panel/ui'
+import { SegmentSummary, SegmentsNotReady, type SegmentCounts } from '@/components/panel/segments'
 
 interface Overview {
   days: number
@@ -24,14 +25,8 @@ type Traffic =
       ready: true
       trackingSince: string | null
       partial: boolean
-      active: number
-      newActive: number
-      returningActive: number
-      registeredNew: number
-      conversionPct: number | null
+      segments: SegmentCounts
       linkedinActive: number
-      sessions: number
-      bounces: number
       vs: { active: number | null; newActive: number | null }
       series: { day: string; active: number; newActive: number }[]
     }
@@ -59,31 +54,20 @@ export default function ResumenPage() {
           {traffic?.ready ? (
             <>
               <div className="panel-grid cols-4">
-                <Stat label="Visitantes activos" value={fmtNum(traffic.active)} delta={traffic.vs.active} caption="Personas distintas con una sesión activa (10 s con la pestaña visible, 2 páginas o un evento clave). Las entradas sin actividad no cuentan." />
-                <Stat label="Nuevos" value={fmtNum(traffic.newActive)} delta={traffic.vs.newActive} caption="Activos que entraron por primera vez en este periodo." />
-                <Stat label="Recurrentes" value={fmtNum(traffic.returningActive)} caption="Activos que ya habían entrado antes (o que ya tenían cuenta)." />
-                <Stat label="Conversión de nuevos" value={fmtPct(traffic.conversionPct)} tone={traffic.conversionPct !== null && traffic.conversionPct >= 5 ? 'good' : undefined} caption={`${fmtNum(traffic.registeredNew)} de ${fmtNum(traffic.newActive)} nuevos activos se registraron en el periodo. Un recurrente que se registra no entra en esta cuenta.`} />
+                <Stat label="Usuarios activos" value={fmtNum(traffic.segments.active)} delta={traffic.vs.active} caption="Personas distintas con una sesión activa (10 s con la pestaña visible, 2 páginas o un evento clave). Quien entra y se va no cuenta." />
+                <Stat label="Nuevos activos" value={fmtNum(traffic.segments.newActive)} delta={traffic.vs.newActive} caption={`Entraron por primera vez y hicieron algo. Otras ${fmtNum(traffic.segments.newVisitOnly)} nuevas solo visitaron.`} />
+                <Stat label="Recurrentes activos" value={fmtNum(traffic.segments.returningActive)} caption={`Ya habían entrado y volvieron a hacer algo. Otras ${fmtNum(traffic.segments.returningVisitOnly)} recurrentes solo visitaron.`} />
+                <Stat label="Conversión de nuevos" value={fmtPct(traffic.segments.conversionPct)} tone={traffic.segments.conversionPct !== null && traffic.segments.conversionPct >= 5 ? 'good' : undefined} caption={`${fmtNum(traffic.segments.registeredNew)} de ${fmtNum(traffic.segments.newActive)} nuevos activos se registraron en el periodo. Un recurrente que se registra no entra en esta cuenta.`} />
               </div>
-              <div className="panel-grid cols-3">
+              <div className="panel-grid cols-2">
                 <Stat label="Registros" value={fmtNum(data.signups)} delta={data.vs.signups} caption="Cuentas nuevas reales (todas, vengan de donde vengan), sin las de prueba ni las que crea el scraper." />
                 <Stat label="Perfiles completos" value={fmtNum(data.completedProfiles)} caption={`De ${fmtNum(data.signups)} registros del periodo: ya pueden recibir vacantes “Para ti”.`} />
-                <Stat label="Entradas sin actividad" value={fmtNum(traffic.bounces)} caption={`De ${fmtNum(traffic.sessions)} entradas, estas se fueron sin hacer nada: no son visitantes y no entran en ninguna cifra de arriba.`} />
               </div>
-              {traffic.partial && (
-                <p className="panel-defs" style={{ marginTop: 0 }}>
-                  <b>Los visitantes activos se miden desde el {traffic.trackingSince ? fmtDate(traffic.trackingSince) : 'momento en que se active la medición'}.</b> Este periodo es más largo que eso, así que
-                  las cifras de arriba están incompletas y no se comparan con el periodo anterior. Quien ya entraba antes de esa fecha y no tiene cuenta aparece como nuevo la primera vez que lo medimos.
-                </p>
-              )}
+              <SegmentSummary segments={traffic.segments} trackingSince={traffic.trackingSince} partial={traffic.partial} />
             </>
           ) : (
             <>
-              <Card title="Los visitantes activos todavía no se miden">
-                <p className="panel-muted" style={{ lineHeight: 1.6 }}>
-                  Falta aplicar la migración <b>web-analytics-summary-migration.sql</b> en Supabase. Mientras tanto se muestran las entradas sin distinguir si la persona hizo algo
-                  ni si era nueva; con la migración, el resumen cuenta solo personas activas y separa las nuevas de las recurrentes.
-                </p>
-              </Card>
+              <SegmentsNotReady />
               <div className="panel-grid cols-4">
                 <Stat label="Visitantes" value={fmtNum(data.visitors)} delta={data.vs.visitors} caption={`Navegadores distintos (sin filtrar por actividad). Hubo ${fmtNum(data.visits)} entradas.`} />
                 <Stat label="Registros" value={fmtNum(data.signups)} delta={data.vs.signups} caption="Cuentas nuevas reales, sin las de prueba ni las que crea el scraper." />
@@ -110,7 +94,7 @@ export default function ResumenPage() {
               <div className="panel-grid cols-2">
                 <Stat label="Publicaciones" value={fmtNum(data.linkedin.posts)} tone={data.linkedin.failedPosts > 0 ? 'warn' : undefined} caption={data.linkedin.failedPosts > 0 ? `${data.linkedin.failedPosts} fallaron: revisa la sección LinkedIn.` : 'Vacantes publicadas en tu perfil.'} />
                 {traffic?.ready
-                  ? <Stat label="Visitantes activos de LinkedIn" value={fmtNum(traffic.linkedinActive)} caption={`${fmtPct(traffic.active > 0 ? Math.round((traffic.linkedinActive / traffic.active) * 1000) / 10 : null)} de los visitantes activos.`} />
+                  ? <Stat label="Usuarios activos de LinkedIn" value={fmtNum(traffic.linkedinActive)} caption={`${fmtPct(traffic.segments.active > 0 ? Math.round((traffic.linkedinActive / traffic.segments.active) * 1000) / 10 : null)} de los usuarios activos.`} />
                   : <Stat label="Visitantes de LinkedIn" value={fmtNum(data.linkedin.visitors)} caption={`${fmtPct(data.visitors > 0 ? Math.round((data.linkedin.visitors / data.visitors) * 1000) / 10 : null)} de todos los visitantes.`} />}
               </div>
               <p className="panel-muted" style={{ marginTop: 12 }}>

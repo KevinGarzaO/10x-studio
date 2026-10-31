@@ -3,6 +3,7 @@ import express from 'express'
 import request from 'supertest'
 
 const rpc = vi.hoisted(() => vi.fn())
+const rpcState = vi.hoisted(() => ({ impl: null as null | unknown }))
 const db = vi.hoisted(() => ({ tables: {} as Record<string, any>, filters: [] as string[], errors: {} as Record<string, string> }))
 
 vi.mock('../../services/supabase.service', () => ({
@@ -48,49 +49,24 @@ beforeEach(() => {
   db.errors = {}
 })
 
-describe('GET /web/dimension and /web/dimensions', () => {
-  it('asks the SQL function for one breakdown and returns its rows', async () => {
-    rpc.mockResolvedValue({ data: [{ value: 'es-MX', sessions: 5 }], error: null })
-    const res = await request(app()).get('/analytics/web/dimension?dimension=language&days=7').expect(200)
-
-    expect(rpc).toHaveBeenCalledWith('analytics_dimension', { p_days: 7, p_dimension: 'language', p_limit: 50 })
-    expect(res.body).toMatchObject({ ready: true, dimension: 'language', rows: [{ value: 'es-MX', sessions: 5 }] })
-  })
-
-  it('refuses a breakdown that is not on the closed list, without touching the database', async () => {
-    await request(app()).get('/analytics/web/dimension?dimension=client_id').expect(400)
-    await request(app()).get('/analytics/web/dimension?dimension=' + encodeURIComponent('language; DROP TABLE users')).expect(400)
-    expect(rpc).not.toHaveBeenCalled()
-  })
-
-  it('asks for several breakdowns at once, keyed by name', async () => {
-    rpc.mockImplementation(async (_name: string, args: any) => ({ data: [{ value: args.p_dimension, sessions: 1 }], error: null }))
-    const res = await request(app()).get('/analytics/web/dimensions?list=language,browser,device_category').expect(200)
-
-    expect(Object.keys(res.body.dimensions)).toEqual(['language', 'browser', 'device_category'])
-    expect(res.body.dimensions.browser[0].value).toBe('browser')
-  })
-
-  it('does not accept too many or unknown breakdowns', async () => {
-    await request(app()).get('/analytics/web/dimensions?list=language,otro').expect(400)
-    await request(app()).get('/analytics/web/dimensions').expect(400)
-  })
-
-  it('says it is not ready when the detail migration was not applied', async () => {
-    rpc.mockResolvedValue({ data: null, error: { message: 'Could not find the function public.analytics_dimension in the schema cache' } })
-    const res = await request(app()).get('/analytics/web/dimension?dimension=language').expect(200)
-    expect(res.body).toEqual({ ready: false })
-  })
-})
-
 describe('GET /web/geo, /web/pages and /web/events', () => {
-  it('brings the city points, the countries and the regions together', async () => {
-    rpc.mockImplementation(async (name: string) => ({ data: [{ fn: name }], error: null }))
+  const segmentRow = (grp: string) => ({ grp, visits: 10, people: 5, new_people: 3, new_active: 2, returning_people: 2, returning_active: 1, registered: 1, registered_active: 1, anonymous: 4, anonymous_active: 2, registered_new: 1, active: 3 })
+
+  it('brings the city points, and the countries and regions with the same distinction of people', async () => {
+    rpcState.impl = null
+    rpc.mockImplementation(async (name: string, args: any) => ({ data: name === 'analytics_segments' ? [segmentRow(args.p_group)] : [{ fn: name }], error: null }))
     const res = await request(app()).get('/analytics/web/geo?days=30').expect(200)
 
     expect(res.body.points).toEqual([{ fn: 'analytics_geo_points' }])
-    expect(res.body.countries).toEqual([{ fn: 'analytics_dimension' }])
-    expect(rpc).toHaveBeenCalledWith('analytics_dimension', { p_days: 30, p_dimension: 'country', p_limit: 250 })
+    expect(res.body.countries[0]).toMatchObject({ label: 'country', people: 5, newActive: 2, newVisitOnly: 1, registeredNew: 1, conversionPct: 50 })
+    expect(res.body.regions[0].label).toBe('region')
+    expect(rpc).toHaveBeenCalledWith('analytics_segments', expect.objectContaining({ p_group: 'country' }))
+  })
+
+  it('says it is not ready when the migration was not applied', async () => {
+    rpc.mockResolvedValue({ data: null, error: { message: 'Could not find the function public.analytics_segments in the schema cache' } })
+    const res = await request(app()).get('/analytics/web/geo').expect(200)
+    expect(res.body).toEqual({ ready: false })
   })
 
   it('answers the pages and the events', async () => {

@@ -197,8 +197,7 @@ describe('acquisitionBySource', () => {
       users: [user('u1', '2026-10-24T11:00:00Z', { signup_source: 'linkedin', signup_medium: 'social', signup_campaign: 'vacante-auto' }), user('u2', '2026-10-24T11:00:00Z')],
     })
 
-    // Sin saber quién es nuevo (la cuenta anterior, por navegador) la conversión sigue siendo sobre los visitantes.
-    expect(rows[0]).toEqual({ source: 'linkedin', medium: 'social', campaign: 'vacante-auto', visitors: 1, visits: 2, newVisitors: null, signups: 1, conversionPct: 100 })
+    expect(rows[0]).toEqual({ source: 'linkedin', medium: 'social', campaign: 'vacante-auto', visitors: 1, visits: 2, signups: 1, conversionPct: 100 })
     expect(rows[1]).toMatchObject({ source: '(directo)', visitors: 1, signups: 1 })
   })
 })
@@ -374,46 +373,5 @@ describe('the last 24 hours', () => {
 
   it('labels the hours in Monterrey time', () => {
     expect(hourKey('2026-10-24T18:30:00Z')).toBe('2026-10-24T12')
-  })
-})
-
-describe('conversion measured over the NEW visitors', () => {
-  const visit = (id: string, patch: Record<string, unknown> = {}) => ({ visitor_id: id, source: 'linkedin', medium: 'social', campaign: 'vacante-auto', content: 'vac-1', landing_path: '/', created_at: '2026-10-24T12:00:00Z', ...patch })
-  const user = (id: string, patch: Record<string, unknown> = {}) => ({ id, created_at: '2026-10-24T13:00:00Z', profile_completed: true, signup_source: 'linkedin', signup_medium: 'social', signup_campaign: 'vacante-auto', signup_content: 'vac-1', ...patch })
-
-  it('by source: 2 signups among 4 new people is 50 %, not 2 among all 10 active ones', () => {
-    const visits = [
-      ...['n1', 'n2', 'n3', 'n4'].map(id => visit(id, { is_new: true })),
-      ...['r1', 'r2', 'r3', 'r4', 'r5', 'r6'].map(id => visit(id, { is_new: false })),
-    ]
-    const [row] = acquisitionBySource({ visits, users: [user('a'), user('b')] })
-    expect(row).toMatchObject({ visitors: 10, newVisitors: 4, signups: 2, conversionPct: 50 })
-  })
-
-  it('without knowing who is new (the old per-browser count) it keeps measuring over the visitors', () => {
-    const visits = ['a', 'b', 'c', 'd'].map(id => visit(id))
-    const [row] = acquisitionBySource({ visits, users: [user('x')] })
-    expect(row).toMatchObject({ visitors: 4, newVisitors: null, conversionPct: 25 })
-  })
-
-  it('a source with returning visitors only has no conversion (no base), not a made up 0 %', () => {
-    const [row] = acquisitionBySource({ visits: [visit('r1', { is_new: false })], users: [] })
-    expect(row).toMatchObject({ newVisitors: 0, conversionPct: null })
-  })
-
-  it('per LinkedIn post: signups over the new visitors of THAT post', () => {
-    const posts = [{ vacancy_slug: 'vac-1', company: 'Stripe', role_category: 'backend', linkedin_post_id: 'x', status: 'published', published_at: '2026-10-24T08:00:00Z', created_at: '2026-10-24T08:00:00Z' }]
-    const visits = [visit('n1', { is_new: true }), visit('n2', { is_new: true }), visit('r1', { is_new: false })]
-    const [post] = postPerformance({ posts, visits, users: [user('a')] })
-    expect(post).toMatchObject({ visitors: 3, newVisitors: 2, signups: 1, conversionPct: 50 })
-  })
-
-  it('groups add up the new visitors of their posts and measure over them', () => {
-    const performance = [
-      { slug: 'a', company: 'X', role: 'backend', publishedAt: null, linkedinPostId: null, visitors: 10, newVisitors: 4, signups: 1, conversionPct: 25 },
-      { slug: 'b', company: 'X', role: 'backend', publishedAt: null, linkedinPostId: null, visitors: 6, newVisitors: 2, signups: 1, conversionPct: 50 },
-    ]
-    const [group] = groupPerformance(performance, post => post.role)
-    expect(group).toMatchObject({ visitors: 16, newVisitors: 6, signups: 2, conversionPct: 33.3 })
   })
 })

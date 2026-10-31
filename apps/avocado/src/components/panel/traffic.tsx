@@ -1,7 +1,7 @@
 'use client'
 
-import { DataTable } from './DataTable'
-import { Card, Empty, fmtNum, fmtPct, InlineBar } from './ui'
+import { Card } from './ui'
+import { SegmentTable, type SegmentCounts } from './segments'
 
 /* ------------------------------------------------------------------ */
 /* Nombres legibles                                                    */
@@ -71,41 +71,11 @@ export function ago(iso: string | null | undefined, now = Date.now()): string {
 /* Piezas                                                              */
 /* ------------------------------------------------------------------ */
 
-export interface DimensionRow {
-  value: string
-  sessions: number
-  people: number
-  engaged: number
-  engagement_rate: number | null
-  conversions: number
-  avg_duration_seconds: number
-}
-
-/** Un desglose (idioma, dispositivo, sistema...) con sesiones, personas, engagement, conversiones y duración. */
-export function DimensionCard({ title, hint, rows, label, searchLabel }: { title: string; hint?: string; rows: DimensionRow[]; label?: (value: string) => string; searchLabel?: string }) {
-  const max = Math.max(1, ...rows.map(row => row.sessions))
+/** Un desglose (idioma, dispositivo, sistema...) con LA distinción de personas en cada fila. */
+export function DimensionCard({ title, hint, rows, label, searchLabel }: { title: string; hint?: string; rows: SegmentCounts[]; label?: (value: string) => string; searchLabel?: string }) {
   return (
     <Card title={title} hint={hint}>
-      {rows.length === 0 ? <Empty>Aún no hay visitas en este periodo.</Empty> : (
-        <DataTable
-          rows={rows}
-          rowKey={row => row.value}
-          searchText={row => `${row.value} ${label ? label(row.value) : ''}`}
-          searchLabel={searchLabel ?? `Buscar en ${title.toLowerCase()}`}
-          pageSize={8}
-          head={<tr><th>{title}</th><th>Sesiones</th><th className="num">Personas</th><th className="num">Engagement</th><th className="num">Conversiones</th><th className="num">Duración</th></tr>}
-          renderRow={row => (
-            <tr>
-              <td>{label ? label(row.value) : row.value}</td>
-              <td style={{ minWidth: 150 }}><InlineBar value={row.sessions} max={max} /> <span className="panel-muted">{fmtNum(row.sessions)}</span></td>
-              <td className="num">{fmtNum(row.people)}</td>
-              <td className="num">{fmtPct(row.engagement_rate)}</td>
-              <td className="num">{fmtNum(row.conversions)}</td>
-              <td className="num">{fmtDuration(row.avg_duration_seconds)}</td>
-            </tr>
-          )}
-        />
-      )}
+      <SegmentTable rows={rows} labelHeader={title} labelRender={label} searchLabel={searchLabel} pageSize={8} />
     </Card>
   )
 }

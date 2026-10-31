@@ -4,24 +4,84 @@ import { DataTable } from '@/components/panel/DataTable'
 import { useState } from 'react'
 import { backendBase } from '@/lib/admin-auth'
 import { Card, Empty, ErrorBox, fmtDate, fmtNum, fmtPct, InlineBar, Loading, PageHeader, PeriodPicker, roleLabel, Stat, usePanelData } from '@/components/panel/ui'
+import { SegmentSummary, SegmentsNotReady, type SegmentCounts } from '@/components/panel/segments'
 
-interface Group { key: string; posts: number; visitors: number; signups: number; visitorsPerPost: number; conversionPct: number | null }
-interface LinkedInData {
-  days: number
-  /** true = los visitantes son personas activas y la conversión se mide sobre las nuevas. */
-  active: boolean
-  status: {
-    connected: boolean; name: string | null; headline: string | null; expiresAt: string | null; daysLeft: number | null
-    publishing: boolean; siteUrlConfigured: boolean; nextPublicationAt: string
-  }
-  totals: { published: number; failed: number; visitors: number; newVisitors: number | null; signups: number }
-  posts: { slug: string | null; company: string | null; role: string | null; publishedAt: string | null; linkedinPostId: string | null; visitors: number; newVisitors: number | null; signups: number; conversionPct: number | null }[]
-  byRole: Group[]
-  byHour: Group[]
-  byCompany: Group[]
+interface Status {
+  connected: boolean; name: string | null; headline: string | null; expiresAt: string | null; daysLeft: number | null
+  publishing: boolean; siteUrlConfigured: boolean; nextPublicationAt: string
 }
 
-function Groups({ title, hint, rows, label }: { title: string; hint: string; rows: Group[]; label: (key: string) => string }) {
+/** Con LA distinción de personas en cada publicación y en cada grupo. */
+interface SegmentGroup { key: string; posts: number; peoplePerPost: number; segments: SegmentCounts }
+interface SegmentLinkedIn {
+  days: number
+  source: 'segments'
+  trackingSince: string | null
+  partial: boolean
+  status: Status
+  totals: { published: number; failed: number; segments: SegmentCounts | null }
+  posts: { slug: string | null; company: string | null; role: string | null; publishedAt: string | null; linkedinPostId: string | null; segments: SegmentCounts }[]
+  byRole: SegmentGroup[]
+  byHour: SegmentGroup[]
+  byCompany: SegmentGroup[]
+}
+
+/** La cuenta anterior, por navegador y sin saber si la persona hizo algo: solo mientras no exista la medición nueva. */
+interface LegacyGroup { key: string; posts: number; visitors: number; signups: number; visitorsPerPost: number; conversionPct: number | null }
+interface LegacyLinkedIn {
+  days: number
+  source: 'legacy'
+  status: Status
+  totals: { published: number; failed: number; visitors: number; signups: number }
+  posts: { slug: string | null; company: string | null; role: string | null; publishedAt: string | null; linkedinPostId: string | null; visitors: number; signups: number; conversionPct: number | null }[]
+  byRole: LegacyGroup[]
+  byHour: LegacyGroup[]
+  byCompany: LegacyGroup[]
+}
+
+type LinkedInData = SegmentLinkedIn | LegacyLinkedIn
+
+/** Las personas de cada publicación (o grupo) con la distinción, en columnas. */
+function PeopleCells({ segments }: { segments: SegmentCounts }) {
+  return (
+    <>
+      <td className="num"><b>{fmtNum(segments.active)}</b><span className="panel-muted panel-seg-pair" style={{ display: 'block' }}>de {fmtNum(segments.people)}</span></td>
+      <td style={{ minWidth: 150 }}><b>{fmtNum(segments.newPeople)}</b><span className="panel-muted panel-seg-pair"> {fmtNum(segments.newActive)} activas · {fmtNum(segments.newVisitOnly)} solo visita</span></td>
+      <td className="num">{fmtNum(segments.returningPeople)}<span className="panel-muted panel-seg-pair" style={{ display: 'block' }}>{fmtNum(segments.returningActive)} activas</span></td>
+      <td className="num">{fmtNum(segments.registered)}</td>
+      <td className="num">{fmtPct(segments.conversionPct)}{segments.newActive > 0 && <span className="panel-muted panel-seg-pair" style={{ display: 'block' }}>{fmtNum(segments.registeredNew)} de {fmtNum(segments.newActive)}</span>}</td>
+    </>
+  )
+}
+
+const PEOPLE_HEAD = <><th className="num">Activas</th><th>Nuevas</th><th className="num">Recurrentes</th><th className="num">Registradas</th><th className="num">Conversión de nuevas</th></>
+
+function SegmentGroups({ title, hint, rows, label }: { title: string; hint: string; rows: SegmentGroup[]; label: (key: string) => string }) {
+  const max = Math.max(1, ...rows.map(row => row.peoplePerPost))
+  return (
+    <Card title={title} hint={hint}>
+      {rows.length === 0 ? <Empty>Aún no hay publicaciones para comparar.</Empty> : (
+        <DataTable
+          rows={rows}
+          rowKey={row => row.key}
+          searchText={row => label(row.key)}
+          searchLabel={`Buscar ${title.replace('Por ', '').toLowerCase()}`}
+          head={<tr><th>{title.replace('Por ', '')}</th><th className="num">Posts</th><th>Personas por post</th>{PEOPLE_HEAD}</tr>}
+          renderRow={row => (
+            <tr>
+              <td>{label(row.key)}</td>
+              <td className="num">{row.posts}</td>
+              <td style={{ minWidth: 150 }}><InlineBar value={row.peoplePerPost} max={max} /> <span className="panel-muted">{fmtNum(row.peoplePerPost)}</span></td>
+              <PeopleCells segments={row.segments} />
+            </tr>
+          )}
+        />
+      )}
+    </Card>
+  )
+}
+
+function Groups({ title, hint, rows, label }: { title: string; hint: string; rows: LegacyGroup[]; label: (key: string) => string }) {
   const max = Math.max(1, ...rows.map(row => row.visitorsPerPost))
   return (
     <Card title={title} hint={hint}>
@@ -75,15 +135,6 @@ export default function LinkedInPage() {
       {error && <ErrorBox message={error} onRetry={reload} />}
       {loading && !data && <Loading />}
 
-      {data && !data.active && (
-        <Card title="Estas cifras todavía no son de personas activas">
-          <p className="panel-muted" style={{ lineHeight: 1.6 }}>
-            Falta aplicar la migración <b>web-analytics-active-people-migration.sql</b> en Supabase. Mientras tanto se cuenta por navegador, sin saber si la persona hizo algo
-            ni si era nueva (un robot o alguien que se fue al instante cuentan igual). Con la migración, solo cuentan las personas con una sesión activa y la conversión se mide sobre las nuevas.
-          </p>
-        </Card>
-      )}
-
       {data && status && (
         <>
           <div className={`panel-banner ${!status.connected ? 'bad' : !status.publishing || expiring ? 'warn' : 'ok'}`}>
@@ -101,52 +152,87 @@ export default function LinkedInPage() {
             <button type="button" className="panel-btn primary" onClick={connect}>{status.connected ? 'Reconectar' : 'Conectar LinkedIn'}</button>
           </div>
 
-          <div className="panel-grid cols-4">
-            <Stat label="Publicadas" value={fmtNum(data.totals.published)} caption="Vacantes que salieron en tu perfil en este periodo." />
-            <Stat label="Fallidas" value={fmtNum(data.totals.failed)} tone={data.totals.failed > 0 ? 'warn' : undefined} caption={data.totals.failed > 0 ? 'No se publicaron: se reintentan solas.' : 'Ninguna falló.'} />
-            <Stat label={data.active ? 'Visitantes activos' : 'Visitantes'} value={fmtNum(data.totals.visitors)} caption="Suma de los visitantes de cada publicación: quien abrió dos cuenta en cada una. Por eso puede ser mayor que los visitantes de LinkedIn del Resumen." />
-            <Stat
-              label="Registros"
-              value={fmtNum(data.totals.signups)}
-              caption={data.active
-                ? `Conversión de nuevos: ${fmtPct(data.totals.newVisitors ? Math.round((data.totals.signups / data.totals.newVisitors) * 1000) / 10 : null)} (${fmtNum(data.totals.signups)} registros entre ${fmtNum(data.totals.newVisitors)} visitantes nuevos).`
-                : `Conversión de ${fmtPct(data.totals.visitors > 0 ? Math.round((data.totals.signups / data.totals.visitors) * 1000) / 10 : null)}.`}
-            />
-          </div>
+          {data.source === 'legacy' ? (
+            <>
+              <SegmentsNotReady />
+              <div className="panel-grid cols-4">
+                <Stat label="Publicadas" value={fmtNum(data.totals.published)} caption="Vacantes que salieron en tu perfil en este periodo." />
+                <Stat label="Fallidas" value={fmtNum(data.totals.failed)} tone={data.totals.failed > 0 ? 'warn' : undefined} caption={data.totals.failed > 0 ? 'No se publicaron: se reintentan solas.' : 'Ninguna falló.'} />
+                <Stat label="Visitantes" value={fmtNum(data.totals.visitors)} caption="Navegadores distintos por publicación (sin filtrar por actividad)." />
+                <Stat label="Registros" value={fmtNum(data.totals.signups)} caption={`Conversión de ${fmtPct(data.totals.visitors > 0 ? Math.round((data.totals.signups / data.totals.visitors) * 1000) / 10 : null)}.`} />
+              </div>
 
-          <Card title="Cada publicación" hint="La más reciente primero">
-            {data.posts.length === 0 ? <Empty>Todavía no hay publicaciones en este periodo.</Empty> : (
-              <DataTable
-                rows={data.posts}
-                rowKey={post => `${post.slug}-${post.publishedAt}`}
-                searchText={post => `${post.company ?? ''} ${roleLabel(post.role)}`}
-                searchLabel="Buscar empresa o rol"
-                head={<tr><th>Fecha</th><th>Empresa</th><th>Rol</th><th className="num">{data.active ? 'Visitantes activos' : 'Visitantes'}</th>{data.active && <th className="num">Nuevos</th>}<th className="num">Registros</th><th className="num">{data.active ? 'Conversión de nuevos' : 'Conversión'}</th><th /></tr>}
-                renderRow={post => (
-                  <tr>
-                    <td>{fmtDate(post.publishedAt, true)}</td>
-                    <td>{post.company ?? '—'}</td>
-                    <td><span className="panel-chip">{roleLabel(post.role)}</span></td>
-                    <td className="num">{fmtNum(post.visitors)}</td>
-                    {data.active && <td className="num">{fmtNum(post.newVisitors)}</td>}
-                    <td className="num">{fmtNum(post.signups)}</td>
-                    <td className="num">{fmtPct(post.conversionPct)}</td>
-                    <td>{post.linkedinPostId && <a href={`https://www.linkedin.com/feed/update/${post.linkedinPostId}`} target="_blank" rel="noopener noreferrer">Ver en LinkedIn ↗</a>}</td>
-                  </tr>
+              <Card title="Cada publicación" hint="La más reciente primero">
+                {data.posts.length === 0 ? <Empty>Todavía no hay publicaciones en este periodo.</Empty> : (
+                  <DataTable
+                    rows={data.posts}
+                    rowKey={post => `${post.slug}-${post.publishedAt}`}
+                    searchText={post => `${post.company ?? ''} ${roleLabel(post.role)}`}
+                    searchLabel="Buscar empresa o rol"
+                    head={<tr><th>Fecha</th><th>Empresa</th><th>Rol</th><th className="num">Visitantes</th><th className="num">Registros</th><th className="num">Conversión</th><th /></tr>}
+                    renderRow={post => (
+                      <tr>
+                        <td>{fmtDate(post.publishedAt, true)}</td>
+                        <td>{post.company ?? '—'}</td>
+                        <td><span className="panel-chip">{roleLabel(post.role)}</span></td>
+                        <td className="num">{fmtNum(post.visitors)}</td>
+                        <td className="num">{fmtNum(post.signups)}</td>
+                        <td className="num">{fmtPct(post.conversionPct)}</td>
+                        <td>{post.linkedinPostId && <a href={`https://www.linkedin.com/feed/update/${post.linkedinPostId}`} target="_blank" rel="noopener noreferrer">Ver en LinkedIn ↗</a>}</td>
+                      </tr>
+                    )}
+                  />
                 )}
-              />
-            )}
-          </Card>
+              </Card>
 
-          <div className="panel-grid cols-2">
-            <Groups title="Por rol" hint="Qué tipo de vacante atrae más" rows={data.byRole} label={roleLabel} />
-            <Groups title="Por hora" hint="Hora de Monterrey" rows={data.byHour} label={key => key} />
-          </div>
-          <Groups title="Por empresa" hint="Las 10 con más visitantes por publicación" rows={data.byCompany} label={key => key} />
+              <div className="panel-grid cols-2">
+                <Groups title="Por rol" hint="Qué tipo de vacante atrae más" rows={data.byRole} label={roleLabel} />
+                <Groups title="Por hora" hint="Hora de Monterrey" rows={data.byHour} label={key => key} />
+              </div>
+              <Groups title="Por empresa" hint="Las 10 con más visitantes por publicación" rows={data.byCompany} label={key => key} />
+            </>
+          ) : (
+            <>
+              <div className="panel-grid cols-3">
+                <Stat label="Publicadas" value={fmtNum(data.totals.published)} caption="Vacantes que salieron en tu perfil en este periodo." />
+                <Stat label="Fallidas" value={fmtNum(data.totals.failed)} tone={data.totals.failed > 0 ? 'warn' : undefined} caption={data.totals.failed > 0 ? 'No se publicaron: se reintentan solas.' : 'Ninguna falló.'} />
+                <Stat label="Usuarios activos de LinkedIn" value={fmtNum(data.totals.segments?.active ?? 0)} caption={`De ${fmtNum(data.totals.segments?.people ?? 0)} personas que llegaron por LinkedIn, esas hicieron algo en el sitio.`} tone="good" />
+              </div>
+              {data.totals.segments && <SegmentSummary segments={data.totals.segments} title="Quién llega desde LinkedIn" hint="Personas distintas de todas las publicaciones" trackingSince={data.trackingSince} partial={data.partial} />}
+
+              <Card title="Cada publicación" hint="La más reciente primero · personas que llegaron por su enlace">
+                {data.posts.length === 0 ? <Empty>Todavía no hay publicaciones en este periodo.</Empty> : (
+                  <DataTable
+                    rows={data.posts}
+                    rowKey={post => `${post.slug}-${post.publishedAt}`}
+                    searchText={post => `${post.company ?? ''} ${roleLabel(post.role)}`}
+                    searchLabel="Buscar empresa o rol"
+                    head={<tr><th>Fecha</th><th>Empresa</th><th>Rol</th>{PEOPLE_HEAD}<th /></tr>}
+                    renderRow={post => (
+                      <tr>
+                        <td>{fmtDate(post.publishedAt, true)}</td>
+                        <td>{post.company ?? '—'}</td>
+                        <td><span className="panel-chip">{roleLabel(post.role)}</span></td>
+                        <PeopleCells segments={post.segments} />
+                        <td>{post.linkedinPostId && <a href={`https://www.linkedin.com/feed/update/${post.linkedinPostId}`} target="_blank" rel="noopener noreferrer">Ver en LinkedIn ↗</a>}</td>
+                      </tr>
+                    )}
+                  />
+                )}
+              </Card>
+
+              <div className="panel-grid cols-2">
+                <SegmentGroups title="Por rol" hint="Qué tipo de vacante atrae más" rows={data.byRole} label={roleLabel} />
+                <SegmentGroups title="Por hora" hint="Hora de Monterrey" rows={data.byHour} label={key => key} />
+              </div>
+              <SegmentGroups title="Por empresa" hint="Las 10 con más personas por publicación" rows={data.byCompany} label={key => key} />
+            </>
+          )}
 
           <p className="panel-defs">
             <b>Límite de la medición.</b> LinkedIn no entrega impresiones ni reacciones de un perfil personal, así que aquí solo se mide lo que llega a tu sitio:
-            los visitantes y registros que entraron por el enlace de cada publicación. Una publicación con pocos visitantes no necesariamente se vio poco en LinkedIn.
+            las personas que entraron por el enlace de cada publicación. Una publicación con pocas personas no necesariamente se vio poco en LinkedIn. <b>Activa</b> es quien hizo algo en el sitio; <b>solo visita</b>, quien entró y se fue.
+            <b> Nueva</b> es quien entra por primera vez en el periodo y <b>recurrente</b> quien ya había entrado; la conversión mide cuántas nuevas se registraron entre las nuevas activas. Una persona que visitó dos publicaciones cuenta en las dos.
           </p>
         </>
       )}
