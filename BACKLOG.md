@@ -12,7 +12,7 @@ Estado al **31 de octubre de 2026**. Se trabaja **de a poco**: una cosa a la vez
 | Sprint | Qué entra | Dónde está |
 |---|---|---|
 | **Noviembre 2026** | Todo lo pendiente que había hasta el 31 de octubre: las letras **A a V** | Sección 2 |
-| **Diciembre 2026** | Letras propias del sprint, otra vez desde la **A**: **A** inicio de sesión con Google · **B** Pixel de Meta y su API · **C** compartir vacantes y discusiones con OG bien hecho · **D** pantallas legales, de privacidad y de cookies · **E** agente experto en producto con nuestros datos | Sección 2B |
+| **Diciembre 2026** | Letras propias del sprint, otra vez desde la **A**: **A** inicio de sesión con Google · **B** Pixel de Meta y su API · **C** compartir vacantes y discusiones con OG bien hecho · **D** pantallas legales, de privacidad y de cookies · **E** jefe de producto con Claude: un agente robusto que revisa, avisa, propone, diseña y actúa solo con tu aprobación (se hace al final, con 2 meses de datos) | Sección 2B |
 
 > **Las letras empiezan de nuevo en cada sprint.** Cuando haga falta distinguirlas se dice "A de noviembre" o "A de diciembre".
 
@@ -230,9 +230,9 @@ Pedido el 30 de octubre: que en cada sección y página de la app las personas p
 | 2 | **B** | Pixel de Meta y su API de conversiones | P3 | M |
 | 3 | **C** | Compartir vacantes y discusiones con OG bien hecho | P2 | M |
 | 4 | **D** | Pantallas legales, de privacidad y de cookies | P2 | L |
-| 5 | **E** | Agente experto en producto con nuestros datos (Claude) | P3 | L |
+| 5 | **E** | Jefe de producto con Claude (agente con aprobación en cada acción y alertas de errores) | P2 | L · arranca con 2 meses de datos |
 
-> Las prioridades son una propuesta mía: A y C ayudan a que llegue y se comparta más gente (P2); B solo rinde cuando se anuncie en Meta, y además depende del tema de cookies (P3). D es P2 por orden de diciembre, pero **conviene adelantarla**: desde que Clarity se enciende, el sitio graba sesiones sin aviso de cookies (ver la nota de D). E (P3) rinde cuando ya haya unas semanas de datos de la medición nueva. Cámbialas si quieres.
+> Las prioridades son una propuesta mía: A y C ayudan a que llegue y se comparta más gente (P2); B solo rinde cuando se anuncie en Meta, y además depende del tema de cookies (P3). D es P2 por orden de diciembre, pero **conviene adelantarla**: desde que Clarity se enciende, el sitio graba sesiones sin aviso de cookies (ver la nota de D). E va **al final a propósito**: necesita unos 2 meses de datos de la medición nueva (desde el 31 de octubre) para que sus conclusiones valgan; cuando llegue ese momento es lo que más valor da, por eso P2. Cámbialas si quieres.
 
 ### A (diciembre). Inicio de sesión con Google — P2 · M
 Hoy se entra con correo, GitHub o LinkedIn. Falta Google, que es la cuenta que casi todos tienen.
@@ -283,17 +283,67 @@ Hoy hay dos páginas, `/privacy` y `/terms` (76 líneas cada una, genéricas, co
 - [ ] Borrar mi cuenta y descargar mis datos (es lo mismo que "Privacidad de cuenta" de noviembre: hacerlo una sola vez).
 - [ ] Pruebas: sin aceptar no se carga ningún script de medición ni de publicidad; la elección se recuerda; retirar el consentimiento los detiene; los textos legales aparecen en el pie de todas las páginas y en los correos.
 
-### E (diciembre). Agente experto en producto con nuestros datos (Claude) — P3 · L
-Que desde la app de Claude puedas preguntarle cosas de AvoTalent (por qué baja el registro, qué vacantes funcionan, quién vuelve) y que, con la información histórica, **proponga features que tengan sustento**, no ocurrencias.
-**Dónde vive (respuesta corta):** no es Claude Code. Claude Code sirve para programar dentro del repositorio. Lo que quieres es **la app de Claude** (Claude Desktop) con **un Proyecto** (las instrucciones y el contexto de "experto en producto") **conectado al servidor MCP** que ya hicimos (`packages/mcp-analytics`). Claude Desktop sí corre servidores MCP locales; la versión web y la del celular necesitarían un servidor MCP **en internet con acceso protegido**, que es otra decisión (y otro costo de cuidado).
-- [ ] **Decisión tuya:** solo en la computadora con Claude Desktop (sin hosting, lo más sencillo) o también desde web y celular (hay que publicar el MCP y protegerlo bien, porque es acceso a tus datos).
-- [ ] **El Proyecto**: instrucciones de un jefe de producto que entiende datos. Reglas: separar lo que dicen los números de lo que es suposición, citar siempre de qué consulta sale cada cifra y el periodo, avisar cuando la muestra es pequeña (hoy son decenas de personas), no confundir correlación con causa, no inventar datos, no mostrar datos personales.
-- [ ] **Más herramientas en el MCP** para poder responder de producto y no solo de tráfico: personas nuevas y recurrentes (`analytics_segments`), retención y cohortes, desempeño de cada vacante (vistas, postulaciones, guardados), calidad de las coincidencias de "Para ti", oferta y demanda de skills y puestos, resultados de los correos (abiertos, clics, registros que trajeron) y de las publicaciones de LinkedIn, y lo que dice el botón de feedback (V de noviembre).
-- [ ] **Bitácora de lanzamientos** (fecha y qué se cambió, en una tabla propia): sin saber **cuándo** salió cada cosa, el agente no puede comparar antes y después ni decir si una feature funcionó. Es lo que vuelve útil el "historial".
-- [ ] **Formato de cada propuesta de feature**: qué problema ve, la evidencia (cifras con periodo y tamaño de muestra), la hipótesis, qué métrica debería moverse, cuánto cuesta (S/M/L), el riesgo y cómo se mediría después. Con un nivel de confianza honesto.
-- [ ] **Seguridad**: solo lectura, rol de base de datos con permisos mínimos (como el del MCP actual), sin correos ni nombres, y revisar qué se manda a Claude (los datos salen de nuestra base hacia la conversación).
-- [ ] **Evaluarlo**: una lista de 10 preguntas con respuesta conocida (por ejemplo "¿cuántas personas se registraron el mes pasado?") para comprobar que no inventa, y revisar sus primeras propuestas contra tu criterio antes de confiar en ellas.
-- [ ] Esperar a tener unas semanas de datos de la medición nueva (analítica propia, Clarity, errores y flujos): antes de eso solo podría proponer con muy poca evidencia.
+### E (diciembre). Jefe de producto con Claude — P2 · L · arranca cuando haya 2 meses de datos
+Un agente que hace de **jefe de producto de AvoTalent**: lee los datos, detecta huecos y errores, propone features y protecciones con sustento, te avisa por correo, diseña lo que propone y lo muestra, y **puede actuar** (activar una alerta, mandar un correo a usuarios, publicar, cambiar código) **solo con tu aprobación explícita en cada acción**. Ese es el tope: llegar hasta el nivel "Actúa con aprobación"; nunca actúa solo hacia afuera.
+
+**Por qué va al final y por qué es lo que más da después.** Un agente de producto es tan bueno como la historia que tiene. Hoy hay decenas de personas y apenas semanas de la medición nueva. Con **2 meses de datos** (analítica propia, Clarity, errores y flujos, correos, vacantes) ya hay comportamiento, retención y antes/después de cada cambio de los que sacar conclusiones, y el agente se estrena con evidencia y no con suposiciones.
+
+**Requisitos antes de empezar**
+- [ ] Haber acumulado ~2 meses de datos de la medición nueva (desde el 31 de octubre de 2026) y revisar que no tenga huecos.
+- [ ] D de diciembre (privacidad): los datos agregados se mandan a la API de Anthropic para que el agente los lea; la política de privacidad debe decirlo.
+- [ ] Bitácora de lanzamientos al día (qué se cambió y cuándo). Sin ella no se puede medir si una feature funcionó. Conviene empezarla **ya**, para que haya 2 meses de historia cuando arranque E.
+- [ ] Tus decisiones: dónde corre (supuesto: **en nuestro backend**, siempre encendido, con una llave de la API de Anthropic y un tope de gasto mensual), a quién le llegan los correos, cómo se aprueban las acciones y la lista inicial de acciones permitidas.
+
+**E1. El jefe de producto en conversación (nivel 1)** — Proyecto de Claude Desktop conectado al MCP
+- [ ] Proyecto con instrucciones de jefe de producto: separar datos de suposiciones, citar siempre la consulta y el periodo de cada cifra, avisar cuando la muestra es chica, no confundir correlación con causa, no inventar, no mostrar datos personales.
+- [ ] Documento de contexto: qué es AvoTalent, para quién, el backlog, las **decisiones ya tomadas** (para no reproponer lo descartado) y la definición de cada métrica (activo, nuevo, recurrente, conversión).
+- [ ] Más herramientas en el MCP: retención y cohortes, personas nuevas y recurrentes, desempeño de cada vacante, calidad de "Para ti", oferta y demanda de skills y puestos, resultados de correos y de LinkedIn, el botón de feedback y la bitácora de lanzamientos.
+- [ ] Formato fijo de propuesta: problema, evidencia (cifras con periodo y tamaño de muestra), hipótesis, métrica que debería moverse, esfuerzo (S/M/L), riesgo, nivel de confianza y cómo se medirá después.
+
+**E2. Revisión automática (nivel 2)** — cron en el backend
+- [ ] Cron semanal (y opcional diario) que llama a Claude por la API con **herramientas de solo lectura** y deja un informe: cómo vamos, qué cambió, huecos, errores, propuestas.
+- [ ] El informe se guarda en la base, se ve en una pantalla nueva de Telemetry ("Informe del jefe de producto") y llega por correo **solo a ti**, usando el control de cuota de correos que ya existe.
+- [ ] Cada conclusión trae su nivel de confianza; con poca muestra dice "con esto no se puede afirmar".
+
+**E3. Alertas, con las métricas de errores (nivel 3)**
+- [ ] Las reglas de alerta pasan de estar en código a una **tabla de reglas** (umbral, ventana, severidad, canal, tiempo de espera entre avisos, encendida o apagada), para que activarlas sea un dato y no un despliegue.
+- [ ] Alertas de **errores y flujos** (los umbrales se calibran con los 2 meses de datos, no con números inventados):
+  - [ ] Pico de errores: más errores por hora que lo normal.
+  - [ ] Error nuevo que afecta a al menos X personas.
+  - [ ] Tasa de error por flujo crítico (iniciar sesión, registrarse, buscar, postularse) por encima del umbral.
+  - [ ] Respuestas 5xx de la API o errores del servidor por encima del umbral.
+  - [ ] Un flujo crítico con intentos y **ningún** completado en N horas (por ejemplo, nadie logra registrarse).
+  - [ ] Carga lenta sostenida en un paso (más de 2.5 s durante una hora).
+  - [ ] Salto de rage clicks en una página (Clarity).
+  - [ ] "La medición dejó de registrar": hay visitas pero ninguna sesión nueva, o hay sesiones pero ningún evento ni flujo en 24 h.
+  - [ ] Falla de los procesos programados (sincronización de Clarity, correos, el propio informe).
+- [ ] Cada alerta de error lleva el enlace a la pantalla de errores, el stack y el video de Clarity del más reciente.
+- [ ] Sin avisos repetidos (tiempo de espera), con severidad y con "ya lo vi" para silenciarla.
+- [ ] El agente puede **proponer** reglas nuevas o cambiar umbrales; quedan como borrador hasta que las apruebes.
+
+**E4. Diseño (nivel 4)**
+- [ ] Bajo demanda desde la app de Claude: le pides una pantalla o un cambio y te la dibuja para verla al instante, y se afina conversando.
+- [ ] Cada propuesta de feature puede llevar un boceto adjunto (una página que se abre en el panel).
+- [ ] Borradores de cambios de código para revisar: **nunca** se publican ni se unen solos.
+
+**E5. Actúa con tu aprobación explícita en cada acción (nivel 5)**
+- [ ] **El modelo nunca tiene las llaves para actuar.** Solo crea **propuestas de acción**; un ejecutor de código normal (no el modelo) hace la acción **después** de que apruebes.
+- [ ] Lista cerrada de acciones permitidas, cada una con su aprobación: activar o cambiar una alerta, mandar un correo (siempre un borrador que ves completo, con la lista de a quién le llega), publicar una publicación, abrir una propuesta de cambio de código. Cualquier cosa fuera de la lista no existe para el agente.
+- [ ] Pantalla de aprobaciones en Telemetry: ver la propuesta con su evidencia, aprobar o rechazar (solo superadmin con sesión; **no** se aprueba desde un enlace del correo sin iniciar sesión).
+- [ ] Cada acción queda con un identificador único (no se ejecuta dos veces), quién aprobó, cuándo, qué hizo y qué resultado dio, y se puede deshacer cuando la acción lo permita.
+- [ ] Los correos a usuarios usan el control de cuota y los topes que ya existen y respetan las preferencias; el agente no puede saltarse ninguno.
+- [ ] Registro de propuestas aceptadas, rechazadas y su resultado: el agente aprende qué te sirve y no repite lo rechazado.
+
+**Lo que lo hace robusto (aplica a todas las etapas)**
+- [ ] **Interruptor de apagado** (variable y botón en el panel) que detiene al agente y a cualquier acción en curso.
+- [ ] **Tope de gasto** diario y mensual de la API, con aviso al acercarse y corte al llegar.
+- [ ] **Registro completo** de cada corrida: qué consultó, qué respondió, cuánto costó, qué propuso.
+- [ ] **Defensa contra instrucciones escondidas:** lo que escribe la gente (discusiones, mensajes de error, feedback) entra siempre como **dato**, nunca como órdenes; el agente no puede ejecutar nada por lo que lea. Con pruebas que intentan engañarlo.
+- [ ] **Privacidad:** solo datos agregados y sin personales hacia la API; el rol de base de datos es de solo lectura y con permisos mínimos.
+- [ ] **Modo sombra** antes de dejarlo actuar: unas semanas donde solo propone y tú comparas con tu criterio, sin ninguna acción.
+- [ ] **Evaluación:** una lista de preguntas con respuesta conocida y de casos con trampa (muestra chica, correlación falsa), que se corre cada vez que cambian sus instrucciones; las instrucciones llevan versión.
+- [ ] Reintentos y fallas controladas: si la API falla, el informe lo dice y no inventa; las acciones no se repiten.
+- [ ] Pruebas automáticas del ejecutor (que nada fuera de la lista se pueda ejecutar y que sin aprobación no corra nada).
 
 ---
 
