@@ -11,7 +11,7 @@ Estado al **31 de octubre de 2026**. Se trabaja **de a poco**: una cosa a la vez
 
 | Sprint | Qué entra | Dónde está |
 |---|---|---|
-| **Noviembre 2026** | Todo lo pendiente que había hasta el 31 de octubre: las letras **A a V** | Sección 2 |
+| **Noviembre 2026** | **0** primero (medir los días flojos), y después todo lo pendiente que había hasta el 31 de octubre: las letras **A a W** | Sección 2 |
 | **Diciembre 2026** | Letras propias del sprint, otra vez desde la **A**: **A** inicio de sesión con Google · **B** Pixel de Meta y su API · **C** compartir vacantes y discusiones con OG bien hecho · **D** pantallas legales, de privacidad y de cookies · **E** jefe de producto con Claude: un agente robusto que revisa, avisa, propone, diseña y actúa solo con tu aprobación (se hace al final, con 2 meses de datos) · **F** días muertos: medirlos y traer a nuestra propia gente de vuelta | Sección 2B |
 
 > **Las letras empiezan de nuevo en cada sprint.** Cuando haga falta distinguirlas se dice "A de noviembre" o "A de diciembre".
@@ -71,6 +71,7 @@ Lo que no alcance en noviembre se **recorre a diciembre** (empezando por lo de p
 
 | Orden | Letra | Pendiente | Prioridad | Tamaño | Antes |
 |---|---|---|---|---|---|
+| 0 | **0** | Ritmo de la semana: medir los días y las horas flojas (se hace primero) | P2 | M | nuevo (pedido 31 oct) |
 | 1 | **A** | Cerrar la API (que no entregue vacantes sin sesión) | P1 | M | A |
 | 2 | **B** | Llave de Resend con acceso completo y rotar el token pegado en el chat | P1 | S | cabo suelto |
 | 3 | **C** | Revisar las variables de entorno de Railway | P1 | S | cabo suelto |
@@ -78,24 +79,34 @@ Lo que no alcance en noviembre se **recorre a diciembre** (empezando por lo de p
 | 5 | **E** | Las 156 vacantes que no le sirven a nadie y el conteo de la cola | P2 | S | cabo suelto |
 | 6 | **V** | Feedback en cada sección y página de la app | P2 | M | nuevo (pedido 30 oct) |
 | 7 | **W** | Que la sesión no se pierda (y entrar directo desde el correo) | P2 | M | nuevo (pedido 31 oct) |
-| 7 | **F** | Confianza en las vacantes (reportar, cola de revisión, enlaces vivos) | P2 | M | B |
-| 8 | **G** | Webhook de Resend | P2 | M | plan nuevo |
-| 9 | **H** | Comunidad: seguir, likes, respuestas y menciones | P2 | L | D |
-| 10 | **I** | SEO y GEO (posición 0 en Google y citas de las IA) | P2 | M | H (parte SEO/GEO) |
-| 11 | **J** | CRM en el admin y termómetro "Valiosas" | P3 | L | plan nuevo |
-| 12 | **K** | Validación de skills: más preguntas de examen | P3 | M | E |
-| 13 | **L** | Mis postulaciones | P3 | M | F |
-| 14 | **M** | Filtro de señal humana en la analítica (en espera) | P3 | M | en espera |
-| 15 | **N** | Arreglar la prueba de retención que depende de la hora | P3 | S | cabo suelto |
-| 16 | **O** | Moderación y reportes | P4 | M | G |
-| 17 | **P** | Sembrar la comunidad con algunas discusiones | P4 | S | G |
-| 18 | **Q** | Perfil como CV y barra de qué tan completo está | P4 | M | G |
-| 19 | **R** | Privacidad de cuenta (contraseña, borrar, exportar) | P4 | M | G |
-| 20 | **S** | Medir las vistas de los artículos del equipo | P4 | S | cabo suelto |
-| 21 | **T** | Subir a git el documento de plan de monetización | P4 | S | cabo suelto |
-| 22 | **U** | Tener presente: la actividad se mide desde el 24 de octubre | Informativo | — | cabo suelto |
+| 8 | **F** | Confianza en las vacantes (reportar, cola de revisión, enlaces vivos) | P2 | M | B |
+| 9 | **G** | Webhook de Resend | P2 | M | plan nuevo |
+| 10 | **H** | Comunidad: seguir, likes, respuestas y menciones | P2 | L | D |
+| 11 | **I** | SEO y GEO (posición 0 en Google y citas de las IA) | P2 | M | H (parte SEO/GEO) |
+| 12 | **J** | CRM en el admin y termómetro "Valiosas" | P3 | L | plan nuevo |
+| 13 | **K** | Validación de skills: más preguntas de examen | P3 | M | E |
+| 14 | **L** | Mis postulaciones | P3 | M | F |
+| 15 | **M** | Filtro de señal humana en la analítica (en espera) | P3 | M | en espera |
+| 16 | **N** | Arreglar la prueba de retención que depende de la hora | P3 | S | cabo suelto |
+| 17 | **O** | Moderación y reportes | P4 | M | G |
+| 18 | **P** | Sembrar la comunidad con algunas discusiones | P4 | S | G |
+| 19 | **Q** | Perfil como CV y barra de qué tan completo está | P4 | M | G |
+| 20 | **R** | Privacidad de cuenta (contraseña, borrar, exportar) | P4 | M | G |
+| 21 | **S** | Medir las vistas de los artículos del equipo | P4 | S | cabo suelto |
+| 22 | **T** | Subir a git el documento de plan de monetización | P4 | S | cabo suelto |
+| 23 | **U** | Tener presente: la actividad se mide desde el 24 de octubre | Informativo | — | cabo suelto |
 
 > El CRM (**J**) queda en P3 por tamaño y porque primero conviene el webhook (**G**), pero si quieres adelantarlo es una decisión tuya.
+
+### 0. Ritmo de la semana: medir los días y las horas flojas — P2 · M · se hace PRIMERO
+Pedido el 31 de octubre. Un sábado entraron 8 visitantes y ninguno vino de LinkedIn; nadie lo vio venir porque hoy no hay una pantalla que muestre **cuándo** hay gente y cuándo no. Se hace antes que todo lo demás de noviembre por una razón práctica: **la línea base de cada día de la semana necesita semanas de datos**, y cada día que pasa sin esta pantalla es un día que no se puede comparar después. Es la parte de medición de F de diciembre (días muertos); las activaciones para traer a nuestra gente siguen siendo de diciembre.
+- [ ] Pantalla en Telemetry, dentro de Tráfico web: **"Ritmo de la semana"**. Personas **activas** por día de la semana y por hora (hora de Monterrey) en un mapa de calor, con las personas nuevas y los registros de cada día. Con la misma definición de personas del resto del panel (activa, nueva, registrada).
+- [ ] **Por origen**, en la misma pantalla: cuánto de cada día viene de LinkedIn, correo, directo y de personas que **ya tenían cuenta**. Así se ve si un día flojo es porque afuera se calló o porque los nuestros no vuelven.
+- [ ] **Cada día contra el mismo día de otras semanas** (un sábado con otros sábados, no con un martes): la mediana de las últimas semanas y cuánto se quedó por debajo. Mientras haya menos de 3 semanas de ese día dice "aún no hay base" en lugar de inventar una comparación.
+- [ ] Marca visible de **día flojo** (por debajo de la mitad de su normal) en la tabla de días, para verlo sin tener que calcularlo. La alarma que avisa a media tarde queda en F de diciembre, junto con las alertas de errores.
+- [ ] **Qué se publicó cada día** en la misma línea (publicaciones de LinkedIn, correos enviados), para poder ver si el día flojo coincide con que no se mandó nada. Incluye la regla nueva de 4 publicaciones al día, todos los días.
+- [ ] Los números salen de las sesiones nuevas de analítica (no de la medición vieja) y respetan el equipo, las cuentas de prueba y los robots. Con pruebas contra una base real (PGlite), como el resto de la analítica.
+- [ ] Se actualiza sola cada 10 s como el resto de las pantallas de Telemetry.
 
 ### A. Cerrar la API — P1 · M
 `/api/community/posts`, `/feed` y `/stats` todavía entregan vacantes a quien no tiene sesión.
@@ -362,13 +373,9 @@ Un agente que hace de **jefe de producto de AvoTalent**: lee los datos, detecta 
 ### F (diciembre). Días muertos: medirlos y traer a nuestra propia gente de vuelta — P2 · L
 Pedido el 31 de octubre, al ver que un sábado casi sin visitas se queda sin registros. Hoy el sitio vive de lo que le llega de afuera (sobre todo las publicaciones de LinkedIn), así que **cuando afuera se calla, el sitio se vacía**: ese día entraron 8 visitantes, de los cuales ninguno era de LinkedIn. Dos partes: primero saber cuáles son los días flojos y por qué, y luego tener una forma de **llamar a nuestra propia gente** (la que ya se registró o ya nos conoce) para que esos días no se mueran.
 
-**Parte 1. Medir los días flojos**
-- [ ] Pantalla en Telemetry (Tráfico web, "Ritmo de la semana"): **personas activas por día de la semana y por hora** (hora de Monterrey) en un mapa de calor, con registros y personas nuevas por día. Se ve de golpe cuándo hay gente y cuándo no.
-- [ ] **Por origen**: cuánto de cada día viene de LinkedIn, correo, directo y de personas que ya tenían cuenta. Así se ve si un día flojo es porque "afuera se calló" o porque "los nuestros no vuelven".
-- [ ] **Línea base por día de la semana** (la mediana de las últimas semanas del mismo día) y marcar **día muerto** cuando se queda por debajo de la mitad. Un sábado se compara con otros sábados, no con un martes.
-- [ ] Una alerta de "día muerto" en el sistema de alertas (E3 de este sprint): a media tarde, si hoy va muy por debajo de su línea base, avisa a tiempo de hacer algo todavía hoy.
-- [ ] Resumen semanal: los días y horas más flojos, y qué se hizo en ellos (publicaciones, correos, avisos) para poder comparar.
-- [ ] Requisito: al menos **4 semanas de datos** de la medición nueva para que la línea base de cada día valga (con un solo sábado no hay comparación).
+**Parte 1. Medir los días flojos** — **movida a noviembre como el punto 0** ("Ritmo de la semana": mapa de calor por día y hora, origen, comparación con el mismo día de otras semanas y qué se publicó). Lo que se queda aquí es lo que necesita esas semanas de datos:
+- [ ] Una **alerta de "día muerto"** en el sistema de alertas (E de este sprint, tabla de reglas): a media tarde, si hoy va muy por debajo de la línea base de su día de la semana, avisa a tiempo de hacer algo todavía hoy.
+- [ ] **Resumen semanal** de los días y horas más flojos y qué se hizo en ellos, para comparar activaciones.
 
 **Parte 2. Activaciones: traer a nuestra propia gente a la web**
 La gente que ya conocemos es el único tráfico que no depende de LinkedIn. Ideas, de menor a mayor esfuerzo; cada una se mide con su propio origen (`utm_medium=activacion`, `utm_campaign=dia-muerto-<tipo>`):
