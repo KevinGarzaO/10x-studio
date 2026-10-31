@@ -4,6 +4,7 @@ import { communityAuthMiddleware, AuthRequest } from '../../../middleware/commun
 import { isBotUserAgent } from '../../../services/analytics/bots'
 import { parseCollectPayload, sanitizeClientId } from '../../../services/web-analytics/payload'
 import { applyCollect, executeUserStitching, type RequestContext } from '../../../services/web-analytics/collect'
+import { saveClarityLink } from '../../../services/web-analytics/clarity-link'
 
 const router = Router()
 
@@ -67,6 +68,7 @@ function makeLimiter(maxPerHour: number) {
 // Un latido cada 10 s son 360 por hora de pestaña abierta: el tope deja holgura para varias pestañas y eventos.
 const allowedCollect = makeLimiter(1500)
 const allowedIdentify = makeLimiter(60)
+const allowedClarity = makeLimiter(120)
 
 /** Una coordenada válida dentro de su rango, o null (lo que llega del encabezado no se toma tal cual). */
 function coordinate(value: string | null, limit: number): number | null {
@@ -119,6 +121,23 @@ router.post('/identify', communityAuthMiddleware, async (req: AuthRequest, res: 
     await executeUserStitching(context.clientId, req.userId)
   } catch (error) {
     console.warn('[WebAnalytics] No se pudo unir la identidad:', (error as Error).message)
+  }
+  res.status(204).end()
+})
+
+/**
+ * "Esta sesión de analítica es esta grabación de Clarity": el navegador arma la dirección del reproductor con lo que Clarity
+ * deja en sus cookies y la manda aquí para que el panel pueda abrir el video de cada sesión. Solo se guarda si es de verdad una
+ * dirección del reproductor de Clarity y la sesión es de ese mismo navegador (ver services/web-analytics/clarity-link.ts).
+ */
+router.post('/clarity', async (req: Request, res: Response) => {
+  try {
+    if (!fromProxy(req)) return res.status(204).end()
+    const context = contextOf(req)
+    if (!context || isBotUserAgent(context.userAgent) || !allowedClarity(context.clientId)) return res.status(204).end()
+    await saveClarityLink(req.body, context.clientId)
+  } catch (error) {
+    console.warn('[WebAnalytics] No se pudo guardar el enlace de Clarity:', (error as Error).message)
   }
   res.status(204).end()
 })

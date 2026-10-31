@@ -670,6 +670,14 @@ const SESSION_COLUMNS =
 
 type SessionRow = { user_id: string | null; [key: string]: unknown }
 
+/** Los enlaces a la grabación de Clarity de estas sesiones. Si la tabla aún no existe (falta la migración) simplemente no hay enlaces. */
+async function clarityUrlsOf(ids: string[]): Promise<Map<string, string>> {
+  if (ids.length === 0) return new Map()
+  const { data, error } = await supabase.from('analytics_clarity_links').select('session_id, clarity_session_url').in('session_id', ids)
+  if (error) return new Map()
+  return new Map((data ?? []).map((row: { session_id: string; clarity_session_url: string }) => [row.session_id, row.clarity_session_url]))
+}
+
 /** Quién es cada cuenta reconocida (las demás son visitantes anónimos). */
 async function namesOf(rows: SessionRow[]): Promise<Map<string, { username: string | null; displayName: string | null; email: string | null }>> {
   const ids = [...new Set(rows.map((row) => row.user_id).filter((id): id is string => !!id))]
@@ -734,13 +742,13 @@ router.get('/web/sessions', handle('sesiones web', async (req, res) => {
     throw new Error(error.message)
   }
   const rows = (data ?? []) as unknown as SessionRow[]
-  const names = await namesOf(rows)
+  const [names, videos] = await Promise.all([namesOf(rows), clarityUrlsOf(rows.map((row) => String(row.session_id)))])
   res.json({
     ready: true,
     page,
     pageSize,
     total: count ?? rows.length,
-    sessions: rows.map((row) => ({ ...row, user: row.user_id ? names.get(row.user_id) ?? null : null })),
+    sessions: rows.map((row) => ({ ...row, user: row.user_id ? names.get(row.user_id) ?? null : null, clarity_url: videos.get(String(row.session_id)) ?? null })),
   })
 }))
 
@@ -767,10 +775,10 @@ router.get('/web/sessions/:id', handle('detalle de sesión', async (req, res) =>
       .order('created_at', { ascending: false })
       .limit(30),
   ])
-  const names = await namesOf([session as SessionRow])
+  const [names, videos] = await Promise.all([namesOf([session as SessionRow]), clarityUrlsOf([id])])
   res.json({
     ready: true,
-    session: { ...session, user: session.user_id ? names.get(session.user_id) ?? null : null },
+    session: { ...session, user: session.user_id ? names.get(session.user_id) ?? null : null, clarity_url: videos.get(id) ?? null },
     pageViews: views.data ?? [],
     events: events.data ?? [],
     otherSessions: others.data ?? [],

@@ -14,15 +14,31 @@ tiempo límite, y devuelve datos agregados: no entrega correos ni nombres.
 | `get_clarity_frustration_data` | Rage clicks, dead clicks, quickbacks y scroll por página (ruta exacta, prefijo con `*`, o las peores páginas si no se da ruta), con tendencia día a día y conteos por 100 sesiones. |
 | `get_user_session_recording` | Por `user_id` o `email`: sus últimas sesiones y cómo abrir su grabación en Clarity. |
 
-## Cómo se conecta Clarity con nuestra base (y por qué no hay `clarity_session_url`)
+## Cómo se conecta Clarity con nuestra base: el video de cada sesión
 
-Clarity **no tiene** una función del navegador para pedir el enlace de una grabación (no existe `clarity("get", "sessionUrl")`),
-y su API de exportación no lista grabaciones. Entonces el vínculo va al revés: el sitio le da a Clarity **nuestros** ids
-(`apps/community/lib/clarity.ts`):
+Clarity **no tiene** una función del navegador para pedir el enlace de una grabación (no existe `clarity("get", "sessionUrl")`) y su API de
+exportación no lista grabaciones. Pero su reproductor tiene una dirección con forma conocida, que se arma con tres datos:
 
-- `clarity("identify", <id de la cuenta>, <id de la sesión de analítica>, <ruta>)` → en Clarity se filtra por **Custom ID** (todas las grabaciones de una cuenta) o **Custom session ID** (esa visita, que es exactamente una fila de `analytics_sessions`).
-- Etiquetas `account` (registered/anonymous), `user_kind`, `avo_session` y `entry_path` para filtrar y segmentar.
-- Nunca se manda el correo ni el nombre; Clarity convierte el id en un hash antes de enviarlo.
+```
+https://clarity.microsoft.com/player/<proyecto>/<usuario de Clarity>/<sesión de Clarity>
+```
+
+El script de Clarity deja el usuario y la sesión en las cookies `_clck` y `_clsk` de nuestro dominio. El navegador (`apps/community/lib/clarity.ts`)
+arma esa dirección y la manda por `/api/a/clarity` al backend, que la guarda ligada a **nuestra** sesión de analítica en `analytics_clarity_links`
+(solo si es una dirección del reproductor de Clarity y la sesión es de ese navegador). Así:
+
+- En **Tráfico web > Sesiones** cada sesión con grabación trae un enlace **▶ Video** (y un botón en el detalle de la sesión).
+- `get_user_session_recording` devuelve `clarityUrl` por sesión.
+- Para abrir el video hay que haber iniciado sesión en el proyecto de Clarity.
+
+Además, el sitio le da a Clarity nuestros ids (`clarity("identify", <id de la cuenta>, <id de la sesión de analítica>, <ruta>)`) y etiquetas
+(`account`, `user_kind`, `avo_session`, `entry_path`), por si prefieres filtrar en su panel: **Custom ID** = una cuenta, **Custom session ID** = una visita.
+No se manda correo ni nombre; Clarity convierte el id en un hash antes de enviarlo.
+
+Límites que conviene saber:
+- **La dirección del reproductor no está documentada por Microsoft** (es la que usan sus propias integraciones y varias guías). Si cambia, se ajusta `clarityPlayerUrl` en `lib/clarity.ts` y nada más.
+- **No todas las sesiones tienen video**: Clarity muestrea, **conserva las grabaciones unos 30 días** (más si las marcas como favoritas) y no graba a quien bloquea su script o las cookies. En esos casos el panel muestra "—".
+- Si pasan más de 30 minutos de inactividad, Clarity y nuestra analítica abren sesión nueva por separado; se queda ligada la última grabación vista.
 
 Las métricas de frustración sí vienen por API: un cron diario (`backend/services/analytics/clarity.ts`) guarda en `analytics_clarity_metrics`
 las de las últimas 24 h por página (la API solo da 1 a 3 días, 10 llamadas al día y 1000 filas, por eso se guarda el historial propio).
@@ -61,12 +77,13 @@ El servidor ya abre cada consulta como `READ ONLY`, pero lo correcto es que ni s
 ```sql
 CREATE ROLE avo_mcp_reader LOGIN PASSWORD 'CAMBIA-ESTA-CLAVE';
 GRANT USAGE ON SCHEMA public TO avo_mcp_reader;
-GRANT SELECT ON analytics_real_sessions, analytics_sessions, analytics_events, analytics_clarity_metrics TO avo_mcp_reader;
+GRANT SELECT ON analytics_real_sessions, analytics_sessions, analytics_events, analytics_clarity_metrics, analytics_clarity_links TO avo_mcp_reader;
 GRANT SELECT (id, email, user_kind, created_at) ON users TO avo_mcp_reader;
 GRANT EXECUTE ON FUNCTION analytics_funnel(int), analytics_landing_performance(int, int), analytics_period_start(int) TO avo_mcp_reader;
 -- Las tablas tienen RLS activado: sin una política, el rol no vería ninguna fila.
 CREATE POLICY mcp_read ON analytics_sessions        FOR SELECT TO avo_mcp_reader USING (true);
 CREATE POLICY mcp_read ON analytics_events          FOR SELECT TO avo_mcp_reader USING (true);
+CREATE POLICY mcp_read ON analytics_clarity_links   FOR SELECT TO avo_mcp_reader USING (true);
 CREATE POLICY mcp_read ON analytics_clarity_metrics FOR SELECT TO avo_mcp_reader USING (true);
 CREATE POLICY mcp_read ON users                     FOR SELECT TO avo_mcp_reader USING (true);
 ```

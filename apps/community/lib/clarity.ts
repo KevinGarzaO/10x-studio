@@ -62,3 +62,64 @@ export function linkClaritySession({ userId, sessionId, path, userKind }: Clarit
   if (sessionId) clarity('set', 'avo_session', sessionId)
   clarity('set', 'entry_path', path)
 }
+
+// ------------------------------------------------------------------------------------------------
+// El enlace a la grabación de cada sesión
+// ------------------------------------------------------------------------------------------------
+
+const CLARITY_ID = /^[A-Za-z0-9]{1,64}$/
+
+/** El primer pedazo de una cookie de Clarity (`valor|2|...` o `valor^...`), ya sin codificar; null si no es un id válido. */
+function firstSegment(raw: string | undefined): string | null {
+  if (!raw) return null
+  let value = raw
+  try {
+    value = decodeURIComponent(raw)
+  } catch {
+    // se usa tal cual
+  }
+  const first = value.split(/[\^|]/)[0]
+  return CLARITY_ID.test(first) ? first : null
+}
+
+/** Lee una cookie de la lista `a=1; b=2` (o null). */
+function cookieValue(cookies: string, name: string): string | undefined {
+  for (const part of cookies.split(';')) {
+    const [key, ...rest] = part.trim().split('=')
+    if (key === name) return rest.join('=')
+  }
+  return undefined
+}
+
+/**
+ * La dirección del video de ESTA sesión en Clarity: https://clarity.microsoft.com/player/<proyecto>/<usuario>/<sesión>.
+ * El usuario y la sesión de Clarity los deja su propio script en las cookies `_clck` y `_clsk` de nuestro dominio. Microsoft
+ * no documenta esta dirección (es la que usan sus propias integraciones), así que si algún día cambia, solo este bloque se ajusta.
+ * Devuelve null si Clarity aún no puso sus cookies (no cargó, está bloqueado o la persona no las acepta).
+ */
+export function clarityPlayerUrl(projectId: string, cookies: string): string | null {
+  const user = firstSegment(cookieValue(cookies, '_clck'))
+  const session = firstSegment(cookieValue(cookies, '_clsk'))
+  if (!projectId || !CLARITY_ID.test(projectId) || !user || !session) return null
+  return `https://clarity.microsoft.com/player/${projectId}/${user}/${session}`
+}
+
+const sentLinks = new Map<string, string>()
+
+/** Avisa al backend qué grabación de Clarity es esta sesión de analítica (una vez por cambio de dirección). */
+export function sendClarityLink(sessionId: string | null): void {
+  if (!clarityEnabled() || !sessionId) return
+  const url = clarityPlayerUrl(CLARITY_PROJECT_ID, document.cookie)
+  if (!url || sentLinks.get(sessionId) === url) return
+  sentLinks.set(sessionId, url)
+  try {
+    void fetch('/api/a/clarity', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ session_id: sessionId, url }), keepalive: true }).catch(() => undefined)
+  } catch {
+    // medir no debe romper nada
+  }
+}
+
+/** Solo para pruebas. */
+export function resetClarityLinksForTests(): void {
+  sentLinks.clear()
+}

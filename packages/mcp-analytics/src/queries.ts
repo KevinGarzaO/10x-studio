@@ -164,6 +164,8 @@ export interface UserRecordings {
     pageViews: number | null
     converted: boolean
     source: string | null
+    /** El video en Clarity, listo para abrir (null si Clarity no grabó la sesión o aún no se liga). */
+    clarityUrl: string | null
   }[]
   /** Cómo abrir la grabación: Clarity no entrega enlaces por API, se filtra en su panel con estos ids. */
   clarity: { dashboardUrl: string | null; customUserId: string | null; howTo: string } | null
@@ -184,9 +186,10 @@ export async function getUserSessionRecording(db: Queryable, input: { userId?: s
   const found = user.rows[0]
   if (!found) return { found: false, user: null, sessions: [], clarity: null }
 
-  const sessions = await db.query<{ session_id: string; created_at: string; entry_path: string | null; exit_path: string | null; is_engaged: boolean; duration_seconds: number | null; page_views_count: number | null; has_conversion: boolean; utm_source: string | null }>(
-    `SELECT session_id, created_at, entry_path, exit_path, is_engaged, duration_seconds, page_views_count, has_conversion, utm_source
-     FROM analytics_sessions WHERE user_id = $1::uuid ORDER BY created_at DESC LIMIT $2`,
+  const sessions = await db.query<{ session_id: string; created_at: string; entry_path: string | null; exit_path: string | null; is_engaged: boolean; duration_seconds: number | null; page_views_count: number | null; has_conversion: boolean; utm_source: string | null; clarity_url: string | null }>(
+    `SELECT s.session_id, s.created_at, s.entry_path, s.exit_path, s.is_engaged, s.duration_seconds, s.page_views_count, s.has_conversion, s.utm_source, l.clarity_session_url AS clarity_url
+     FROM analytics_sessions s LEFT JOIN analytics_clarity_links l ON l.session_id = s.session_id
+     WHERE s.user_id = $1::uuid ORDER BY s.created_at DESC LIMIT $2`,
     [found.id, limit],
   )
 
@@ -204,13 +207,15 @@ export async function getUserSessionRecording(db: Queryable, input: { userId?: s
       pageViews: row.page_views_count,
       converted: row.has_conversion,
       source: row.utm_source,
+      clarityUrl: row.clarity_url,
     })),
     clarity: {
       dashboardUrl: project ? `https://clarity.microsoft.com/projects/view/${encodeURIComponent(project)}/dashboard` : null,
       customUserId: found.id,
       howTo:
-        'Clarity no entrega el enlace de una grabación por API. Abre el proyecto > Recordings > Filters > "Custom ID" = el id de la cuenta (todas sus grabaciones) o "Custom session ID" = el sessionId de abajo (esa visita exacta). ' +
-        'Solo hay grabación si Clarity la conservó (se muestrea y no guarda para siempre) y si la persona no tenía bloqueado el script.',
+        'Cada sesión trae `clarityUrl`: el enlace directo al video (hay que haber iniciado sesión en el proyecto de Clarity para verlo). Si es null, Clarity no la grabó o aún no se liga. ' +
+        'Alternativa: Clarity > Recordings > Filters > "Custom ID" = el id de la cuenta (todas sus grabaciones) o "Custom session ID" = el sessionId de la sesión. ' +
+        'Las grabaciones se muestrean y Clarity las conserva unos 30 días; no hay video de quien bloquea el script.',
     },
   }
 }

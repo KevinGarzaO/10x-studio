@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react'
 import { usePathname } from 'next/navigation'
 import Script from 'next/script'
-import { clarityBootstrap, clarityEnabled, CLARITY_PROJECT_ID, linkClaritySession } from '../lib/clarity'
+import { clarityBootstrap, clarityEnabled, CLARITY_PROJECT_ID, linkClaritySession, sendClarityLink } from '../lib/clarity'
 import { currentSessionId } from '../lib/web-analytics'
 import { getCachedUser } from '../lib/session'
 
@@ -18,11 +18,14 @@ export function useClarityIntegration(): void {
     if (!clarityEnabled()) return
     const link = () => {
       const user = getCachedUser()
-      linkClaritySession({ userId: user?.id ?? null, sessionId: currentSessionId(), path: pathname, userKind: user?.user_kind ?? null })
+      const sessionId = currentSessionId()
+      linkClaritySession({ userId: user?.id ?? null, sessionId, path: pathname, userKind: user?.user_kind ?? null })
+      // Las cookies de Clarity aparecen unos segundos después de cargar su script: de ahí los reintentos.
+      sendClarityLink(sessionId)
     }
     link()
-    const retry = window.setTimeout(link, 1500)
-    return () => window.clearTimeout(retry)
+    const retries = [1500, 5000, 15000].map(ms => window.setTimeout(link, ms))
+    return () => retries.forEach(window.clearTimeout)
   }, [pathname])
 }
 

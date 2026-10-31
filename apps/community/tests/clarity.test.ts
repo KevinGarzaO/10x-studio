@@ -86,4 +86,36 @@ describe('Clarity', () => {
     expect(code).toContain('https://www.clarity.ms/tag/')
     expect(code).toContain('"abc\\"123"')
   })
+
+  it('builds the player URL from the _clck (user) and _clsk (session) cookies, with either separator, and not without them', async () => {
+    const clarity = await load('abc123')
+    expect(clarity.clarityPlayerUrl('abc123', '_ga=1; _clck=xyz987%7C2%7Cabc; _clsk=sess42%7C1700000000%7C3%7C1')).toBe('https://clarity.microsoft.com/player/abc123/xyz987/sess42')
+    expect(clarity.clarityPlayerUrl('abc123', '_clck=xyz987^2^abc; _clsk=sess42^1')).toBe('https://clarity.microsoft.com/player/abc123/xyz987/sess42')
+    expect(clarity.clarityPlayerUrl('abc123', '_clck=xyz987|2')).toBeNull()
+    expect(clarity.clarityPlayerUrl('abc123', '')).toBeNull()
+    // nada raro entra en la dirección
+    expect(clarity.clarityPlayerUrl('abc123', '_clck=../evil|2; _clsk=s1|1')).toBeNull()
+    expect(clarity.clarityPlayerUrl('a/b', '_clck=u1|2; _clsk=s1|1')).toBeNull()
+  })
+
+  it('tells the backend which recording is this analytics session, once per change', async () => {
+    const clarity = await load('abc123')
+    clarity.resetClarityLinksForTests()
+    const calls: { url: string; body: any }[] = []
+    global.fetch = vi.fn(async (url: string, init?: RequestInit) => { calls.push({ url: String(url), body: JSON.parse(String(init?.body)) }); return { ok: true } }) as unknown as typeof fetch
+    document.cookie = '_clck=xyz987|2|abc'
+    document.cookie = '_clsk=sess42|1'
+
+    clarity.sendClarityLink('11111111-1111-4111-8111-111111111111')
+    clarity.sendClarityLink('11111111-1111-4111-8111-111111111111')
+    expect(calls).toEqual([{ url: '/api/a/clarity', body: { session_id: '11111111-1111-4111-8111-111111111111', url: 'https://clarity.microsoft.com/player/abc123/xyz987/sess42' } }])
+
+    document.cookie = '_clsk=sess43|1'
+    clarity.sendClarityLink('11111111-1111-4111-8111-111111111111')
+    expect(calls).toHaveLength(2)
+    clarity.sendClarityLink(null)
+    expect(calls).toHaveLength(2)
+    document.cookie = '_clck=; expires=Thu, 01 Jan 1970 00:00:00 GMT'
+    document.cookie = '_clsk=; expires=Thu, 01 Jan 1970 00:00:00 GMT'
+  })
 })

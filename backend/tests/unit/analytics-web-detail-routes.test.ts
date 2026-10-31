@@ -101,6 +101,22 @@ describe('GET /web/sessions', () => {
     expect(db.filters).toContain('analytics_real_sessions:order:created_at,{"ascending":false}')
   })
 
+  it('brings the Clarity recording of each session when there is one, and null when there is not', async () => {
+    db.tables.analytics_real_sessions = [session(), session({ session_id: 'b' })]
+    db.tables.analytics_clarity_links = [{ session_id: ID, clarity_session_url: 'https://clarity.microsoft.com/player/abc/u1/s1' }]
+    const res = await request(app()).get('/analytics/web/sessions').expect(200)
+    expect(res.body.sessions[0].clarity_url).toBe('https://clarity.microsoft.com/player/abc/u1/s1')
+    expect(res.body.sessions[1].clarity_url).toBeNull()
+  })
+
+  it('still lists the sessions (without video) when the Clarity migration has not been applied', async () => {
+    db.tables.analytics_real_sessions = [session()]
+    db.errors.analytics_clarity_links = 'relation "analytics_clarity_links" does not exist'
+    const res = await request(app()).get('/analytics/web/sessions').expect(200)
+    expect(res.body.ready).toBe(true)
+    expect(res.body.sessions[0].clarity_url).toBeNull()
+  })
+
   it('applies the filters the panel offers, and ignores values that are not valid', async () => {
     await request(app()).get('/analytics/web/sessions?device=mobile&country=mx&source=LinkedIn&engaged=1&conversion=1&visitor=new').expect(200)
     expect(db.filters).toEqual(expect.arrayContaining([

@@ -85,7 +85,7 @@ describe('clarity-migration.sql (Postgres real)', () => {
   it('creates the table, can run twice, keeps one row per day and page, and is closed to the public key', async () => {
     const sql = fs.readFileSync(path.join(__dirname, '../../sql/clarity-migration.sql'), 'utf8')
     const db = new PGlite()
-    await db.exec('CREATE ROLE anon; CREATE ROLE authenticated;')
+    await db.exec('CREATE ROLE anon; CREATE ROLE authenticated; CREATE ROLE service_role;')
     await db.exec(sql)
     await db.exec(sql)
     await db.exec(`INSERT INTO analytics_clarity_metrics (day, path, rage_clicks_count) VALUES ('2026-10-30','/a',1) ON CONFLICT (day, path) DO UPDATE SET rage_clicks_count = EXCLUDED.rage_clicks_count`)
@@ -95,6 +95,40 @@ describe('clarity-migration.sql (Postgres real)', () => {
     expect(rows[0].rage_clicks_count).toBe(5)
     const grants = (await db.query<any>(`SELECT has_table_privilege('anon','analytics_clarity_metrics','SELECT') a, has_table_privilege('authenticated','analytics_clarity_metrics','SELECT') b`)).rows[0]
     expect(grants).toEqual({ a: false, b: false })
+    await db.close()
+  }, 60000)
+})
+
+describe('analytics_set_clarity_url (Postgres real)', () => {
+  it('saves the player address only for a session of that same browser, refuses other addresses, and updates when Clarity opens a new session', async () => {
+    const read = (name: string) => fs.readFileSync(path.join(__dirname, '../../sql', name), 'utf8')
+    const db = new PGlite()
+    await db.exec('CREATE ROLE anon; CREATE ROLE authenticated; CREATE ROLE service_role;')
+    await db.exec(`CREATE TABLE users (id uuid PRIMARY KEY, is_test_account boolean DEFAULT false, is_scraper_profile boolean DEFAULT false, user_kind text DEFAULT 'user', created_at timestamptz DEFAULT now())`)
+    await db.exec(read('web-analytics-migration.sql'))
+    await db.exec(read('clarity-migration.sql'))
+    await db.exec(read('clarity-migration.sql'))
+
+    const session = '00000000-0000-4000-8000-000000000001'
+    await db.query(`INSERT INTO analytics_sessions (session_id, client_id, entry_path) VALUES ($1, 'client-aaaa-1', '/')`, [session])
+    const call = async (sessionId: string, client: string, url: string) => (await db.query<any>('SELECT analytics_set_clarity_url($1, $2, $3) AS ok', [sessionId, client, url])).rows[0].ok
+    const good = 'https://clarity.microsoft.com/player/abc123/xyz987/sess42'
+
+    expect(await call(session, 'client-aaaa-1', good)).toBe(true)
+    // de otro navegador, de una sesión que no existe o con una dirección que no es la de Clarity: no se guarda
+    expect(await call(session, 'client-bbbb-2', 'https://clarity.microsoft.com/player/abc123/xyz987/other')).toBe(false)
+    expect(await call('00000000-0000-4000-8000-000000000002', 'client-aaaa-1', good)).toBe(false)
+    for (const url of ['https://evil.com/player/a/b/c', 'http://clarity.microsoft.com/player/a/b/c', `${good}/x`, 'https://clarity.microsoft.com/player/a/b/c?x=1', 'https://clarity.microsoft.com.evil.com/player/a/b/c']) {
+      expect(await call(session, 'client-aaaa-1', url)).toBe(false)
+    }
+    expect((await db.query<any>('SELECT * FROM analytics_clarity_links')).rows).toHaveLength(1)
+
+    const next = 'https://clarity.microsoft.com/player/abc123/xyz987/sess43'
+    expect(await call(session, 'client-aaaa-1', next)).toBe(true)
+    expect((await db.query<any>('SELECT clarity_session_url FROM analytics_clarity_links')).rows).toEqual([{ clarity_session_url: next }])
+
+    const grants = (await db.query<any>(`SELECT has_function_privilege('anon','analytics_set_clarity_url(uuid,text,text)','EXECUTE') a, has_function_privilege('service_role','analytics_set_clarity_url(uuid,text,text)','EXECUTE') b, has_table_privilege('anon','analytics_clarity_links','SELECT') c`)).rows[0]
+    expect(grants).toEqual({ a: false, b: true, c: false })
     await db.close()
   }, 60000)
 })

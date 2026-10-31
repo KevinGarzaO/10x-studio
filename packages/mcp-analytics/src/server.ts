@@ -67,8 +67,8 @@ export function createServer(db: Queryable, options: ServerOptions = {}): McpSer
     {
       title: 'Sesiones y grabación de una persona',
       description:
-        'Busca una cuenta por user_id o email y devuelve sus últimas sesiones (entrada, salida, tiempo, si convirtió) y cómo abrir su grabación en Clarity ' +
-        '(Clarity no da enlaces por API: se filtra por el "Custom ID" = id de la cuenta o el "Custom session ID" = sessionId). No devuelve el correo ni el nombre. ' +
+        'Busca una cuenta por user_id o email y devuelve sus últimas sesiones (entrada, salida, tiempo, si convirtió) y el enlace directo a su video en Clarity (`clarityUrl`, cuando existe) ' +
+        'o cómo filtrarlo en Clarity por el "Custom ID" (cuenta) / "Custom session ID". No devuelve el correo ni el nombre. ' +
         'Solo para diagnosticar un caso concreto; trata a la persona con la privacidad que merece.',
       inputSchema: {
         user_id: z.string().uuid().optional().describe('El id de la cuenta (UUID).'),

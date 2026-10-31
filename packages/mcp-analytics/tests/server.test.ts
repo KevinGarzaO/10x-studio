@@ -45,6 +45,7 @@ describe('servidor MCP de analítica', () => {
     await session(3, 'client-aaaa-3', { entry: '/empleos/dotnet', exit: '/vacantes/x', converted: true })
     await session(4, 'client-aaaa-4', { user: ana, entry: '/vacantes/x', exit: '/signup' })
 
+    await pg.exec(`INSERT INTO analytics_clarity_links (session_id, clarity_session_url) VALUES ('${uuid(104)}', 'https://clarity.microsoft.com/player/abc123/xyz987/sess42')`)
     await pg.exec(`INSERT INTO analytics_clarity_metrics (day, path, sessions, page_views, rage_clicks_count, dead_clicks_count, quick_backs_count, avg_scroll_depth) VALUES
       ((NOW() AT TIME ZONE 'America/Monterrey')::date, '/empleos/dotnet', 50, 70, 9, 14, 6, 40.5),
       ((NOW() AT TIME ZONE 'America/Monterrey')::date - 1, '/empleos/dotnet', 50, 70, 3, 4, 2, 44.5),
@@ -118,7 +119,7 @@ describe('servidor MCP de analítica', () => {
     expect(byEmail.json.found).toBe(true)
     expect(byEmail.json.user.id).toBe(uuid(1))
     expect(byEmail.json.sessions).toHaveLength(1)
-    expect(byEmail.json.sessions[0]).toMatchObject({ sessionId: uuid(104), entryPath: '/vacantes/x', exitPath: '/signup', converted: false })
+    expect(byEmail.json.sessions[0]).toMatchObject({ sessionId: uuid(104), entryPath: '/vacantes/x', exitPath: '/signup', converted: false, clarityUrl: 'https://clarity.microsoft.com/player/abc123/xyz987/sess42' })
     expect(byEmail.json.clarity.dashboardUrl).toBe('https://clarity.microsoft.com/projects/view/abc123/dashboard')
     expect(byEmail.json.clarity.customUserId).toBe(uuid(1))
     expect(byEmail.text).not.toContain('ana@example.com')

@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react'
 import { Card, Empty, ErrorBox, fmtNum, Loading, PageHeader, PeriodPicker, usePanelData } from '@/components/panel/ui'
 import { fmtDuration, fmtExact, languageName, TrafficNotReady } from '@/components/panel/traffic'
-import { deviceLabel, originLabel, personLabel, placeLabel, SessionDetailDrawer, type SessionRow } from '@/components/panel/sessions'
+import { deviceLabel, originLabel, personLabel, placeLabel, SessionDetailDrawer, VideoLink, type SessionRow } from '@/components/panel/sessions'
 
 interface SessionsData {
   ready: boolean
@@ -82,7 +82,7 @@ export default function SesionesPage() {
               <div className="panel-table-wrap">
                 <table className="panel-table panel-clickable">
                   <thead>
-                    <tr><th>Empezó</th><th>Persona</th><th>Ubicación</th><th>Dispositivo</th><th>Idioma</th><th>Llegó desde</th><th>Entró por</th><th className="num">Páginas</th><th className="num">Tiempo</th><th>Estado</th></tr>
+                    <tr><th>Empezó</th><th>Persona</th><th>Ubicación</th><th>Dispositivo</th><th>Idioma</th><th>Llegó desde</th><th>Entró por</th><th className="num">Páginas</th><th className="num">Tiempo</th><th>Estado</th><th>Video</th></tr>
                   </thead>
                   <tbody>
                     {data.sessions.map(session => (
@@ -100,6 +100,7 @@ export default function SesionesPage() {
                           {session.has_conversion ? <span className="panel-chip good">Conversión</span> : session.is_engaged ? <span className="panel-chip good">Activa</span> : <span className="panel-chip">Rebote</span>}
                           {session.is_new_visitor && <span className="panel-chip" style={{ marginLeft: 4 }}>Nueva</span>}
                         </td>
+                        <td><VideoLink url={session.clarity_url} compact /></td>
                       </tr>
                     ))}
                   </tbody>

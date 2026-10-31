@@ -226,3 +226,33 @@ describe('POST /identify (user stitching)', () => {
     await asProxy(request(app()).post('/api/analytics/identify')).set('Authorization', 'Bearer ok').send({}).expect(204)
   })
 })
+
+describe('POST /clarity (the recording of a session)', () => {
+  const URL_OK = 'https://clarity.microsoft.com/player/abc123/xyz987/sess42'
+
+  it('saves the Clarity player address tied to the session and to THIS browser (client id from the proxy header)', async () => {
+    await asProxy(request(app()).post('/api/analytics/clarity')).send({ session_id: SESSION, url: URL_OK }).expect(204)
+    expect(rpc).toHaveBeenCalledWith('analytics_set_clarity_url', { p_session: SESSION, p_client: CLIENT, p_url: URL_OK })
+  })
+
+  it('refuses anything that is not a Clarity player address (the panel shows it as a link)', async () => {
+    for (const url of ['https://evil.example.com/player/a/b/c', 'javascript:alert(1)', 'https://clarity.microsoft.com/player/a/b/c/d', 'https://clarity.microsoft.com.evil.com/player/a/b/c', `${URL_OK}?next=x`, 12]) {
+      await asProxy(request(app()).post('/api/analytics/clarity')).send({ session_id: SESSION, url }).expect(204)
+    }
+    await asProxy(request(app()).post('/api/analytics/clarity')).send({ session_id: 'nope', url: URL_OK }).expect(204)
+    expect(rpc).not.toHaveBeenCalled()
+  })
+
+  it('does not record robots, and a database error still answers 204', async () => {
+    await asProxy(request(app()).post('/api/analytics/clarity'), { 'x-avo-ua': 'Googlebot/2.1' }).send({ session_id: SESSION, url: URL_OK }).expect(204)
+    expect(rpc).not.toHaveBeenCalled()
+    rpc.mockResolvedValue({ data: null, error: { message: 'boom' } })
+    await asProxy(request(app()).post('/api/analytics/clarity')).send({ session_id: SESSION, url: URL_OK }).expect(204)
+  })
+
+  it('needs the proxy when the secret is configured', async () => {
+    process.env.ANALYTICS_PROXY_SECRET = 's3cret'
+    await asProxy(request(app()).post('/api/analytics/clarity')).send({ session_id: SESSION, url: URL_OK }).expect(204)
+    expect(rpc).not.toHaveBeenCalled()
+  })
+})

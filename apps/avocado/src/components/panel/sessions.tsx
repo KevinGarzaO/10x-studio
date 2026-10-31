@@ -38,6 +38,18 @@ export interface SessionRow {
   created_at: string
   last_activity_at: string
   user?: { username: string | null; displayName: string | null; email: string | null } | null
+  /** La grabación en Clarity, si Clarity ya la ligó a esta sesión. */
+  clarity_url?: string | null
+}
+
+/** El enlace al video de la sesión (se abre en Clarity, donde hay que haber iniciado sesión en el proyecto). */
+export function VideoLink({ url, compact }: { url: string | null | undefined; compact?: boolean }) {
+  if (!url) return <span className="panel-muted" title="Clarity no ligó una grabación a esta sesión (no la grabó o aún no llega)">—</span>
+  return (
+    <a href={url} target="_blank" rel="noopener noreferrer" className={compact ? undefined : 'panel-btn'} onClick={event => event.stopPropagation()}>
+      ▶ {compact ? 'Video' : 'Ver el video en Clarity'}
+    </a>
+  )
 }
 
 const DEVICE: Record<string, string> = { desktop: 'Computadora', mobile: 'Celular', tablet: 'Tableta' }
@@ -121,6 +133,10 @@ export function SessionDetailDrawer({ id, onClose, onOpen }: { id: string; onClo
 
         {session && (
           <div className="panel-drawer-body">
+            <p style={{ margin: '0 0 12px' }}>
+              <VideoLink url={session.clarity_url} />
+              {!session.clarity_url && <span className="panel-muted"> Sin video: Clarity no grabó esta sesión (se muestrea, guarda unos 30 días y no graba a quien bloquea el script) o aún no la liga.</span>}
+            </p>
             <div className="panel-chips">
               <span className={`panel-chip ${session.is_engaged ? 'good' : ''}`}>{session.is_engaged ? 'Sesión activa' : 'Sesión sin engagement'}</span>
               {session.has_conversion && <span className="panel-chip good">Conversión</span>}
