@@ -3,6 +3,7 @@ import type { Metadata, Viewport } from 'next'
 import { AttributionCapture } from '@/components/attribution-capture'
 import { ClarityIntegration } from '@/components/clarity-integration'
 import { ErrorCapture } from '@/components/error-capture'
+import { SessionKeeper } from '@/components/session-keeper'
 import { GlobalErrorBoundary } from '@/components/global-error-boundary'
 import { SessionCapture } from '@/components/session-capture'
 import { WebAnalytics } from '@/components/web-analytics'
@@ -55,6 +56,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
         <AttributionCapture />
         <WebAnalytics />
         <ClarityIntegration />
+        <SessionKeeper />
         <ErrorCapture />
         <GlobalErrorBoundary area="layout">{children}</GlobalErrorBoundary>
         {process.env.NODE_ENV === 'production' && <Analytics />}
