@@ -13,6 +13,7 @@ const sql = fs.readFileSync(path.join(__dirname, '../../sql/web-analytics-migrat
 const detailSql = fs.readFileSync(path.join(__dirname, '../../sql/web-analytics-detail-migration.sql'), 'utf8')
 const summarySql = fs.readFileSync(path.join(__dirname, '../../sql/web-analytics-summary-migration.sql'), 'utf8')
 const segmentsSql = fs.readFileSync(path.join(__dirname, '../../sql/web-analytics-segments-migration.sql'), 'utf8')
+const retentionSql = fs.readFileSync(path.join(__dirname, '../../sql/web-analytics-retention-migration.sql'), 'utf8')
 const uuid = (n: number) => `00000000-0000-4000-8000-${String(n).padStart(12, '0')}`
 const S = (n: number) => uuid(n)
 
@@ -41,6 +42,8 @@ describe('web-analytics-migration.sql (Postgres real)', () => {
     await c.query(summarySql)
     await c.query(segmentsSql)
     await c.query(segmentsSql)
+    await c.query(retentionSql)
+    await c.query(retentionSql)
   }, 60000)
 
 
@@ -560,6 +563,43 @@ describe('web-analytics-migration.sql (Postgres real)', () => {
       assert.strictEqual(rows.find((r: any) => r.slug === 'vac-a').viewers, 4)
       const none = await q(`SELECT * FROM analytics_vacancy_segments(now() + interval '1 hour', now() + interval '2 hours')`)
       assert.strictEqual(none.length, 0)
+    })
+
+    it('retención: quién estuvo activa, en cuántos días, y quién volvió después de su primera visita', async () => {
+      await c.query(`DELETE FROM analytics_events; DELETE FROM analytics_page_views; DELETE FROM analytics_sessions; DELETE FROM users;`)
+      const mk = (n: number, client: string, daysAgo: number, engaged: boolean, user: string | null = null) =>
+        c.query(`INSERT INTO analytics_sessions (session_id, client_id, user_id, entry_path, is_engaged, created_at) VALUES ($1,$2,$3,'/',$4, now() - ($5 || ' days')::interval)`, [S(n), client, user, engaged, String(daysAgo)])
+      const cuenta = uuid(820)
+      const team = uuid(821)
+      await c.query(`INSERT INTO users (id, created_at) VALUES ($1, now() - interval '90 days')`, [cuenta])
+      await c.query(`INSERT INTO users (id, user_kind) VALUES ($1, 'superadmin')`, [team])
+      await mk(101, 'rt-vuelve', 5, true)
+      await mk(102, 'rt-vuelve', 1, true)
+      await mk(103, 'rt-una', 3, true)
+      await mk(104, 'rt-una', 3, true) // otra sesión activa el mismo día: no suma un día más
+      await mk(105, 'rt-rebote', 2, false)
+      await mk(106, 'rt-viejo', 60, false)
+      await mk(107, 'rt-viejo', 2, true)
+      await mk(108, 'rt-cuenta', 2, true, cuenta)
+      await mk(109, 'rt-equipo', 2, true, team)
+      const rows = await q(`SELECT * FROM analytics_people_activity(30, 100)`)
+      const by = (key: string) => rows.find((r: any) => r.person_key === key)
+      assert.strictEqual(rows.length, 4, 'el rebote y el equipo no cuentan: ' + JSON.stringify(rows.map((r: any) => r.person_key)))
+      assert.deepStrictEqual([by('rt-vuelve').days_active, by('rt-vuelve').return_days, by('rt-vuelve').is_new, by('rt-vuelve').is_registered], [2, 1, true, false])
+      assert.deepStrictEqual([by('rt-una').days_active, by('rt-una').return_days, by('rt-una').is_new], [1, 0, true])
+      // ya había entrado antes del periodo: es recurrente, y estar activa después de su primera visita es volver
+      assert.deepStrictEqual([by('rt-viejo').is_new, by('rt-viejo').return_days], [false, 1])
+      // la cuenta es más vieja que la medición: recurrente y registrada
+      assert.deepStrictEqual([by(cuenta).is_registered, by(cuenta).is_new, by(cuenta).return_days], [true, false, 1])
+      assert.strictEqual(rows[0].person_key, 'rt-vuelve', 'primero quien más días ha estado activa')
+      assert.strictEqual(by('rt-vuelve').active_days.length, 2)
+    })
+
+    it('retención: lo que queda fuera del periodo no cuenta, y la función no se llama con la llave pública', async () => {
+      const short = await q(`SELECT * FROM analytics_people_activity(1, 100)`)
+      assert.strictEqual(short.length, 0)
+      const row = (await q(`SELECT has_function_privilege('anon','analytics_people_activity(int,int)','EXECUTE') a, has_function_privilege('service_role','analytics_people_activity(int,int)','EXECUTE') b`))[0]
+      assert.deepStrictEqual(row, { a: false, b: true })
     })
 
     it('segmentos: las funciones no se pueden llamar con la llave pública', async () => {

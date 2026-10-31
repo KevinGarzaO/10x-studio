@@ -24,6 +24,7 @@ const SCREENS = [
   { href: '/panel/trafico/canales', title: 'Canales', text: 'De dónde llegan: origen, medio, campaña y sitio.' },
   { href: '/panel/trafico/embudo', title: 'Embudo y eventos', text: 'El recorrido del candidato y cada evento.' },
   { href: '/panel/trafico/cohortes', title: 'Cohortes', text: 'Quién vuelve, por semana de adquisición.' },
+  { href: '/panel/trafico/retencion', title: 'Retención', text: 'Quién usa AvoTalent, quién volvió y con qué frecuencia.' },
 ]
 
 export default function TraficoPage() {

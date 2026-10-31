@@ -41,10 +41,12 @@ Seguridad: el navegador nunca ve ni manda su `client_id` (va en la cookie `HttpO
 
 ## Para activarlo
 
-1. Correr en el editor SQL de Supabase, en este orden: `backend/sql/web-analytics-migration.sql`, `backend/sql/web-analytics-detail-migration.sql`, `backend/sql/web-analytics-summary-migration.sql` (solo el gráfico por día del Resumen) y `backend/sql/web-analytics-segments-migration.sql` (LA distinción de personas en todo el panel). Se pueden correr más de una vez.
+1. Correr en el editor SQL de Supabase, en este orden: `backend/sql/web-analytics-migration.sql`, `backend/sql/web-analytics-detail-migration.sql`, `backend/sql/web-analytics-summary-migration.sql` (solo el gráfico por día del Resumen) y `backend/sql/web-analytics-segments-migration.sql` (LA distinción de personas en todo el panel) y `backend/sql/web-analytics-retention-migration.sql` (solo la pantalla Tráfico web > Retención). Se pueden correr más de una vez.
 2. Poner la MISMA variable `ANALYTICS_PROXY_SECRET` (un texto largo al azar) en Vercel (comunidad) y en Railway (backend) y volver a desplegar.
 3. Entrar a `/panel/trafico`. Los números empiezan en cero y se llenan con las visitas nuevas; lo anterior no se puede reconstruir.
 
 ## LA distinción de personas (regla del dueño, 31 oct 2026)
 
 En todo el admin una persona es **nueva** o **recurrente**; cada una es **activa** (hizo algo: 10 s con la pestaña visible, 2 páginas o un evento clave) o **solo visita** (entró y se fue: no es un usuario); y está **registrada** (tiene cuenta) o **anónima**. La **conversión** es personas nuevas que se registraron en el periodo ÷ personas nuevas ACTIVAS. Las entradas (sesiones) se muestran aparte, como ruido. Cada pantalla que cuenta gente lo muestra igual: Resumen, Vacantes (personas que abrieron cada vacante), Adquisición, LinkedIn y todo Tráfico web (canales, páginas de entrada, país, idioma, dispositivo...). Una persona cuenta una vez en cada grupo donde entró, por eso los grupos no suman el total.
+
+Retención nueva (2026-10-30): por pedido del dueño, `/panel/retencion` (Analítica, sobre `user_activity_daily`) se queda tal cual y la medición nueva tiene su propia pantalla en Tráfico web, `/panel/trafico/retencion` (`GET /api/admin/analytics/web/retention`, función SQL `analytics_people_activity`): personas activas, quién volvió (activa en un día posterior al de su primera visita o cuenta), DAU/WAU/MAU, tabla de quién usa AvoTalent y cohortes semanales. Conviven hasta que las cifras cuadren.

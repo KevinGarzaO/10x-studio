@@ -56,6 +56,7 @@ export const NAV_GROUPS: NavGroup[] = [
       { href: '/panel/trafico/canales', label: 'Canales', icon: '⇉' },
       { href: '/panel/trafico/embudo', label: 'Embudo y eventos', icon: '▽' },
       { href: '/panel/trafico/cohortes', label: 'Cohortes', icon: '▥' },
+      { href: '/panel/trafico/retencion', label: 'Retención', icon: '↺' },
     ],
   },
 ]

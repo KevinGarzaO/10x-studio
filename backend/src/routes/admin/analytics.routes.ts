@@ -777,6 +777,89 @@ router.get('/web/sessions/:id', handle('detalle de sesión', async (req, res) =>
   })
 }))
 
+/**
+ * Retención de la medición nueva (Tráfico web > Retención). No sustituye a /retention (que lee user_activity_daily): usa las
+ * sesiones nuevas y la misma distinción de personas. Activa = tuvo una sesión activa ese día; volvió = estuvo activa un día
+ * después del de su primera visita (o de su cuenta).
+ */
+router.get('/web/retention', handle('retención web', async (req, res) => {
+  const days = webPeriod(req)
+  const [active, cohorts, people, trackedSince] = await Promise.all([
+    supabase.rpc('analytics_active_users', { p_days: days }),
+    supabase.rpc('analytics_retention_cohorts', { p_weeks: 8 }),
+    supabase.rpc('analytics_people_activity', { p_days: days, p_limit: 1000 }),
+    trackingSince(),
+  ])
+  const failed = [active, cohorts, people].find((result) => result.error)
+  if (failed?.error) {
+    if (missingMigration(failed.error.message)) return res.json({ ready: false })
+    throw new Error(failed.error.message)
+  }
+
+  const rows = (people.data ?? []) as { person_key: string; is_registered: boolean; first_day: string; is_new: boolean; days_active: number; return_days: number; last_active: string; active_days: string[] | null }[]
+  const registeredIds = rows.filter((row) => row.is_registered).map((row) => row.person_key)
+  const found = registeredIds.length
+    ? await supabase.from('users').select('id, username, display_name, photo_url, profile_completed').in('id', registeredIds).limit(1000)
+    : { data: [] as { id: string; username: string | null; display_name: string | null; photo_url: string | null; profile_completed: boolean | null }[] }
+  const byId = new Map((found.data ?? []).map((user) => [user.id, user]))
+
+  const today = dayKey(new Date().toISOString())
+  const list = rows.map((row) => {
+    const user = byId.get(row.person_key)
+    return {
+      key: row.person_key,
+      registered: row.is_registered,
+      username: user?.username ?? null,
+      displayName: user?.display_name ?? null,
+      photoUrl: user?.photo_url ?? null,
+      profileCompleted: user?.profile_completed ?? null,
+      isNew: row.is_new,
+      firstDay: row.first_day,
+      daysActive: row.days_active,
+      returnDays: row.return_days,
+      lastActive: row.last_active,
+      activeToday: row.last_active === today,
+      activeDays: row.active_days ?? [],
+    }
+  })
+
+  // "Podían volver" son las personas cuya primera visita fue antes de hoy: las de hoy aún no tuvieron un día después.
+  const eligible = list.filter((person) => person.firstDay < today)
+  const returned = eligible.filter((person) => person.returnDays > 0)
+  const daily = (active.data ?? []) as { day: string; dau: number; wau: number; mau: number }[]
+  const latest = daily[daily.length - 1]
+
+  const byWeek = new Map<string, { week: string; size: number; retained: { offset: number; count: number; pct: number | null }[] }>()
+  for (const row of (cohorts.data ?? []) as { cohort_week: string; cohort_size: number; week_offset: number; retained: number; retained_pct: number | null }[]) {
+    const entry = byWeek.get(row.cohort_week) ?? { week: row.cohort_week, size: row.cohort_size, retained: [] }
+    entry.retained.push({ offset: row.week_offset, count: row.retained, pct: row.retained_pct })
+    byWeek.set(row.cohort_week, entry)
+  }
+
+  const from = webRange(days).from
+  res.json({
+    ready: true,
+    days,
+    trackingSince: trackedSince,
+    partial: isPartial(trackedSince, from),
+    summary: {
+      dau: latest?.dau ?? 0,
+      wau: latest?.wau ?? 0,
+      mau: latest?.mau ?? 0,
+      stickinessPct: latest && latest.mau > 0 ? Math.round((latest.dau / latest.mau) * 1000) / 10 : null,
+      activePeople: list.length,
+      newActive: list.filter((person) => person.isNew).length,
+      returningActive: list.filter((person) => !person.isNew).length,
+      eligible: eligible.length,
+      returned: returned.length,
+      returnRatePct: pct(returned.length, eligible.length),
+    },
+    daily,
+    people: list,
+    cohorts: [...byWeek.values()],
+  })
+}))
+
 /** Retención: actividad diaria, semanal y mensual, y cohortes por semana de registro. */
 router.get('/retention', handle('retención', async (_req, res) => {
   const since = new Date(Date.now() - 60 * 86400000)
