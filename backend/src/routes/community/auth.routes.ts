@@ -26,7 +26,7 @@ router.post('/signup', async (req: Request, res: Response) => {
       return res.status(409).json({ error: 'El email o username ya está en uso' })
     }
 
-    const communityAppUrl = process.env.COMMUNITY_APP_URL || 'http://localhost:3002'
+    const communityAppUrl = (process.env.COMMUNITY_APP_URL || 'http://localhost:3002').replace(/\/+$/, '') // sin "/" final: no "//onboarding"
     const { data: authData, error: authError } = await createAuthClient().auth.signUp({
       email,
       password,
@@ -204,7 +204,7 @@ router.get('/oauth/:provider', (req: Request, res: Response) => {
 
   // Detectar la URL del frontend de forma dinámica según el origen de la petición
   const originHeader = req.get('origin') || req.get('referer')
-  let communityAppUrl = process.env.COMMUNITY_APP_URL || 'https://avotalent.app'
+  let communityAppUrl = (process.env.COMMUNITY_APP_URL || 'https://avotalent.app').replace(/\/+$/, '') // sin "/" final: no "//auth/callback"
 
   if (originHeader) {
     try {

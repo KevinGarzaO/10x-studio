@@ -105,3 +105,29 @@ describe('refresh tells the browser whether the session is really gone', () => {
     expect(res.body.session.access_token).toBe('t2')
   })
 })
+
+describe('the public site address never produces a double slash', () => {
+  it('the OAuth redirect has a single slash even when COMMUNITY_APP_URL ends with "/"', async () => {
+    process.env.COMMUNITY_APP_URL = 'https://avotalent.app/'
+    process.env.SUPABASE_URL = 'https://proyecto.supabase.co'
+    try {
+      const res = await request(app()).get('/api/community/auth/oauth/linkedin').expect(302)
+      expect(res.headers.location).toContain(`redirect_to=${encodeURIComponent('https://avotalent.app/auth/callback')}`)
+      expect(res.headers.location).not.toContain(encodeURIComponent('//auth'))
+    } finally {
+      delete process.env.COMMUNITY_APP_URL
+    }
+  })
+
+  it('the confirmation email of a signup points to /onboarding with a single slash', async () => {
+    process.env.COMMUNITY_APP_URL = 'https://avotalent.app//'
+    const main = clients[0]
+    try {
+      await request(app()).post('/api/community/auth/signup').send({ email: 'a@b.co', password: 'x', username: 'ana' }).expect(201)
+      const used = clients.find(c => c !== main && c.auth.signUp.mock.calls.length > 0)
+      expect(used.auth.signUp.mock.calls[0][0].options.emailRedirectTo).toBe('https://avotalent.app/onboarding')
+    } finally {
+      delete process.env.COMMUNITY_APP_URL
+    }
+  })
+})
