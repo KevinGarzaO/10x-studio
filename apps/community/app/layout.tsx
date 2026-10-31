@@ -2,6 +2,7 @@ import { Analytics } from '@vercel/analytics/next'
 import type { Metadata, Viewport } from 'next'
 import { AttributionCapture } from '@/components/attribution-capture'
 import { SessionCapture } from '@/components/session-capture'
+import { WebAnalytics } from '@/components/web-analytics'
 import { Inter } from 'next/font/google'
 import { THEME_SCRIPT } from '@/lib/theme'
 import './globals.css'
@@ -49,6 +50,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
       <body className="antialiased">
         <SessionCapture />
         <AttributionCapture />
+        <WebAnalytics />
         {children}
         {process.env.NODE_ENV === 'production' && <Analytics />}
       </body>

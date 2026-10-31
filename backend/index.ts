@@ -27,6 +27,7 @@ import communityStatsRoutes from './src/routes/community/stats.routes'
 import communityDiscoverRoutes from './src/routes/community/discover.routes'
 import communitySeoRoutes from './src/routes/community/seo.routes'
 import communityAttributionRoutes from './src/routes/community/attribution.routes'
+import webAnalyticsCollectRoutes from './src/routes/analytics/collect.routes'
 import communityFeedRoutes from './src/routes/community/feed.routes'
 import communityHistoryRoutes from './src/routes/community/history.routes'
 import communitySkillExamsRoutes from './src/routes/community/skill-exams.routes'
@@ -104,6 +105,9 @@ app.get('/api/linkedin/callback', linkedinCallback)
 app.use('/api/linkedin', studioAuth({ isPublic: isLinkedInPublic }), linkedinRoutes)
 // Panel de analítica de AvoTalent
 app.use('/api/admin/analytics', studioAuth(), adminAnalyticsRoutes)
+
+// Analítica web propia (reglas de GA4): la llama el intermediario de la comunidad, no el navegador
+app.use('/api/analytics', webAnalyticsCollectRoutes)
 
 // Community Hub routes (public auth endpoints, protected community endpoints)
 app.use('/api/community/auth', communityAuthRoutes)

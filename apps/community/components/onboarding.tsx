@@ -1,5 +1,6 @@
 'use client'
 
+import { trackEvent } from '../lib/web-analytics'
 import { useRouter } from 'next/navigation'
 import { useEffect, useRef, useState } from 'react'
 import { Loader2, MapPin, Tag } from 'lucide-react'
@@ -207,6 +208,7 @@ export function OnboardingPage() {
         return
       }
       localStorage.setItem('avocado_user', JSON.stringify(data.user))
+      void trackEvent('profile_completed', { role: roleCategory ?? undefined, seniority: seniority ?? undefined })
       // Termina el recorrido: si venía de una vacante, vuelve a ella.
       router.push(takeReturnTo() ?? '/')
       router.refresh()

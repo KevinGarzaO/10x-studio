@@ -320,6 +320,65 @@ router.get('/users', handle('usuarios', async (req, res) => {
   })
 }))
 
+/**
+ * Tráfico web (la analítica propia, con las reglas de GA4): personas activas por día, embudo, páginas de entrada, canales
+ * y cohortes. Todo sale de funciones SQL (backend/sql/web-analytics-migration.sql) que cuentan en horario de Monterrey y
+ * sin el equipo, las cuentas de prueba ni el scraper. Sin la migración dice que no está lista en lugar de mostrar ceros.
+ */
+const WEB_PERIODS = [1, 7, 30, 90]
+router.get('/web', handle('tráfico web', async (req, res) => {
+  const requested = parseInt(String(req.query.days ?? '30'), 10)
+  const days = WEB_PERIODS.includes(requested) ? requested : 30
+
+  const [active, funnel, landing, channels, cohorts] = await Promise.all([
+    supabase.rpc('analytics_active_users', { p_days: days }),
+    supabase.rpc('analytics_funnel', { p_days: days }),
+    supabase.rpc('analytics_landing_performance', { p_days: days, p_limit: 1000 }),
+    supabase.rpc('analytics_channels', { p_days: days, p_limit: 1000 }),
+    supabase.rpc('analytics_retention_cohorts', { p_weeks: 8 }),
+  ])
+
+  const failed = [active, funnel, landing, channels, cohorts].find((result) => result.error)
+  if (failed?.error) {
+    // Las funciones aún no existen (falta correr la migración): se dice, en lugar de mostrar ceros que parecerían reales.
+    if (/function|does not exist|schema cache|analytics_/i.test(failed.error.message)) return res.json({ ready: false })
+    throw new Error(failed.error.message)
+  }
+
+  const daily = (active.data ?? []) as { day: string; dau: number; wau: number; mau: number }[]
+  const pages = (landing.data ?? []) as { entry_path: string; sessions: number; active_users: number; engagement_rate: number | null; conversions: number; conversion_rate: number | null }[]
+  const sessions = pages.reduce((sum, row) => sum + row.sessions, 0)
+  const conversions = pages.reduce((sum, row) => sum + row.conversions, 0)
+  const latest = daily[daily.length - 1]
+
+  // Las cohortes llegan como filas (semana, desfase): se arman como matriz, una fila por semana de adquisición.
+  const byWeek = new Map<string, { week: string; size: number; retained: { offset: number; count: number; pct: number | null }[] }>()
+  for (const row of (cohorts.data ?? []) as { cohort_week: string; cohort_size: number; week_offset: number; retained: number; retained_pct: number | null }[]) {
+    const entry = byWeek.get(row.cohort_week) ?? { week: row.cohort_week, size: row.cohort_size, retained: [] }
+    entry.retained.push({ offset: row.week_offset, count: row.retained, pct: row.retained_pct })
+    byWeek.set(row.cohort_week, entry)
+  }
+
+  res.json({
+    ready: true,
+    days,
+    summary: {
+      dau: latest?.dau ?? 0,
+      wau: latest?.wau ?? 0,
+      mau: latest?.mau ?? 0,
+      sessions,
+      engagementRatePct: sessions > 0 ? Math.round((pages.reduce((sum, row) => sum + Math.round(((row.engagement_rate ?? 0) / 100) * row.sessions), 0) / sessions) * 1000) / 10 : null,
+      conversions,
+      conversionRatePct: sessions > 0 ? Math.round((conversions / sessions) * 1000) / 10 : null,
+    },
+    daily,
+    funnel: funnel.data ?? [],
+    landingPages: pages,
+    channels: channels.data ?? [],
+    cohorts: [...byWeek.values()],
+  })
+}))
+
 /** Retención: actividad diaria, semanal y mensual, y cohortes por semana de registro. */
 router.get('/retention', handle('retención', async (_req, res) => {
   const since = new Date(Date.now() - 60 * 86400000)

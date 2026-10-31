@@ -1,5 +1,6 @@
 'use client'
 
+import { trackEvent } from '../../../../lib/web-analytics'
 import { DetailSkeleton } from '@/components/skeletons'
 import Link from 'next/link'
 import { useParams, useRouter } from 'next/navigation'
@@ -321,7 +322,10 @@ export default function VacancyPage() {
 
   // Anota que se abrió la vacante (una vez por sesión): es lo que dice si la gente que llega encuentra algo.
   useEffect(() => {
-    if (post) trackVacancyEvent(post.slug || slug, 'view')
+    if (post) {
+      trackVacancyEvent(post.slug || slug, 'view')
+      void trackEvent('click_view_job_detail', { slug: post.slug || slug })
+    }
   }, [post, slug])
 
   if (loading || error || !post) {
@@ -409,6 +413,9 @@ export default function VacancyPage() {
   function handleApplyClick() {
     trackVacancyEvent(current.slug || slug, 'apply')
     if (!applyUrl) return
+    // Con sesión, "Postularse" abre el sitio de la empresa: empieza a postular y sale a postular de verdad.
+    void trackEvent('click_start_apply', { slug: current.slug || slug })
+    void trackEvent('click_external_apply', { slug: current.slug || slug })
     if (canEmbedApply) {
       setApplyOpen(true)
     } else {
@@ -422,7 +429,7 @@ export default function VacancyPage() {
     : user
       ? handleApplyClick
       // Sin cuenta, "Postularse" lleva a registrarse y de vuelta a esta vacante.
-      : () => { trackVacancyEvent(post.slug || slug, 'apply'); requestAuth({ variant: 'vacancy', subject: `${post.title} — ${companyName}` }) }
+      : () => { trackVacancyEvent(post.slug || slug, 'apply'); void trackEvent('click_start_apply', { slug: post.slug || slug }); requestAuth({ variant: 'vacancy', subject: `${post.title} — ${companyName}` }) }
 
   return (
     <>

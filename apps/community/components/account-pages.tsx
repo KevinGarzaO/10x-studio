@@ -1,5 +1,6 @@
 'use client'
 
+import { trackEvent, identifyUser } from '../lib/web-analytics'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useState, FormEvent, useEffect } from 'react'
@@ -439,10 +440,13 @@ export function AuthPage({ mode }: { mode: 'login' | 'signup' }) {
 
       if (data.session?.access_token) {
         saveSession(data.session, data.user)
+        // Medición: registro o inicio de sesión, y se une este navegador con la cuenta (user stitching).
+        void trackEvent(signup ? 'user_registration_success' : 'login_success', { method: 'email' }).then(() => identifyUser())
         // Quien venía de una vacante vuelve a ella; el registro pasa primero por el onboarding.
         router.push(signup ? '/onboarding' : (peekReturnTo() ?? '/'))
         router.refresh()
       } else if (signup) {
+        void trackEvent('user_registration_success', { method: 'email', confirmation_pending: true })
         setSuccess('Cuenta creada. Revisa tu correo para confirmar tu email y luego inicia sesión.')
         setLoading(false)
       } else {
