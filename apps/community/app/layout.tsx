@@ -1,4 +1,3 @@
-import { Analytics } from '@vercel/analytics/next'
 import type { Metadata, Viewport } from 'next'
 import { AttributionCapture } from '@/components/attribution-capture'
 import { ClarityIntegration } from '@/components/clarity-integration'
@@ -59,7 +58,6 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
         <SessionKeeper />
         <ErrorCapture />
         <GlobalErrorBoundary area="layout">{children}</GlobalErrorBoundary>
-        {process.env.NODE_ENV === 'production' && <Analytics />}
       </body>
     </html>
   )
