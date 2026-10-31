@@ -12,7 +12,7 @@ Estado al **31 de octubre de 2026**. Se trabaja **de a poco**: una cosa a la vez
 | Sprint | Qué entra | Dónde está |
 |---|---|---|
 | **Noviembre 2026** | Todo lo pendiente que había hasta el 31 de octubre: las letras **A a V** | Sección 2 |
-| **Diciembre 2026** | Letras propias del sprint, otra vez desde la **A**: **A** inicio de sesión con Google · **B** Pixel de Meta y su API · **C** compartir vacantes y discusiones con OG bien hecho · **D** pantallas legales, de privacidad y de cookies · **E** jefe de producto con Claude: un agente robusto que revisa, avisa, propone, diseña y actúa solo con tu aprobación (se hace al final, con 2 meses de datos) | Sección 2B |
+| **Diciembre 2026** | Letras propias del sprint, otra vez desde la **A**: **A** inicio de sesión con Google · **B** Pixel de Meta y su API · **C** compartir vacantes y discusiones con OG bien hecho · **D** pantallas legales, de privacidad y de cookies · **E** jefe de producto con Claude: un agente robusto que revisa, avisa, propone, diseña y actúa solo con tu aprobación (se hace al final, con 2 meses de datos) · **F** días muertos: medirlos y traer a nuestra propia gente de vuelta | Sección 2B |
 
 > **Las letras empiezan de nuevo en cada sprint.** Cuando haga falta distinguirlas se dice "A de noviembre" o "A de diciembre".
 
@@ -233,7 +233,7 @@ Pedido el 31 de octubre, al ver un video: alguien con cuenta entró por un aviso
 
 ---
 
-## 2B. Sprint de diciembre (letras A a E)
+## 2B. Sprint de diciembre (letras A a F)
 
 **Prioridad:** igual que arriba (P1 urgente · P2 alta · P3 media · P4 después). **Tamaño:** S unas horas · M medio día a un día · L varios días.
 
@@ -244,6 +244,7 @@ Pedido el 31 de octubre, al ver un video: alguien con cuenta entró por un aviso
 | 3 | **C** | Compartir vacantes y discusiones con OG bien hecho | P2 | M |
 | 4 | **D** | Pantallas legales, de privacidad y de cookies | P2 | L |
 | 5 | **E** | Jefe de producto con Claude (agente con aprobación en cada acción y alertas de errores) | P2 | L · arranca con 2 meses de datos |
+| 6 | **F** | Días muertos: medirlos y traer a nuestra propia gente de vuelta | P2 | L |
 
 > Las prioridades son una propuesta mía: A y C ayudan a que llegue y se comparta más gente (P2); B solo rinde cuando se anuncie en Meta, y además depende del tema de cookies (P3). D es P2 por orden de diciembre, pero **conviene adelantarla**: desde que Clarity se enciende, el sitio graba sesiones sin aviso de cookies (ver la nota de D). E va **al final a propósito**: necesita unos 2 meses de datos de la medición nueva (desde el 31 de octubre) para que sus conclusiones valgan; cuando llegue ese momento es lo que más valor da, por eso P2. Cámbialas si quieres.
 
@@ -357,6 +358,35 @@ Un agente que hace de **jefe de producto de AvoTalent**: lee los datos, detecta 
 - [ ] **Evaluación:** una lista de preguntas con respuesta conocida y de casos con trampa (muestra chica, correlación falsa), que se corre cada vez que cambian sus instrucciones; las instrucciones llevan versión.
 - [ ] Reintentos y fallas controladas: si la API falla, el informe lo dice y no inventa; las acciones no se repiten.
 - [ ] Pruebas automáticas del ejecutor (que nada fuera de la lista se pueda ejecutar y que sin aprobación no corra nada).
+
+### F (diciembre). Días muertos: medirlos y traer a nuestra propia gente de vuelta — P2 · L
+Pedido el 31 de octubre, al ver que un sábado casi sin visitas se queda sin registros. Hoy el sitio vive de lo que le llega de afuera (sobre todo las publicaciones de LinkedIn), así que **cuando afuera se calla, el sitio se vacía**: ese día entraron 8 visitantes, de los cuales ninguno era de LinkedIn. Dos partes: primero saber cuáles son los días flojos y por qué, y luego tener una forma de **llamar a nuestra propia gente** (la que ya se registró o ya nos conoce) para que esos días no se mueran.
+
+**Parte 1. Medir los días flojos**
+- [ ] Pantalla en Telemetry (Tráfico web, "Ritmo de la semana"): **personas activas por día de la semana y por hora** (hora de Monterrey) en un mapa de calor, con registros y personas nuevas por día. Se ve de golpe cuándo hay gente y cuándo no.
+- [ ] **Por origen**: cuánto de cada día viene de LinkedIn, correo, directo y de personas que ya tenían cuenta. Así se ve si un día flojo es porque "afuera se calló" o porque "los nuestros no vuelven".
+- [ ] **Línea base por día de la semana** (la mediana de las últimas semanas del mismo día) y marcar **día muerto** cuando se queda por debajo de la mitad. Un sábado se compara con otros sábados, no con un martes.
+- [ ] Una alerta de "día muerto" en el sistema de alertas (E3 de este sprint): a media tarde, si hoy va muy por debajo de su línea base, avisa a tiempo de hacer algo todavía hoy.
+- [ ] Resumen semanal: los días y horas más flojos, y qué se hizo en ellos (publicaciones, correos, avisos) para poder comparar.
+- [ ] Requisito: al menos **4 semanas de datos** de la medición nueva para que la línea base de cada día valga (con un solo sábado no hay comparación).
+
+**Parte 2. Activaciones: traer a nuestra propia gente a la web**
+La gente que ya conocemos es el único tráfico que no depende de LinkedIn. Ideas, de menor a mayor esfuerzo; cada una se mide con su propio origen (`utm_medium=activacion`, `utm_campaign=dia-muerto-<tipo>`):
+- [ ] **Avisos dentro de la app y notificaciones push del navegador** (ya existe la campana; falta el aviso al teléfono o la computadora con la pestaña cerrada). Un "hay 12 vacantes nuevas para ti" o un tema de la comunidad. Los push necesitan un permiso de la persona y un service worker.
+- [ ] **"El tema del día"**: una pregunta o discusión diaria (publicada por nosotros o propuesta por la comunidad) que dé una razón para volver aunque no haya vacantes nuevas, sobre todo en fin de semana.
+- [ ] **Correo ligero en los días flojos** a quien tiene cuenta y le conviene (las mejores coincidencias nuevas de "Para ti", ya existentes), con tope por persona y por semana para no cansar. Cabe en la cuota gratis de Resend solo con un tope diario de unos 90 correos en total.
+- [ ] **Resumen del fin de semana** (viernes en la tarde o sábado en la mañana): las vacantes más vistas de la semana y lo que se perdieron.
+- [ ] **Nuestra audiencia propia**: la lista de correos del dueño y los suscriptores de Substack (que ya son la base de las invitaciones), y las personas que nos siguen en LinkedIn con publicaciones pensadas para el fin de semana (ya son 4 al día todos los días).
+- [ ] **Racha o recordatorio suave** para quien volvió varios días: "llevas 3 días, hoy hay 8 vacantes nuevas de tu puesto". Con cuidado de no presionar.
+- [ ] **Experimentos medidos**: cada activación se prueba en unos cuantos días flojos y se compara con el mismo día de las semanas anteriores (la línea base de la parte 1). No se deja encendida si no mueve la aguja.
+- [ ] **Límites y respeto:** máximo de avisos por persona a la semana, horario de envío razonable, y cada tipo se puede apagar en Ajustes (ya existe la pestaña Notificaciones). Los push y los correos de activación respetan esa elección.
+
+**Decisiones tuyas**
+- [ ] Qué canal probar primero: push del navegador, correo ligero o "el tema del día". Propuesta: empezar por **el tema del día** (no cuesta cuota ni exige permisos) y el **correo ligero** de fin de semana, y dejar los push para después de la parte legal (D de este sprint).
+- [ ] Si el contenido del "tema del día" lo escribes tú, lo propone el agente de producto (E) para que lo apruebes, o sale de la propia comunidad.
+- [ ] Cuántos avisos por persona a la semana son aceptables (propuesta: 2 en total, contando todos los canales).
+
+**Depende de:** la pantalla de ritmo semanal necesita unas semanas de datos; los push necesitan D (privacidad y consentimiento); el agente de producto (E) puede proponer y medir estas activaciones con su informe semanal.
 
 ---
 
