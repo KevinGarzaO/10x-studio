@@ -10,6 +10,7 @@ import { loadMatchingOverview } from '../../../services/analytics/matching-data'
 import {
   acquisitionBySource,
   buildOverview,
+  change,
   dayKey,
   groupPerformance,
   hourOf,
@@ -150,6 +151,59 @@ router.get('/vacancies', handle('vacantes', async (req, res) => {
   })
 }))
 
+/**
+ * Los visitantes del resumen: SOLO personas con una sesión activa (10 s con la pestaña visible, 2 páginas o un evento clave),
+ * separadas en nuevas y recurrentes, y la conversión medida sobre las NUEVAS. Salen de la analítica web propia
+ * (backend/sql/web-analytics-summary-migration.sql). Si esa medición aún no existe, `ready: false` y el panel lo dice.
+ *
+ * Una comparación contra el periodo anterior solo se da si la medición ya existía entonces: si no, sería comparar contra ceros.
+ */
+async function visitorsTraffic(days: number, bucketDays: string[]) {
+  const now = new Date()
+  const from = periodStart(days, now)
+  const span = periodSpanMs(days)
+  const previousFrom = new Date(from.getTime() - span)
+  const hourly = days === 1
+
+  const [current, previous, series] = await Promise.all([
+    supabase.rpc('analytics_visitors_summary', { p_from: from.toISOString(), p_to: new Date(now.getTime() + 1).toISOString() }),
+    supabase.rpc('analytics_visitors_summary', { p_from: previousFrom.toISOString(), p_to: from.toISOString() }),
+    supabase.rpc('analytics_visitors_series', { p_from: from.toISOString(), p_to: new Date(now.getTime() + 1).toISOString(), p_bucket: hourly ? 'hour' : 'day' }),
+  ])
+  const failed = [current, previous, series].find((result) => result.error)
+  if (failed?.error) {
+    if (/function|does not exist|schema cache|analytics_|relation/i.test(failed.error.message)) return { ready: false as const }
+    throw new Error(failed.error.message)
+  }
+
+  type Summary = { tracking_since: string | null; active: number; new_active: number; returning_active: number; registered_new: number; linkedin_active: number; sessions: number; engaged_sessions: number }
+  const now_ = ((current.data ?? [])[0] ?? null) as Summary | null
+  const before = ((previous.data ?? [])[0] ?? null) as Summary | null
+  const trackingSince = now_?.tracking_since ?? null
+  const since = trackingSince ? Date.parse(trackingSince) : null
+
+  const byBucket = new Map(((series.data ?? []) as { bucket: string; active: number; new_active: number }[]).map((row) => [row.bucket, row]))
+  return {
+    ready: true as const,
+    trackingSince,
+    // El periodo está incompleto si la medición empezó después de que el periodo arrancó.
+    partial: since === null || since > from.getTime(),
+    active: now_?.active ?? 0,
+    newActive: now_?.new_active ?? 0,
+    returningActive: now_?.returning_active ?? 0,
+    registeredNew: now_?.registered_new ?? 0,
+    // Registros de gente nueva entre gente nueva activa: un recurrente que se registra no engorda la conversión.
+    conversionPct: pct(now_?.registered_new ?? 0, now_?.new_active ?? 0),
+    linkedinActive: now_?.linkedin_active ?? 0,
+    sessions: now_?.sessions ?? 0,
+    bounces: Math.max(0, (now_?.sessions ?? 0) - (now_?.engaged_sessions ?? 0)),
+    vs: since !== null && since <= previousFrom.getTime() && before
+      ? { active: change(now_?.active ?? 0, before.active), newActive: change(now_?.new_active ?? 0, before.new_active) }
+      : { active: null, newActive: null },
+    series: bucketDays.map((day) => ({ day, active: byBucket.get(day)?.active ?? 0, newActive: byBucket.get(day)?.new_active ?? 0 })),
+  }
+}
+
 /** Resumen: los números de arriba del panel, con su comparación contra el periodo anterior. */
 router.get('/overview', handle('resumen', async (req, res) => {
   const days = periodOf(req)
@@ -169,9 +223,11 @@ router.get('/overview', handle('resumen', async (req, res) => {
   ])
 
   const nextBatch = nextBatchFrom(cycle?.[0]?.cycle_started_at ? new Date(cycle[0].cycle_started_at) : null)
+  const traffic = await visitorsTraffic(days, overview.series.map((point) => point.day))
 
   res.json({
     ...overview,
+    traffic,
     totals: { users: totalUsers ?? 0, activeVacancies: activeVacancies ?? 0, queuedVacancies: queued ?? 0, lastIngestedAt: lastIngested?.[0]?.created_at ?? null,
       // La última que salió al feed (el scraper trae lotes cada 15 días y el feed los publica repartidos entre esos 15 días) y cuándo toca el siguiente lote.
       lastPublishedAt: lastPublished?.[0]?.created_at ?? null,

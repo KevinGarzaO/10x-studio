@@ -11,6 +11,7 @@ import { PGlite } from '@electric-sql/pglite'
  */
 const sql = fs.readFileSync(path.join(__dirname, '../../sql/web-analytics-migration.sql'), 'utf8')
 const detailSql = fs.readFileSync(path.join(__dirname, '../../sql/web-analytics-detail-migration.sql'), 'utf8')
+const summarySql = fs.readFileSync(path.join(__dirname, '../../sql/web-analytics-summary-migration.sql'), 'utf8')
 const uuid = (n: number) => `00000000-0000-4000-8000-${String(n).padStart(12, '0')}`
 const S = (n: number) => uuid(n)
 
@@ -30,11 +31,13 @@ describe('web-analytics-migration.sql (Postgres real)', () => {
 
   it('crea todo y se puede correr dos veces sin error', async () => {
     await c.query(`CREATE ROLE service_role; CREATE ROLE anon; CREATE ROLE authenticated;`)
-    await c.query(`CREATE TABLE users (id uuid PRIMARY KEY, is_test_account boolean DEFAULT false, is_scraper_profile boolean DEFAULT false, user_kind text DEFAULT 'user')`)
+    await c.query(`CREATE TABLE users (id uuid PRIMARY KEY, is_test_account boolean DEFAULT false, is_scraper_profile boolean DEFAULT false, user_kind text DEFAULT 'user', created_at timestamptz DEFAULT now())`)
     await c.query(sql)
     await c.query(sql)
     await c.query(detailSql)
     await c.query(detailSql)
+    await c.query(summarySql)
+    await c.query(summarySql)
   }, 60000)
 
 
@@ -336,5 +339,81 @@ describe('web-analytics-migration.sql (Postgres real)', () => {
     it('detalle: las funciones nuevas tampoco las puede llamar anon ni authenticated', async () => {
       const row = (await q(`SELECT has_function_privilege('anon','analytics_dimension(int,text,int)','EXECUTE') a, has_function_privilege('authenticated','analytics_geo_points(int,int)','EXECUTE') b, has_function_privilege('service_role','analytics_pages(int,int)','EXECUTE') c`))[0]
       assert.deepStrictEqual(row, { a: false, b: false, c: true })
+    })
+
+    // ---------- el resumen: personas ACTIVAS, nuevas y recurrentes ----------
+    it('resumen: solo cuentan las personas con una sesión activa; los rebotes no son visitantes', async () => {
+      await c.query(`DELETE FROM analytics_events; DELETE FROM analytics_page_views; DELETE FROM analytics_sessions; DELETE FROM users;`)
+      const mk = async (n: number, client: string, daysAgo: number, o: Record<string, any> = {}) => {
+        await c.query(
+          `INSERT INTO analytics_sessions (session_id, client_id, user_id, entry_path, utm_source, is_engaged, created_at) VALUES ($1,$2,$3,'/',$4,$5, now() - ($6 || ' days')::interval)`,
+          [S(n), client, o.user ?? null, o.source ?? null, o.engaged ?? false, String(daysAgo)],
+        )
+      }
+      // Periodo = los últimos 7 días. activo-nuevo: primera visita dentro y activo. rebote: entró y no hizo nada.
+      await mk(51, 'sum-nuevo', 2, { engaged: true, source: 'linkedin' })
+      await mk(52, 'sum-rebote', 1)
+      await mk(53, 'sum-recurrente', 20)                       // vino hace 20 días (no activa)
+      await mk(54, 'sum-recurrente', 1, { engaged: true })     // y volvió activa hace 1 día
+      await mk(55, 'sum-nuevo2', 3, { engaged: true })
+      const [row] = await q(`SELECT * FROM analytics_visitors_summary(now() - interval '7 days', now() + interval '1 minute')`)
+      assert.strictEqual(row.active, 3, `active ${row.active}`)
+      assert.strictEqual(row.new_active, 2)
+      assert.strictEqual(row.returning_active, 1)
+      assert.strictEqual(row.sessions, 4)
+      assert.strictEqual(row.engaged_sessions, 3)
+      assert.strictEqual(row.linkedin_active, 1)
+      assert.ok(row.tracking_since)
+    })
+
+    it('resumen: quien ya tenía cuenta antes de la medición es recurrente, no nuevo', async () => {
+      const old = uuid(700)
+      await c.query(`INSERT INTO users (id, created_at) VALUES ($1, now() - interval '60 days')`, [old])
+      await c.query(`INSERT INTO analytics_sessions (session_id, client_id, user_id, entry_path, is_engaged, created_at) VALUES ($1,'sum-vieja',$2,'/',true, now() - interval '1 day')`, [S(56), old])
+      const [row] = await q(`SELECT * FROM analytics_visitors_summary(now() - interval '7 days', now() + interval '1 minute')`)
+      // antes: 3 activos (2 nuevos, 1 recurrente); ahora también la cuenta vieja: recurrente
+      assert.deepStrictEqual([row.active, row.new_active, row.returning_active], [4, 2, 2])
+    })
+
+    it('resumen: la conversión es de los NUEVOS: un recurrente que se registra no cuenta', async () => {
+      // un nuevo que se registra en el periodo
+      const nuevo = uuid(701)
+      await c.query(`INSERT INTO users (id, created_at) VALUES ($1, now() - interval '2 days')`, [nuevo])
+      await c.query(`UPDATE analytics_sessions SET user_id = $1 WHERE client_id = 'sum-nuevo'`, [nuevo])
+      // un recurrente que se registra en el periodo (venía de hace 20 días)
+      const recurrente = uuid(702)
+      await c.query(`INSERT INTO users (id, created_at) VALUES ($1, now() - interval '1 day')`, [recurrente])
+      await c.query(`UPDATE analytics_sessions SET user_id = $1 WHERE client_id = 'sum-recurrente'`, [recurrente])
+      const [row] = await q(`SELECT * FROM analytics_visitors_summary(now() - interval '7 days', now() + interval '1 minute')`)
+      assert.strictEqual(row.new_active, 2)
+      assert.strictEqual(row.registered_new, 1, 'solo el nuevo que se registró')
+    })
+
+    it('resumen: el periodo anterior se mide aparte (para comparar)', async () => {
+      const [row] = await q(`SELECT * FROM analytics_visitors_summary(now() - interval '30 days', now() - interval '7 days')`)
+      // en esos 23 días solo hay actividad activa de la sesión 53? no: era no activa. No hay personas activas.
+      assert.strictEqual(row.active, 0)
+    })
+
+    it('resumen: la serie por día trae activos y nuevos por día de Monterrey, y por hora con otro formato', async () => {
+      const days = await q(`SELECT * FROM analytics_visitors_series(now() - interval '7 days', now() + interval '1 minute', 'day')`)
+      assert.ok(days.length >= 2)
+      assert.ok(days.every((r: any) => /^\d{4}-\d{2}-\d{2}$/.test(r.bucket)), JSON.stringify(days))
+      assert.strictEqual(days.reduce((sum: number, r: any) => sum + r.new_active, 0), 2)
+      const hours = await q(`SELECT * FROM analytics_visitors_series(now() - interval '2 days', now() + interval '1 minute', 'hour')`)
+      assert.ok(hours.every((r: any) => /^\d{4}-\d{2}-\d{2}T\d{2}$/.test(r.bucket)), JSON.stringify(hours))
+    })
+
+    it('resumen: nadie del equipo ni de pruebas cuenta como visitante', async () => {
+      const team = uuid(703)
+      await c.query(`INSERT INTO users (id, user_kind) VALUES ($1, 'superadmin')`, [team])
+      await c.query(`INSERT INTO analytics_sessions (session_id, client_id, user_id, entry_path, is_engaged) VALUES ($1,'sum-team',$2,'/',true)`, [S(57), team])
+      const [row] = await q(`SELECT * FROM analytics_visitors_summary(now() - interval '7 days', now() + interval '1 minute')`)
+      assert.strictEqual(row.active, 4)
+    })
+
+    it('resumen: las funciones nuevas no se pueden llamar con la llave pública', async () => {
+      const row = (await q(`SELECT has_function_privilege('anon','analytics_visitors_summary(timestamptz,timestamptz)','EXECUTE') a, has_function_privilege('service_role','analytics_visitors_series(timestamptz,timestamptz,text)','EXECUTE') b`))[0]
+      assert.deepStrictEqual(row, { a: false, b: true })
     })
 })
