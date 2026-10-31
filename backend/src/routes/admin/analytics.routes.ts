@@ -7,6 +7,7 @@ import { ttlCache } from '../../../services/analytics/cache'
 import { emptySegment, isMissingMigration, loadSegments, trackingSince, SEGMENT_GROUPS, type SegmentCounts, type SegmentGroup } from '../../../services/analytics/segments'
 import { dailyQuota, daysUntilNextBatch, nextBatchFrom } from '../../../services/scraper/quota'
 import { loadAlerts } from '../../../services/analytics/alerts-data'
+import { stepsByFlow, type FlowStepRow } from '../../../services/analytics/flows'
 import { loadMatchingOverview } from '../../../services/analytics/matching-data'
 import {
   acquisitionBySource,
@@ -782,6 +783,57 @@ router.get('/web/sessions/:id', handle('detalle de sesión', async (req, res) =>
     pageViews: views.data ?? [],
     events: events.data ?? [],
     otherSessions: others.data ?? [],
+  })
+}))
+
+/**
+ * Telemetría > Errores: los errores agrupados (el mismo error en la misma página), los más frecuentes primero, con las personas
+ * afectadas y el enlace al video de Clarity del más reciente que lo tenga.
+ */
+router.get('/web/errors', handle('errores', async (req, res) => {
+  const days = Math.min(Math.max(parseInt(String(req.query.days ?? '7'), 10) || 7, 1), 90)
+  const limit = Math.min(Math.max(parseInt(String(req.query.limit ?? '50'), 10) || 50, 1), 200)
+  const { data, error } = await supabase.rpc('analytics_error_summary', { p_days: days, p_limit: limit })
+  if (error) {
+    if (missingMigration(error.message)) return res.json({ ready: false })
+    throw new Error(error.message)
+  }
+  const rows = (data ?? []) as { fingerprint: string; error_name: string; error_message: string; path: string; error_source: string; occurrences: number; people_affected: number; first_seen: string; last_seen: string; stack_trace: string | null; frames: unknown; sample_session_id: string | null; clarity_url: string | null; seconds_into_session: number | null }[]
+  res.json({
+    ready: true,
+    days,
+    totals: { errors: rows.reduce((sum, row) => sum + row.occurrences, 0), kinds: rows.length, withVideo: rows.filter((row) => row.clarity_url).length },
+    errors: rows.map((row) => ({
+      fingerprint: row.fingerprint, name: row.error_name, message: row.error_message, path: row.path, source: row.error_source,
+      occurrences: row.occurrences, peopleAffected: row.people_affected, firstSeen: row.first_seen, lastSeen: row.last_seen,
+      stack: row.stack_trace, frames: Array.isArray(row.frames) ? row.frames : [],
+      sessionId: row.sample_session_id, clarityUrl: row.clarity_url, secondsIntoSession: row.seconds_into_session,
+    })),
+  })
+}))
+
+/** Telemetría > Flujos: por flujo crítico, cuántos intentos se completan, se abandonan o fallan, y los tiempos; y paso a paso dónde se pierde la gente. */
+router.get('/web/flows', handle('flujos', async (req, res) => {
+  const days = webPeriod(req)
+  const [summary, steps] = await Promise.all([supabase.rpc('analytics_flow_summary', { p_days: days }), supabase.rpc('analytics_flow_steps', { p_days: days })])
+  const failed = [summary, steps].find((result) => result.error)
+  if (failed?.error) {
+    if (missingMigration(failed.error.message)) return res.json({ ready: false })
+    throw new Error(failed.error.message)
+  }
+  const byFlow = stepsByFlow((steps.data ?? []) as FlowStepRow[])
+  res.json({
+    ready: true,
+    days,
+    flows: ((summary.data ?? []) as Record<string, unknown>[]).map((row) => ({
+      name: row.flow_name,
+      runsStarted: row.runs_started, peopleStarted: row.people_started, runsCompleted: row.runs_completed, peopleCompleted: row.people_completed,
+      runsDropped: row.runs_dropped, runsError: row.runs_error, runsInProgress: row.runs_in_progress,
+      completionRatePct: row.completion_rate_pct === null ? null : Number(row.completion_rate_pct),
+      dropoffRatePct: row.dropoff_rate_pct === null ? null : Number(row.dropoff_rate_pct),
+      avgDurationMs: row.avg_duration_ms, avgLoadTimeMs: row.avg_load_time_ms, frustratedRuns: row.frustrated_runs,
+      steps: byFlow[String(row.flow_name)] ?? [],
+    })),
   })
 }))
 

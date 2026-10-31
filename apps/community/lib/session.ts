@@ -1,3 +1,4 @@
+import { reportApiError } from './error-reporter'
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'
 
 export interface Session {
@@ -116,6 +117,9 @@ export async function fetchJsonWithSession(url: string): Promise<any | null> {
       if (!token) return null
       res = await fetch(url, { headers: { Authorization: `Bearer ${token}` } })
     }
+    // Una respuesta 5xx es un fallo nuestro (no de la persona): se reporta como error de API.
+    // (se importa al momento para no crear un ciclo: error-reporter usa la analítica, que a su vez usa esta sesión)
+    if (res.status >= 500) void import('./error-reporter').then(module => module.reportApiError({ url, status: res.status })).catch(() => undefined)
     return res.ok ? await res.json() : null
   } catch {
     return null

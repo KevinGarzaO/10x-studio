@@ -12,7 +12,9 @@ tiempo límite, y devuelve datos agregados: no entrega correos ni nombres.
 |---|---|
 | `get_funnel_dropoffs` | El embudo del candidato con avance y abandono entre pasos, las rutas donde terminan las sesiones que **no** convirtieron y cómo convierte cada página de entrada. |
 | `get_clarity_frustration_data` | Rage clicks, dead clicks, quickbacks y scroll por página (ruta exacta, prefijo con `*`, o las peores páginas si no se da ruta), con tendencia día a día y conteos por 100 sesiones. |
-| `get_user_session_recording` | Por `user_id` o `email`: sus últimas sesiones y cómo abrir su grabación en Clarity. |
+| `get_user_session_recording` | Por `user_id` o `email`: sus últimas sesiones y el enlace a su grabación en Clarity. |
+| `get_error_logs_with_clarity_video` | Los errores recientes (navegador, API, servidor) por frecuencia: mensaje, página, personas afectadas, primeras líneas del stack y el video de Clarity de la sesión más reciente donde pasó, con el segundo en que falló. |
+| `get_flow_performance_analysis` | Por flujo crítico (iniciar sesión, crear cuenta, buscar vacantes, postularse): completitud, abandono, tiempos, frustración, paso a paso, y los rage/dead clicks de Clarity en sus páginas. |
 
 ## Cómo se conecta Clarity con nuestra base: el video de cada sesión
 
@@ -47,7 +49,7 @@ las de las últimas 24 h por página (la API solo da 1 a 3 días, 10 llamadas al
 
 ### 1. Base de datos (una vez, en el editor SQL de Supabase)
 
-Correr `backend/sql/clarity-migration.sql` (además de las migraciones de analítica web que ya existen).
+Correr `backend/sql/clarity-migration.sql` y después `backend/sql/telemetry-migration.sql` (errores y flujos), además de las migraciones de analítica web que ya existen.
 
 ### 2. Clarity
 
@@ -77,13 +79,17 @@ El servidor ya abre cada consulta como `READ ONLY`, pero lo correcto es que ni s
 ```sql
 CREATE ROLE avo_mcp_reader LOGIN PASSWORD 'CAMBIA-ESTA-CLAVE';
 GRANT USAGE ON SCHEMA public TO avo_mcp_reader;
-GRANT SELECT ON analytics_real_sessions, analytics_sessions, analytics_events, analytics_clarity_metrics, analytics_clarity_links TO avo_mcp_reader;
+GRANT SELECT ON analytics_real_sessions, analytics_sessions, analytics_events, analytics_clarity_metrics, analytics_clarity_links,
+  analytics_error_logs, analytics_flow_metrics, analytics_flow_runs TO avo_mcp_reader;
 GRANT SELECT (id, email, user_kind, created_at) ON users TO avo_mcp_reader;
-GRANT EXECUTE ON FUNCTION analytics_funnel(int), analytics_landing_performance(int, int), analytics_period_start(int) TO avo_mcp_reader;
+GRANT EXECUTE ON FUNCTION analytics_funnel(int), analytics_landing_performance(int, int), analytics_period_start(int),
+  analytics_error_summary(int, int), analytics_flow_summary(int), analytics_flow_steps(int) TO avo_mcp_reader;
 -- Las tablas tienen RLS activado: sin una política, el rol no vería ninguna fila.
 CREATE POLICY mcp_read ON analytics_sessions        FOR SELECT TO avo_mcp_reader USING (true);
 CREATE POLICY mcp_read ON analytics_events          FOR SELECT TO avo_mcp_reader USING (true);
 CREATE POLICY mcp_read ON analytics_clarity_links   FOR SELECT TO avo_mcp_reader USING (true);
+CREATE POLICY mcp_read ON analytics_error_logs      FOR SELECT TO avo_mcp_reader USING (true);
+CREATE POLICY mcp_read ON analytics_flow_metrics    FOR SELECT TO avo_mcp_reader USING (true);
 CREATE POLICY mcp_read ON analytics_clarity_metrics FOR SELECT TO avo_mcp_reader USING (true);
 CREATE POLICY mcp_read ON users                     FOR SELECT TO avo_mcp_reader USING (true);
 ```

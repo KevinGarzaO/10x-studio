@@ -45,6 +45,7 @@ import adminExamQuestionsRoutes from './src/routes/admin/exam-questions.routes'
 import scraperRoutes from './routes/scraper'
 
 import path from 'path'
+import { captureServerError } from './services/web-analytics/telemetry'
 
 dotenv.config()
 
@@ -142,6 +143,13 @@ app.use(sitemapRoutes)
 // Root route
 app.get('/', (req, res) => {
   res.send('10X Studio API is running')
+})
+
+// Telemetría: todo error que se escape de una ruta queda registrado (con su ruta y su cuenta si la hay) y sigue su camino normal
+// (esto solo anota: la respuesta al cliente la sigue dando el manejo de errores de Express).
+app.use((err: unknown, req: express.Request, _res: express.Response, next: express.NextFunction) => {
+  captureServerError(err, { path: req.path, userId: (req as express.Request & { userId?: string }).userId ?? null })
+  next(err)
 })
 
 // Start Cron

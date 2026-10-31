@@ -1,6 +1,7 @@
 'use client'
 
 import { trackEvent, identifyUser } from '@/lib/web-analytics'
+import { flowFor } from '@/lib/flow-tracker'
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Loader2 } from 'lucide-react'
@@ -66,6 +67,8 @@ export default function AuthCallbackPage() {
         // Una cuenta creada hace un momento es un registro; si no, es un inicio de sesión.
         const justCreated = data.user?.created_at ? Date.now() - Date.parse(data.user.created_at) < 2 * 60 * 1000 : false
         void trackEvent(justCreated ? 'user_registration_success' : 'login_success', { method: data.user?.provider ?? 'oauth' }).then(() => identifyUser())
+        // El intento de entrar (o de registrarse) empezó en la página anterior, antes de ir al proveedor: aquí se cierra.
+        for (const name of ['auth_register', 'auth_login'] as const) flowFor(name).completeFlow('oauth_success')
         router.replace(data.user?.profile_completed ? '/' : '/onboarding')
         router.refresh()
       } catch {

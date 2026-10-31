@@ -16,6 +16,7 @@ de notas al inicio del archivo, nunca reescribiendo el texto original.
 | 004 | [Rediseño del foro](004-forum-redesign.md) | Sin spec: implementación directa | Feed rediseñado; faltan detalle, perfil y crear |
 | 005 | [Retención y engagement: qué falta para amarrar la app](005-retention-and-engagement-roadmap.md) | Sin spec todavía | Plan acordado, sin empezar |
 | 008 | [Microsoft Clarity + servidor MCP de analítica](008-clarity-and-mcp.md) | Sin spec: implementación directa | Construido; falta activarlo |
+| 009 | [Telemetría: errores con video de Clarity y flujos críticos](009-telemetry-errors-and-flows.md) | Sin spec: implementación directa | Construido; falta correr la migración |
 
 ## Cómo agregar uno nuevo
 

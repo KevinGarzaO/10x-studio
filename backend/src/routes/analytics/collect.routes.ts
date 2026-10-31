@@ -5,6 +5,7 @@ import { isBotUserAgent } from '../../../services/analytics/bots'
 import { parseCollectPayload, sanitizeClientId } from '../../../services/web-analytics/payload'
 import { applyCollect, executeUserStitching, type RequestContext } from '../../../services/web-analytics/collect'
 import { saveClarityLink } from '../../../services/web-analytics/clarity-link'
+import { parseErrorPayload, parseFlowPayload, recordError, recordFlowStep } from '../../../services/web-analytics/telemetry'
 
 const router = Router()
 
@@ -69,6 +70,9 @@ function makeLimiter(maxPerHour: number) {
 const allowedCollect = makeLimiter(1500)
 const allowedIdentify = makeLimiter(60)
 const allowedClarity = makeLimiter(120)
+// Un error dentro de un ciclo puede dispararse cientos de veces: el tope por navegador protege la base.
+const allowedError = makeLimiter(60)
+const allowedFlow = makeLimiter(600)
 
 /** Una coordenada válida dentro de su rango, o null (lo que llega del encabezado no se toma tal cual). */
 function coordinate(value: string | null, limit: number): number | null {
@@ -121,6 +125,34 @@ router.post('/identify', communityAuthMiddleware, async (req: AuthRequest, res: 
     await executeUserStitching(context.clientId, req.userId)
   } catch (error) {
     console.warn('[WebAnalytics] No se pudo unir la identidad:', (error as Error).message)
+  }
+  res.status(204).end()
+})
+
+/** Un error del navegador (excepción, promesa sin atrapar, fallo al renderizar, o una llamada al servidor que falló). */
+router.post('/error', async (req: Request, res: Response) => {
+  try {
+    if (!fromProxy(req)) return res.status(204).end()
+    const context = contextOf(req)
+    const record = parseErrorPayload(req.body)
+    if (!context || !record || isBotUserAgent(context.userAgent) || !allowedError(context.clientId)) return res.status(204).end()
+    await recordError(record, { clientId: context.clientId, userAgent: context.userAgent })
+  } catch (error) {
+    console.warn('[Telemetria] No se pudo guardar el error:', (error as Error).message)
+  }
+  res.status(204).end()
+})
+
+/** Un paso de un flujo crítico (iniciar sesión, registrarse, buscar vacantes, postularse). */
+router.post('/flow', async (req: Request, res: Response) => {
+  try {
+    if (!fromProxy(req)) return res.status(204).end()
+    const context = contextOf(req)
+    const record = parseFlowPayload(req.body)
+    if (!context || !record || isBotUserAgent(context.userAgent) || !allowedFlow(context.clientId)) return res.status(204).end()
+    await recordFlowStep(record, context.clientId)
+  } catch (error) {
+    console.warn('[Telemetria] No se pudo guardar el paso del flujo:', (error as Error).message)
   }
   res.status(204).end()
 })

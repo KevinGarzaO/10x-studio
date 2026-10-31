@@ -25,6 +25,8 @@ const SCREENS = [
   { href: '/panel/trafico/embudo', title: 'Embudo y eventos', text: 'El recorrido del candidato y cada evento.' },
   { href: '/panel/trafico/cohortes', title: 'Cohortes', text: 'Quién vuelve, por semana de adquisición.' },
   { href: '/panel/trafico/retencion', title: 'Retención', text: 'Quién usa AvoTalent, quién volvió y con qué frecuencia.' },
+  { href: '/panel/trafico/errores', title: 'Errores', text: 'Lo que falló en el sitio, con la gente afectada y el video de Clarity.' },
+  { href: '/panel/trafico/flujos', title: 'Flujos críticos', text: 'Iniciar sesión, registrarse, buscar y postularse: tiempos, abandono y frustración.' },
 ]
 
 export default function TraficoPage() {

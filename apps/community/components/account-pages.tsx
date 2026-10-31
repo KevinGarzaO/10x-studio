@@ -1,6 +1,8 @@
 'use client'
 
 import { trackEvent, identifyUser } from '../lib/web-analytics'
+import { pageLoadMs } from '../lib/flow-tracker'
+import { useFlowTracker } from '../lib/use-flow-tracker'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useState, FormEvent, useEffect } from 'react'
@@ -401,6 +403,10 @@ export function AuthPage({ mode }: { mode: 'login' | 'signup' }) {
   const [success, setSuccess] = useState('')
   const [loading, setLoading] = useState(false)
 
+  // Telemetría del flujo: llegar a la página, enviar el formulario y cómo termina (ver lib/flow-tracker.ts).
+  const flow = useFlowTracker(signup ? 'auth_register' : 'auth_login')
+  useEffect(() => { flow.startFlow({ reuse: true, loadTimeMs: pageLoadMs() }) }, [flow])
+
   async function handleSubmit(e: FormEvent) {
     e.preventDefault()
     setError('')
@@ -424,6 +430,7 @@ export function AuthPage({ mode }: { mode: 'login' | 'signup' }) {
         if (attribution) body.attribution = attribution
       }
 
+      const requestedAt = performance.now()
       const res = await fetch(`${API_URL}${endpoint}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -431,8 +438,13 @@ export function AuthPage({ mode }: { mode: 'login' | 'signup' }) {
       })
 
       const data = await res.json()
+      const apiMs = Math.round(performance.now() - requestedAt)
+      flow.trackStep('submit', 1, apiMs)
 
       if (!res.ok) {
+        // Un 4xx (contraseña incorrecta, correo repetido) es la persona equivocándose y puede reintentar: el intento sigue abierto.
+        if (res.status >= 500) flow.failFlow('submit', new Error(`HTTP ${res.status}`))
+        else flow.trackStep('submit_rejected', 2)
         setError(data.error || 'Error al procesar la solicitud')
         setLoading(false)
         return
@@ -442,18 +454,21 @@ export function AuthPage({ mode }: { mode: 'login' | 'signup' }) {
         saveSession(data.session, data.user)
         // Medición: registro o inicio de sesión, y se une este navegador con la cuenta (user stitching).
         void trackEvent(signup ? 'user_registration_success' : 'login_success', { method: 'email' }).then(() => identifyUser())
+        flow.completeFlow('success')
         // Quien venía de una vacante vuelve a ella; el registro pasa primero por el onboarding.
         router.push(signup ? '/onboarding' : (peekReturnTo() ?? '/'))
         router.refresh()
       } else if (signup) {
         void trackEvent('user_registration_success', { method: 'email', confirmation_pending: true })
+        flow.completeFlow('confirmation_pending')
         setSuccess('Cuenta creada. Revisa tu correo para confirmar tu email y luego inicia sesión.')
         setLoading(false)
       } else {
         setError('No se pudo iniciar sesión. Verifica tu email y contraseña.')
         setLoading(false)
       }
-    } catch {
+    } catch (error) {
+      flow.failFlow('submit', error)
       setError('Error de conexión. Intenta de nuevo.')
       setLoading(false)
     }
@@ -489,7 +504,7 @@ export function AuthPage({ mode }: { mode: 'login' | 'signup' }) {
             <button
               type="button"
               className="oauth-btn"
-              onClick={() => { window.location.href = `${API_URL}/api/community/auth/oauth/linkedin` }}
+              onClick={() => { flow.trackStep('oauth_redirect', 1); window.location.href = `${API_URL}/api/community/auth/oauth/linkedin` }}
             >
               <svg width="16" height="16" viewBox="0 0 24 24" fill="#0A66C2" aria-hidden="true">
                 <path d="M20.45 20.45h-3.56v-5.57c0-1.33-.02-3.04-1.85-3.04-1.85 0-2.13 1.45-2.13 2.94v5.67H9.35V9h3.41v1.56h.05c.47-.9 1.63-1.85 3.36-1.85 3.6 0 4.27 2.37 4.27 5.46v6.28zM5.34 7.43a2.06 2.06 0 1 1 0-4.12 2.06 2.06 0 0 1 0 4.12zM7.12 20.45H3.56V9h3.56v11.45z"/>
@@ -499,7 +514,7 @@ export function AuthPage({ mode }: { mode: 'login' | 'signup' }) {
             <button
               type="button"
               className="oauth-btn"
-              onClick={() => { window.location.href = `${API_URL}/api/community/auth/oauth/github` }}
+              onClick={() => { flow.trackStep('oauth_redirect', 1); window.location.href = `${API_URL}/api/community/auth/oauth/github` }}
             >
               <svg width="16" height="16" viewBox="0 0 24 24" fill="var(--text)" aria-hidden="true">
                 <path d="M12 .3a12 12 0 0 0-3.8 23.4c.6.1.8-.3.8-.6v-2c-3.3.7-4-1.6-4-1.6-.5-1.4-1.3-1.8-1.3-1.8-1.1-.7.1-.7.1-.7 1.2 0 1.8 1.2 1.8 1.2 1.1 1.8 2.8 1.3 3.5 1 .1-.8.4-1.3.8-1.6-2.7-.3-5.5-1.3-5.5-5.9 0-1.3.5-2.4 1.2-3.2-.1-.3-.5-1.5.1-3.2 0 0 1-.3 3.3 1.2a11.5 11.5 0 0 1 6 0C17 4.6 18 4.9 18 4.9c.7 1.7.3 2.9.2 3.2.8.8 1.2 1.9 1.2 3.2 0 4.6-2.8 5.6-5.5 5.9.4.4.8 1.1.8 2.2v3.3c0 .3.2.7.8.6A12 12 0 0 0 12 .3z"/>

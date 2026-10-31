@@ -1,6 +1,8 @@
 'use client'
 
 import { trackEvent } from '../../../../lib/web-analytics'
+import { pageLoadMs } from '../../../../lib/flow-tracker'
+import { useFlowTracker } from '../../../../lib/use-flow-tracker'
 import { DetailSkeleton } from '@/components/skeletons'
 import Link from 'next/link'
 import { useParams, useRouter } from 'next/navigation'
@@ -198,6 +200,9 @@ export default function VacancyPage() {
   const [redirecting, setRedirecting] = useState(false)
   const [fullContent, setFullContent] = useState<string | null>(null)
   const [applyOpen, setApplyOpen] = useState(false)
+  // Telemetría de los flujos (ver lib/flow-tracker.ts).
+  const applyFlow = useFlowTracker('job_application')
+  const searchFlow = useFlowTracker('job_search_filter')
   const [applySuccess, setApplySuccess] = useState(false)
   const iframeRef = useRef<HTMLIFrameElement>(null)
 
@@ -231,6 +236,11 @@ export default function VacancyPage() {
   useEffect(() => {
     if (!applyOpen) setApplySuccess(false)
   }, [applyOpen])
+
+  // La confirmación de la postulación dentro de la página (cuando el sitio de la empresa se abre en un marco).
+  useEffect(() => {
+    if (applySuccess) applyFlow.completeFlow('confirmed')
+  }, [applySuccess, applyFlow])
 
   useEffect(() => {
     setLoading(true)
@@ -328,6 +338,16 @@ export default function VacancyPage() {
     }
   }, [post, slug])
 
+  // Telemetría de los flujos: abrir una vacante cierra la búsqueda que la trajo y empieza el intento de postularse
+  // (cada vacante es un intento nuevo; el anterior, si no terminó, queda como abandonado). Ver lib/flow-tracker.ts.
+  const hasPost = !!post
+  useEffect(() => {
+    if (!hasPost) return
+    searchFlow.completeFlow('open_result')
+    applyFlow.startFlow({ loadTimeMs: pageLoadMs() })
+    applyFlow.trackStep('view_detail', 1)
+  }, [hasPost, slug, applyFlow, searchFlow])
+
   if (loading || error || !post) {
     return (
       <div className="detail-page">
@@ -416,10 +436,13 @@ export default function VacancyPage() {
     // Con sesión, "Postularse" abre el sitio de la empresa: empieza a postular y sale a postular de verdad.
     void trackEvent('click_start_apply', { slug: current.slug || slug })
     void trackEvent('click_external_apply', { slug: current.slug || slug })
+    applyFlow.trackStep('click_apply', 2)
     if (canEmbedApply) {
       setApplyOpen(true)
     } else {
       window.open(applyUrl, '_blank', 'noopener,noreferrer')
+      // Se abre el sitio de la empresa: no hay una confirmación que ver, salir a postular es el final de lo que medimos.
+      applyFlow.completeFlow('external_apply')
     }
   }
 
@@ -429,7 +452,7 @@ export default function VacancyPage() {
     : user
       ? handleApplyClick
       // Sin cuenta, "Postularse" lleva a registrarse y de vuelta a esta vacante.
-      : () => { trackVacancyEvent(post.slug || slug, 'apply'); void trackEvent('click_start_apply', { slug: post.slug || slug }); requestAuth({ variant: 'vacancy', subject: `${post.title} — ${companyName}` }) }
+      : () => { trackVacancyEvent(post.slug || slug, 'apply'); void trackEvent('click_start_apply', { slug: post.slug || slug }); applyFlow.trackStep('click_apply_needs_account', 2); requestAuth({ variant: 'vacancy', subject: `${post.title} — ${companyName}` }) }
 
   return (
     <>

@@ -1,6 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useFlowTracker } from '../lib/use-flow-tracker'
 import { useRouter } from 'next/navigation'
 import { Building, Briefcase, Hash, Search, Target, User, X } from 'lucide-react'
 import { getToken } from '../lib/session'
@@ -65,6 +66,8 @@ export function SearchBox() {
 
   const items = useMemo(() => toItems(results), [results])
   const trimmed = query.trim()
+  // Telemetría: buscar es un flujo (busca > llegan resultados > abre uno). Lo cierra la página de la vacante.
+  const flow = useFlowTracker('job_search_filter')
 
   // Busca un instante después de que se deja de escribir, y descarta la respuesta de una búsqueda ya vieja.
   useEffect(() => {
@@ -77,13 +80,18 @@ export function SearchBox() {
     setLoading(true)
     const timer = setTimeout(() => {
       const token = getToken()
+      flow.startFlow({ reuse: true })
+      const requestedAt = performance.now()
       fetch(`${API_URL}/api/community/discover/search?q=${encodeURIComponent(trimmed)}`, {
         signal: controller.signal,
         headers: token ? { Authorization: `Bearer ${token}` } : undefined,
       })
-        .then(res => (res.ok ? res.json() : null))
-        .then(data => { setResults(data); setActive(0) })
-        .catch(() => {})
+        .then(res => {
+          if (res.status >= 500) flow.failFlow('search', new Error(`HTTP ${res.status}`))
+          return res.ok ? res.json() : null
+        })
+        .then(data => { flow.trackStep('results', 1, Math.round(performance.now() - requestedAt)); setResults(data); setActive(0) })
+        .catch(error => { if (!controller.signal.aborted) flow.failFlow('search', error) })
         .finally(() => { if (!controller.signal.aborted) setLoading(false) })
     }, 250)
     return () => { clearTimeout(timer); controller.abort() }

@@ -211,3 +211,56 @@ describe('GET /web/retention', () => {
     expect(res.body).toEqual({ ready: false })
   })
 })
+
+describe('GET /web/errors', () => {
+  const row = (patch: Record<string, unknown> = {}) => ({
+    fingerprint: 'fp1', error_name: 'TypeError', error_message: 'x is undefined', path: '/vacantes/x', error_source: 'frontend', occurrences: 4, people_affected: 3,
+    first_seen: '2026-10-30T10:00:00Z', last_seen: '2026-10-31T10:00:00Z', stack_trace: 'at f (a.js:1:2)', frames: [{ file: '/a.js', fn: 'f', line: 1, col: 2 }],
+    sample_session_id: ID, clarity_url: 'https://clarity.microsoft.com/player/abc/u1/s1', seconds_into_session: 42, ...patch,
+  })
+
+  it('lists the grouped errors with the people affected, the stack and the Clarity video', async () => {
+    rpc.mockImplementation(async (name: string) => ({ data: name === 'analytics_error_summary' ? [row(), row({ fingerprint: 'fp2', clarity_url: null, occurrences: 1, frames: null })] : [], error: null }))
+    const res = await request(app()).get('/analytics/web/errors?days=7&limit=20').expect(200)
+
+    expect(rpc).toHaveBeenCalledWith('analytics_error_summary', { p_days: 7, p_limit: 20 })
+    expect(res.body.totals).toEqual({ errors: 5, kinds: 2, withVideo: 1 })
+    expect(res.body.errors[0]).toMatchObject({ name: 'TypeError', occurrences: 4, peopleAffected: 3, clarityUrl: 'https://clarity.microsoft.com/player/abc/u1/s1', secondsIntoSession: 42, sessionId: ID })
+    expect(res.body.errors[0].frames).toEqual([{ file: '/a.js', fn: 'f', line: 1, col: 2 }])
+    expect(res.body.errors[1].frames).toEqual([])
+  })
+
+  it('bounds the period and the limit, and says it is not ready when the migration was not applied', async () => {
+    await request(app()).get('/analytics/web/errors?days=9999&limit=9999').expect(200)
+    expect(rpc).toHaveBeenCalledWith('analytics_error_summary', { p_days: 90, p_limit: 200 })
+    rpc.mockResolvedValue({ data: null, error: { message: 'Could not find the function public.analytics_error_summary in the schema cache' } })
+    expect((await request(app()).get('/analytics/web/errors').expect(200)).body).toEqual({ ready: false })
+  })
+})
+
+describe('GET /web/flows', () => {
+  it('brings each flow with its rates and its steps, with what is lost after each step', async () => {
+    rpc.mockImplementation(async (name: string) => {
+      if (name === 'analytics_flow_summary') {
+        return { data: [{ flow_name: 'auth_login', runs_started: 10, people_started: 9, runs_completed: 6, people_completed: 6, runs_dropped: 3, runs_error: 1, runs_in_progress: 0, completion_rate_pct: '60.0', dropoff_rate_pct: '30.0', avg_duration_ms: 8000, avg_load_time_ms: 900, frustrated_runs: 2 }], error: null }
+      }
+      if (name === 'analytics_flow_steps') {
+        return { data: [
+          { flow_name: 'auth_login', step_name: 'start', step_order: 0, reached: 10, continued: 7, is_final: false, avg_duration_ms: 0, avg_load_time_ms: 500, errors: 0, frustrated: 0, rage_clicks: 0 },
+          { flow_name: 'auth_login', step_name: 'success', step_order: 2, reached: 6, continued: 0, is_final: true, avg_duration_ms: 400, avg_load_time_ms: null, errors: 0, frustrated: 0, rage_clicks: 0 },
+        ], error: null }
+      }
+      return { data: [], error: null }
+    })
+    const res = await request(app()).get('/analytics/web/flows?days=30').expect(200)
+
+    expect(res.body.flows).toHaveLength(1)
+    expect(res.body.flows[0]).toMatchObject({ name: 'auth_login', runsStarted: 10, runsCompleted: 6, completionRatePct: 60, dropoffRatePct: 30, runsError: 1, avgDurationMs: 8000, frustratedRuns: 2 })
+    expect(res.body.flows[0].steps.map((step: any) => [step.name, step.reached, step.dropoffToNextPct])).toEqual([['start', 10, 30], ['success', 6, null]])
+  })
+
+  it('says it is not ready when the migration was not applied', async () => {
+    rpc.mockResolvedValue({ data: null, error: { message: 'Could not find the function public.analytics_flow_summary in the schema cache' } })
+    expect((await request(app()).get('/analytics/web/flows').expect(200)).body).toEqual({ ready: false })
+  })
+})

@@ -1,6 +1,7 @@
 'use client'
 
 import { useMemo, useState, useEffect, useCallback, useRef } from 'react'
+import { flowFor } from '../lib/flow-tracker'
 import Link from 'next/link'
 import { usePathname, useRouter, useSearchParams } from 'next/navigation'
 import {
@@ -698,6 +699,13 @@ export function Feed() {
   const { search, activeTag, setActiveTag, requestAuth, user } = useShell()
 
   const [filters, setFilters] = useState<FeedFilters>(DEFAULT_FILTERS)
+  // Telemetría: cambiar un filtro del feed es empezar a buscar (el flujo se cierra al abrir una vacante).
+  const filtersTouched = useRef(false)
+  useEffect(() => {
+    if (!filtersTouched.current) { filtersTouched.current = true; return }
+    flowFor('job_search_filter').startFlow({ reuse: true })
+    flowFor('job_search_filter').trackStep('filter_applied', 1)
+  }, [filters])
   const [headline, setHeadline] = useState<{ openVacancies?: number; newVacanciesToday?: number } | null>(null)
 
   // Las cifras de la cabecera: vacantes abiertas y nuevas de hoy.

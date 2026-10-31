@@ -53,7 +53,7 @@ export interface ProxyResult {
  * client_id nuevo (UUID v4).
  */
 export async function forwardToBackend(options: {
-  path: 'collect' | 'identify' | 'clarity'
+  path: 'collect' | 'identify' | 'clarity' | 'error' | 'flow'
   body: string
   headers: HeaderReader
   existingClientId: string | null

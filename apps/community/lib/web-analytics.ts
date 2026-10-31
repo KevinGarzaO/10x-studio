@@ -336,3 +336,24 @@ export function resetWebAnalyticsForTests(): void {
 export function currentSessionId(): string | null {
   return current?.id ?? readSession()?.id ?? null
 }
+
+/**
+ * Para los demás módulos de telemetría (errores, flujos, Clarity): el mismo envío en fila que la analítica, para que el PRIMER
+ * envío de un navegador nuevo sea el que recibe la cookie y los demás salgan con el mismo client_id. Respeta `?notrack=1`.
+ */
+export function sendTelemetry(url: string, body: unknown): Promise<void> {
+  if (!enabled()) return Promise.resolve()
+  return post(url, body)
+}
+
+/** Igual que sendTelemetry pero sin esperar a nadie (para cuando la página se está cerrando). */
+export function beaconTelemetry(url: string, body: unknown): void {
+  if (!enabled()) return
+  try {
+    const data = JSON.stringify(body)
+    if (typeof navigator !== 'undefined' && typeof navigator.sendBeacon === 'function' && navigator.sendBeacon(url, data)) return
+    void fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: data, keepalive: true })
+  } catch {
+    // medir no debe romper nada
+  }
+}

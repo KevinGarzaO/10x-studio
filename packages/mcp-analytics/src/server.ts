@@ -2,6 +2,7 @@ import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
 import type { CallToolResult } from '@modelcontextprotocol/sdk/types.js'
 import { z } from 'zod'
 import { getClarityFrustration, getFunnelDropoffs, getUserSessionRecording, type Queryable } from './queries'
+import { getErrorLogsWithClarityVideo, getFlowPerformanceAnalysis } from './telemetry-queries'
 
 export interface ServerOptions {
   /** El proyecto de Clarity (NEXT_PUBLIC_CLARITY_PROJECT_ID), para armar el enlace al panel. */
@@ -78,6 +79,41 @@ export function createServer(db: Queryable, options: ServerOptions = {}): McpSer
       annotations: { readOnlyHint: true, openWorldHint: false },
     },
     (args) => respond(() => getUserSessionRecording(db, { userId: args.user_id, email: args.email, limit: args.limit, clarityProjectId: options.clarityProjectId })),
+  )
+
+  tool(
+    'get_error_logs_with_clarity_video',
+    {
+      title: 'Errores recientes con su video de Clarity',
+      description:
+        'Los errores del sitio (navegador, llamadas a la API y servidor) agrupados y ordenados por frecuencia: mensaje, página, cuántas veces y a cuántas personas afectó, las primeras líneas del stack ' +
+        '(del código empaquetado) y el enlace al video de Clarity de la sesión más reciente donde pasó, con el segundo de la sesión en que falló. Opcional `path` para un solo lugar del sitio. ' +
+        'Cruza con get_funnel_dropoffs: un error frecuente en una ruta donde cae el embudo es una pista fuerte.',
+      inputSchema: {
+        days: z.number().int().min(1).max(90).default(7),
+        limit: z.number().int().min(1).max(50).default(15),
+        path: z.string().max(300).optional().describe('Ruta exacta que empieza con "/" (por ejemplo /vacantes/mi-vacante).'),
+      },
+      annotations: { readOnlyHint: true, openWorldHint: false },
+    },
+    (args) => respond(() => getErrorLogsWithClarityVideo(db, args)),
+  )
+
+  tool(
+    'get_flow_performance_analysis',
+    {
+      title: 'Rendimiento de los flujos críticos',
+      description:
+        'Por flujo (auth_login, auth_register, job_search_filter, job_application): intentos, personas, tasa de completitud y de abandono, intentos con error técnico, duración y tiempo de carga promedio, ' +
+        'intentos con frustración (carga > 2.5 s o rage clicks), paso a paso cuántos llegan y cuántos se pierden hacia el siguiente, y los rage/dead clicks de Clarity en las páginas por donde pasa cada flujo. ' +
+        'Equivocarse de contraseña no cuenta como error del flujo. Opcional `flow` para uno solo.',
+      inputSchema: {
+        days: z.number().int().min(1).max(90).default(30),
+        flow: z.string().max(50).optional().describe('Nombre del flujo, por ejemplo job_application.'),
+      },
+      annotations: { readOnlyHint: true, openWorldHint: false },
+    },
+    (args) => respond(() => getFlowPerformanceAnalysis(db, args)),
   )
 
   return server
