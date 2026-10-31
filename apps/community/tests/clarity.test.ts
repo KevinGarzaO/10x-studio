@@ -55,6 +55,25 @@ describe('Clarity', () => {
     expect(calls).toContainEqual(['set', 'avo_session', 'session-2'])
   })
 
+  it('turns on by itself in production with the AvoTalent project, a variable overrides it, and an EMPTY variable turns it off', async () => {
+    vi.resetModules()
+    vi.stubEnv('NODE_ENV', 'production')
+    delete process.env.NEXT_PUBLIC_CLARITY_PROJECT_ID
+    expect((await import('@/lib/clarity')).CLARITY_PROJECT_ID).toBe('z6emolc22r')
+    vi.resetModules()
+    vi.stubEnv('NEXT_PUBLIC_CLARITY_PROJECT_ID', 'otro')
+    expect((await import('@/lib/clarity')).CLARITY_PROJECT_ID).toBe('otro')
+    vi.resetModules()
+    vi.stubEnv('NEXT_PUBLIC_CLARITY_PROJECT_ID', '')
+    expect((await import('@/lib/clarity')).CLARITY_PROJECT_ID).toBe('')
+  })
+
+  it('is off in development and tests when nothing is configured', async () => {
+    vi.resetModules()
+    delete process.env.NEXT_PUBLIC_CLARITY_PROJECT_ID
+    expect((await import('@/lib/clarity')).CLARITY_PROJECT_ID).toBe('')
+  })
+
   it('does not break the page when Clarity has not loaded (ad blocker)', async () => {
     const clarity = await load('abc123')
     delete (window as any).clarity

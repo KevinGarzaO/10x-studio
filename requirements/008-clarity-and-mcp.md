@@ -17,7 +17,7 @@ Lo pedido se construyó, con estas diferencias que salen de cómo funciona Clari
 
 1. Supabase (editor SQL): `backend/sql/clarity-migration.sql`.
 2. Clarity: crear el proyecto, copiar el Project ID y generar el token (Settings > Data Export).
-3. Vercel: `NEXT_PUBLIC_CLARITY_PROJECT_ID`. Railway: `CLARITY_API_KEY` y `CLARITY_SYNC=on`.
+3. El sitio enciende Clarity solo en producción con el proyecto `z6emolc22r` (ya en el código; `NEXT_PUBLIC_CLARITY_PROJECT_ID` lo cambia y puesta VACÍA en Vercel lo apaga). Railway: `CLARITY_API_KEY` y `CLARITY_SYNC=on` para las métricas de frustración.
 4. Decidir el **consentimiento**: Clarity graba sesiones de personas. Hoy el sitio no tiene aviso de cookies (decisión de 007); Clarity enmascara por defecto texto, números y correos, pero conviene decidirlo antes de encender.
 5. Para el MCP: `packages/mcp-analytics/README.md` (rol de solo lectura, compilar y conectarlo a Claude).
 

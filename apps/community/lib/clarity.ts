@@ -3,13 +3,20 @@ import { isTrackingOff } from './attribution'
 /**
  * Microsoft Clarity (grabaciones de sesión, mapas de calor, rage clicks y dead clicks).
  *
- * Solo se activa si `NEXT_PUBLIC_CLARITY_PROJECT_ID` está puesto, y nunca en un navegador con `?notrack=1` (el equipo).
+ * Solo se activa con un proyecto (ver CLARITY_PROJECT_ID más abajo), y nunca en un navegador con `?notrack=1` (el equipo).
  * Clarity no tiene una función para pedir el enlace de la grabación, así que el vínculo con nuestra base va al revés: le damos
  * a Clarity NUESTROS ids (`identify`: la cuenta y la sesión de analítica) y en su panel se filtran las grabaciones por ellos.
  * Nunca se manda el correo ni el nombre: solo el id de la cuenta (Clarity lo convierte en un hash antes de enviarlo).
  */
 
-export const CLARITY_PROJECT_ID = process.env.NEXT_PUBLIC_CLARITY_PROJECT_ID?.trim() || ''
+/** El proyecto de AvoTalent en Clarity (es público: va en el código de la página). Solo se usa en producción. */
+const DEFAULT_PROJECT_ID = 'z6emolc22r'
+
+/**
+ * En producción se enciende solo con el proyecto de AvoTalent. `NEXT_PUBLIC_CLARITY_PROJECT_ID` lo cambia, y puesta VACÍA
+ * (en Vercel) apaga Clarity sin tocar el código. En desarrollo y en las pruebas está apagado, para no ensuciar las grabaciones.
+ */
+export const CLARITY_PROJECT_ID = (process.env.NEXT_PUBLIC_CLARITY_PROJECT_ID ?? (process.env.NODE_ENV === 'production' ? DEFAULT_PROJECT_ID : '')).trim()
 
 type ClarityFn = (command: string, ...args: unknown[]) => unknown
 

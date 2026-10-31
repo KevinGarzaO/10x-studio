@@ -42,7 +42,7 @@ Correr `backend/sql/clarity-migration.sql` (además de las migraciones de analí
 
 | Variable | Dónde | Para qué |
 |---|---|---|
-| `NEXT_PUBLIC_CLARITY_PROJECT_ID` | Vercel (`apps/community`) | Enciende Clarity en el sitio. Vacía = apagado. Sin ella tampoco funciona el enlace del panel en esta herramienta. |
+| `NEXT_PUBLIC_CLARITY_PROJECT_ID` | Vercel (`apps/community`) | Opcional: en producción Clarity ya se enciende solo con el proyecto de AvoTalent (`z6emolc22r`). Cámbiala para usar otro; **vacía** apaga Clarity sin tocar el código. También arma el enlace al panel en esta herramienta. |
 | `CLARITY_API_KEY` | Railway (backend) | El token de la API de exportación. **Nunca** en un archivo del repositorio. |
 | `CLARITY_SYNC=on` | Railway (backend) | Enciende el cron diario (23:55 hora de Monterrey). Apagado por defecto. |
 | `DATABASE_URL` | Solo en tu computadora, en la configuración del cliente MCP | Conexión Postgres **de solo lectura** (abajo). |
