@@ -51,8 +51,12 @@ export function CommunityShell({ children }: { children: ReactNode }) {
   // Un tema filtra el feed; desde cualquier otra pantalla primero se vuelve a él.
   const onTagClick = useCallback((tag: string) => {
     setActiveTag(prev => (prev === tag ? null : tag))
+    setMobileMenu(false)
     if (pathname !== '/') router.push('/')
   }, [pathname, router])
+
+  // El menú del móvil se cierra solo al ir a otra página: antes se quedaba abierto encima y la persona no veía lo que abrió.
+  useEffect(() => { setMobileMenu(false) }, [pathname])
 
   const requestAuth = useCallback((request?: unknown) => {
     // Como onClick directo llega un evento, no unas opciones: solo se acepta lo que trae `variant`.
@@ -75,7 +79,7 @@ export function CommunityShell({ children }: { children: ReactNode }) {
       <ProfileGate />
       <div className="app-shell">
         <header className="topbar">
-          <button className="mobile-menu-button icon-button" onClick={() => setMobileMenu(!mobileMenu)} aria-label="Abrir menú"><Menu size={20} /></button>
+          <button className="mobile-menu-button icon-button" onClick={() => setMobileMenu(!mobileMenu)} aria-label={mobileMenu ? 'Cerrar menú' : 'Abrir menú'} aria-expanded={mobileMenu}>{mobileMenu ? <X size={20} /> : <Menu size={20} />}</button>
           <Link href="/" className="brand" aria-label="AvoTalent"><img className="brand-mark" src="/avotalent-logo.png" alt="" aria-hidden="true" /><span><span className="brand-avo">Avo</span><span className="brand-accent">Talent</span></span></Link>
           <SearchBox />
           <div className="top-actions">
@@ -85,7 +89,7 @@ export function CommunityShell({ children }: { children: ReactNode }) {
           </div>
         </header>
 
-        <div className={`mobile-drawer ${mobileMenu ? 'open' : ''}`}>
+        <div className={`mobile-drawer ${mobileMenu ? 'open' : ''}`} onClick={event => { if ((event.target as HTMLElement).closest('a')) setMobileMenu(false) }}>
           <div className="drawer-head"><strong>Menú</strong><button className="icon-button" onClick={() => setMobileMenu(false)} aria-label="Cerrar menú"><X size={18} /></button></div>
           <LeftSidebar activeTag={activeTag} onTagClick={onTagClick} />
         </div>
