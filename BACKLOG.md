@@ -77,6 +77,7 @@ Lo que no alcance en noviembre se **recorre a diciembre** (empezando por lo de p
 | 4 | **D** | Velocidad real: medir con tu base y revisar las secciones lentas del admin | P1 | M | cabo suelto |
 | 5 | **E** | Las 156 vacantes que no le sirven a nadie y el conteo de la cola | P2 | S | cabo suelto |
 | 6 | **V** | Feedback en cada sección y página de la app | P2 | M | nuevo (pedido 30 oct) |
+| 7 | **W** | Que la sesión no se pierda (y entrar directo desde el correo) | P2 | M | nuevo (pedido 31 oct) |
 | 7 | **F** | Confianza en las vacantes (reportar, cola de revisión, enlaces vivos) | P2 | M | B |
 | 8 | **G** | Webhook de Resend | P2 | M | plan nuevo |
 | 9 | **H** | Comunidad: seguir, likes, respuestas y menciones | P2 | L | D |
@@ -215,6 +216,18 @@ Pedido el 30 de octubre: que en cada sección y página de la app las personas p
 - [ ] Más adelante, que aparezca en la ficha de la persona del CRM (**J**).
 - [ ] **Decisión tuya:** ¿también pueden dejar feedback los visitantes sin cuenta (con un correo opcional), o solo quien tiene sesión? Propuesta: solo con sesión al inicio, porque los visitantes solo ven el feed y así se evita el spam.
 - [ ] **Decisión tuya:** cómo quieres enterarte de los nuevos. Propuesta: contador en el admin y un resumen diario por correo solo si hay alguno (poco volumen, cabe en la cuota de Resend).
+
+### W. Que la sesión no se pierda (y entrar directo desde el correo) — P2 · M
+Pedido el 31 de octubre, al ver un video: alguien con cuenta entró por un aviso "Para ti" y el sitio le pidió iniciar sesión otra vez. Un aviso por correo llega justo a quien tiene la sesión vieja (la mayoría de los destinatarios entró por última vez hace 5 a 20 días), así que esto cuesta justo en lo que más queremos que funcione.
+**Hecho el 31 de octubre (arreglos pequeños, ya en el código):**
+- [x] La renovación de la sesión era frágil: cualquier fallo (sin red, servidor lento, error 5xx) **borraba la sesión**, y varias pantallas renovaban a la vez con el mismo token de un solo uso, de modo que la que llegaba segunda fallaba y borraba lo que la primera acababa de guardar. Ahora hay **una sola renovación a la vez**, se renueva **antes** de pedir con un token vencido, y la sesión solo se borra si el servidor la **rechaza de verdad** (el servidor ahora responde 503, no 401, cuando Supabase no contestó bien). Si otra pestaña ya renovó, se usa esa sesión.
+- [x] La analítica dejaba como **anónima** a toda persona que regresaba con la sesión vencida (0 de 11 sesiones ligadas a una cuenta, aunque había gente dentro): ahora renueva antes de ligar la visita con la cuenta.
+- [x] Se mide: `session_renewed`, `session_lost` (con el motivo: `refresh_rejected`, `refresh_unavailable` o `token_missing`) y `auth_wall_shown` (el aviso de registro de la vacante, con `had_session_before`: si este navegador ya había tenido sesión). Se ven en Tráfico web > Embudo y eventos.
+**Pendiente:**
+- [ ] **Revisar los datos** de esos tres eventos tras unas semanas: ¿cuántas personas con cuenta ven el aviso de registro? ¿por qué motivo? Con eso se decide cuál de las dos siguientes vale la pena primero.
+- [ ] **Sesión en una cookie del servidor de larga duración** (en lugar de solo `localStorage`). Safari y los navegadores de iPhone recortan el almacenamiento del sitio si no se entra en unos 7 días; una cookie puesta por el servidor no sufre ese recorte. Es el cambio de fondo (login, renovación y cierre pasan por el servidor de la comunidad) y se hace con cuidado.
+- [ ] **Entrar directo desde el correo:** que el enlace de los avisos "Para ti" lleve un acceso de **un solo uso, con vencimiento corto y ligado a esa vacante**, para no pedir nada. **Decisión tuya (seguridad):** si el correo se reenvía, otra persona entraría a esa cuenta; se limita con el vencimiento, el uso único y pidiendo confirmación para lo delicado (cambiar contraseña, borrar cuenta).
+- [ ] Recordar con qué proveedor entró cada persona (LinkedIn, GitHub o correo) y ofrecérselo primero en el aviso.
 
 ---
 

@@ -2,10 +2,11 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 
 vi.mock('@/lib/session', () => ({
   getToken: vi.fn(() => null as string | null),
+  getValidToken: vi.fn(async () => null as string | null),
   getCachedUser: vi.fn(() => null as { id?: string } | null),
 }))
 
-import { getToken, getCachedUser } from '@/lib/session'
+import { getToken, getValidToken, getCachedUser } from '@/lib/session'
 import {
   ActiveTimer, resolveSession, referrerHostOf, utmOf, queryParamsOf, SESSION_KEY, SESSION_TIMEOUT_MS, HEARTBEAT_MS,
   trackEvent, trackPageView, identifyUser, startWebAnalytics, resetWebAnalyticsForTests,
@@ -26,6 +27,8 @@ beforeEach(() => {
   sent = []
   setVisibility('visible')
   vi.mocked(getToken).mockReturnValue(null)
+  // identifyUser pide un token que sirva (lo renueva si venció): aquí se comporta como el guardado
+  vi.mocked(getValidToken).mockImplementation(async () => vi.mocked(getToken)())
   vi.mocked(getCachedUser).mockReturnValue(null)
   global.fetch = vi.fn(async (url: string, init?: RequestInit) => {
     sent.push({ url: String(url), body: init?.body ? JSON.parse(String(init.body)) : null, headers: (init?.headers ?? {}) as Record<string, string> })

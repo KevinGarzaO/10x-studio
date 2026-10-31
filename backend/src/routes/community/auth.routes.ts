@@ -128,7 +128,11 @@ router.post('/refresh', async (req: Request, res: Response) => {
     const { data, error } = await createAuthClient().auth.refreshSession({ refresh_token })
 
     if (error || !data.session) {
-      return res.status(401).json({ error: error?.message || 'No se pudo renovar la sesión' })
+      // 401 = Supabase dijo que ese token no vale (ya usado, vencido o revocado): la persona debe entrar otra vez.
+      // 503 = Supabase no respondió bien (red, 5xx): la sesión puede seguir siendo buena y el navegador NO debe borrarla.
+      const status = (error as { status?: number } | null)?.status
+      const retryable = error?.name === 'AuthRetryableFetchError' || (typeof status === 'number' && status >= 500)
+      return res.status(retryable ? 503 : 401).json({ error: error?.message || 'No se pudo renovar la sesión' })
     }
 
     res.json({ session: data.session, user: data.user })

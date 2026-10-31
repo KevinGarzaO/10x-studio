@@ -15,7 +15,7 @@
  * `?notrack=1` (ver attribution.ts) apaga todo en ese navegador, para que el equipo no cuente como visitantes.
  */
 
-import { getToken, getCachedUser } from './session'
+import { getValidToken, getCachedUser } from './session'
 import { isTrackingOff } from './attribution'
 
 const COLLECT_URL = '/api/a/collect'
@@ -270,8 +270,11 @@ export async function trackEvent(eventName: string, params: Record<string, unkno
  */
 export async function identifyUser(): Promise<void> {
   try {
-    const token = getToken()
-    if (!enabled() || !token) return
+    if (!enabled()) return
+    // Con un token vencido el servidor lo rechaza y la sesión se quedaba "anónima" aunque la persona estuviera dentro (así se veía a
+    // todo el que regresa con la sesión de hace horas): se renueva antes. Si no se puede, no se marca como ligada y se reintenta.
+    const token = await getValidToken()
+    if (!token) return
     const userId = getCachedUser()?.id ?? token.slice(-12)
     if (current?.identified === userId) {
       await queue

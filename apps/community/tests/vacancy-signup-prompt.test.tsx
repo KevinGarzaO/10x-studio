@@ -137,4 +137,28 @@ describe('the vacancy page for someone without an account', () => {
     expect(requestAuth).toHaveBeenCalledTimes(2)
     expect(requestAuth).toHaveBeenLastCalledWith({ variant: 'vacancy', subject: 'Backend Engineer — Stripe' })
   })
+
+  it('leaves a trace in the analytics: that the wall was shown, and whether this browser had a session before', async () => {
+    ;(globalThis as any).__avoAnalyticsTest = true
+    const walls: any[] = []
+    const base = global.fetch
+    global.fetch = vi.fn(async (url: string, init?: RequestInit) => {
+      if (String(url) === '/api/a/collect' && init?.body) {
+        const body = JSON.parse(String(init.body))
+        if (body.type === 'event' && body.name === 'auth_wall_shown') walls.push(body.params)
+        return { ok: true, status: 204 }
+      }
+      return (base as typeof fetch)(url, init)
+    }) as unknown as typeof fetch
+
+    try {
+      localStorage.setItem('avo_had_session', '1') // este navegador tuvo una sesión y la perdió
+      const requestAuth = renderPage({ user: null, userLoaded: true })
+      await waitFor(() => expect(requestAuth).toHaveBeenCalledTimes(1))
+      await waitFor(() => expect(walls).toHaveLength(1))
+      expect(walls[0]).toEqual({ surface: 'vacancy', had_session_before: true })
+    } finally {
+      ;(globalThis as any).__avoAnalyticsTest = false
+    }
+  })
 })

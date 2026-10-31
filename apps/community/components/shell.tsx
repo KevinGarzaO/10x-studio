@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { Bell, Menu, X } from 'lucide-react'
 import { fetchCurrentUser, getCachedUser } from '../lib/session'
+import { identifyUser } from '../lib/web-analytics'
 import { fetchUnreadCount } from '../lib/notifications'
 import { ShellContext, type AuthRequest } from '../lib/shell-context'
 import { LeftSidebar, RightSidebar, ProfileMenu, AuthModal } from './community-hub'
@@ -30,6 +31,8 @@ export function CommunityShell({ children }: { children: ReactNode }) {
     setUser(getCachedUser())
     fetchCurrentUser().then(u => {
       setUser(u)
+      // Ya con la sesión confirmada (y renovada si hacía falta), la visita se une con la cuenta.
+      if (u) void identifyUser()
     }).catch(() => {}).finally(() => setUserLoaded(true))
     // Quién debe completar su perfil lo decide <ProfileGate>, que también cubre
     // la foto y los skills fuera del catálogo, y se monta igual en las pantallas

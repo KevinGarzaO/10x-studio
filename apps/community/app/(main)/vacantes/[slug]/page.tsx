@@ -2,6 +2,7 @@
 
 import { trackEvent } from '../../../../lib/web-analytics'
 import { pageLoadMs } from '../../../../lib/flow-tracker'
+import { hadSessionBefore } from '../../../../lib/session-marker'
 import { useFlowTracker } from '../../../../lib/use-flow-tracker'
 import { DetailSkeleton } from '@/components/skeletons'
 import Link from 'next/link'
@@ -312,6 +313,8 @@ export default function VacancyPage() {
   // la sesión, para no avisar a quien ya tiene cuenta.
   useEffect(() => {
     if (!post || !userLoaded || user) return
+    // Telemetría: cuántas veces se muestra el aviso y si ESTE navegador ya había tenido una sesión (la persona la perdió) o nunca.
+    void trackEvent('auth_wall_shown', { surface: 'vacancy', had_session_before: hadSessionBefore() })
     requestAuth({ variant: 'vacancy', subject: [post.title, formatCompanyName(post.company)].filter(Boolean).join(' — ') })
   }, [post, userLoaded, user, slug, requestAuth])
 

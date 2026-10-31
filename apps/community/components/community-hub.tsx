@@ -155,7 +155,7 @@ export function ProfileMenu({ user }: { user: any }) {
             type="button"
             className="profile-menu-item profile-menu-logout"
             role="menuitem"
-            onClick={() => { clearSession(); window.location.href = '/login' }}
+            onClick={() => { clearSession({ explicit: true }); window.location.href = '/login' }}
           >
             <LogOut size={15} /> Cerrar sesión
           </button>
