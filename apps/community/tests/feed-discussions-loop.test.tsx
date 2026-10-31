@@ -29,6 +29,11 @@ const jobPage = (page: number) => Array.from({ length: 10 }, (_, i) => ({
 }))
 
 let requests: string[]
+/** Artículos del equipo y discusiones de miembros que devuelve el servidor (por defecto, ninguno). */
+let editorial: unknown[] = []
+let social: unknown[] = []
+/** Si hay artículos de sobra: cada página de artículos llega llena (como el blog del equipo, que publica a diario). */
+let endlessEditorial = false
 
 function renderFeed() {
   return render(
@@ -44,6 +49,9 @@ beforeEach(() => {
   resetErrorReporterForTests()
   resetWebAnalyticsForTests()
   requests = []
+  editorial = []
+  social = []
+  endlessEditorial = false
   global.fetch = vi.fn(async (url: string) => {
     const u = String(url)
     requests.push(u)
@@ -52,6 +60,8 @@ beforeEach(() => {
     const page = Number(new URL(u).searchParams.get('page') ?? 1)
     // 600 vacantes de sobra (todas las páginas llegan llenas); ni artículos ni discusiones.
     if (u.includes('type=job')) return { ok: true, json: async () => ({ posts: jobPage(page) }) }
+    if (u.includes('/posts/editorial')) return { ok: true, json: async () => ({ posts: endlessEditorial ? editorial.map((a: any) => ({ ...a, id: `${a.id}-p${page}` })) : page === 1 ? editorial : [] }) }
+    if (u.includes('type=social')) return { ok: true, json: async () => ({ posts: page === 1 ? social : [] }) }
     return { ok: true, json: async () => ({ posts: [] }) }
   }) as unknown as typeof fetch
 })
@@ -87,6 +97,47 @@ describe('the Discusiones view', () => {
     await waitFor(() => expect(jobPages()).toBeGreaterThan(1))
     await new Promise(resolve => setTimeout(resolve, 300))
     expect(jobPages()).toBeLessThanOrEqual(12)
+  })
+})
+
+describe('what each view shows while more vacancies can still arrive', () => {
+  const article = { ...base, id: 'a1', type: 'editorial', title: 'Un artículo del equipo', author: { id: 'u1', username: 'ana', display_name: 'Ana', photo_url: null } }
+  const discussion = { ...base, id: 's1', type: 'discussion', title: 'Una discusión de un miembro', author: { id: 'u3', username: 'beto', display_name: 'Beto', photo_url: null } }
+
+  it('"Discusiones" shows the articles and discussions that exist (they used to wait forever for vacancies that were hidden: an empty list)', async () => {
+    editorial = [article]
+    social = [discussion]
+    renderFeed()
+    await screen.findByText('Vacante 1-0')
+    fireEvent.click(screen.getByRole('button', { name: 'Discusiones' }))
+
+    expect(await screen.findByText('Una discusión de un miembro')).toBeTruthy()
+    expect(screen.getByText('Un artículo del equipo')).toBeTruthy()
+    expect(screen.queryByText(/Nada con estos filtros/)).toBeNull()
+    expect(screen.queryByText('Vacante 1-0')).toBeNull()
+  })
+
+  it('"Vacantes" shows every vacancy that was loaded, not only the first 4 (the gap of the next article, which never comes there)', async () => {
+    // el blog tiene artículos de sobra: cada página llega llena (4) y el feed cree que SIEMPRE faltan artículos por traer
+    editorial = [1, 2, 3, 4].map(n => ({ ...article, id: `a${n}`, title: `Artículo ${n}` }))
+    endlessEditorial = true
+    renderFeed()
+    await screen.findByText('Vacante 1-0')
+    fireEvent.click(screen.getByRole('button', { name: 'Vacantes' }))
+
+    await waitFor(() => expect(screen.getAllByText(/^Vacante 1-\d$/).length).toBe(10))
+    expect(screen.queryByText('Artículo 1')).toBeNull()
+  })
+
+  it('with a vacancy filter on, the articles are hidden and the vacancies are not cut at 4', async () => {
+    editorial = [article]
+    renderFeed()
+    await screen.findByText('Vacante 1-0')
+    fireEvent.click(screen.getByRole('button', { name: 'Remoto' }))
+
+    // ninguna vacante de la prueba es remota: no hay nada que mostrar, pero tampoco se queda cargando para siempre
+    await waitFor(() => expect(screen.getByText(/Nada con estos filtros/)).toBeTruthy(), { timeout: 3000 })
+    expect(screen.queryByText('Cargando más posts...')).toBeNull()
   })
 })
 

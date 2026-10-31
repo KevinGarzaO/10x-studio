@@ -48,12 +48,23 @@ export function applyFeedFilters<A, J extends VacancyLike, F extends ForYouLike>
  * (cientos de vacantes, de 10 en 10). "Para ti" son las coincidencias ya calculadas: no tiene más páginas.
  */
 export function feedHasMore(more: { moreArticles: boolean; moreJobs: boolean }, filters: FeedFilters): boolean {
+  const relevant = relevantMore(more, filters)
+  return relevant.moreArticles || relevant.moreJobs
+}
+
+/**
+ * De "todavía hay más por traer" de cada fuente, solo lo que esta vista MUESTRA. Armar el feed necesita lo mismo: si las vacantes
+ * están escondidas ("Discusiones") y se le dice que aún pueden llegar más, los artículos se quedan esperando a que no queden
+ * vacantes pendientes y la lista sale VACÍA; y si los artículos están escondidos ("Vacantes", o con un filtro de vacantes) y se le
+ * dice que aún faltan artículos, solo se muestran las primeras 4 vacantes (el hueco del siguiente artículo, que nunca llega).
+ */
+export function relevantMore(more: { moreArticles: boolean; moreJobs: boolean }, filters: FeedFilters): { moreArticles: boolean; moreJobs: boolean } {
   const vacancyFilters = filters.remote || filters.myLevel
   switch (filters.view) {
-    case 'forYou': return false
-    case 'jobs': return more.moreJobs
-    case 'posts': return !vacancyFilters && more.moreArticles
-    default: return (!vacancyFilters && more.moreArticles) || more.moreJobs
+    case 'forYou': return { moreArticles: false, moreJobs: false }
+    case 'jobs': return { moreArticles: false, moreJobs: more.moreJobs }
+    case 'posts': return { moreArticles: !vacancyFilters && more.moreArticles, moreJobs: false }
+    default: return { moreArticles: !vacancyFilters && more.moreArticles, moreJobs: more.moreJobs }
   }
 }
 

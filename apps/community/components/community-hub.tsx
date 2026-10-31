@@ -22,7 +22,7 @@ import { VacancyStats, type VacancyStatsData } from './vacancy-stats'
 import { PostStats } from './post-stats'
 import { compactStats } from '../lib/feed-stats'
 import { fetchJsonWithSession } from '../lib/session'
-import { DEFAULT_FILTERS, applyFeedFilters, feedHasMore, feedSummary, profileProgress, type FeedFilters, type FeedView } from '../lib/feed-filters'
+import { DEFAULT_FILTERS, applyFeedFilters, feedHasMore, feedSummary, profileProgress, relevantMore, type FeedFilters, type FeedView } from '../lib/feed-filters'
 import { reportApiError, reportError } from '../lib/error-reporter'
 import { ProfileHoverCard } from './profile-hover-card'
 import { excerptOf } from '../lib/user-markdown'
@@ -900,10 +900,10 @@ export function Feed() {
       jobs: snapshot.jobs.filter(p => matches(postText(p))),
       forYou: snapshot.forYou.filter(item => matches(`${item.title} ${item.company || ''} ${item.skills.join(' ')}`)),
     }, filters, user?.seniority)
+    // Solo cuenta lo que esta vista muestra (ver relevantMore): si no, "Discusiones" salía vacía y "Vacantes" solo con 4.
     return buildFeed<FeedPost>({
       ...visible,
-      moreArticles: snapshot.moreArticles,
-      moreJobs: snapshot.moreJobs,
+      ...relevantMore(snapshot, filters),
     })
   }, [snapshot, search, activeTag, filters, user?.seniority])
 

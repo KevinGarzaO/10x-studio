@@ -4,7 +4,7 @@ import request from 'supertest'
 
 // Registra cada llamada encadenada a la consulta de community_posts.
 const log = vi.hoisted(() => ({ calls: [] as string[] }))
-const rows = vi.hoisted(() => ({ list: [] as any[] }))
+const rows = vi.hoisted(() => ({ list: [] as any[], error: null as null | { code?: string; message: string } }))
 
 vi.mock('../../services/supabase.service', () => ({
   supabase: {
@@ -15,7 +15,7 @@ vi.mock('../../services/supabase.service', () => ({
         q[name] = (...args: unknown[]) => { log.calls.push(`${name}:${args.map(a => (typeof a === 'object' ? JSON.stringify(a) : a)).join(',')}`); return q }
       }
       q.then = (resolve: any, reject: any) =>
-        Promise.resolve({ data: rows.list, count: rows.list.length, error: null }).then(resolve, reject)
+        Promise.resolve(rows.error ? { data: null, count: null, error: rows.error } : { data: rows.list, count: rows.list.length, error: null }).then(resolve, reject)
       return q
     },
   },
@@ -39,6 +39,7 @@ const job = (id: string, company: string, createdAt: string) => ({
 beforeEach(() => {
   log.calls = []
   rows.list = []
+  rows.error = null
 })
 
 describe('GET /posts?type=job&sort=recent', () => {
@@ -80,5 +81,30 @@ describe('GET /posts?type=job&sort=recent', () => {
 
     expect(log.calls).toContain('order:is_scraper_post,{"ascending":true}')
     expect(log.calls.some(c => c.startsWith('range:'))).toBe(false)
+  })
+})
+
+describe('a page after the last one', () => {
+  // PostgREST contesta "Requested range not satisfiable" cuando el desplazamiento pasa del final. Antes eso era un 500, y el
+  // feed (que pide la página siguiente para saber si hay más) lo repetía en cada página.
+  const outOfRange = { code: 'PGRST103', message: 'Requested range not satisfiable' }
+
+  it('answers an empty page for the member posts, not a 500', async () => {
+    rows.error = outOfRange
+    const res = await request(app()).get('/api/community/posts?type=social&page=2&limit=4').expect(200)
+    expect(res.body.posts).toEqual([])
+    expect(res.body.pagination).toMatchObject({ page: 2, limit: 4 })
+  })
+
+  it('answers an empty page for the vacancies and for the editorial articles too', async () => {
+    rows.error = outOfRange
+    expect((await request(app()).get('/api/community/posts?type=job&sort=recent&page=9&limit=10').expect(200)).body.posts).toEqual([])
+    expect((await request(app()).get('/api/community/posts/editorial?page=5&limit=4').expect(200)).body.posts).toEqual([])
+  })
+
+  it('still answers 500 for a real database error', async () => {
+    rows.error = { code: '42P01', message: 'relation does not exist' }
+    await request(app()).get('/api/community/posts?type=social&page=1&limit=4').expect(500)
+    await request(app()).get('/api/community/posts/editorial?page=1&limit=4').expect(500)
   })
 })

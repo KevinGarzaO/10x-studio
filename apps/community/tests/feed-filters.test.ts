@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { DEFAULT_FILTERS, applyFeedFilters, feedHasMore, feedSummary, isRemote, profileProgress } from '@/lib/feed-filters'
+import { DEFAULT_FILTERS, applyFeedFilters, feedHasMore, feedSummary, relevantMore, isRemote, profileProgress } from '@/lib/feed-filters'
 
 const article = (id: string) => ({ id })
 const job = (id: string, modalidad: string | null, seniority_level: string | null) => ({ id, modalidad, seniority_level })
@@ -111,5 +111,18 @@ describe('feedHasMore', () => {
     expect(feedHasMore({ moreArticles: false, moreJobs: true }, { ...DEFAULT_FILTERS, myLevel: true })).toBe(true)
     expect(feedHasMore({ moreArticles: true, moreJobs: true }, { ...DEFAULT_FILTERS, view: 'posts', remote: true })).toBe(false)
     expect(feedHasMore(none, DEFAULT_FILTERS)).toBe(false)
+  })
+})
+
+describe('relevantMore', () => {
+  const more = { moreArticles: true, moreJobs: true }
+
+  it('only keeps "there is more" for what the view shows, so the feed is built without waiting for what is hidden', () => {
+    expect(relevantMore(more, { ...DEFAULT_FILTERS, view: 'posts' })).toEqual({ moreArticles: true, moreJobs: false })
+    expect(relevantMore(more, { ...DEFAULT_FILTERS, view: 'jobs' })).toEqual({ moreArticles: false, moreJobs: true })
+    expect(relevantMore(more, { ...DEFAULT_FILTERS, view: 'forYou' })).toEqual({ moreArticles: false, moreJobs: false })
+    expect(relevantMore(more, DEFAULT_FILTERS)).toEqual(more)
+    expect(relevantMore(more, { ...DEFAULT_FILTERS, remote: true })).toEqual({ moreArticles: false, moreJobs: true })
+    expect(relevantMore(more, { ...DEFAULT_FILTERS, view: 'posts', myLevel: true })).toEqual({ moreArticles: false, moreJobs: false })
   })
 })

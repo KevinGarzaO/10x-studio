@@ -10,6 +10,7 @@ import { evaluateVacancy, MANUAL_PUBLISH_RULE, REJECT_REASON_LABEL } from '../..
 import { validateMemberPost, normalizeTags, POSTS_PER_DAY } from '../../../services/community/post-rules'
 import { uploadPostImage, isCommunityImageUrl } from '../../../services/community/post-images'
 import { loadAllowedTags, findInvalidTags } from '../../../services/community/post-tags'
+import { isRangeNotSatisfiable } from '../../../services/community/pagination'
 
 const router = Router()
 
@@ -101,6 +102,8 @@ router.get('/editorial', async (req: Request, res: Response) => {
 
     const { data: blogPosts, count, error } = await query.range(from, to)
 
+    // Una página después de la última: vacía, no un error (ver isRangeNotSatisfiable).
+    if (error && isRangeNotSatisfiable(error)) return res.json({ posts: [], pagination: { page, limit, total: 0, pages: 0 } })
     if (error) throw error
 
     const authorIds = [...new Set((blogPosts || []).map((p: any) => p.user_id).filter(Boolean))]
@@ -237,6 +240,8 @@ router.get('/', async (req: Request, res: Response) => {
 
     const { data: posts, count, error } = await query
 
+    // Una página después de la última: vacía, no un error (ver isRangeNotSatisfiable).
+    if (error && isRangeNotSatisfiable(error)) return res.json({ posts: [], pagination: { page, limit, total: 0, pages: 0 } })
     if (error) throw error
 
     let mapped = (posts || []).map((p: any) => ({
