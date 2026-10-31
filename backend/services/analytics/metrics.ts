@@ -24,6 +24,11 @@ export interface VisitRow {
   content: string | null
   landing_path: string | null
   created_at: string
+  /**
+   * Solo en las visitas de personas ACTIVAS (analítica web propia): si es la primera vez que la persona entra. Cuando viene,
+   * la conversión se mide sobre las NUEVAS y no sobre todas.
+   */
+  is_new?: boolean
 }
 
 export interface UserRow {
@@ -190,9 +195,16 @@ export interface PostPerformance {
   publishedAt: string | null
   linkedinPostId: string | null
   visitors: number
+  /** Cuántos de esos visitantes eran nuevos (solo con visitas de personas activas). */
+  newVisitors: number | null
   signups: number
+  /** registros / visitantes nuevos (o / visitantes, si no se sabe quién es nuevo). */
   conversionPct: number | null
 }
+
+/** Visitantes nuevos de un grupo de visitas, o null si no se sabe quién es nuevo. */
+const newVisitorsOf = (visits: VisitRow[]): number | null =>
+  visits.some((visit) => visit.is_new !== undefined) ? uniqueVisitors(visits.filter((visit) => visit.is_new)) : null
 
 /**
  * El rendimiento de cada publicación de LinkedIn: los visitantes que llegaron por SU enlace
@@ -203,7 +215,9 @@ export function postPerformance(input: { posts: LinkedInPostRow[]; visits: Visit
     .filter((post) => post.status === 'published')
     .map((post) => {
       const slug = post.vacancy_slug
-      const visitors = slug ? uniqueVisitors(input.visits.filter((visit) => visit.content === slug && visit.source === 'linkedin')) : 0
+      const own = slug ? input.visits.filter((visit) => visit.content === slug && visit.source === 'linkedin') : []
+      const visitors = uniqueVisitors(own)
+      const newVisitors = newVisitorsOf(own)
       const signups = slug ? input.users.filter((user) => user.signup_content === slug && user.signup_source === 'linkedin').length : 0
       return {
         slug,
@@ -212,8 +226,9 @@ export function postPerformance(input: { posts: LinkedInPostRow[]; visits: Visit
         publishedAt: post.published_at,
         linkedinPostId: post.linkedin_post_id,
         visitors,
+        newVisitors,
         signups,
-        conversionPct: pct(signups, visitors),
+        conversionPct: pct(signups, newVisitors ?? visitors),
       }
     })
     .sort((a, b) => Date.parse(b.publishedAt ?? '') - Date.parse(a.publishedAt ?? ''))
@@ -224,6 +239,8 @@ export interface GroupStats {
   posts: number
   visitors: number
   signups: number
+  /** Visitantes nuevos del grupo (null si no se sabe quién es nuevo). */
+  newVisitors: number | null
   /** Visitantes por publicación: para comparar grupos de distinto tamaño. */
   visitorsPerPost: number
   conversionPct: number | null
@@ -242,13 +259,16 @@ export function groupPerformance(performance: PostPerformance[], keyOf: (post: P
     .map(([key, rows]) => {
       const visitors = rows.reduce((sum, row) => sum + row.visitors, 0)
       const signups = rows.reduce((sum, row) => sum + row.signups, 0)
+      const knowsNew = rows.every((row) => row.newVisitors != null)
+      const newVisitors = knowsNew ? rows.reduce((sum, row) => sum + (row.newVisitors ?? 0), 0) : null
       return {
         key,
         posts: rows.length,
         visitors,
         signups,
+        newVisitors,
         visitorsPerPost: Math.round((visitors / rows.length) * 10) / 10,
-        conversionPct: pct(signups, visitors),
+        conversionPct: pct(signups, newVisitors ?? visitors),
       }
     })
     .sort((a, b) => b.visitorsPerPost - a.visitorsPerPost)
@@ -260,7 +280,10 @@ export interface SourceRow {
   campaign: string
   visitors: number
   visits: number
+  /** Visitantes nuevos (solo con visitas de personas activas). */
+  newVisitors: number | null
   signups: number
+  /** registros / visitantes nuevos (o / visitantes, si no se sabe quién es nuevo). */
   conversionPct: number | null
 }
 
@@ -284,7 +307,8 @@ export function acquisitionBySource(input: { visits: VisitRow[]; users: UserRow[
     .map(([key, row]) => {
       const [source, medium, campaign] = JSON.parse(key) as [string, string, string]
       const visitors = uniqueVisitors(row.visits)
-      return { source, medium, campaign, visitors, visits: row.visits.length, signups: row.signups, conversionPct: pct(row.signups, visitors) }
+      const newVisitors = newVisitorsOf(row.visits)
+      return { source, medium, campaign, visitors, visits: row.visits.length, newVisitors, signups: row.signups, conversionPct: pct(row.signups, newVisitors ?? visitors) }
     })
     .sort((a, b) => b.signups - a.signups || b.visitors - a.visitors)
 }

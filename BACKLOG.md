@@ -12,9 +12,11 @@ Estado al **31 de octubre de 2026**. Se trabaja **de a poco**: una cosa a la vez
 | Sprint | Qué entra | Dónde está |
 |---|---|---|
 | **Noviembre 2026** | Todo lo pendiente que había hasta el 31 de octubre: las letras **A a V** | Sección 2 |
-| **Diciembre 2026** | **W** inicio de sesión con Google · **X** Pixel de Meta y su API · **Y** compartir vacantes y discusiones con OG bien hecho | Sección 2B |
+| **Diciembre 2026** | Letras propias del sprint, otra vez desde la **A**: **A** inicio de sesión con Google · **B** Pixel de Meta y su API · **C** compartir vacantes y discusiones con OG bien hecho | Sección 2B |
 
-Lo que no alcance en noviembre se **recorre a diciembre** (empezando por lo de prioridad P4) y diciembre se vuelve a ordenar al arrancar. Diciembre sigue creciendo: se agrega aquí cuando lo pases.
+> **Las letras empiezan de nuevo en cada sprint.** Cuando haga falta distinguirlas se dice "A de noviembre" o "A de diciembre".
+
+Lo que no alcance en noviembre se **recorre a diciembre** (empezando por lo de prioridad P4), con su letra nueva, y diciembre se vuelve a ordenar al arrancar. Diciembre sigue creciendo: se agrega aquí cuando lo pases.
 
 ---
 
@@ -215,19 +217,19 @@ Pedido el 30 de octubre: que en cada sección y página de la app las personas p
 
 ---
 
-## 2B. Sprint de diciembre
+## 2B. Sprint de diciembre (letras A a C)
 
 **Prioridad:** igual que arriba (P1 urgente · P2 alta · P3 media · P4 después). **Tamaño:** S unas horas · M medio día a un día · L varios días.
 
 | Orden | Letra | Pendiente | Prioridad | Tamaño |
 |---|---|---|---|---|
-| 1 | **W** | Inicio de sesión con Google | P2 | M |
-| 2 | **X** | Pixel de Meta y su API de conversiones | P3 | M |
-| 3 | **Y** | Compartir vacantes y discusiones con OG bien hecho | P2 | M |
+| 1 | **A** | Inicio de sesión con Google | P2 | M |
+| 2 | **B** | Pixel de Meta y su API de conversiones | P3 | M |
+| 3 | **C** | Compartir vacantes y discusiones con OG bien hecho | P2 | M |
 
-> Las prioridades son una propuesta mía: W y Y ayudan a que llegue y se comparta más gente (P2); X solo rinde cuando se anuncie en Meta, y además depende del tema de cookies (P3). Cámbialas si quieres.
+> Las prioridades son una propuesta mía: A y C ayudan a que llegue y se comparta más gente (P2); B solo rinde cuando se anuncie en Meta, y además depende del tema de cookies (P3). Cámbialas si quieres.
 
-### W. Inicio de sesión con Google — P2 · M
+### A (diciembre). Inicio de sesión con Google — P2 · M
 Hoy se entra con correo, GitHub o LinkedIn. Falta Google, que es la cuenta que casi todos tienen.
 - [ ] Crear el cliente OAuth en Google Cloud (pantalla de consentimiento, dominios autorizados y la dirección de regreso de Supabase) y activar Google como proveedor en Supabase.
 - [ ] Backend: agregar `google` a los proveedores permitidos (`OAUTH_PROVIDERS` y `AUTHORIZE_KEYS` en `auth.routes.ts`) y guardarlo como `users.provider = 'google'`.
@@ -238,7 +240,7 @@ Hoy se entra con correo, GitHub o LinkedIn. Falta Google, que es la cuenta que c
 - [ ] Medirlo: el registro y el inicio de sesión con Google llegan a la analítica con su método (`method: google`).
 - [ ] Pruebas, incluido el regreso del proveedor y la cuenta nueva contra la existente.
 
-### X. Pixel de Meta y su API de conversiones — P3 · M
+### B (diciembre). Pixel de Meta y su API de conversiones — P3 · M
 Para medir y optimizar anuncios en Facebook e Instagram. "API de tracking" lo entendí como el Pixel en el navegador **más** la API de conversiones desde el servidor (la que no se pierde con los bloqueadores).
 - [ ] **Decisión tuya (cookies):** el Pixel usa cookies de publicidad. Lo normal es no cargarlo hasta que la persona acepte, lo que obliga a hacer el aviso de cookies que dejamos para después. Decidir si el aviso entra con esto.
 - [ ] Pixel base en la comunidad (no en el admin) con el ID en una variable de entorno, apagado en navegadores con `?notrack=1`.
@@ -249,7 +251,7 @@ Para medir y optimizar anuncios en Facebook e Instagram. "API de tracking" lo en
 - [ ] Revisar con el "Test Events" de Meta que cada evento llega una sola vez, y documentarlo.
 - [ ] Pruebas de que no se manda nada sin consentimiento ni en cuentas del equipo o de prueba.
 
-### Y. Compartir vacantes y discusiones con OG bien hecho — P2 · M
+### C (diciembre). Compartir vacantes y discusiones con OG bien hecho — P2 · M
 Que al pegar un enlace de AvoTalent en WhatsApp, LinkedIn, X o Facebook salga una tarjeta bonita y correcta. Hoy las vacantes tienen una tarjeta básica y las discusiones **no tienen ninguna** (la página de una publicación se arma en el navegador y las redes no la ven).
 - [ ] Discusiones: que la dirección de cada publicación tenga su propia tarjeta (título, resumen, autor y portada), con la misma técnica que ya usan las vacantes (parte de servidor).
 - [ ] Vacantes: mejorar la tarjeta que ya hay (empresa, puesto, modalidad y nivel) y pasarla a imagen grande.

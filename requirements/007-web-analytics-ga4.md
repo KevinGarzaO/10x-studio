@@ -41,6 +41,6 @@ Seguridad: el navegador nunca ve ni manda su `client_id` (va en la cookie `HttpO
 
 ## Para activarlo
 
-1. Correr en el editor SQL de Supabase, en este orden: `backend/sql/web-analytics-migration.sql`, `backend/sql/web-analytics-detail-migration.sql` y `backend/sql/web-analytics-summary-migration.sql` (se pueden correr más de una vez).
+1. Correr en el editor SQL de Supabase, en este orden: `backend/sql/web-analytics-migration.sql`, `backend/sql/web-analytics-detail-migration.sql`, `backend/sql/web-analytics-summary-migration.sql` y `backend/sql/web-analytics-active-people-migration.sql` (se pueden correr más de una vez).
 2. Poner la MISMA variable `ANALYTICS_PROXY_SECRET` (un texto largo al azar) en Vercel (comunidad) y en Railway (backend) y volver a desplegar.
 3. Entrar a `/panel/trafico`. Los números empiezan en cero y se llenan con las visitas nuevas; lo anterior no se puede reconstruir.

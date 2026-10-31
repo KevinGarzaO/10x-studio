@@ -73,6 +73,29 @@ const visitsSince = (since: string) =>
       .range(from, to),
   )
 
+/**
+ * Las visitas de personas ACTIVAS del periodo (una por sesión activa, con su origen y si la persona es nueva), de la analítica
+ * web propia. Es lo que cuentan Adquisición y LinkedIn: así un "visitante" es una persona que hizo algo en el sitio y la conversión
+ * se mide sobre las nuevas. `null` si esa medición aún no existe (falta backend/sql/web-analytics-active-people-migration.sql).
+ */
+async function activeVisits(from: Date, to: Date): Promise<VisitRow[] | null> {
+  const rows: VisitRow[] = []
+  for (let start = 0; start < 20000; start += 1000) {
+    const { data, error } = await supabase
+      .rpc('analytics_active_visits', { p_from: from.toISOString(), p_to: to.toISOString() })
+      .range(start, start + 999)
+    if (error) {
+      if (/function|does not exist|schema cache|analytics_|relation/i.test(error.message)) return null
+      throw new Error(error.message)
+    }
+    for (const row of (data ?? []) as { person_key: string; is_new: boolean; utm_source: string | null; utm_medium: string | null; utm_campaign: string | null; utm_content: string | null; entry_path: string | null; created_at: string }[]) {
+      rows.push({ visitor_id: row.person_key, source: row.utm_source, medium: row.utm_medium, campaign: row.utm_campaign, content: row.utm_content, landing_path: row.entry_path, created_at: row.created_at, is_new: row.is_new })
+    }
+    if (!data || data.length < 1000) break
+  }
+  return rows
+}
+
 const linkedinPosts = (since: string) =>
   readAll<LinkedInPostRow>((from, to) =>
     supabase
@@ -111,9 +134,79 @@ router.get('/alerts', handle('alarmas', async (_req, res) => {
   res.json({ alerts: await loadAlerts() })
 }))
 
-/** Vacantes: cuánta gente abre cada una, cuánta pulsa "Postularse" y cuánta la guarda. */
+/**
+ * Vacantes en PERSONAS ACTIVAS: cuántas personas con una sesión activa abrieron cada vacante y cuántas pulsaron "Postularse"
+ * (una persona cuenta una sola vez por vacante). Sale de la analítica web propia (backend/sql/web-analytics-active-people-migration.sql).
+ * `null` si esa medición todavía no existe: entonces se cae a la cuenta anterior, por navegador, y se avisa.
+ */
+async function vacanciesByActivePeople(days: number) {
+  const now = new Date()
+  const from = periodStart(days, now)
+  const to = new Date(now.getTime() + 1)
+  const [people, totals] = await Promise.all([
+    supabase.rpc('analytics_vacancy_people', { p_from: from.toISOString(), p_to: to.toISOString(), p_limit: 100 }),
+    supabase.rpc('analytics_vacancy_totals', { p_from: from.toISOString(), p_to: to.toISOString() }),
+  ])
+  const failed = [people, totals].find((result) => result.error)
+  if (failed?.error) {
+    if (/function|does not exist|schema cache|analytics_|relation/i.test(failed.error.message)) return null
+    throw new Error(failed.error.message)
+  }
+
+  const rows = (people.data ?? []) as { slug: string; viewers: number; applicants: number }[]
+  const total = ((totals.data ?? [])[0] ?? { tracking_since: null, viewers: 0, applicants: 0, vacancies: 0 }) as { tracking_since: string | null; viewers: number; applicants: number; vacancies: number }
+
+  const since = from.toISOString()
+  const saved = await readAll<{ source_id: string }>((start, end) =>
+    supabase.from('user_vacancy_history').select('source_id').eq('is_saved', true).gte('saved_at', since).range(start, end),
+  )
+  const shown = await supabase.from('user_vacancy_history').select('*', { count: 'exact', head: true }).gte('seen_at', since)
+  const { data: posts } = rows.length > 0
+    ? await supabase.from('community_posts').select('id, slug, title, company, role_category').in('slug', rows.map((row) => row.slug))
+    : { data: [] as { id: string; slug: string; title: string; company: string | null; role_category: string | null }[] }
+  const bySlug = new Map((posts ?? []).map((post) => [post.slug, post]))
+  const savedCount = new Map<string, number>()
+  for (const row of saved) savedCount.set(row.source_id, (savedCount.get(row.source_id) ?? 0) + 1)
+
+  const trackingSince = total.tracking_since
+  return {
+    ready: true as const,
+    source: 'people' as const,
+    days,
+    trackingSince,
+    // Si la medición empezó después de que el periodo arrancó, las cifras están incompletas.
+    partial: !trackingSince || Date.parse(trackingSince) > from.getTime(),
+    totals: {
+      viewers: total.viewers,
+      applicants: total.applicants,
+      vacancies: total.vacancies,
+      applyRatePct: pct(total.applicants, total.viewers),
+      saved: saved.length,
+      recommendationsShown: shown.count ?? 0,
+    },
+    top: rows.map((row) => {
+      const post = bySlug.get(row.slug)
+      return {
+        slug: row.slug,
+        title: post?.title ?? row.slug,
+        company: post?.company ?? null,
+        role: post?.role_category ?? null,
+        viewers: row.viewers,
+        applicants: row.applicants,
+        applyRatePct: pct(row.applicants, row.viewers),
+        saved: post ? savedCount.get(post.id) ?? 0 : 0,
+      }
+    }),
+  }
+}
+
+/** Vacantes: cuánta gente activa abre cada una, cuánta pulsa "Postularse" y cuánta la guarda. */
 router.get('/vacancies', handle('vacantes', async (req, res) => {
   const days = periodOf(req)
+  const byPeople = await vacanciesByActivePeople(days)
+  if (byPeople) return res.json(byPeople)
+
+  // Sin la analítica propia: la cuenta anterior, por navegador y sin saber si hizo algo. El panel lo avisa.
   const since = periodStart(days).toISOString()
 
   const events = await readAll<VacancyEventRow>((from, to) =>
@@ -142,6 +235,7 @@ router.get('/vacancies', handle('vacantes', async (req, res) => {
 
   res.json({
     ready: true,
+    source: 'legacy',
     days,
     totals: { ...engagement, byVacancy: undefined, saved: saved.length, recommendationsShown: shown.count ?? 0 },
     top: top.map((row) => {
@@ -243,9 +337,11 @@ router.get('/linkedin', handle('linkedin', async (req, res) => {
   const days = periodOf(req)
   const since = new Date(periodStart(days).getTime()).toISOString()
 
+  const now = new Date()
+  const active = await activeVisits(periodStart(days, now), new Date(now.getTime() + 1))
   const [posts, visits, users, { data: profile }] = await Promise.all([
     linkedinPosts(since),
-    visitsSince(since),
+    active ? Promise.resolve(active) : visitsSince(since),
     realUsers(since),
     supabase.from('linkedin_profiles').select('first_name, last_name, headline, photo_url, connected_at, expires_at').not('access_token', 'is', null).order('connected_at', { ascending: false }).limit(1).maybeSingle(),
   ])
@@ -268,10 +364,13 @@ router.get('/linkedin', handle('linkedin', async (req, res) => {
       siteUrlConfigured: siteUrl() !== null,
       nextPublicationAt: nextPublication().toISOString(),
     },
+    // `active: true` = los visitantes son personas activas y la conversión se mide sobre las nuevas.
+    active: active !== null,
     totals: {
       published: performance.length,
       failed,
       visitors: performance.reduce((sum, post) => sum + post.visitors, 0),
+      newVisitors: active ? performance.reduce((sum, post) => sum + (post.newVisitors ?? 0), 0) : null,
       signups: performance.reduce((sum, post) => sum + post.signups, 0),
     },
     posts: performance,
@@ -285,7 +384,9 @@ router.get('/linkedin', handle('linkedin', async (req, res) => {
 router.get('/acquisition', handle('adquisición', async (req, res) => {
   const days = periodOf(req)
   const since = periodStart(days).toISOString()
-  const [visits, users] = await Promise.all([visitsSince(since), realUsers(since)])
+  const now = new Date()
+  const active = await activeVisits(periodStart(days, now), new Date(now.getTime() + 1))
+  const [visits, users] = await Promise.all([active ? Promise.resolve(active) : visitsSince(since), realUsers(since)])
 
   // "Volvió": estuvo activa en un día posterior al de su registro. Solo se sabe si la tabla existe.
   let returned: number | null = null
@@ -300,16 +401,32 @@ router.get('/acquisition', handle('adquisición', async (req, res) => {
 
   const visitors = uniqueVisitors(visits)
   const completed = users.filter((user) => user.profile_completed).length
+  const newVisits = visits.filter((visit) => visit.is_new)
+  const newVisitors = uniqueVisitors(newVisits)
+  // Quienes entraron por primera vez en el periodo Y se registraron en él: la conversión se mide sobre los nuevos.
+  const registeredIds = new Set(users.map((user) => user.id))
+  const registeredNew = new Set(newVisits.filter((visit) => registeredIds.has(visit.visitor_id)).map((visit) => visit.visitor_id)).size
+
   res.json({
     days,
+    // `active: true` = las cifras son de personas activas (analítica propia); si no, de navegadores (la cuenta anterior).
+    active: active !== null,
     sources: acquisitionBySource({ visits, users }),
     landingPages: topLandingPages(visits, 10),
-    funnel: [
-      { step: 'Visitantes', count: visitors, pctOfPrevious: null },
-      { step: 'Se registraron', count: users.length, pctOfPrevious: pct(users.length, visitors) },
-      { step: 'Completaron su perfil', count: completed, pctOfPrevious: pct(completed, users.length) },
-      { step: 'Volvieron otro día', count: returned, pctOfPrevious: returned === null ? null : pct(returned, completed || users.length) },
-    ],
+    funnel: active
+      ? [
+          { step: 'Visitantes activos', count: visitors, pctOfPrevious: null },
+          { step: 'Nuevos', count: newVisitors, pctOfPrevious: pct(newVisitors, visitors) },
+          { step: 'Se registraron (de los nuevos)', count: registeredNew, pctOfPrevious: pct(registeredNew, newVisitors) },
+          { step: 'Completaron su perfil', count: completed, pctOfPrevious: pct(completed, users.length) },
+          { step: 'Volvieron otro día', count: returned, pctOfPrevious: returned === null ? null : pct(returned, completed || users.length) },
+        ]
+      : [
+          { step: 'Visitantes', count: visitors, pctOfPrevious: null },
+          { step: 'Se registraron', count: users.length, pctOfPrevious: pct(users.length, visitors) },
+          { step: 'Completaron su perfil', count: completed, pctOfPrevious: pct(completed, users.length) },
+          { step: 'Volvieron otro día', count: returned, pctOfPrevious: returned === null ? null : pct(returned, completed || users.length) },
+        ],
   })
 }))
 

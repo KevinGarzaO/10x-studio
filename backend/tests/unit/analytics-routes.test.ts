@@ -14,7 +14,11 @@ const rpcState = vi.hoisted(() => ({ impl: null as null | ((name: string, args: 
 vi.mock('../../services/supabase.service', () => ({
   supabase: {
     // La analítica web propia (funciones SQL) no existe en estas pruebas: el resumen debe seguir respondiendo sin ella.
-    rpc: (name: string, args: any) => (rpcState.impl ? rpcState.impl(name, args) : Promise.resolve({ data: null, error: { message: 'function analytics_visitors_summary does not exist' } })),
+    // `.range` existe porque las lecturas largas de funciones se piden por páginas.
+    rpc: (name: string, args: any) => {
+      const result = rpcState.impl ? rpcState.impl(name, args) : Promise.resolve({ data: null, error: { message: 'function analytics_visitors_summary does not exist' } })
+      return Object.assign(result, { range: () => result })
+    },
     from: (table: string) => ({
       select: () => {
         let single = false
@@ -336,6 +340,92 @@ describe('GET /analytics/overview: active visitors, new and returning', () => {
     rpcState.impl = async (name) => (name === 'analytics_visitors_series' ? { data: [], error: null } : { data: [summary({ active: 0, new_active: 0, returning_active: 0, registered_new: 0, linkedin_active: 0, sessions: 0, engaged_sessions: 0 })], error: null })
     const res = await request(app()).get('/analytics/overview?days=7').expect(200)
     expect(res.body.traffic).toMatchObject({ active: 0, newActive: 0, conversionPct: null, bounces: 0 })
+  })
+})
+
+describe('GET /analytics/vacancies: active people', () => {
+  const totals = (patch: Record<string, unknown> = {}) => ({ tracking_since: new Date(Date.now() - 60 * 86400000).toISOString(), viewers: 30, applicants: 6, vacancies: 4, ...patch })
+
+  it('counts active PEOPLE per vacancy (who opened it and who pressed Postularse), not views', async () => {
+    data.tables.community_posts = [{ id: 'p1', slug: 'vac-1', title: 'Backend en Stripe', company: 'Stripe', role_category: 'backend' }]
+    data.tables.user_vacancy_history = [{ source_id: 'p1' }, { source_id: 'p1' }]
+    rpcState.impl = async (name) => (name === 'analytics_vacancy_people'
+      ? { data: [{ slug: 'vac-1', viewers: 20, applicants: 5 }, { slug: 'vac-2', viewers: 10, applicants: 1 }], error: null }
+      : { data: [totals()], error: null })
+
+    const res = await request(app()).get('/analytics/vacancies?days=30').expect(200)
+
+    expect(res.body).toMatchObject({ ready: true, source: 'people', partial: false })
+    expect(res.body.totals).toMatchObject({ viewers: 30, applicants: 6, applyRatePct: 20, vacancies: 4, saved: 2 })
+    expect(res.body.top[0]).toMatchObject({ slug: 'vac-1', title: 'Backend en Stripe', viewers: 20, applicants: 5, applyRatePct: 25, saved: 2 })
+    // una vacante sin página conocida sigue saliendo, con su slug como título
+    expect(res.body.top[1]).toMatchObject({ slug: 'vac-2', title: 'vac-2', saved: 0 })
+  })
+
+  it('says the period is incomplete when the measurement started after it began', async () => {
+    rpcState.impl = async (name) => (name === 'analytics_vacancy_people' ? { data: [], error: null } : { data: [totals({ tracking_since: new Date(Date.now() - 2 * 86400000).toISOString() })], error: null })
+    const res = await request(app()).get('/analytics/vacancies?days=30').expect(200)
+    expect(res.body.partial).toBe(true)
+  })
+
+  it('falls back to the old per-browser count, saying so, when the SQL functions do not exist yet', async () => {
+    data.tables.vacancy_events = [{ vacancy_slug: 'vac-1', event: 'view', visitor_id: 'a' }]
+    const res = await request(app()).get('/analytics/vacancies?days=30').expect(200)
+    expect(res.body.source).toBe('legacy')
+    expect(res.body.totals.views).toBe(1)
+  })
+
+  it('a real database error is a 500, not a silent zero', async () => {
+    rpcState.impl = async () => ({ data: null, error: { message: 'canceling statement due to statement timeout' } })
+    vi.spyOn(console, 'error').mockImplementation(() => {})
+    await request(app()).get('/analytics/vacancies?days=30').expect(500)
+  })
+
+  it('no one active opened a vacancy yet: zeros and no division by zero', async () => {
+    rpcState.impl = async (name) => (name === 'analytics_vacancy_people' ? { data: [], error: null } : { data: [totals({ viewers: 0, applicants: 0, vacancies: 0 })], error: null })
+    const res = await request(app()).get('/analytics/vacancies?days=30').expect(200)
+    expect(res.body.totals).toMatchObject({ viewers: 0, applicants: 0, applyRatePct: null })
+    expect(res.body.top).toEqual([])
+  })
+})
+
+describe('GET /analytics/acquisition and /linkedin: active visitors', () => {
+  const row = (person: string, isNew: boolean, patch: Record<string, unknown> = {}) => ({
+    person_key: person, is_new: isNew, utm_source: 'linkedin', utm_medium: 'social', utm_campaign: 'vacante-auto', utm_content: 'vac-1', entry_path: '/vacantes/vac-1', created_at: new Date(Date.now() - 3600000).toISOString(), ...patch,
+  })
+
+  it('acquisition counts active people, splits the new ones and measures the funnel over them', async () => {
+    rpcState.impl = async () => ({ data: [row('n1', true), row('n2', true), row('r1', false), row('r1', false)], error: null })
+    const res = await request(app()).get('/analytics/acquisition?days=30').expect(200)
+
+    expect(res.body.active).toBe(true)
+    expect(res.body.funnel.slice(0, 2)).toEqual([
+      { step: 'Visitantes activos', count: 3, pctOfPrevious: null },
+      { step: 'Nuevos', count: 2, pctOfPrevious: 66.7 },
+    ])
+    expect(res.body.sources[0]).toMatchObject({ source: 'linkedin', visitors: 3, newVisitors: 2 })
+  })
+
+  it('acquisition falls back to the old per-browser count, saying so, when the SQL function does not exist', async () => {
+    const res = await request(app()).get('/analytics/acquisition?days=30').expect(200)
+    expect(res.body.active).toBe(false)
+    expect(res.body.funnel[0].step).toBe('Visitantes')
+  })
+
+  it('linkedin counts the active people that came through each post and says so', async () => {
+    data.tables.linkedin_vacancy_posts = [{ vacancy_slug: 'vac-1', company: 'Stripe', role_category: 'backend', linkedin_post_id: 'urn:1', status: 'published', published_at: new Date(Date.now() - 7200000).toISOString(), created_at: new Date(Date.now() - 7200000).toISOString() }]
+    rpcState.impl = async () => ({ data: [row('n1', true), row('n2', true), row('r1', false)], error: null })
+    const res = await request(app()).get('/analytics/linkedin?days=30').expect(200)
+
+    expect(res.body.active).toBe(true)
+    expect(res.body.posts[0]).toMatchObject({ slug: 'vac-1', visitors: 3, newVisitors: 2 })
+    expect(res.body.totals).toMatchObject({ visitors: 3, newVisitors: 2 })
+  })
+
+  it('a real database error is a 500, not a silent zero', async () => {
+    rpcState.impl = async () => ({ data: null, error: { message: 'canceling statement due to statement timeout' } })
+    vi.spyOn(console, 'error').mockImplementation(() => {})
+    await request(app()).get('/analytics/acquisition?days=30').expect(500)
   })
 })
 

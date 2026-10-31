@@ -6,7 +6,9 @@ import { Card, Empty, ErrorBox, fmtNum, fmtPct, InlineBar, Loading, PageHeader, 
 
 interface Acquisition {
   days: number
-  sources: { source: string; medium: string; campaign: string; visitors: number; visits: number; signups: number; conversionPct: number | null }[]
+  /** true = las cifras son de personas activas (analítica propia); false = por navegador, la cuenta anterior. */
+  active: boolean
+  sources: { source: string; medium: string; campaign: string; visitors: number; visits: number; newVisitors: number | null; signups: number; conversionPct: number | null }[]
   landingPages: { path: string; visitors: number }[]
   funnel: { step: string; count: number | null; pctOfPrevious: number | null }[]
 }
@@ -24,6 +26,15 @@ export default function AdquisicionPage() {
 
       {error && <ErrorBox message={error} onRetry={reload} />}
       {loading && !data && <Loading />}
+
+      {data && !data.active && (
+        <Card title="Estas cifras todavía no son de personas activas">
+          <p className="panel-muted" style={{ lineHeight: 1.6 }}>
+            Falta aplicar la migración <b>web-analytics-active-people-migration.sql</b> en Supabase. Mientras tanto se cuenta por navegador, sin saber si la persona hizo algo
+            ni si era nueva (un robot o alguien que se fue al instante cuentan igual). Con la migración, solo cuentan las personas con una sesión activa y la conversión se mide sobre las nuevas.
+          </p>
+        </Card>
+      )}
 
       {data && (
         <>
@@ -47,14 +58,14 @@ export default function AdquisicionPage() {
                 rowKey={row => `${row.source}|${row.medium}|${row.campaign}`}
                 searchText={row => `${row.source} ${row.medium} ${row.campaign}`}
                 searchLabel="Buscar origen, medio o campaña"
-                head={<tr><th>Origen</th><th>Medio</th><th>Campaña</th><th className="num">Visitantes</th><th className="num">Entradas</th><th className="num">Registros</th><th className="num">Conversión</th></tr>}
+                head={<tr><th>Origen</th><th>Medio</th><th>Campaña</th><th className="num">{data.active ? 'Visitantes activos' : 'Visitantes'}</th><th className="num">{data.active ? 'Nuevos' : 'Entradas'}</th><th className="num">Registros</th><th className="num">{data.active ? 'Conversión de nuevos' : 'Conversión'}</th></tr>}
                 renderRow={row => (
                   <tr>
                     <td><span className="panel-chip">{row.source}</span></td>
                     <td>{row.medium}</td>
                     <td>{row.campaign}</td>
                     <td className="num">{fmtNum(row.visitors)}</td>
-                    <td className="num">{fmtNum(row.visits)}</td>
+                    <td className="num">{fmtNum(data.active ? row.newVisitors : row.visits)}</td>
                     <td className="num">{fmtNum(row.signups)}</td>
                     <td className="num">{fmtPct(row.conversionPct)}</td>
                   </tr>

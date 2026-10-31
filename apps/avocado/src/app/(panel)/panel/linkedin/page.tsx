@@ -8,12 +8,14 @@ import { Card, Empty, ErrorBox, fmtDate, fmtNum, fmtPct, InlineBar, Loading, Pag
 interface Group { key: string; posts: number; visitors: number; signups: number; visitorsPerPost: number; conversionPct: number | null }
 interface LinkedInData {
   days: number
+  /** true = los visitantes son personas activas y la conversión se mide sobre las nuevas. */
+  active: boolean
   status: {
     connected: boolean; name: string | null; headline: string | null; expiresAt: string | null; daysLeft: number | null
     publishing: boolean; siteUrlConfigured: boolean; nextPublicationAt: string
   }
-  totals: { published: number; failed: number; visitors: number; signups: number }
-  posts: { slug: string | null; company: string | null; role: string | null; publishedAt: string | null; linkedinPostId: string | null; visitors: number; signups: number; conversionPct: number | null }[]
+  totals: { published: number; failed: number; visitors: number; newVisitors: number | null; signups: number }
+  posts: { slug: string | null; company: string | null; role: string | null; publishedAt: string | null; linkedinPostId: string | null; visitors: number; newVisitors: number | null; signups: number; conversionPct: number | null }[]
   byRole: Group[]
   byHour: Group[]
   byCompany: Group[]
@@ -73,6 +75,15 @@ export default function LinkedInPage() {
       {error && <ErrorBox message={error} onRetry={reload} />}
       {loading && !data && <Loading />}
 
+      {data && !data.active && (
+        <Card title="Estas cifras todavía no son de personas activas">
+          <p className="panel-muted" style={{ lineHeight: 1.6 }}>
+            Falta aplicar la migración <b>web-analytics-active-people-migration.sql</b> en Supabase. Mientras tanto se cuenta por navegador, sin saber si la persona hizo algo
+            ni si era nueva (un robot o alguien que se fue al instante cuentan igual). Con la migración, solo cuentan las personas con una sesión activa y la conversión se mide sobre las nuevas.
+          </p>
+        </Card>
+      )}
+
       {data && status && (
         <>
           <div className={`panel-banner ${!status.connected ? 'bad' : !status.publishing || expiring ? 'warn' : 'ok'}`}>
@@ -93,8 +104,14 @@ export default function LinkedInPage() {
           <div className="panel-grid cols-4">
             <Stat label="Publicadas" value={fmtNum(data.totals.published)} caption="Vacantes que salieron en tu perfil en este periodo." />
             <Stat label="Fallidas" value={fmtNum(data.totals.failed)} tone={data.totals.failed > 0 ? 'warn' : undefined} caption={data.totals.failed > 0 ? 'No se publicaron: se reintentan solas.' : 'Ninguna falló.'} />
-            <Stat label="Visitantes" value={fmtNum(data.totals.visitors)} caption="Suma de los visitantes de cada publicación: quien abrió dos cuenta en cada una. Por eso puede ser mayor que los visitantes de LinkedIn del Resumen." />
-            <Stat label="Registros" value={fmtNum(data.totals.signups)} caption={`Conversión de ${fmtPct(data.totals.visitors > 0 ? Math.round((data.totals.signups / data.totals.visitors) * 1000) / 10 : null)}.`} />
+            <Stat label={data.active ? 'Visitantes activos' : 'Visitantes'} value={fmtNum(data.totals.visitors)} caption="Suma de los visitantes de cada publicación: quien abrió dos cuenta en cada una. Por eso puede ser mayor que los visitantes de LinkedIn del Resumen." />
+            <Stat
+              label="Registros"
+              value={fmtNum(data.totals.signups)}
+              caption={data.active
+                ? `Conversión de nuevos: ${fmtPct(data.totals.newVisitors ? Math.round((data.totals.signups / data.totals.newVisitors) * 1000) / 10 : null)} (${fmtNum(data.totals.signups)} registros entre ${fmtNum(data.totals.newVisitors)} visitantes nuevos).`
+                : `Conversión de ${fmtPct(data.totals.visitors > 0 ? Math.round((data.totals.signups / data.totals.visitors) * 1000) / 10 : null)}.`}
+            />
           </div>
 
           <Card title="Cada publicación" hint="La más reciente primero">
@@ -104,13 +121,14 @@ export default function LinkedInPage() {
                 rowKey={post => `${post.slug}-${post.publishedAt}`}
                 searchText={post => `${post.company ?? ''} ${roleLabel(post.role)}`}
                 searchLabel="Buscar empresa o rol"
-                head={<tr><th>Fecha</th><th>Empresa</th><th>Rol</th><th className="num">Visitantes</th><th className="num">Registros</th><th className="num">Conversión</th><th /></tr>}
+                head={<tr><th>Fecha</th><th>Empresa</th><th>Rol</th><th className="num">{data.active ? 'Visitantes activos' : 'Visitantes'}</th>{data.active && <th className="num">Nuevos</th>}<th className="num">Registros</th><th className="num">{data.active ? 'Conversión de nuevos' : 'Conversión'}</th><th /></tr>}
                 renderRow={post => (
                   <tr>
                     <td>{fmtDate(post.publishedAt, true)}</td>
                     <td>{post.company ?? '—'}</td>
                     <td><span className="panel-chip">{roleLabel(post.role)}</span></td>
                     <td className="num">{fmtNum(post.visitors)}</td>
+                    {data.active && <td className="num">{fmtNum(post.newVisitors)}</td>}
                     <td className="num">{fmtNum(post.signups)}</td>
                     <td className="num">{fmtPct(post.conversionPct)}</td>
                     <td>{post.linkedinPostId && <a href={`https://www.linkedin.com/feed/update/${post.linkedinPostId}`} target="_blank" rel="noopener noreferrer">Ver en LinkedIn ↗</a>}</td>

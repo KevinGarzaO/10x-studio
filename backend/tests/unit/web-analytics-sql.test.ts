@@ -12,6 +12,7 @@ import { PGlite } from '@electric-sql/pglite'
 const sql = fs.readFileSync(path.join(__dirname, '../../sql/web-analytics-migration.sql'), 'utf8')
 const detailSql = fs.readFileSync(path.join(__dirname, '../../sql/web-analytics-detail-migration.sql'), 'utf8')
 const summarySql = fs.readFileSync(path.join(__dirname, '../../sql/web-analytics-summary-migration.sql'), 'utf8')
+const activePeopleSql = fs.readFileSync(path.join(__dirname, '../../sql/web-analytics-active-people-migration.sql'), 'utf8')
 const uuid = (n: number) => `00000000-0000-4000-8000-${String(n).padStart(12, '0')}`
 const S = (n: number) => uuid(n)
 
@@ -38,6 +39,8 @@ describe('web-analytics-migration.sql (Postgres real)', () => {
     await c.query(detailSql)
     await c.query(summarySql)
     await c.query(summarySql)
+    await c.query(activePeopleSql)
+    await c.query(activePeopleSql)
   }, 60000)
 
 
@@ -414,6 +417,86 @@ describe('web-analytics-migration.sql (Postgres real)', () => {
 
     it('resumen: las funciones nuevas no se pueden llamar con la llave pública', async () => {
       const row = (await q(`SELECT has_function_privilege('anon','analytics_visitors_summary(timestamptz,timestamptz)','EXECUTE') a, has_function_privilege('service_role','analytics_visitors_series(timestamptz,timestamptz,text)','EXECUTE') b`))[0]
+      assert.deepStrictEqual(row, { a: false, b: true })
+    })
+
+    // ---------- vacantes en personas activas ----------
+    it('vacantes: solo cuentan las personas ACTIVAS, una vez por vacante, aunque abran o pulsen varias veces', async () => {
+      await c.query(`DELETE FROM analytics_events; DELETE FROM analytics_page_views; DELETE FROM analytics_sessions; DELETE FROM users;`)
+      const mk = (n: number, client: string, engaged: boolean) => c.query(`INSERT INTO analytics_sessions (session_id, client_id, entry_path, is_engaged) VALUES ($1,$2,'/',$3)`, [S(n), client, engaged])
+      const ev = (n: number, name: string, slug: string | null) => c.query(`INSERT INTO analytics_events (session_id, event_name, event_params) VALUES ($1,$2,$3::jsonb)`, [S(n), name, JSON.stringify(slug ? { slug } : {})])
+      await mk(61, 'vac-ana', true); await mk(62, 'vac-beto', true); await mk(63, 'vac-rebote', false)
+      // ana abre dos veces la vacante A, y pulsa Postularse dos veces
+      await ev(61, 'click_view_job_detail', 'vac-a'); await ev(61, 'click_view_job_detail', 'vac-a')
+      await ev(61, 'click_start_apply', 'vac-a'); await ev(61, 'click_start_apply', 'vac-a')
+      // beto abre A y B, y no postula
+      await ev(62, 'click_view_job_detail', 'vac-a'); await ev(62, 'click_view_job_detail', 'vac-b')
+      // el rebote (sesión sin actividad) abre A y B: NO cuenta
+      await ev(63, 'click_view_job_detail', 'vac-a'); await ev(63, 'click_view_job_detail', 'vac-b')
+      // un evento sin vacante y otro tipo de evento no cuentan
+      await ev(61, 'click_view_job_detail', null); await ev(61, 'scroll', 'vac-a')
+      const rows = await q(`SELECT * FROM analytics_vacancy_people(now() - interval '1 day', now() + interval '1 minute')`)
+      assert.deepStrictEqual(rows.map((r: any) => [r.slug, r.viewers, r.applicants]), [['vac-a', 2, 1], ['vac-b', 1, 0]])
+    })
+
+    it('vacantes: los totales son personas distintas en todo el periodo, no la suma de las vacantes', async () => {
+      const [row] = await q(`SELECT * FROM analytics_vacancy_totals(now() - interval '1 day', now() + interval '1 minute')`)
+      // ana y beto abrieron alguna vacante (2 personas; beto abrió dos pero cuenta una vez); solo ana postuló.
+      assert.deepStrictEqual([row.viewers, row.applicants, row.vacancies], [2, 1, 2])
+      assert.ok(row.tracking_since)
+    })
+
+    it('vacantes: lo que pasó fuera del periodo no cuenta', async () => {
+      const [row] = await q(`SELECT * FROM analytics_vacancy_totals(now() + interval '1 hour', now() + interval '2 hours')`)
+      assert.deepStrictEqual([row.viewers, row.applicants, row.vacancies], [0, 0, 0])
+    })
+
+    it('vacantes: nadie del equipo cuenta como persona que abrió una vacante', async () => {
+      const team = uuid(710)
+      await c.query(`INSERT INTO users (id, user_kind) VALUES ($1, 'superadmin')`, [team])
+      await c.query(`INSERT INTO analytics_sessions (session_id, client_id, user_id, entry_path, is_engaged) VALUES ($1,'vac-team',$2,'/',true)`, [S(64), team])
+      await c.query(`INSERT INTO analytics_events (session_id, event_name, event_params) VALUES ($1,'click_view_job_detail','{"slug":"vac-a"}')`, [S(64)])
+      const [row] = await q(`SELECT * FROM analytics_vacancy_totals(now() - interval '1 day', now() + interval '1 minute')`)
+      assert.strictEqual(row.viewers, 2)
+    })
+
+    it('vacantes: las funciones no se pueden llamar con la llave pública', async () => {
+      const row = (await q(`SELECT has_function_privilege('anon','analytics_vacancy_people(timestamptz,timestamptz,int)','EXECUTE') a, has_function_privilege('service_role','analytics_vacancy_totals(timestamptz,timestamptz)','EXECUTE') b`))[0]
+      assert.deepStrictEqual(row, { a: false, b: true })
+    })
+
+    // ---------- visitas activas para Adquisición y LinkedIn ----------
+    it('visitas activas: una por sesión activa, con su origen y si la persona es nueva', async () => {
+      await c.query(`DELETE FROM analytics_events; DELETE FROM analytics_page_views; DELETE FROM analytics_sessions; DELETE FROM users;`)
+      const mk = (n: number, client: string, daysAgo: number, engaged: boolean, source: string | null = null) =>
+        c.query(`INSERT INTO analytics_sessions (session_id, client_id, entry_path, utm_source, utm_content, is_engaged, created_at) VALUES ($1,$2,'/vacantes/x',$3,'vac-x',$4, now() - ($5 || ' days')::interval)`, [S(n), client, source, engaged, String(daysAgo)])
+      await mk(71, 'av-nuevo', 1, true, 'linkedin')
+      await mk(72, 'av-rebote', 1, false, 'linkedin')
+      await mk(73, 'av-recurrente', 30, false)
+      await mk(74, 'av-recurrente', 1, true, 'linkedin')
+      const rows = await q(`SELECT * FROM analytics_active_visits(now() - interval '7 days', now() + interval '1 minute')`)
+      assert.strictEqual(rows.length, 2, 'el rebote no es una visita')
+      const nuevo = rows.find((r: any) => r.person_key === 'av-nuevo')
+      const recurrente = rows.find((r: any) => r.person_key === 'av-recurrente')
+      assert.strictEqual(nuevo.is_new, true)
+      assert.strictEqual(recurrente.is_new, false)
+      assert.deepStrictEqual([nuevo.utm_source, nuevo.utm_content, nuevo.entry_path], ['linkedin', 'vac-x', '/vacantes/x'])
+    })
+
+    it('visitas activas: una cuenta anterior a la medición es recurrente y el equipo no cuenta', async () => {
+      const old = uuid(720)
+      await c.query(`INSERT INTO users (id, created_at) VALUES ($1, now() - interval '90 days')`, [old])
+      await c.query(`INSERT INTO analytics_sessions (session_id, client_id, user_id, entry_path, is_engaged) VALUES ($1,'av-vieja',$2,'/',true)`, [S(75), old])
+      const team = uuid(721)
+      await c.query(`INSERT INTO users (id, user_kind) VALUES ($1, 'superadmin')`, [team])
+      await c.query(`INSERT INTO analytics_sessions (session_id, client_id, user_id, entry_path, is_engaged) VALUES ($1,'av-team',$2,'/',true)`, [S(76), team])
+      const rows = await q(`SELECT * FROM analytics_active_visits(now() - interval '7 days', now() + interval '1 minute')`)
+      assert.strictEqual(rows.find((r: any) => r.person_key === old)?.is_new, false)
+      assert.ok(!rows.some((r: any) => r.person_key === team))
+    })
+
+    it('visitas activas: la función no se puede llamar con la llave pública', async () => {
+      const row = (await q(`SELECT has_function_privilege('anon','analytics_active_visits(timestamptz,timestamptz)','EXECUTE') a, has_function_privilege('service_role','analytics_active_visits(timestamptz,timestamptz)','EXECUTE') b`))[0]
       assert.deepStrictEqual(row, { a: false, b: true })
     })
 })
