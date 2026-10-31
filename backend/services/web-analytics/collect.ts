@@ -10,6 +10,9 @@ export interface RequestContext {
   country: string | null
   region: string | null
   city: string | null
+  /** La posición de la ciudad (no de la persona). */
+  latitude: number | null
+  longitude: number | null
 }
 
 const clip = (value: string | null | undefined, max: number): string | null => (value ? value.slice(0, max) : null)
@@ -32,6 +35,8 @@ export async function applyCollect(payload: CollectPayload, context: RequestCont
           country: clip(context.country, 100),
           region: clip(context.region, 100),
           city: clip(context.city, 100),
+          latitude: context.latitude,
+          longitude: context.longitude,
           device_category: ua.deviceCategory,
           operating_system: ua.operatingSystem,
           os_version: ua.osVersion,

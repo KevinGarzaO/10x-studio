@@ -21,7 +21,7 @@ const BACKEND_TIMEOUT_MS = 4000
 type HeaderReader = { get(name: string): string | null }
 
 /** Los datos del visitante que solo conoce quien está en la frontera (Vercel / Cloudflare). */
-export function geoFromHeaders(headers: HeaderReader): { country: string | null; region: string | null; city: string | null } {
+export function geoFromHeaders(headers: HeaderReader): { country: string | null; region: string | null; city: string | null; latitude: string | null; longitude: string | null } {
   const pick = (...names: string[]) => {
     for (const name of names) {
       const value = headers.get(name)
@@ -33,6 +33,9 @@ export function geoFromHeaders(headers: HeaderReader): { country: string | null;
     country: pick('x-vercel-ip-country', 'cf-ipcountry'),
     region: pick('x-vercel-ip-country-region'),
     city: pick('x-vercel-ip-city', 'cf-ipcity'),
+    // La posición de la CIUDAD (no de la persona), para dibujar el mapa. Cloudflare no la manda por defecto.
+    latitude: pick('x-vercel-ip-latitude'),
+    longitude: pick('x-vercel-ip-longitude'),
   }
 }
 
@@ -72,6 +75,8 @@ export async function forwardToBackend(options: {
   if (geo.country) headers['x-avo-country'] = geo.country
   if (geo.region) headers['x-avo-region'] = geo.region
   if (geo.city) headers['x-avo-city'] = geo.city
+  if (geo.latitude) headers['x-avo-lat'] = geo.latitude
+  if (geo.longitude) headers['x-avo-lon'] = geo.longitude
   if (options.secret) headers['x-avo-proxy-secret'] = options.secret
   const auth = options.headers.get('authorization')
   if (auth && options.path === 'identify') headers.Authorization = auth

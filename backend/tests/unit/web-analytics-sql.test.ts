@@ -10,6 +10,7 @@ import { PGlite } from '@electric-sql/pglite'
  * comparten la misma base. La tabla de usuarios es un mínimo (solo lo que la migración lee).
  */
 const sql = fs.readFileSync(path.join(__dirname, '../../sql/web-analytics-migration.sql'), 'utf8')
+const detailSql = fs.readFileSync(path.join(__dirname, '../../sql/web-analytics-detail-migration.sql'), 'utf8')
 const uuid = (n: number) => `00000000-0000-4000-8000-${String(n).padStart(12, '0')}`
 const S = (n: number) => uuid(n)
 
@@ -32,6 +33,8 @@ describe('web-analytics-migration.sql (Postgres real)', () => {
     await c.query(`CREATE TABLE users (id uuid PRIMARY KEY, is_test_account boolean DEFAULT false, is_scraper_profile boolean DEFAULT false, user_kind text DEFAULT 'user')`)
     await c.query(sql)
     await c.query(sql)
+    await c.query(detailSql)
+    await c.query(detailSql)
   }, 60000)
 
 
@@ -244,5 +247,94 @@ describe('web-analytics-migration.sql (Postgres real)', () => {
       const f = await q(`SELECT * FROM analytics_funnel(7)`)
       assert.deepStrictEqual(f.map((r) => r.people), [0, 0, 0, 0])
       assert.strictEqual((await q(`SELECT * FROM analytics_landing_performance(7)`)).length, 0)
+    })
+
+    // ---------- el detalle: mapa, idioma, dispositivos, páginas y eventos ----------
+    it('detalle: la sesión guarda la posición de la ciudad y el resto de lo que llega', async () => {
+      await c.query(`DELETE FROM analytics_events; DELETE FROM analytics_page_views; DELETE FROM analytics_sessions; DELETE FROM users;`)
+      await start(41, 'cd-1', { city: 'Monterrey', region: 'NLE', country: 'MX', latitude: '25.6866', longitude: '-100.3161', language: 'es-MX', operating_system: 'Windows', browser: 'Chrome', screen_resolution: '1920x1080', timezone: 'America/Monterrey' })
+      const row = (await q(`SELECT latitude, longitude, language, screen_resolution FROM analytics_sessions WHERE session_id = $1`, [S(41)]))[0]
+      assert.strictEqual(Number(row.latitude), 25.6866)
+      assert.strictEqual(Number(row.longitude), -100.3161)
+      assert.strictEqual(row.language, 'es-MX')
+      assert.strictEqual(row.screen_resolution, '1920x1080')
+    })
+
+    it('detalle: la vista nueva también trae la posición', async () => {
+      const row = (await q(`SELECT latitude FROM analytics_real_sessions WHERE session_id = $1`, [S(41)]))[0]
+      assert.strictEqual(Number(row.latitude), 25.6866)
+    })
+
+    it('detalle: desglose por idioma, dispositivo, nuevo o recurrente, con engagement y duración', async () => {
+      await start(42, 'cd-2', { city: 'Bogotá', country: 'CO', latitude: '4.711', longitude: '-74.0721', language: 'es-CO', device_category: 'mobile', operating_system: 'Android' })
+      await start(43, 'cd-2', { city: 'Bogotá', country: 'CO', latitude: '4.711', longitude: '-74.0721', language: 'es-CO', device_category: 'mobile', operating_system: 'Android' })
+      await q(`UPDATE analytics_sessions SET created_at = now() - interval '60 seconds' WHERE session_id = $1`, [S(41)])
+      await q(`SELECT analytics_heartbeat($1, 'cd-1', 20)`, [S(41)])
+
+      const lang = await q(`SELECT * FROM analytics_dimension(7, 'language')`)
+      assert.deepStrictEqual(lang.map((r: any) => [r.value, r.sessions]), [['es-CO', 2], ['es-MX', 1]])
+      const mx = lang.find((r: any) => r.value === 'es-MX')
+      assert.strictEqual(mx.engaged, 1)
+      assert.strictEqual(Number(mx.engagement_rate), 100)
+      assert.strictEqual(mx.avg_duration_seconds, 20)
+
+      const device = await q(`SELECT * FROM analytics_dimension(7, 'device_category')`)
+      assert.deepStrictEqual(device.map((r: any) => [r.value, r.sessions]), [['mobile', 2], ['desktop', 1]])
+
+      const visitor = await q(`SELECT * FROM analytics_dimension(7, 'visitor_type')`)
+      assert.deepStrictEqual(Object.fromEntries(visitor.map((r: any) => [r.value, r.sessions])), { Nuevo: 2, Recurrente: 1 })
+    })
+
+    it('detalle: ciudades y países con nombre legible, y lo que no se sabe sale como (sin dato)', async () => {
+      await start(44, 'cd-3', { language: null, city: null, region: null, country: null, latitude: null, longitude: null })
+      const city = await q(`SELECT * FROM analytics_dimension(7, 'city')`)
+      assert.strictEqual(city[0].value, 'Bogotá, CO')
+      assert.ok(city.some((r: any) => r.value === 'Monterrey, MX'))
+      assert.ok(city.some((r: any) => r.value === '(sin dato)'))
+      const lang = await q(`SELECT * FROM analytics_dimension(7, 'language')`)
+      assert.ok(lang.some((r: any) => r.value === '(sin dato)'))
+    })
+
+    it('detalle: un desglose que no está en la lista cerrada no devuelve nada (no se arma SQL con lo que llegue)', async () => {
+      assert.strictEqual((await q(`SELECT * FROM analytics_dimension(7, 'user_id; DROP TABLE users')`)).length, 0)
+      assert.strictEqual((await q(`SELECT * FROM analytics_dimension(7, 'client_id')`)).length, 0)
+    })
+
+    it('detalle: los puntos del mapa traen ciudad, coordenadas y cuánta gente', async () => {
+      const points = await q(`SELECT * FROM analytics_geo_points(7)`)
+      const bogota = points.find((r: any) => r.city === 'Bogotá')
+      assert.deepStrictEqual([bogota.country, bogota.sessions, bogota.people], ['CO', 2, 1])
+      assert.strictEqual(Number(bogota.latitude), 4.711)
+      // una sesión sin coordenadas no puede dibujarse: no sale
+      assert.ok(!points.some((r: any) => r.city === null))
+    })
+
+    it('detalle: páginas vistas con sus entradas y salidas', async () => {
+      await q(`SELECT analytics_record_page_view($1, 'cd-1', '/saved', null)`, [S(41)])
+      await q(`SELECT analytics_record_page_view($1, 'cd-1', '/vacantes/react', null)`, [S(41)])
+      const pages = await q(`SELECT * FROM analytics_pages(7)`)
+      const react = pages.find((r: any) => r.path === '/vacantes/react')
+      // /vacantes/react: la entrada de 4 sesiones (41..44) + la vista de 41 al final = 5 vistas. Salidas: la de la 41 y las 3
+      // sesiones de una sola página (entran y salen ahí).
+      assert.strictEqual(react.views, 5)
+      assert.strictEqual(react.entries, 4)
+      assert.strictEqual(react.exits, 4)
+      const saved = pages.find((r: any) => r.path === '/saved')
+      assert.deepStrictEqual([saved.views, saved.entries, saved.exits], [1, 0, 0])
+    })
+
+    it('detalle: resumen de eventos con cuántas veces y a cuánta gente, y cuáles son clave', async () => {
+      await q(`SELECT analytics_record_event($1, 'cd-1', 'click_view_job_detail', '{}', false)`, [S(41)])
+      await q(`SELECT analytics_record_event($1, 'cd-2', 'click_view_job_detail', '{}', false)`, [S(42)])
+      await q(`SELECT analytics_record_event($1, 'cd-2', 'click_external_apply', '{}', true)`, [S(42)])
+      const events = await q(`SELECT * FROM analytics_events_summary(7)`)
+      const view = events.find((r: any) => r.event_name === 'click_view_job_detail')
+      assert.deepStrictEqual([view.events, view.people, view.is_conversion], [2, 2, false])
+      assert.strictEqual(events.find((r: any) => r.event_name === 'click_external_apply').is_conversion, true)
+    })
+
+    it('detalle: las funciones nuevas tampoco las puede llamar anon ni authenticated', async () => {
+      const row = (await q(`SELECT has_function_privilege('anon','analytics_dimension(int,text,int)','EXECUTE') a, has_function_privilege('authenticated','analytics_geo_points(int,int)','EXECUTE') b, has_function_privilege('service_role','analytics_pages(int,int)','EXECUTE') c`))[0]
+      assert.deepStrictEqual(row, { a: false, b: false, c: true })
     })
 })

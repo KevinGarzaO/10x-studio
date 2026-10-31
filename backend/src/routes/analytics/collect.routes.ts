@@ -68,6 +68,13 @@ function makeLimiter(maxPerHour: number) {
 const allowedCollect = makeLimiter(1500)
 const allowedIdentify = makeLimiter(60)
 
+/** Una coordenada válida dentro de su rango, o null (lo que llega del encabezado no se toma tal cual). */
+function coordinate(value: string | null, limit: number): number | null {
+  if (!value) return null
+  const number = Number(value)
+  return Number.isFinite(number) && Math.abs(number) <= limit ? Math.round(number * 10000) / 10000 : null
+}
+
 function contextOf(req: Request): RequestContext | null {
   const clientId = sanitizeClientId(header(req, 'x-avo-client-id') ?? (process.env.ANALYTICS_PROXY_SECRET ? null : req.body?.client_id))
   if (!clientId) return null
@@ -78,6 +85,8 @@ function contextOf(req: Request): RequestContext | null {
     country: decoded(header(req, 'x-avo-country')),
     region: decoded(header(req, 'x-avo-region')),
     city: decoded(header(req, 'x-avo-city')),
+    latitude: coordinate(header(req, 'x-avo-lat'), 90),
+    longitude: coordinate(header(req, 'x-avo-lon'), 180),
   }
 }
 

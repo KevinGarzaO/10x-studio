@@ -30,7 +30,7 @@ const app = () => {
 }
 
 const asProxy = (req: request.Test, extra: Record<string, string> = {}) =>
-  req.set({ 'x-avo-client-id': CLIENT, 'x-avo-ua': CHROME_WINDOWS, 'x-avo-country': 'MX', 'x-avo-region': 'NLE', 'x-avo-city': 'Monterrey', ...extra })
+  req.set({ 'x-avo-client-id': CLIENT, 'x-avo-ua': CHROME_WINDOWS, 'x-avo-country': 'MX', 'x-avo-region': 'NLE', 'x-avo-city': 'Monterrey', 'x-avo-lat': '25.6866', 'x-avo-lon': '-100.3161', ...extra })
 
 beforeEach(() => {
   rpc.mockReset()
@@ -120,10 +120,16 @@ describe('POST /collect', () => {
 
     expect(rpc).toHaveBeenCalledWith('analytics_start_session', {
       p: expect.objectContaining({
-        session_id: SESSION, client_id: CLIENT, entry_path: '/vacantes/react-developer', country: 'MX', region: 'NLE', city: 'Monterrey',
+        session_id: SESSION, client_id: CLIENT, entry_path: '/vacantes/react-developer', country: 'MX', region: 'NLE', city: 'Monterrey', latitude: 25.6866, longitude: -100.3161,
         device_category: 'desktop', operating_system: 'Windows', browser: 'Chrome', language: 'es-MX', utm_source: 'linkedin', referrer_host: 'linkedin.com',
       }),
     })
+  })
+
+  it('does not trust coordinates outside the planet (or text) coming in the headers', async () => {
+    await asProxy(request(app()).post('/api/analytics/collect'), { 'x-avo-lat': '999', 'x-avo-lon': 'abc' })
+      .send({ type: 'session_start', session_id: SESSION, entry_path: '/' }).expect(204)
+    expect(rpc.mock.calls[0][1].p).toMatchObject({ latitude: null, longitude: null })
   })
 
   it('decodes a city that arrives URL encoded', async () => {

@@ -34,12 +34,13 @@ Un módulo propietario de analítica, atribución y medición de tráfico para A
 | Recolección y stitching | `backend/services/web-analytics/collect.ts`, `backend/src/routes/analytics/collect.routes.ts` |
 | Intermediario de la comunidad | `apps/community/lib/analytics-proxy.ts`, `app/api/a/*` |
 | Cliente | `apps/community/lib/web-analytics.ts`, `components/web-analytics.tsx` |
-| Panel | `/panel/trafico`, `GET /api/admin/analytics/web` |
+| Panel (módulo "Tráfico web" del menú, plegable) | `/panel/trafico` (resumen) y, dentro, `en-vivo`, `sesiones` (cada entrada con su detalle: recorrido al segundo, ubicación, dispositivo, origen y otras visitas de la persona), `geografia` (mapa SVG con ciudades), `audiencia` (idioma, dispositivo, sistema, navegador, pantalla, zona horaria), `paginas`, `canales`, `embudo`, `cohortes` |
+| Detalle (mapa, desgloses, páginas, eventos) | `backend/sql/web-analytics-detail-migration.sql` (latitud y longitud de la CIUDAD, `analytics_dimension`, `analytics_geo_points`, `analytics_pages`, `analytics_events_summary`) |
 
 Seguridad: el navegador nunca ve ni manda su `client_id` (va en la cookie `HttpOnly`); el backend solo cree la ciudad, el User-Agent y el `client_id` si traen `ANALYTICS_PROXY_SECRET`; el `user_id` del stitching sale del token verificado; qué es "conversión" lo decide una lista fija del servidor; el tiempo activo nunca puede pasar del tiempo real de la sesión; las funciones SQL solo las ejecuta `service_role`.
 
 ## Para activarlo
 
-1. Correr `backend/sql/web-analytics-migration.sql` en el editor SQL de Supabase.
+1. Correr en el editor SQL de Supabase, en este orden: `backend/sql/web-analytics-migration.sql` y luego `backend/sql/web-analytics-detail-migration.sql` (las dos se pueden correr más de una vez).
 2. Poner la MISMA variable `ANALYTICS_PROXY_SECRET` (un texto largo al azar) en Vercel (comunidad) y en Railway (backend) y volver a desplegar.
 3. Entrar a `/panel/trafico`. Los números empiezan en cero y se llenan con las visitas nuevas; lo anterior no se puede reconstruir.

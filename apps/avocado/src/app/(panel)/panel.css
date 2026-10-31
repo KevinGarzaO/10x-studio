@@ -185,3 +185,67 @@
 
 /* Mientras llega otra página, búsqueda o filtro de una tabla: se queda lo que había, atenuado */
 .panel-refreshing { opacity: .55; transition: opacity .15s; pointer-events: none; }
+
+/* Menú por módulos que se pliegan */
+.panel-nav { display: flex; flex-direction: column; gap: 6px; overflow-y: auto; min-height: 0; padding-bottom: 12px; }
+.panel-group { display: flex; flex-direction: column; gap: 2px; }
+.panel-group-head { display: flex; align-items: center; gap: 10px; width: 100%; padding: 8px 12px; border: 0; border-radius: 10px; background: transparent; color: #94a3b8; font: 700 11px/1 var(--font-sans, inherit); letter-spacing: .08em; text-transform: uppercase; cursor: pointer; text-align: left; }
+.panel-group-head:hover { background: rgba(255,255,255,.05); color: #e2e8f0; }
+.panel-group-icon { width: 18px; text-align: center; font-size: 13px; }
+.panel-group-label { flex: 1; }
+.panel-group-chevron { font-size: 16px; transition: transform .15s; transform: rotate(0deg); }
+.panel-group-chevron.open { transform: rotate(90deg); }
+.panel-group-items { display: flex; flex-direction: column; gap: 2px; margin: 0 0 6px 8px; padding-left: 8px; border-left: 1px solid rgba(255,255,255,.08); }
+.panel-group-items a { padding: 8px 12px; font-size: 13.5px; }
+
+/* ---- Tráfico web ---- */
+.panel-shortcuts { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 10px; }
+.panel-shortcut { display: flex; flex-direction: column; gap: 4px; padding: 12px 14px; border: 1px solid var(--p-line); border-radius: 12px; text-decoration: none; color: var(--p-text); background: #fff; transition: border-color .15s, box-shadow .15s; }
+.panel-shortcut:hover { border-color: #34d399; box-shadow: 0 2px 10px rgba(16,185,129,.12); }
+.panel-shortcut span { font-size: 12.5px; color: var(--p-muted); line-height: 1.4; }
+
+/* El mapa */
+.panel-map { border: 1px solid var(--p-line); border-radius: 12px; overflow: hidden; background: #eef4f8; }
+.panel-map svg { display: block; width: 100%; height: auto; }
+.panel-map-sea { fill: #eef4f8; }
+.panel-map-land { fill: #dfe5ea; stroke: #fff; stroke-width: .5; }
+.panel-map-land:hover { stroke: #94a3b8; }
+.panel-map-city { fill: rgba(5,150,105,.55); stroke: #047857; stroke-width: 1.2; cursor: pointer; transition: fill .12s; }
+.panel-map-city.hover, .panel-map-city:hover { fill: rgba(5,150,105,.85); }
+
+/* Tablas donde cada fila se puede abrir */
+.panel-clickable tbody tr { cursor: pointer; }
+.panel-clickable tbody tr:hover { background: #f1f5f9; }
+.panel-clickable tbody tr:focus-visible { outline: 2px solid #34d399; outline-offset: -2px; }
+.panel-live-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: #10b981; margin-right: 4px; animation: panel-pulse 1.6s ease-in-out infinite; }
+@keyframes panel-pulse { 0%, 100% { box-shadow: 0 0 0 0 rgba(16,185,129,.5); } 50% { box-shadow: 0 0 0 5px rgba(16,185,129,0); } }
+@media (prefers-reduced-motion: reduce) { .panel-live-dot { animation: none; } }
+
+/* El detalle de una sesión (cajón a la derecha) */
+.panel-overlay-on { position: fixed; inset: 0; background: rgba(15,23,42,.45); z-index: 40; }
+.panel-drawer { position: fixed; top: 0; right: 0; bottom: 0; width: min(560px, 100vw); background: #fff; z-index: 41; box-shadow: -12px 0 40px rgba(15,23,42,.2); display: flex; flex-direction: column; }
+.panel-drawer-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; padding: 18px 20px; border-bottom: 1px solid var(--p-line); }
+.panel-drawer-head h2 { margin: 0 0 2px; font-size: 18px; }
+.panel-drawer-body { padding: 16px 20px 40px; overflow-y: auto; flex: 1; }
+.panel-drawer-body h3 { margin: 22px 0 8px; font-size: 12px; letter-spacing: .08em; text-transform: uppercase; color: var(--p-muted); }
+.panel-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.panel-fields { display: grid; grid-template-columns: 1fr 1fr; gap: 10px 16px; margin: 0; }
+.panel-field dt { font-size: 11.5px; color: var(--p-muted); margin-bottom: 2px; }
+.panel-field dd { margin: 0; font-size: 13.5px; word-break: break-word; }
+.panel-timeline { list-style: none; margin: 0; padding: 0; position: relative; }
+.panel-timeline li { display: grid; grid-template-columns: 120px 14px 1fr; gap: 10px; padding: 7px 0; align-items: start; font-size: 13px; }
+.panel-timeline-time { color: var(--p-muted); font-variant-numeric: tabular-nums; font-size: 12px; }
+.panel-timeline-time small { color: #94a3b8; }
+.panel-timeline-dot { width: 10px; height: 10px; border-radius: 50%; margin-top: 4px; background: #94a3b8; }
+.panel-timeline-dot.page { background: #0ea5e9; }
+.panel-timeline-dot.event { background: #a78bfa; }
+.panel-timeline-dot.key { background: #10b981; box-shadow: 0 0 0 3px rgba(16,185,129,.2); }
+.panel-timeline-meta { font-size: 12px; margin-top: 2px; word-break: break-word; }
+.panel-others { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.panel-others li { display: flex; justify-content: space-between; align-items: center; gap: 10px; font-size: 13px; }
+.panel-others button { display: flex; flex-direction: column; gap: 2px; width: 100%; text-align: left; padding: 8px 10px; border: 1px solid var(--p-line); border-radius: 10px; background: #fff; cursor: pointer; font: inherit; color: inherit; }
+.panel-others button:hover { border-color: #34d399; background: #f0fdf4; }
+@media (max-width: 640px) {
+  .panel-fields { grid-template-columns: 1fr; }
+  .panel-timeline li { grid-template-columns: 96px 12px 1fr; }
+}

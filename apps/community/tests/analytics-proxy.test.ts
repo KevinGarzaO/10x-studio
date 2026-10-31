@@ -9,7 +9,7 @@ function run(overrides: Partial<Parameters<typeof forwardToBackend>[0]> = {}) {
   const promise = forwardToBackend({
     path: 'collect',
     body: '{"type":"heartbeat"}',
-    headers: headers({ 'user-agent': 'Mozilla/5.0 Chrome/130', 'accept-language': 'es-MX,es;q=0.9', 'x-vercel-ip-country': 'MX', 'x-vercel-ip-country-region': 'NLE', 'x-vercel-ip-city': 'Monterrey' }),
+    headers: headers({ 'user-agent': 'Mozilla/5.0 Chrome/130', 'accept-language': 'es-MX,es;q=0.9', 'x-vercel-ip-country': 'MX', 'x-vercel-ip-country-region': 'NLE', 'x-vercel-ip-city': 'Monterrey', 'x-vercel-ip-latitude': '25.6866', 'x-vercel-ip-longitude': '-100.3161' }),
     existingClientId: OK_ID,
     backendUrl: 'https://api.test',
     secret: 'clave',
@@ -21,9 +21,9 @@ function run(overrides: Partial<Parameters<typeof forwardToBackend>[0]> = {}) {
 
 describe('geoFromHeaders', () => {
   it('reads Vercel, and Cloudflare as a fallback', () => {
-    expect(geoFromHeaders(headers({ 'x-vercel-ip-country': 'MX', 'x-vercel-ip-city': 'Monterrey', 'x-vercel-ip-country-region': 'NLE' }))).toEqual({ country: 'MX', region: 'NLE', city: 'Monterrey' })
-    expect(geoFromHeaders(headers({ 'cf-ipcountry': 'AR', 'cf-ipcity': 'Rosario' }))).toEqual({ country: 'AR', region: null, city: 'Rosario' })
-    expect(geoFromHeaders(headers({}))).toEqual({ country: null, region: null, city: null })
+    expect(geoFromHeaders(headers({ 'x-vercel-ip-country': 'MX', 'x-vercel-ip-city': 'Monterrey', 'x-vercel-ip-country-region': 'NLE' }))).toEqual({ country: 'MX', region: 'NLE', city: 'Monterrey', latitude: null, longitude: null })
+    expect(geoFromHeaders(headers({ 'cf-ipcountry': 'AR', 'cf-ipcity': 'Rosario' }))).toEqual({ country: 'AR', region: null, city: 'Rosario', latitude: null, longitude: null })
+    expect(geoFromHeaders(headers({}))).toEqual({ country: null, region: null, city: null, latitude: null, longitude: null })
   })
 })
 
@@ -36,6 +36,7 @@ describe('forwardToBackend', () => {
     expect(url).toBe('https://api.test/api/analytics/collect')
     expect(init.body).toBe('{"type":"heartbeat"}')
     expect(init.headers).toMatchObject({
+      'x-avo-lat': '25.6866', 'x-avo-lon': '-100.3161',
       'x-avo-client-id': OK_ID, 'x-avo-ua': 'Mozilla/5.0 Chrome/130', 'x-avo-lang': 'es-MX,es;q=0.9',
       'x-avo-country': 'MX', 'x-avo-region': 'NLE', 'x-avo-city': 'Monterrey', 'x-avo-proxy-secret': 'clave',
     })

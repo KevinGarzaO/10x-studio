@@ -33,7 +33,7 @@ import {
 const router = Router()
 
 // Cada consulta lee miles de filas: se guarda un minuto (y `?fresh=1` la vuelve a calcular).
-router.use(ttlCache(60_000, (path) => path === '/me'))
+router.use(ttlCache(60_000, (path) => path === '/me' || path === '/web/live' || path.startsWith('/web/sessions')))
 
 /**
  * El panel de analítica de AvoTalent. Todo lo que cuelga de aquí se monta detrás de
@@ -376,6 +376,201 @@ router.get('/web', handle('tráfico web', async (req, res) => {
     landingPages: pages,
     channels: channels.data ?? [],
     cohorts: [...byWeek.values()],
+  })
+}))
+
+/** Los desgloses que se pueden pedir (la misma lista cerrada que la función SQL `analytics_dimension`). */
+const WEB_DIMENSIONS = [
+  'language', 'device_category', 'operating_system', 'browser', 'browser_version', 'screen_resolution', 'timezone',
+  'country', 'region', 'city', 'referrer_host', 'exit_path', 'visitor_type',
+]
+
+const webPeriod = (req: Request) => {
+  const requested = parseInt(String(req.query.days ?? '30'), 10)
+  return WEB_PERIODS.includes(requested) ? requested : 30
+}
+
+/** Si las funciones SQL aún no existen (falta una migración) se dice, en lugar de mostrar ceros que parecerían reales. */
+const missingMigration = (message: string) => /function|does not exist|schema cache|analytics_|relation|column/i.test(message)
+
+/** Un desglose: idioma, dispositivo, sistema, navegador, pantalla, zona horaria, país, región, ciudad, sitio de origen... */
+router.get('/web/dimension', handle('desglose web', async (req, res) => {
+  const dimension = String(req.query.dimension ?? '')
+  if (!WEB_DIMENSIONS.includes(dimension)) return res.status(400).json({ error: 'Desglose no válido', allowed: WEB_DIMENSIONS })
+  const limit = Math.min(Math.max(parseInt(String(req.query.limit ?? '50'), 10) || 50, 1), 500)
+  const { data, error } = await supabase.rpc('analytics_dimension', { p_days: webPeriod(req), p_dimension: dimension, p_limit: limit })
+  if (error) {
+    if (missingMigration(error.message)) return res.json({ ready: false })
+    throw new Error(error.message)
+  }
+  res.json({ ready: true, days: webPeriod(req), dimension, rows: data ?? [] })
+}))
+
+/** Varios desgloses de una vez (una pantalla suele necesitar cuatro o cinco). */
+router.get('/web/dimensions', handle('desgloses web', async (req, res) => {
+  const wanted = String(req.query.list ?? '').split(',').map((item) => item.trim()).filter(Boolean)
+  if (wanted.length === 0 || wanted.length > 8 || wanted.some((item) => !WEB_DIMENSIONS.includes(item))) {
+    return res.status(400).json({ error: 'Desgloses no válidos', allowed: WEB_DIMENSIONS })
+  }
+  const days = webPeriod(req)
+  const results = await Promise.all(wanted.map((dimension) => supabase.rpc('analytics_dimension', { p_days: days, p_dimension: dimension, p_limit: 50 })))
+  const failed = results.find((result) => result.error)
+  if (failed?.error) {
+    if (missingMigration(failed.error.message)) return res.json({ ready: false })
+    throw new Error(failed.error.message)
+  }
+  res.json({ ready: true, days, dimensions: Object.fromEntries(wanted.map((dimension, index) => [dimension, results[index].data ?? []])) })
+}))
+
+/** Mapa: las ciudades con sus coordenadas y los países. */
+router.get('/web/geo', handle('geografía web', async (req, res) => {
+  const days = webPeriod(req)
+  const [points, countries, regions] = await Promise.all([
+    supabase.rpc('analytics_geo_points', { p_days: days }),
+    supabase.rpc('analytics_dimension', { p_days: days, p_dimension: 'country', p_limit: 250 }),
+    supabase.rpc('analytics_dimension', { p_days: days, p_dimension: 'region', p_limit: 250 }),
+  ])
+  const failed = [points, countries, regions].find((result) => result.error)
+  if (failed?.error) {
+    if (missingMigration(failed.error.message)) return res.json({ ready: false })
+    throw new Error(failed.error.message)
+  }
+  res.json({ ready: true, days, points: points.data ?? [], countries: countries.data ?? [], regions: regions.data ?? [] })
+}))
+
+/** Cada página vista, con sus entradas y salidas. */
+router.get('/web/pages', handle('páginas web', async (req, res) => {
+  const days = webPeriod(req)
+  const { data, error } = await supabase.rpc('analytics_pages', { p_days: days, p_limit: 1000 })
+  if (error) {
+    if (missingMigration(error.message)) return res.json({ ready: false })
+    throw new Error(error.message)
+  }
+  res.json({ ready: true, days, pages: data ?? [] })
+}))
+
+/** Cada evento: cuántas veces y a cuánta gente. */
+router.get('/web/events', handle('eventos web', async (req, res) => {
+  const days = webPeriod(req)
+  const { data, error } = await supabase.rpc('analytics_events_summary', { p_days: days })
+  if (error) {
+    if (missingMigration(error.message)) return res.json({ ready: false })
+    throw new Error(error.message)
+  }
+  res.json({ ready: true, days, events: data ?? [] })
+}))
+
+const SESSION_COLUMNS =
+  'session_id, user_id, client_id, person_key, entry_path, exit_path, country, region, city, latitude, longitude, device_category, operating_system, os_version, ' +
+  'browser, browser_version, language, screen_resolution, timezone, utm_source, utm_medium, utm_campaign, utm_term, utm_content, referrer_host, is_new_visitor, ' +
+  'page_views_count, duration_seconds, is_engaged, has_conversion, created_at, last_activity_at'
+
+type SessionRow = { user_id: string | null; [key: string]: unknown }
+
+/** Quién es cada cuenta reconocida (las demás son visitantes anónimos). */
+async function namesOf(rows: SessionRow[]): Promise<Map<string, { username: string | null; displayName: string | null; email: string | null }>> {
+  const ids = [...new Set(rows.map((row) => row.user_id).filter((id): id is string => !!id))]
+  const names = new Map<string, { username: string | null; displayName: string | null; email: string | null }>()
+  if (ids.length === 0) return names
+  const { data } = await supabase.from('users').select('id, username, display_name, email').in('id', ids)
+  for (const user of data ?? []) names.set(user.id, { username: user.username ?? null, displayName: user.display_name ?? null, email: user.email ?? null })
+  return names
+}
+
+/** Ahora mismo: las sesiones con actividad en los últimos minutos y la página donde están. */
+router.get('/web/live', handle('en vivo', async (req, res) => {
+  const minutes = Math.min(Math.max(parseInt(String(req.query.minutes ?? '5'), 10) || 5, 1), 60)
+  const since = new Date(Date.now() - minutes * 60000).toISOString()
+  const { data, error } = await supabase
+    .from('analytics_real_sessions')
+    .select(SESSION_COLUMNS)
+    .gte('last_activity_at', since)
+    .order('last_activity_at', { ascending: false })
+    .limit(200)
+  if (error) {
+    if (missingMigration(error.message)) return res.json({ ready: false })
+    throw new Error(error.message)
+  }
+  const rows = (data ?? []) as unknown as SessionRow[]
+  const names = await namesOf(rows)
+  res.json({ ready: true, minutes, now: new Date().toISOString(), sessions: rows.map((row) => ({ ...row, user: row.user_id ? names.get(row.user_id) ?? null : null })) })
+}))
+
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+
+/**
+ * Sesión por sesión: cada entrada al sitio con todo lo que sabemos. Con búsqueda, filtros y páginas.
+ * Filtros: days, q (página, ciudad, país, origen, sitio, idioma), device, country, source, engaged=1, conversion=1,
+ * visitor=new|returning, person (el person_key de una persona).
+ */
+router.get('/web/sessions', handle('sesiones web', async (req, res) => {
+  const pageSize = Math.min(Math.max(parseInt(String(req.query.pageSize ?? '25'), 10) || 25, 1), 100)
+  const page = Math.max(parseInt(String(req.query.page ?? '1'), 10) || 1, 1)
+  const since = periodStart(webPeriod(req)).toISOString()
+  // Lo que se teclea va dentro de un filtro de PostgREST: sin comas, paréntesis ni comodines que lo rompan.
+  const q = String(req.query.q ?? '').replace(/[,()%*]/g, ' ').replace(/\\/g, ' ').trim().slice(0, 60)
+
+  let query = supabase.from('analytics_real_sessions').select(SESSION_COLUMNS, { count: 'exact' }).gte('created_at', since)
+  const device = String(req.query.device ?? '')
+  if (['desktop', 'mobile', 'tablet'].includes(device)) query = query.eq('device_category', device)
+  const country = String(req.query.country ?? '').trim()
+  if (/^[A-Za-z]{2}$/.test(country)) query = query.eq('country', country.toUpperCase())
+  const source = String(req.query.source ?? '').trim().toLowerCase().slice(0, 100)
+  if (source) query = query.eq('utm_source', source)
+  if (req.query.engaged === '1') query = query.eq('is_engaged', true)
+  if (req.query.conversion === '1') query = query.eq('has_conversion', true)
+  if (req.query.visitor === 'new') query = query.eq('is_new_visitor', true)
+  if (req.query.visitor === 'returning') query = query.eq('is_new_visitor', false)
+  const person = String(req.query.person ?? '').trim()
+  if (/^[A-Za-z0-9-]{8,64}$/.test(person)) query = query.eq('person_key', person)
+  if (q) query = query.or(['entry_path', 'exit_path', 'city', 'country', 'utm_source', 'referrer_host', 'language'].map((column) => `${column}.ilike.%${q}%`).join(','))
+
+  const { data, error, count } = await query.order('created_at', { ascending: false }).range((page - 1) * pageSize, page * pageSize - 1)
+  if (error) {
+    if (missingMigration(error.message)) return res.json({ ready: false })
+    throw new Error(error.message)
+  }
+  const rows = (data ?? []) as unknown as SessionRow[]
+  const names = await namesOf(rows)
+  res.json({
+    ready: true,
+    page,
+    pageSize,
+    total: count ?? rows.length,
+    sessions: rows.map((row) => ({ ...row, user: row.user_id ? names.get(row.user_id) ?? null : null })),
+  })
+}))
+
+/** Una sesión por dentro: todos sus datos, cada página con su hora, cada evento con sus parámetros y las otras visitas de esa persona. */
+router.get('/web/sessions/:id', handle('detalle de sesión', async (req, res) => {
+  const id = String(req.params.id)
+  if (!UUID.test(id)) return res.status(400).json({ error: 'Sesión no válida' })
+
+  const { data: session, error } = await supabase.from('analytics_sessions').select('*').eq('session_id', id).maybeSingle()
+  if (error) {
+    if (missingMigration(error.message)) return res.json({ ready: false })
+    throw new Error(error.message)
+  }
+  if (!session) return res.status(404).json({ error: 'No existe esa sesión' })
+
+  const [views, events, others] = await Promise.all([
+    supabase.from('analytics_page_views').select('id, path, query_params, created_at').eq('session_id', id).order('created_at', { ascending: true }).limit(500),
+    supabase.from('analytics_events').select('id, event_name, event_params, is_conversion, created_at').eq('session_id', id).order('created_at', { ascending: true }).limit(500),
+    supabase
+      .from('analytics_sessions')
+      .select('session_id, created_at, entry_path, exit_path, is_engaged, has_conversion, duration_seconds, page_views_count, utm_source, referrer_host')
+      .neq('session_id', id)
+      .or(session.user_id ? `client_id.eq.${session.client_id},user_id.eq.${session.user_id}` : `client_id.eq.${session.client_id}`)
+      .order('created_at', { ascending: false })
+      .limit(30),
+  ])
+  const names = await namesOf([session as SessionRow])
+  res.json({
+    ready: true,
+    session: { ...session, user: session.user_id ? names.get(session.user_id) ?? null : null },
+    pageViews: views.data ?? [],
+    events: events.data ?? [],
+    otherSessions: others.data ?? [],
   })
 }))
 
