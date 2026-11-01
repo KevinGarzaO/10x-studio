@@ -430,6 +430,14 @@ router.get('/:id', async (req: Request, res: Response) => {
 
     if (!error && post) {
       const viewerId = await getOptionalUserId(req)
+
+      // El detalle completo de una vacante (descripción, enlace de postulación, contacto) solo se entrega con sesión: sin esto cualquier
+      // robot podía leerlas todas aunque la página muestre el aviso para registrarse. Lo que ve un buscador sigue abierto en
+      // /api/community/seo/vacancy/:slug (sin contacto). Las discusiones y los artículos siguen públicos.
+      if (!viewerId && (post as any).type === 'job') {
+        return res.status(401).json({ error: 'Inicia sesión para ver esta vacante', code: 'auth_required' })
+      }
+
       const savedMap = await getSavedMap(viewerId, [(post as any).id])
 
       // En una vacante, qué tan bien encaja con quien la mira (el mismo puntaje de "Para ti").

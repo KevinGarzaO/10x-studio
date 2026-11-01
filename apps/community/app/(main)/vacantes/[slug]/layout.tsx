@@ -3,8 +3,6 @@ import { ROLE_CATEGORY_LABELS, SENIORITY_LABELS } from '../../../../lib/profile-
 import { getSeoVacancy, SITE_URL } from '../../../../lib/seo'
 import { jobPostingSchema, jsonLdString } from '../../../../lib/job-posting-schema'
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'
-
 interface VacancyMeta {
   title?: string
   company?: string | null
@@ -29,13 +27,9 @@ const known = (value: string | null | undefined): value is string => !!value && 
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
   const { slug } = await params
 
-  let vacancy: VacancyMeta | null = null
-  try {
-    const res = await fetch(`${API_URL}/api/community/posts/${encodeURIComponent(slug)}`, { next: { revalidate: 600 } })
-    if (res.ok) vacancy = await res.json()
-  } catch {
-    // sin backend: se usan los metadatos generales del sitio
-  }
+  // Se lee la versión pública (sin contacto) que ya usa el JSON-LD: el detalle completo solo se entrega con sesión
+  // y la tarjeta que ven LinkedIn y WhatsApp no la tiene.
+  const vacancy: VacancyMeta | null = await getSeoVacancy(slug)
 
   if (!vacancy?.title) return {}
 

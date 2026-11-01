@@ -26,6 +26,12 @@ const vacancy = {
   tags: [], votesCount: 0, commentsCount: 0, created_at: '2026-10-01T10:00:00Z', skills: ['python'], role_category: 'backend',
 }
 
+/** Lo que el servidor entrega sin sesión (/seo/vacancy/:slug): campos públicos, sin contenido completo ni enlace de postulación. */
+const publicVersion = {
+  id: 'v1', slug: 'backend-engineer-1', title: 'Backend Engineer', company: 'Stripe', company_logo: null, location: null, modalidad: null,
+  seniority_level: null, role_category: 'backend', skills: ['python'], budget: null, created_at: '2026-10-01T10:00:00Z',
+}
+
 function renderPage(shell: { user: unknown; userLoaded: boolean }, requestAuth = vi.fn()) {
   render(
     <ShellContext.Provider value={{ ...shell, requestAuth, search: '', activeTag: null, setActiveTag: vi.fn() }}>
@@ -40,7 +46,11 @@ beforeEach(() => {
   localStorage.clear()
   sessionStorage.clear()
   window.history.pushState({}, '', '/vacantes/backend-engineer-1')
-  global.fetch = vi.fn(async () => ({ ok: true, json: async () => vacancy })) as unknown as typeof fetch
+  // Como el servidor de verdad: sin sesión el detalle se rechaza (401) y solo está la versión pública, sin contenido ni contacto.
+  global.fetch = vi.fn(async (url: string) => {
+    if (String(url).includes('/api/community/seo/vacancy/')) return { ok: true, status: 200, json: async () => ({ vacancy: publicVersion }) }
+    return { ok: false, status: 401, json: async () => ({ error: 'Inicia sesión para ver esta vacante', code: 'auth_required' }) }
+  }) as unknown as typeof fetch
   window.scrollTo = vi.fn() as unknown as typeof window.scrollTo
 })
 
@@ -98,6 +108,17 @@ describe('AuthModal for a vacancy', () => {
 })
 
 describe('the vacancy page for someone without an account', () => {
+  it('works from the public version only: the full detail was refused and nothing of it is on screen', async () => {
+    const requestAuth = renderPage({ user: null, userLoaded: true })
+
+    await waitFor(() => expect(requestAuth).toHaveBeenCalledTimes(1))
+    const urls = (global.fetch as any).mock.calls.map((call: unknown[]) => String(call[0]))
+    expect(urls.some((url: string) => url.endsWith('/api/community/posts/backend-engineer-1'))).toBe(true)
+    expect(urls.some((url: string) => url.includes('/api/community/seo/vacancy/backend-engineer-1'))).toBe(true)
+    // no se buscó el contenido de la empresa (Greenhouse) porque no hay enlace de origen sin sesión
+    expect(urls.some((url: string) => url.includes('greenhouse'))).toBe(false)
+  })
+
   it('asks to sign up when they arrive, naming the vacancy', async () => {
     const requestAuth = renderPage({ user: null, userLoaded: true })
 

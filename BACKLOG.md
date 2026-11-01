@@ -110,11 +110,11 @@ Pedido el 31 de octubre. Un sábado entraron 8 visitantes y ninguno vino de Link
 - **Hecho el 1 de noviembre de 2026** (junto con la bitácora de cambios; ver `requirements/010-change-log-and-weekly-rhythm.md`). Falta que corras `web-analytics-rhythm-migration.sql` en Supabase. Las comparaciones con el mismo día de otras semanas dirán «aún no hay base» hasta que haya 3 semanas de cada día (hacia la tercera semana de noviembre).
 
 ### A. Cerrar la API — P1 · M
-`/api/community/posts`, `/feed` y `/stats` todavía entregan vacantes a quien no tiene sesión.
-- [ ] Exigir sesión en esas rutas.
-- [ ] Mantener abiertas las rutas `/seo/*` (las usan las páginas públicas y Google).
-- [ ] Revisar qué datos necesita ver un visitante (por ejemplo, las cifras de la página de inicio) y qué no.
-- [ ] Pruebas de que sin sesión no se entrega nada.
+**Alcance acordado el 1 de noviembre de 2026 (cambia el texto de arriba):** NO se cierra el feed, NO se cambia ninguna ruta y NO se toca lo público para SEO (`/seo/*`, que sí existe y trae la versión sin contacto). Solo se cierra **el detalle de una vacante** para que ningún robot lo lea sin sesión.
+- [x] `GET /api/community/posts/:id` (por id o slug) contesta **401** a quien no tiene una sesión válida cuando es una vacante. Discusiones y artículos siguen públicos. Probado (`backend/tests/unit/vacancy-detail-auth.test.ts`).
+- [x] La tarjeta que ven LinkedIn y WhatsApp (`generateMetadata` del layout de la vacante) ahora lee la versión pública `/seo/vacancy/:slug`, no el detalle.
+- [x] La página de la vacante sin sesión se arma con esa versión pública (título, empresa, skills) detrás del aviso de registro; con sesión se vuelve a pedir el detalle completo. "Postularse" y el cuadro de registro siguen apareciendo.
+- [ ] **Decisión pendiente:** el listado `GET /posts?type=job` (el feed) devuelve la fila completa de cada vacante (`select('*')`: contenido, enlace de postulación, contactos) también sin sesión, así que un robot puede leer por ahí lo mismo que ya no sale en el detalle. Cerrar eso sin cerrar el feed significa que, sin sesión, la lista omita contacto y enlace de postulación y recorte el contenido; las tarjetas del feed hoy usan el contenido y el enlace, así que cambiaría cómo se ven para un visitante.
 
 ### B. Llave de Resend y token — P1 · S
 - [ ] Crear en Resend una llave con **acceso completo** (sin ella no se pueden leer aperturas ni rebotes; el webhook de **G** quitaría esa necesidad).

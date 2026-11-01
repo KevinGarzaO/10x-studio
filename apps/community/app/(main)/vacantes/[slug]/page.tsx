@@ -165,6 +165,18 @@ interface PostData {
   historyId?: string | null
 }
 
+/** Lo que se muestra de una vacante a quien no tiene sesión: solo los campos públicos de /seo/vacancy/:slug. */
+async function fetchPublicTeaser(slug: string): Promise<PostData> {
+  const res = await fetch(`${API_URL}/api/community/seo/vacancy/${encodeURIComponent(slug)}`)
+  if (!res.ok) throw new Error('Post no encontrado')
+  const { vacancy } = await res.json()
+  return {
+    id: vacancy.id, type: 'job', title: vacancy.title, slug: vacancy.slug, company: vacancy.company, company_logo: vacancy.company_logo,
+    seniority_level: vacancy.seniority_level, role_category: vacancy.role_category, skills: vacancy.skills, modalidad: vacancy.modalidad,
+    created_at: vacancy.created_at, author: { id: null, username: '', display_name: '', photo_url: null }, tags: [], votesCount: 0, commentsCount: 0,
+  }
+}
+
 function buildApplyUrl(platform: string | null, sourceUrl: string | null): string | null {
   if (!platform || !sourceUrl) return null
   if (platform === 'lever') {
@@ -249,7 +261,13 @@ export default function VacancyPage() {
     // Con sesión, el backend agrega qué tan bien encaja la vacante contigo.
     const token = getToken()
     fetch(`${API_URL}/api/community/posts/${slug}`, token ? { headers: { Authorization: `Bearer ${token}` } } : undefined)
-      .then(res => { if (!res.ok) throw new Error('Post no encontrado'); return res.json() })
+      .then(res => {
+        // Sin sesión el servidor no entrega el detalle (401): se arma lo mínimo con la versión pública, sin contacto, que ya ve
+        // un buscador, para que el aviso de registro tenga de qué vacante hablar. La descripción y la postulación quedan fuera.
+        if (res.status === 401) return fetchPublicTeaser(slug)
+        if (!res.ok) throw new Error('Post no encontrado')
+        return res.json()
+      })
       .then(data => {
         if (data.slug && data.slug !== slug && !redirecting) {
           setRedirecting(true)
@@ -267,7 +285,7 @@ export default function VacancyPage() {
         }
       })
       .catch(() => { setError('Publicación no encontrada'); setLoading(false) })
-  }, [slug])
+  }, [slug, user?.id])
 
   async function fetchAtsContent(url: string) {
     try {
@@ -450,7 +468,8 @@ export default function VacancyPage() {
   }
 
   const commentsTotal = comments.length || post.commentsCount || 0
-  const applyAction = expired || !applyUrl
+  // Sin cuenta el servidor no entrega el enlace de postulación (ni el contenido): "Postularse" existe igual y lleva al registro.
+  const applyAction = expired || (!applyUrl && user)
     ? null
     : user
       ? handleApplyClick
@@ -562,7 +581,7 @@ export default function VacancyPage() {
                   )
                 )}
 
-                {applyUrl && !user && (
+                {!user && (
                   <div className="detail-guest-cta">
                     <LockKeyhole size={24} />
                     <h3>¿Interesado en esta vacante?</h3>

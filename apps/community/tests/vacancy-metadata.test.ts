@@ -6,8 +6,14 @@ const respond = (body: unknown, ok = true) => vi.stubGlobal('fetch', vi.fn(() =>
 afterEach(() => { vi.unstubAllGlobals() })
 
 describe('generateMetadata of a vacancy', () => {
+  it('reads the public, contact-free version (the full detail needs a session and a link card has none)', async () => {
+    respond({ vacancy: { title: 'X' } })
+    await generateMetadata({ params: Promise.resolve({ slug: 'backend-engineer-1' }) })
+    expect(String((global.fetch as any).mock.calls[0][0])).toContain('/api/community/seo/vacancy/backend-engineer-1')
+  })
+
   it('gives the link card a title, a description with the key facts, and the company logo', async () => {
-    respond({
+    respond({ vacancy: {
       title: 'Backend Engineer',
       company: 'Stripe',
       company_logo: 'https://cdn.test/stripe.png',
@@ -16,7 +22,7 @@ describe('generateMetadata of a vacancy', () => {
       location: 'Dublin',
       modalidad: 'Remoto',
       skills: ['python', 'aws'],
-    })
+    } })
 
     const meta = await generateMetadata({ params: Promise.resolve({ slug: 'backend-engineer-1' }) })
 
@@ -30,7 +36,7 @@ describe('generateMetadata of a vacancy', () => {
   })
 
   it('leaves out what the vacancy does not say', async () => {
-    respond({ title: 'Analista', company: 'Acme', modalidad: 'No especificado', location: 'unknown', skills: [] })
+    respond({ vacancy: { title: 'Analista', company: 'Acme', modalidad: 'No especificado', location: 'unknown', skills: [] } })
 
     const meta = await generateMetadata({ params: Promise.resolve({ slug: 'x' }) })
 
