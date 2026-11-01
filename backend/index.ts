@@ -46,6 +46,7 @@ import scraperRoutes from './routes/scraper'
 
 import path from 'path'
 import { captureServerError } from './services/web-analytics/telemetry'
+import { recordDeployFromEnv } from './services/analytics/changes'
 
 dotenv.config()
 
@@ -154,6 +155,9 @@ app.use((err: unknown, req: express.Request, _res: express.Response, next: expre
 
 // Start Cron
 initCron()
+
+// Anota el despliegue en la bitácora de cambios (solo en Railway, una vez por commit; nunca estorba al arranque)
+void recordDeployFromEnv().then((result) => { if (result.saved) console.log('[Cambios] despliegue anotado') })
 
 app.listen(Number(PORT), '0.0.0.0', () => {
   console.log(`Server running on port ${PORT}`)

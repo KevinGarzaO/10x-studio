@@ -100,13 +100,14 @@ Lo que no alcance en noviembre se **recorre a diciembre** (empezando por lo de p
 
 ### 0. Ritmo de la semana: medir los días y las horas flojas — P2 · M · se hace PRIMERO
 Pedido el 31 de octubre. Un sábado entraron 8 visitantes y ninguno vino de LinkedIn; nadie lo vio venir porque hoy no hay una pantalla que muestre **cuándo** hay gente y cuándo no. Se hace antes que todo lo demás de noviembre por una razón práctica: **la línea base de cada día de la semana necesita semanas de datos**, y cada día que pasa sin esta pantalla es un día que no se puede comparar después. Es la parte de medición de F de diciembre (días muertos); las activaciones para traer a nuestra gente siguen siendo de diciembre.
-- [ ] Pantalla en Telemetry, dentro de Tráfico web: **"Ritmo de la semana"**. Personas **activas** por día de la semana y por hora (hora de Monterrey) en un mapa de calor, con las personas nuevas y los registros de cada día. Con la misma definición de personas del resto del panel (activa, nueva, registrada).
-- [ ] **Por origen**, en la misma pantalla: cuánto de cada día viene de LinkedIn, correo, directo y de personas que **ya tenían cuenta**. Así se ve si un día flojo es porque afuera se calló o porque los nuestros no vuelven.
-- [ ] **Cada día contra el mismo día de otras semanas** (un sábado con otros sábados, no con un martes): la mediana de las últimas semanas y cuánto se quedó por debajo. Mientras haya menos de 3 semanas de ese día dice "aún no hay base" en lugar de inventar una comparación.
-- [ ] Marca visible de **día flojo** (por debajo de la mitad de su normal) en la tabla de días, para verlo sin tener que calcularlo. La alarma que avisa a media tarde queda en F de diciembre, junto con las alertas de errores.
-- [ ] **Qué se publicó cada día** en la misma línea (publicaciones de LinkedIn, correos enviados), para poder ver si el día flojo coincide con que no se mandó nada. Incluye la regla nueva de 4 publicaciones al día, todos los días.
-- [ ] Los números salen de las sesiones nuevas de analítica (no de la medición vieja) y respetan el equipo, las cuentas de prueba y los robots. Con pruebas contra una base real (PGlite), como el resto de la analítica.
-- [ ] Se actualiza sola cada 10 s como el resto de las pantallas de Telemetry.
+- [x] Pantalla en Telemetry, dentro de Tráfico web: **"Ritmo de la semana"**. Personas **activas** por día de la semana y por hora (hora de Monterrey) en un mapa de calor, con las personas nuevas y los registros de cada día. Con la misma definición de personas del resto del panel (activa, nueva, registrada).
+- [x] **Por origen**, en la misma pantalla: cuánto de cada día viene de LinkedIn, correo, directo y de personas que **ya tenían cuenta**. Así se ve si un día flojo es porque afuera se calló o porque los nuestros no vuelven.
+- [x] **Cada día contra el mismo día de otras semanas** (un sábado con otros sábados, no con un martes): la mediana de las últimas semanas y cuánto se quedó por debajo. Mientras haya menos de 3 semanas de ese día dice "aún no hay base" en lugar de inventar una comparación.
+- [x] Marca visible de **día flojo** (por debajo de la mitad de su normal) en la tabla de días, para verlo sin tener que calcularlo. La alarma que avisa a media tarde queda en F de diciembre, junto con las alertas de errores.
+- [x] **Qué se publicó cada día** en la misma línea (publicaciones de LinkedIn, correos enviados), para poder ver si el día flojo coincide con que no se mandó nada. Incluye la regla nueva de 4 publicaciones al día, todos los días.
+- [x] Los números salen de las sesiones nuevas de analítica (no de la medición vieja) y respetan el equipo, las cuentas de prueba y los robots. Con pruebas contra una base real (PGlite), como el resto de la analítica.
+- [x] Se actualiza sola cada 10 s como el resto de las pantallas de Telemetry.
+- **Hecho el 1 de noviembre de 2026** (junto con la bitácora de cambios; ver `requirements/010-change-log-and-weekly-rhythm.md`). Falta que corras `web-analytics-rhythm-migration.sql` en Supabase. Las comparaciones con el mismo día de otras semanas dirán «aún no hay base» hasta que haya 3 semanas de cada día (hacia la tercera semana de noviembre).
 
 ### A. Cerrar la API — P1 · M
 `/api/community/posts`, `/feed` y `/stats` todavía entregan vacantes a quien no tiene sesión.
@@ -316,7 +317,7 @@ Un agente que hace de **jefe de producto de AvoTalent**: lee los datos, detecta 
 **Requisitos antes de empezar**
 - [ ] Haber acumulado ~2 meses de datos de la medición nueva (desde el 31 de octubre de 2026) y revisar que no tenga huecos.
 - [ ] D de diciembre (privacidad): los datos agregados se mandan a la API de Anthropic para que el agente los lea; la política de privacidad debe decirlo.
-- [ ] Bitácora de lanzamientos al día (qué se cambió y cuándo). Sin ella no se puede medir si una feature funcionó. Conviene empezarla **ya**, para que haya 2 meses de historia cuando arranque E.
+- [x] Bitácora de lanzamientos al día (qué se cambió y cuándo). **Construida el 1 de noviembre de 2026** (Tráfico web > Cambios, herramienta `get_change_log` del MCP, anotación automática de cada despliegue). Falta correr `product-changes-migration.sql` y traer el historial con `npm run log-changes -- --apply`; desde ahí hay que mantenerla al día con `npm run log-change` para lo que no es un commit.
 - [ ] Tus decisiones: dónde corre (supuesto: **en nuestro backend**, siempre encendido, con una llave de la API de Anthropic y un tope de gasto mensual), a quién le llegan los correos, cómo se aprueban las acciones y la lista inicial de acciones permitidas.
 
 **E1. El jefe de producto en conversación (nivel 1)** — Proyecto de Claude Desktop conectado al MCP

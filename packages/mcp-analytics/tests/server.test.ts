@@ -30,7 +30,7 @@ describe('servidor MCP de analítica', () => {
     pg = new PGlite()
     await pg.exec('CREATE ROLE service_role; CREATE ROLE anon; CREATE ROLE authenticated;')
     await pg.exec(`CREATE TABLE users (id uuid PRIMARY KEY, email text, is_test_account boolean DEFAULT false, is_scraper_profile boolean DEFAULT false, user_kind text DEFAULT 'user', created_at timestamptz DEFAULT now())`)
-    for (const file of ['web-analytics-migration.sql', 'web-analytics-detail-migration.sql', 'clarity-migration.sql', 'telemetry-migration.sql']) await pg.exec(read(file))
+    for (const file of ['web-analytics-migration.sql', 'web-analytics-detail-migration.sql', 'clarity-migration.sql', 'telemetry-migration.sql', 'web-analytics-segments-migration.sql', 'product-changes-migration.sql']) await pg.exec(read(file))
 
     const ana = uuid(1)
     await pg.exec(`INSERT INTO users (id, email) VALUES ('${ana}', 'ana@example.com')`)
@@ -63,6 +63,8 @@ describe('servidor MCP de analítica', () => {
       ((NOW() AT TIME ZONE 'America/Monterrey')::date, '/vacantes/x', 100, 120, 1, 2, 0, 80),
       ((NOW() AT TIME ZONE 'America/Monterrey')::date - 40, '/empleos/dotnet', 10, 10, 99, 99, 99, 1)`)
 
+    await pg.exec(`INSERT INTO product_changes (title, kind, area, shipped_at) VALUES ('Nuevo registro más corto', 'feature', 'auth', now() - interval '12 hours')`)
+
     const [clientTransport, serverTransport] = InMemoryTransport.createLinkedPair()
     await createServer(db, { clarityProjectId: 'abc123' }).connect(serverTransport)
     client = new Client({ name: 'test', version: '0.0.0' })
@@ -76,7 +78,7 @@ describe('servidor MCP de analítica', () => {
 
   it('exposes the three tools, all read-only', async () => {
     const { tools } = await client.listTools()
-    expect(tools.map((tool) => tool.name).sort()).toEqual(['get_clarity_frustration_data', 'get_error_logs_with_clarity_video', 'get_flow_performance_analysis', 'get_funnel_dropoffs', 'get_user_session_recording'])
+    expect(tools.map((tool) => tool.name).sort()).toEqual(['get_change_log', 'get_clarity_frustration_data', 'get_error_logs_with_clarity_video', 'get_flow_performance_analysis', 'get_funnel_dropoffs', 'get_user_session_recording'])
     expect(tools.every((tool) => tool.annotations?.readOnlyHint === true)).toBe(true)
   })
 
@@ -170,6 +172,16 @@ describe('servidor MCP de analítica', () => {
     expect((await call('get_flow_performance_analysis', { days: 7, flow: 'job_application' })).json.flows).toEqual([])
   })
 
+  it('get_change_log: each change with its before/after per day, its comparability and the reminder that it proves no cause', async () => {
+    const { json } = await call('get_change_log', { windowDays: 7 })
+    expect(json.windowDays).toBe(7)
+    expect(json.changes).toHaveLength(1)
+    expect(json.changes[0]).toMatchObject({ title: 'Nuevo registro más corto', kind: 'feature', area: 'auth', confidence: 'pendiente' })
+    expect(json.changes[0].sessionsPerDay.after).not.toBeNull()
+    expect(json.note).toContain('NO prueba')
+    expect((await call('get_change_log', { windowDays: 5 })).isError).toBe(true)
+  })
+
   it('the read-only role from the README can run every tool and cannot write (the documented SQL is tested, not just written)', async () => {
     const readme = fs.readFileSync(path.join(__dirname, '../README.md'), 'utf8')
     const block = readme.match(/```sql\r?\n([\s\S]*?)```/)![1]
@@ -191,6 +203,7 @@ describe('servidor MCP de analítica', () => {
     const telemetry = await import('../src/telemetry-queries')
     expect((await telemetry.getErrorLogsWithClarityVideo(asReader, { days: 7 })).errors.length).toBeGreaterThan(0)
     expect((await telemetry.getFlowPerformanceAnalysis(asReader, { days: 7 })).flows.length).toBeGreaterThan(0)
+    expect((await telemetry.getChangeLog(asReader, { windowDays: 7 })).changes.length).toBe(1)
     expect((await getUserSessionRecording(asReader, { email: 'ana@example.com' })).found).toBe(true)
 
     await pg.exec('SET ROLE avo_mcp_reader')

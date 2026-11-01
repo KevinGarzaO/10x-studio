@@ -9,6 +9,8 @@
     "lint": "eslint . --ext .ts",
     "test": "vitest run tests/unit",
     "clarity-sync": "tsx scripts/clarity-sync.ts",
+    "log-changes": "tsx scripts/log-changes.ts",
+    "log-change": "tsx scripts/log-change.ts",
     "test:integration": "vitest run tests/integration",
     "migrate-history": "tsx scripts/migrate-history.ts",
     "sync-to-community": "tsx scripts/sync-to-community.ts",

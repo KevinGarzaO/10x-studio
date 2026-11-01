@@ -27,6 +27,8 @@ const SCREENS = [
   { href: '/panel/trafico/retencion', title: 'Retención', text: 'Quién usa AvoTalent, quién volvió y con qué frecuencia.' },
   { href: '/panel/trafico/errores', title: 'Errores', text: 'Lo que falló en el sitio, con la gente afectada y el video de Clarity.' },
   { href: '/panel/trafico/flujos', title: 'Flujos críticos', text: 'Iniciar sesión, registrarse, buscar y postularse: tiempos, abandono y frustración.' },
+  { href: '/panel/trafico/ritmo', title: 'Ritmo de la semana', text: 'Cuándo hay gente: mapa de calor por día y hora, y cada día contra su normal.' },
+  { href: '/panel/trafico/cambios', title: 'Cambios', text: 'Qué se cambió y cuándo, con lo que pasó antes y después.' },
 ]
 
 export default function TraficoPage() {

@@ -7,6 +7,8 @@ import { ttlCache } from '../../../services/analytics/cache'
 import { emptySegment, isMissingMigration, loadSegments, trackingSince, SEGMENT_GROUPS, type SegmentCounts, type SegmentGroup } from '../../../services/analytics/segments'
 import { dailyQuota, daysUntilNextBatch, nextBatchFrom } from '../../../services/scraper/quota'
 import { loadAlerts } from '../../../services/analytics/alerts-data'
+import { IMPACT_WINDOWS, loadChangeImpact } from '../../../services/analytics/changes'
+import { loadRhythm } from '../../../services/analytics/rhythm'
 import { stepsByFlow, type FlowStepRow } from '../../../services/analytics/flows'
 import { loadMatchingOverview } from '../../../services/analytics/matching-data'
 import {
@@ -108,6 +110,26 @@ router.get('/me', async (req, res) => {
     : { data: null }
   res.json({ ok: true, user: data ? { username: data.username ?? null, displayName: data.display_name ?? null, photoUrl: data.photo_url ?? null, email: data.email ?? null } : null })
 })
+
+/**
+ * Bitácora de cambios con lo que pasó antes y después de cada uno (backend/sql/product-changes-migration.sql). `window` = 3, 7 o 14 días
+ * a cada lado. Cada cambio trae su `confidence`: la comparación nunca prueba que el cambio fue la causa, solo dice qué se movió.
+ */
+router.get('/changes', handle('cambios', async (req, res) => {
+  const requested = parseInt(String(req.query.window ?? '7'), 10)
+  const windowDays = (IMPACT_WINDOWS as readonly number[]).includes(requested) ? requested : 7
+  const limit = Math.min(Math.max(parseInt(String(req.query.limit ?? '100'), 10) || 100, 1), 200)
+  res.json(await loadChangeImpact(windowDays, limit))
+}))
+
+/**
+ * Ritmo de la semana: mapa de calor por día de la semana y hora, y una fila por día con su origen, su base (el mismo día de otras semanas)
+ * y lo que se publicó (backend/sql/web-analytics-rhythm-migration.sql). `days` = 7, 30 o 90.
+ */
+router.get('/web/rhythm', handle('ritmo de la semana', async (req, res) => {
+  const requested = parseInt(String(req.query.days ?? '30'), 10)
+  res.json(await loadRhythm(requested === 7 || requested === 90 ? requested : 30))
+}))
 
 /** El match: qué tan bien encajan las vacantes con la gente que hay, con el mismo motor de "Para ti". */
 router.get('/matching', handle('match', async (_req, res) => {

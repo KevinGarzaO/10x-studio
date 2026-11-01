@@ -164,3 +164,83 @@ export async function getFlowPerformanceAnalysis(db: Queryable, input: { days?: 
   }))
   return { days, flows, note: flows.length === 0 ? 'Sin intentos de flujos en ese periodo (o falta correr telemetry-migration.sql).' : null }
 }
+
+// ------------------------------------------------------------------------------------------------
+// Bitácora de cambios del producto: antes y después de cada uno
+// ------------------------------------------------------------------------------------------------
+
+export interface ChangeLogShift { before: number | null; after: number | null; changePct: number | null }
+export interface ChangeLog {
+  windowDays: number
+  changes: {
+    shippedAt: string
+    title: string
+    kind: string
+    area: string
+    expectedMetric: string | null
+    source: string
+    activePeoplePerDay: ChangeLogShift
+    newActivePerDay: ChangeLogShift
+    sessionsPerDay: ChangeLogShift
+    registrationsPerDay: ChangeLogShift
+    errorsPerDay: ChangeLogShift
+    beforeTrackedDays: number
+    afterTrackedDays: number
+    nearbyChanges: number
+    confidence: 'pendiente' | 'sin_base' | 'mezclado' | 'comparable'
+  }[]
+  /** Siempre presente: recuerda que antes/después no prueba una causa. */
+  note: string
+}
+
+const numeric = (value: unknown) => (value === null || value === undefined ? 0 : Number(value))
+/** Total entre días; null si no hay días con qué dividir (igual que backend/services/analytics/changes.ts). */
+const perDay = (total: number, days: number) => (days >= 0.25 ? round(total / days, 2) : null)
+const shiftOf = (before: number | null, after: number | null): ChangeLogShift => ({
+  before,
+  after,
+  changePct: before !== null && after !== null && before > 0 ? Math.round(((after - before) / before) * 100) : null,
+})
+
+export async function getChangeLog(db: Queryable, input: { windowDays?: number; limit?: number; sinceDays?: number } = {}): Promise<ChangeLog> {
+  const windowDays = [3, 7, 14].includes(input.windowDays as number) ? (input.windowDays as number) : 7
+  const limit = clamp(input.limit, 1, 100, 30)
+  const sinceDays = clamp(input.sinceDays, 1, 365, 60)
+  const { rows } = await db.query<Record<string, any>>(
+    'SELECT * FROM analytics_change_impact($1, $2, now() - make_interval(days => $3))',
+    [windowDays, limit, sinceDays],
+  )
+
+  const changes = rows.map((row) => {
+    const beforeDays = numeric(row.before_tracked_days)
+    const afterDays = numeric(row.after_tracked_days)
+    const confidence: ChangeLog['changes'][number]['confidence'] =
+      afterDays < 1 ? 'pendiente' : beforeDays < 2 ? 'sin_base' : row.nearby_changes >= 3 ? 'mezclado' : 'comparable'
+    return {
+      shippedAt: new Date(row.shipped_at).toISOString(),
+      title: String(row.title),
+      kind: String(row.kind),
+      area: String(row.area),
+      expectedMetric: row.expected_metric ?? null,
+      source: String(row.source),
+      activePeoplePerDay: shiftOf(perDay(row.before_active_person_days, beforeDays), perDay(row.after_active_person_days, afterDays)),
+      newActivePerDay: shiftOf(perDay(row.before_new_active, beforeDays), perDay(row.after_new_active, afterDays)),
+      sessionsPerDay: shiftOf(perDay(row.before_sessions, beforeDays), perDay(row.after_sessions, afterDays)),
+      // Los registros salen de `users` (tiene más historia que la medición): se dividen entre días de calendario.
+      registrationsPerDay: shiftOf(perDay(row.before_registrations, numeric(row.before_calendar_days)), perDay(row.after_registrations, numeric(row.after_calendar_days))),
+      errorsPerDay: shiftOf(perDay(row.before_errors, beforeDays), perDay(row.after_errors, afterDays)),
+      beforeTrackedDays: round(beforeDays, 2),
+      afterTrackedDays: round(afterDays, 2),
+      nearbyChanges: Number(row.nearby_changes),
+      confidence,
+    }
+  })
+  return {
+    windowDays,
+    changes,
+    note:
+      'Promedios por día medido, antes y después de cada cambio. Antes/después NO prueba que el cambio fue la causa: ' +
+      'revisa `confidence` (sin_base = hay menos de 2 días medidos antes; mezclado = 3+ cambios cerca; pendiente = muy reciente) y `nearbyChanges`. ' +
+      'La medición de sesiones empezó el 30 de octubre de 2026; antes solo los registros tienen historia.',
+  }
+}

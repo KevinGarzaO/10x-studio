@@ -2,7 +2,7 @@ import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
 import type { CallToolResult } from '@modelcontextprotocol/sdk/types.js'
 import { z } from 'zod'
 import { getClarityFrustration, getFunnelDropoffs, getUserSessionRecording, type Queryable } from './queries'
-import { getErrorLogsWithClarityVideo, getFlowPerformanceAnalysis } from './telemetry-queries'
+import { getChangeLog, getErrorLogsWithClarityVideo, getFlowPerformanceAnalysis } from './telemetry-queries'
 
 export interface ServerOptions {
   /** El proyecto de Clarity (NEXT_PUBLIC_CLARITY_PROJECT_ID), para armar el enlace al panel. */
@@ -114,6 +114,23 @@ export function createServer(db: Queryable, options: ServerOptions = {}): McpSer
       annotations: { readOnlyHint: true, openWorldHint: false },
     },
     (args) => respond(() => getFlowPerformanceAnalysis(db, args)),
+  )
+
+  tool(
+    'get_change_log',
+    {
+      title: 'Bitácora de cambios y su antes/después',
+      description:
+        'Los cambios que se han hecho al producto (funciones, arreglos, ajustes de configuración) con su fecha, y por cada uno el promedio por día de personas activas, nuevas activas, sesiones, registros y errores ' +
+        'en los días de ANTES y de DESPUÉS (3, 7 o 14 por lado). Cada cambio trae `confidence` y `nearbyChanges`: antes/después no prueba una causa, solo dice qué se movió y qué tan comparable es.',
+      inputSchema: {
+        windowDays: z.union([z.literal(3), z.literal(7), z.literal(14)]).default(7).describe('Días a cada lado del cambio.'),
+        sinceDays: z.number().int().min(1).max(365).default(60).describe('Cuántos días hacia atrás mirar cambios.'),
+        limit: z.number().int().min(1).max(100).default(30),
+      },
+      annotations: { readOnlyHint: true, openWorldHint: false },
+    },
+    (args) => respond(() => getChangeLog(db, args)),
   )
 
   return server
