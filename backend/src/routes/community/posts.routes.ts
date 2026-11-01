@@ -11,6 +11,8 @@ import { validateMemberPost, normalizeTags, POSTS_PER_DAY } from '../../../servi
 import { uploadPostImage, isCommunityImageUrl } from '../../../services/community/post-images'
 import { loadAllowedTags, findInvalidTags } from '../../../services/community/post-tags'
 import { isRangeNotSatisfiable } from '../../../services/community/pagination'
+import { getOptionalUserId } from '../../../services/community/viewer'
+import { redactListForGuest } from '../../../services/community/guest-view'
 
 const router = Router()
 
@@ -33,17 +35,9 @@ function normalizeAuthor(a: any) {
   }
 }
 
-// The post list/detail endpoints are public (no login required to browse),
-// but the "Guardar" bookmark state still needs to reflect a logged-in
-// viewer's own history — so auth here is optional, not required.
-async function getOptionalUserId(req: Request): Promise<string | null> {
-  const authHeader = req.headers.authorization
-  if (!authHeader?.startsWith('Bearer ')) return null
-  const token = authHeader.split(' ')[1]
-  const { data, error } = await supabase.auth.getUser(token)
-  if (error || !data.user) return null
-  return data.user.id
-}
+// The post list endpoints are public (no login required to browse), but the "Guardar" bookmark state still needs to reflect a
+// logged-in viewer's own history — so auth here is optional (getOptionalUserId). Without a session a vacancy is delivered reduced
+// to what a feed card shows (services/community/guest-view.ts); the full detail needs a session.
 
 // Maps community_posts.id -> the user_vacancy_history row id, so the
 // frontend has what it needs to call DELETE /api/community/history/:id to
@@ -199,6 +193,7 @@ router.get('/', async (req: Request, res: Response) => {
       const viewerId = await getOptionalUserId(req)
       const savedMap = await getSavedMap(viewerId, ordered.map((p: any) => p.id))
       ordered = ordered.map((p: any) => ({ ...p, stats: statsOf(p), isSaved: savedMap.has(p.id), historyId: savedMap.get(p.id) ?? null }))
+      if (!viewerId) ordered = redactListForGuest(ordered)
 
       return res.json({
         posts: ordered,
@@ -319,6 +314,7 @@ router.get('/', async (req: Request, res: Response) => {
     const statsOf = type === 'job' ? await loadVacancyStats() : null
     const votedSet = await getVotedSet(viewerId, mapped.map((p: any) => p.id))
     mapped = mapped.map((p: any) => ({ ...p, ...(statsOf ? { stats: statsOf(p) } : {}), isSaved: savedMap.has(p.id), historyId: savedMap.get(p.id) ?? null, hasVoted: votedSet.has(p.id) }))
+    if (!viewerId) mapped = redactListForGuest(mapped)
 
     res.json({
       posts: mapped,

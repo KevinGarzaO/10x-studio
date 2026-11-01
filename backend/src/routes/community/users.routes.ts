@@ -6,6 +6,8 @@ import { sameSkills } from '../../../lib/same-skills'
 import { buildCandidateProfileSchema, firstUnapprovedSkill, cvPayloadSchema, parseStoredCv } from '@avocado/schemas'
 import { requireAccountType } from '../../middleware/require-account-type.middleware'
 import { refreshUserMatches } from '../../../services/matching/refresh'
+import { getOptionalUserId } from '../../../services/community/viewer'
+import { redactProfileForGuest } from '../../../services/community/guest-view'
 
 const router = Router()
 
@@ -128,7 +130,8 @@ router.get('/:username', async (req: Request, res: Response) => {
       return res.status(404).json({ error: 'Usuario no encontrado' })
     }
 
-    res.json({ user })
+    // Sin sesión, las vacantes de un perfil salen reducidas a lo que muestra una tarjeta (services/community/guest-view.ts).
+    res.json({ user: (await getOptionalUserId(req)) ? user : redactProfileForGuest(user) })
   } catch (error) {
     console.error('Community Get user error:', error)
     res.status(500).json({ error: 'Error al obtener el usuario' })

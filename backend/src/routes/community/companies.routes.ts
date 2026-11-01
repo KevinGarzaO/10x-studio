@@ -1,6 +1,8 @@
 import { Router, Request, Response } from 'express'
 import { supabase } from '../../../services/supabase.service'
 import { loadPublicProfile, PROFILE_POSTS_SELECT } from './users.routes'
+import { getOptionalUserId } from '../../../services/community/viewer'
+import { redactProfileForGuest } from '../../../services/community/guest-view'
 
 const router = Router()
 
@@ -32,7 +34,8 @@ router.get('/:slug', async (req: Request, res: Response) => {
       return res.status(404).json({ error: 'Empresa no encontrada' })
     }
 
-    res.json({ user: company })
+    // Sin sesión, sus vacantes salen reducidas a lo que muestra una tarjeta (services/community/guest-view.ts).
+    res.json({ user: (await getOptionalUserId(req)) ? company : redactProfileForGuest(company) })
   } catch (error) {
     console.error('Community Get company error:', error)
     res.status(500).json({ error: 'Error al obtener la empresa' })
