@@ -3,6 +3,7 @@ import { mcpAuthRouter, getOAuthProtectedResourceMetadataUrl } from '@modelconte
 import type { OAuthServerProvider } from '@modelcontextprotocol/sdk/server/auth/provider.js'
 import { requireBearerAuth } from '@modelcontextprotocol/sdk/server/auth/middleware/bearerAuth.js'
 import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js'
+import { JSONRPCMessageSchema } from '@modelcontextprotocol/sdk/types.js'
 import type { Queryable } from '../queries'
 import { createServer } from '../server'
 import { OwnerOAuthProvider, SCOPE, type ProviderOptions } from './provider'
@@ -69,8 +70,22 @@ export function createRemoteApp(options: RemoteAppOptions): { app: Express; prov
   app.post('/mcp', auth, express.json({ limit: '1mb' }), async (req: Request, res: Response) => {
     const body = req.body as { method?: unknown } | unknown[] | undefined
     res.locals.rpcMethod = Array.isArray(body) ? 'batch' : String((body as { method?: unknown } | undefined)?.method ?? '').replace(/[^\w/.-]/g, '').slice(0, 40)
+    // Diagnóstico seguro: qué versión del protocolo dice hablar el cliente y, si su mensaje no pasa la validación, QUÉ campos fallan
+    // (solo nombres y códigos de error, nunca valores). Los mensajes de Claude no llevan claves, pero así no se depende de ello.
+    const protocol = String(req.get('mcp-protocol-version') ?? '-').replace(/[^\w.-]/g, '').slice(0, 20)
+    const accept = String(req.get('accept') ?? '-').replace(/[^\w/,;= .*-]/g, '').slice(0, 80)
+    if (!Array.isArray(body)) {
+      const checked = JSONRPCMessageSchema.safeParse(req.body)
+      if (!checked.success) {
+        const keys = Object.keys((req.body ?? {}) as object).join(',').slice(0, 120)
+        const issues = checked.error.issues.slice(0, 6).map((issue) => `${issue.path.join('.')}:${issue.code}`).join(' ')
+        console.log(`[mcp] mensaje no válido (campos: ${keys}) problemas: ${issues}`)
+      }
+    }
+    console.log(`[mcp] ${String(res.locals.rpcMethod)} protocolo=${protocol} accept="${accept}"`)
     const server = createServer(options.db, { clarityProjectId: options.clarityProjectId })
     const transport = new StreamableHTTPServerTransport({ sessionIdGenerator: undefined, enableJsonResponse: true })
+    transport.onerror = (error) => { console.log(`[mcp] el transporte rechazó: ${String(error.message).replace(/\s+/g, ' ').slice(0, 200)}`) }
     res.on('close', () => { void transport.close(); void server.close() })
     try {
       await server.connect(transport)
