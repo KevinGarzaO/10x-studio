@@ -3,6 +3,7 @@ import type { CallToolResult } from '@modelcontextprotocol/sdk/types.js'
 import { z } from 'zod'
 import { getClarityFrustration, getFunnelDropoffs, getUserSessionRecording, type Queryable } from './queries'
 import { getChangeLog, getErrorLogsWithClarityVideo, getFlowPerformanceAnalysis } from './telemetry-queries'
+import { getRetentionAndCohorts, getServerSpeed, getSignupSources, getWeeklyRhythm } from './product-queries'
 
 export interface ServerOptions {
   /** El proyecto de Clarity (NEXT_PUBLIC_CLARITY_PROJECT_ID), para armar el enlace al panel. */
@@ -131,6 +132,71 @@ export function createServer(db: Queryable, options: ServerOptions = {}): McpSer
       annotations: { readOnlyHint: true, openWorldHint: false },
     },
     (args) => respond(() => getChangeLog(db, args)),
+  )
+
+  tool(
+    'get_retention_and_cohorts',
+    {
+      title: 'Retención, cohortes y personas nuevas contra recurrentes',
+      description:
+        'Con la definición única de personas del panel: cuántas personas entraron, cuántas son nuevas y cuántas recurrentes, cuántas solo visitaron (ruido), cuántas nuevas se registraron y la conversión (registradas nuevas ÷ nuevas activas); ' +
+        'personas activas por día, semana y mes; de las que ya habían entrado antes cuántas volvieron a otro día; y las cohortes semanales de llegada con el % que sigue activo semana a semana. ' +
+        'La medición empezó el 30 de octubre de 2026: con pocos días casi nadie ha podido volver. Mira siempre el tamaño de la cohorte.',
+      inputSchema: {
+        days: z.number().int().min(1).max(90).default(30),
+        weeks: z.number().int().min(1).max(12).default(8).describe('Cuántas semanas de cohortes mostrar.'),
+      },
+      annotations: { readOnlyHint: true, openWorldHint: false },
+    },
+    (args) => respond(() => getRetentionAndCohorts(db, args)),
+  )
+
+  tool(
+    'get_signup_sources',
+    {
+      title: 'De dónde llegan los registros',
+      description:
+        'Por canal (origen / medio / campaña), por publicación de LinkedIn y el total de LinkedIn: personas nuevas activas, cuántas se registraron y la conversión. También cuántas cuentas reales se crearon en el periodo. ' +
+        'Una persona cuenta una vez en cada canal que visitó; los canales no suman el total. Con pocas personas por canal, 0 % o 100 % casi siempre es azar.',
+      inputSchema: {
+        days: z.number().int().min(1).max(90).default(30),
+        limit: z.number().int().min(1).max(30).default(12).describe('Cuántos canales y publicaciones mostrar.'),
+      },
+      annotations: { readOnlyHint: true, openWorldHint: false },
+    },
+    (args) => respond(() => getSignupSources(db, args)),
+  )
+
+  tool(
+    'get_weekly_rhythm',
+    {
+      title: 'Ritmo de la semana',
+      description:
+        'Cuándo hay gente en AvoTalent: una fila por día (personas activas, nuevas, las que ya tenían cuenta, origen LinkedIn/correo/directo/otro, registros) comparada con la mediana del mismo día de la semana de las últimas 4 semanas ' +
+        '(hace falta tener 3: si no, "sin_base"), los días flojos (menos de la mitad de lo normal) y las horas con más personas activas. Las horas son de Monterrey.',
+      inputSchema: {
+        days: z.number().int().min(7).max(90).default(30),
+      },
+      annotations: { readOnlyHint: true, openWorldHint: false },
+    },
+    (args) => respond(() => getWeeklyRhythm(db, args)),
+  )
+
+  tool(
+    'get_server_speed',
+    {
+      title: 'Velocidad del servidor',
+      description:
+        'Cuánto tarda cada ruta de la API: peticiones, errores, promedio, mediana y p95 (estimados con rangos: "hasta N ms"), máximo, tiempo total y qué parte del tiempo del servidor consume. Ordenado por tiempo total. ' +
+        'Una ruta es lenta si su p95 pasa de 1 s. Opcional `routeContains` para una ruta concreta (por ejemplo "community/posts" para el feed y la vacante). Solo mide el servidor, no el navegador.',
+      inputSchema: {
+        days: z.number().int().min(1).max(30).default(1).describe('1 = últimas 24 horas.'),
+        routeContains: z.string().max(60).optional().describe('Parte del nombre de la ruta, por ejemplo community/posts.'),
+        limit: z.number().int().min(1).max(60).default(15),
+      },
+      annotations: { readOnlyHint: true, openWorldHint: false },
+    },
+    (args) => respond(() => getServerSpeed(db, args)),
   )
 
   return server

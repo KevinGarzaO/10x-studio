@@ -30,7 +30,7 @@ describe('servidor MCP de analítica', () => {
     pg = new PGlite()
     await pg.exec('CREATE ROLE service_role; CREATE ROLE anon; CREATE ROLE authenticated;')
     await pg.exec(`CREATE TABLE users (id uuid PRIMARY KEY, email text, is_test_account boolean DEFAULT false, is_scraper_profile boolean DEFAULT false, user_kind text DEFAULT 'user', created_at timestamptz DEFAULT now())`)
-    for (const file of ['web-analytics-migration.sql', 'web-analytics-detail-migration.sql', 'clarity-migration.sql', 'telemetry-migration.sql', 'web-analytics-segments-migration.sql', 'product-changes-migration.sql']) await pg.exec(read(file))
+    for (const file of ['web-analytics-migration.sql', 'web-analytics-detail-migration.sql', 'clarity-migration.sql', 'telemetry-migration.sql', 'web-analytics-segments-migration.sql', 'web-analytics-retention-migration.sql', 'web-analytics-rhythm-migration.sql', 'product-changes-migration.sql', 'api-timing-migration.sql']) await pg.exec(read(file))
 
     const ana = uuid(1)
     await pg.exec(`INSERT INTO users (id, email) VALUES ('${ana}', 'ana@example.com')`)
@@ -65,6 +65,10 @@ describe('servidor MCP de analítica', () => {
 
     await pg.exec(`INSERT INTO product_changes (title, kind, area, shipped_at) VALUES ('Nuevo registro más corto', 'feature', 'auth', now() - interval '12 hours')`)
 
+    await pg.exec(`INSERT INTO api_timing_hourly (hour, method, route, requests, errors, sum_ms, max_ms, b0, b1, b2, b3, b4, b5, b6, b7) VALUES
+      (date_trunc('hour', now()), 'GET', '/api/community/posts', 10, 1, 8000, 3000, 2, 2, 2, 1, 1, 1, 1, 0),
+      (date_trunc('hour', now()), 'GET', '/api/community/stats', 40, 0, 800, 60, 38, 2, 0, 0, 0, 0, 0, 0)`)
+
     const [clientTransport, serverTransport] = InMemoryTransport.createLinkedPair()
     await createServer(db, { clarityProjectId: 'abc123' }).connect(serverTransport)
     client = new Client({ name: 'test', version: '0.0.0' })
@@ -78,7 +82,7 @@ describe('servidor MCP de analítica', () => {
 
   it('exposes the three tools, all read-only', async () => {
     const { tools } = await client.listTools()
-    expect(tools.map((tool) => tool.name).sort()).toEqual(['get_change_log', 'get_clarity_frustration_data', 'get_error_logs_with_clarity_video', 'get_flow_performance_analysis', 'get_funnel_dropoffs', 'get_user_session_recording'])
+    expect(tools.map((tool) => tool.name).sort()).toEqual(['get_change_log', 'get_clarity_frustration_data', 'get_error_logs_with_clarity_video', 'get_flow_performance_analysis', 'get_funnel_dropoffs', 'get_retention_and_cohorts', 'get_server_speed', 'get_signup_sources', 'get_user_session_recording', 'get_weekly_rhythm'])
     expect(tools.every((tool) => tool.annotations?.readOnlyHint === true)).toBe(true)
   })
 
@@ -182,6 +186,49 @@ describe('servidor MCP de analítica', () => {
     expect((await call('get_change_log', { windowDays: 5 })).isError).toBe(true)
   })
 
+  it('get_retention_and_cohorts: new against returning people, the single conversion definition, and who came back', async () => {
+    const { json } = await call('get_retention_and_cohorts', { days: 7 })
+    // 4 personas entraron ayer y las 4 estuvieron activas; todas son nuevas y una de ellas (ana, cuenta creada ayer) se registró
+    expect(json.people).toMatchObject({ visitors: 4, newActive: 4, returningActive: 0, visitOnly: 0, registeredNew: 1, conversionPct: 25 })
+    expect(json.activeUsers.length).toBeGreaterThan(0)
+    // nadie ha podido volver todavía: todas entraron ayer y no hay otro día
+    expect(json.returning).toMatchObject({ activePeople: 4, eligible: 4, returned: 0, returnedPct: 0 })
+    expect(json.cohorts[0].size).toBe(4)
+    expect(json.note).toContain('30 de octubre')
+    // nunca una persona ni un identificador
+    expect(JSON.stringify(json)).not.toMatch(/client-|ana@example|person_key/)
+  })
+
+  it('get_signup_sources: channels with their conversion, the LinkedIn total, and the real accounts created', async () => {
+    const { json } = await call('get_signup_sources', { days: 7 })
+    expect(json.realAccountsCreated).toBe(1)
+    expect(json.channels[0]).toMatchObject({ source: '(direct) / (none) / (not set)', newActive: 4, registeredNew: 1, conversionPct: 25 })
+    expect(json.linkedinTotal === null || json.linkedinTotal.newActive === 0).toBe(true)
+    expect(json.note).toContain('azar')
+    expect(JSON.stringify(json)).not.toMatch(/client-|ana@example/)
+  })
+
+  it('get_weekly_rhythm: a row per day judged against the same weekday, no base yet, and nobody identifiable', async () => {
+    const { json } = await call('get_weekly_rhythm', { days: 7 })
+    expect(json.days_detail.length).toBeGreaterThanOrEqual(1)
+    // el primer día de la medición no se juzga, y con un solo día de datos no puede haber días flojos ni base
+    expect(json.days_detail[0]).toMatchObject({ active: 4, status: 'parcial', baseline: null })
+    expect(json.slowDays).toEqual([])
+    expect(Array.isArray(json.busiestHours)).toBe(true)
+    expect(JSON.stringify(json)).not.toMatch(/client-|ana@example/)
+    expect((await call('get_weekly_rhythm', { days: 3 })).isError).toBe(true)
+  })
+
+  it('get_server_speed: routes by total time with estimated median and p95, slow ones marked, and a safe route filter', async () => {
+    const { json } = await call('get_server_speed', { days: 1 })
+    expect(json.routes.map((route: any) => route.route)).toEqual(['/api/community/posts', '/api/community/stats'])
+    expect(json.routes[0]).toMatchObject({ requests: 10, errors: 1, errorPct: 10, avgMs: 800, p50Ms: 250, p95Ms: 3000, maxMs: 3000, slow: true })
+    expect(json.routes[1]).toMatchObject({ requests: 40, p50Ms: 50, p95Ms: 50, slow: false })
+    expect(json.routes[0].shareOfServerTimePct).toBeGreaterThan(json.routes[1].shareOfServerTimePct)
+    expect((await call('get_server_speed', { routeContains: 'stats' })).json.routes).toHaveLength(1)
+    expect((await call('get_server_speed', { routeContains: "x'; DROP TABLE users;--" })).isError).toBe(true)
+  })
+
   it('the read-only role from the README can run every tool and cannot write (the documented SQL is tested, not just written)', async () => {
     const readme = fs.readFileSync(path.join(__dirname, '../README.md'), 'utf8')
     const block = readme.match(/```sql\r?\n([\s\S]*?)```/)![1]
@@ -204,6 +251,11 @@ describe('servidor MCP de analítica', () => {
     expect((await telemetry.getErrorLogsWithClarityVideo(asReader, { days: 7 })).errors.length).toBeGreaterThan(0)
     expect((await telemetry.getFlowPerformanceAnalysis(asReader, { days: 7 })).flows.length).toBeGreaterThan(0)
     expect((await telemetry.getChangeLog(asReader, { windowDays: 7 })).changes.length).toBe(1)
+    const product = await import('../src/product-queries')
+    expect((await product.getRetentionAndCohorts(asReader, { days: 7 })).people.visitors).toBeGreaterThan(0)
+    expect((await product.getSignupSources(asReader, { days: 7 })).channels.length).toBeGreaterThan(0)
+    expect((await product.getWeeklyRhythm(asReader, { days: 7 })).days_detail.length).toBeGreaterThan(0)
+    expect((await product.getServerSpeed(asReader, { days: 1 })).routes.length).toBe(2)
     expect((await getUserSessionRecording(asReader, { email: 'ana@example.com' })).found).toBe(true)
 
     await pg.exec('SET ROLE avo_mcp_reader')

@@ -70,8 +70,12 @@ En el panel de Telemetry (telemetry.avotalent.app) hay: Resumen, LinkedIn, Vacan
 - `get_error_logs_with_clarity_video`: errores del navegador, la API y el servidor, con su video.
 - `get_flow_performance_analysis`: iniciar sesión, crear cuenta, buscar vacantes, postularse, **ver el feed** y **ver una vacante**: completitud, abandono, tiempos y frustración.
 - `get_change_log`: lo que se cambió y cuándo, con su antes/después.
+- `get_retention_and_cohorts`: personas nuevas contra recurrentes, solo visitaron, conversión, activas por día/semana/mes, cuántas volvieron y las cohortes semanales.
+- `get_signup_sources`: de dónde llegan las personas nuevas y los registros (canal, publicación de LinkedIn, total de LinkedIn) y su conversión.
+- `get_weekly_rhythm`: cada día contra el mismo día de otras semanas, días flojos, origen y las horas con más gente.
+- `get_server_speed`: cuánto tarda cada ruta del servidor (mediana y p95 estimados) y qué parte del tiempo consume.
 
-Faltan herramientas para: retención y cohortes, personas nuevas y recurrentes, desempeño de cada vacante, calidad de «Para ti», oferta y demanda de skills y puestos, resultados de correos y de LinkedIn, Ritmo de la semana, Velocidad del servidor y el botón de feedback (todavía no existe). Si la pregunta necesita una de ellas, **se dice que falta la herramienta** en vez de contestar con lo que se recuerda.
+Faltan herramientas para: desempeño de cada vacante, calidad de «Para ti», oferta y demanda de skills y puestos, resultados de correos y de LinkedIn, y el botón de feedback (todavía no existe). Si la pregunta necesita una de ellas, **se dice que falta la herramienta** en vez de contestar con lo que se recuerda.
 
 ## 5. Desde cuándo hay datos (muy importante para no sobreinterpretar)
 

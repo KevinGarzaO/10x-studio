@@ -326,7 +326,8 @@ Un agente que hace de **jefe de producto de AvoTalent**: lee los datos, detecta 
 **E1. El jefe de producto en conversación (nivel 1)** — Proyecto de Claude Desktop conectado al MCP
 - [ ] Proyecto con instrucciones de jefe de producto: separar datos de suposiciones, citar siempre la consulta y el periodo de cada cifra, avisar cuando la muestra es chica, no confundir correlación con causa, no inventar, no mostrar datos personales.
 - [ ] Documento de contexto: qué es AvoTalent, para quién, el backlog, las **decisiones ya tomadas** (para no reproponer lo descartado) y la definición de cada métrica (activo, nuevo, recurrente, conversión).
-- [ ] Más herramientas en el MCP: retención y cohortes, personas nuevas y recurrentes, desempeño de cada vacante, calidad de "Para ti", oferta y demanda de skills y puestos, resultados de correos y de LinkedIn, el botón de feedback y la bitácora de lanzamientos.
+- [x] Más herramientas en el MCP, **primera tanda (1 de noviembre de 2026)**: retención y cohortes, personas nuevas contra recurrentes, origen de los registros, Ritmo de la semana, Velocidad del servidor y la bitácora de cambios.
+- [ ] Más herramientas en el MCP, **pendientes**: desempeño de cada vacante, calidad de "Para ti", oferta y demanda de skills y puestos, resultados de correos y de LinkedIn, y el botón de feedback (cuando exista).
 - [ ] Formato fijo de propuesta: problema, evidencia (cifras con periodo y tamaño de muestra), hipótesis, métrica que debería moverse, esfuerzo (S/M/L), riesgo, nivel de confianza y cómo se medirá después.
 
 **E2. Revisión automática (nivel 2)** — cron en el backend

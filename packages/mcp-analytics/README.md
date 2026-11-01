@@ -14,6 +14,10 @@ tiempo límite, y devuelve datos agregados: no entrega correos ni nombres.
 | `get_clarity_frustration_data` | Rage clicks, dead clicks, quickbacks y scroll por página (ruta exacta, prefijo con `*`, o las peores páginas si no se da ruta), con tendencia día a día y conteos por 100 sesiones. |
 | `get_user_session_recording` | Por `user_id` o `email`: sus últimas sesiones y el enlace a su grabación en Clarity. |
 | `get_error_logs_with_clarity_video` | Los errores recientes (navegador, API, servidor) por frecuencia: mensaje, página, personas afectadas, primeras líneas del stack y el video de Clarity de la sesión más reciente donde pasó, con el segundo en que falló. |
+| `get_retention_and_cohorts` | Personas nuevas contra recurrentes, solo visitaron, conversión (registradas nuevas ÷ nuevas activas), activas por día/semana/mes, cuántas volvieron y las cohortes semanales. |
+| `get_signup_sources` | De dónde llegan las personas nuevas y los registros: por canal, por publicación de LinkedIn y el total de LinkedIn, con su conversión. |
+| `get_weekly_rhythm` | Una fila por día (activas, nuevas, las que ya tenían cuenta, origen, registros) contra el mismo día de otras semanas, los días flojos y las horas con más gente. |
+| `get_server_speed` | Por ruta de la API: peticiones, errores, mediana y p95 estimados, tiempo total y qué parte del servidor consume. |
 | `get_change_log` | Los cambios hechos al producto con su fecha y, por cada uno, el promedio por día de personas activas, nuevas activas, sesiones, registros y errores en los días de antes y de después (3, 7 o 14), con su comparabilidad. Antes/después no prueba una causa. |
 | `get_flow_performance_analysis` | Por flujo crítico (iniciar sesión, crear cuenta, buscar vacantes, postularse): completitud, abandono, tiempos, frustración, paso a paso, y los rage/dead clicks de Clarity en sus páginas. |
 
@@ -81,11 +85,14 @@ El servidor ya abre cada consulta como `READ ONLY`, pero lo correcto es que ni s
 CREATE ROLE avo_mcp_reader LOGIN PASSWORD 'CAMBIA-ESTA-CLAVE';
 GRANT USAGE ON SCHEMA public TO avo_mcp_reader;
 GRANT SELECT ON analytics_real_sessions, analytics_sessions, analytics_events, analytics_clarity_metrics, analytics_clarity_links,
-  analytics_error_logs, analytics_flow_metrics, analytics_flow_runs, product_changes TO avo_mcp_reader;
+  analytics_error_logs, analytics_flow_metrics, analytics_flow_runs, product_changes, api_timing_hourly TO avo_mcp_reader;
 GRANT SELECT (id, email, user_kind, created_at, is_test_account, is_scraper_profile) ON users TO avo_mcp_reader;
 GRANT EXECUTE ON FUNCTION analytics_funnel(int), analytics_landing_performance(int, int), analytics_period_start(int),
   analytics_error_summary(int, int), analytics_flow_summary(int), analytics_flow_steps(int),
-  analytics_window_metrics(timestamptz, timestamptz), analytics_change_impact(int, int, timestamptz) TO avo_mcp_reader;
+  analytics_window_metrics(timestamptz, timestamptz), analytics_change_impact(int, int, timestamptz),
+  analytics_active_users(int), analytics_retention_cohorts(int), analytics_people_activity(int, int),
+  analytics_segments(timestamptz, timestamptz, text, int), analytics_rhythm_days(int), analytics_rhythm_heatmap(int),
+  api_timing_summary(int) TO avo_mcp_reader;
 -- Las tablas tienen RLS activado: sin una política, el rol no vería ninguna fila.
 CREATE POLICY mcp_read ON analytics_sessions        FOR SELECT TO avo_mcp_reader USING (true);
 CREATE POLICY mcp_read ON analytics_events          FOR SELECT TO avo_mcp_reader USING (true);
@@ -94,6 +101,7 @@ CREATE POLICY mcp_read ON analytics_error_logs      FOR SELECT TO avo_mcp_reader
 CREATE POLICY mcp_read ON analytics_flow_metrics    FOR SELECT TO avo_mcp_reader USING (true);
 CREATE POLICY mcp_read ON analytics_clarity_metrics FOR SELECT TO avo_mcp_reader USING (true);
 CREATE POLICY mcp_read ON product_changes           FOR SELECT TO avo_mcp_reader USING (true);
+CREATE POLICY mcp_read ON api_timing_hourly         FOR SELECT TO avo_mcp_reader USING (true);
 CREATE POLICY mcp_read ON users                     FOR SELECT TO avo_mcp_reader USING (true);
 ```
 
