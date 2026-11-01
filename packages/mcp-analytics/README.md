@@ -139,6 +139,45 @@ claude mcp add avotalent-analytics --env DATABASE_URL="postgresql://avo_mcp_read
 
 Pruebas: `pnpm --filter @avocado/mcp-analytics test` (cliente MCP real contra Postgres real en memoria, con las migraciones verdaderas).
 
+## Servidor remoto (Railway)
+
+Además del modo local (stdio), el mismo servidor corre como servicio HTTPS en Railway para que el agente no dependa de ninguna computadora. `src/http.ts` arranca `src/http/app.ts`: las **mismas herramientas de solo lectura**, detrás de un inicio de sesión (OAuth 2.1) de **un solo dueño**.
+
+**Por qué OAuth.** Un conector personalizado de Claude solo acepta servidores sin autenticación o con OAuth (no hay una llave fija que pegar). Sin autenticación cualquiera con la dirección leería tus cifras, así que este servidor es su propio servidor de autorización con una sola regla: se entra con la **clave del dueño**.
+
+**Cómo protege.**
+- Registro dinámico de clientes, pero **solo con las direcciones de regreso de Claude** (`https://claude.ai/api/mcp/auth_callback` y la de `claude.com`); cualquier otra se rechaza.
+- Pantalla de acceso con la clave del dueño (`MCP_OWNER_KEY`); **5 intentos fallidos** desde una dirección la bloquean 15 minutos.
+- PKCE obligatorio; el código de autorización dura 5 minutos y sirve **una vez**; el token de acceso dura 1 hora y el de renovación 30 días (rota, cada uno sirve una vez).
+- Todo va **firmado con HMAC** (`MCP_TOKEN_SECRET`): no se guarda nada, así que un despliegue no cierra la sesión de nadie.
+- **Botón de emergencia:** subir `MCP_TOKEN_EPOCH` (o cambiar `MCP_TOKEN_SECRET`) en Railway invalida de golpe todo lo emitido y obliga a conectar de nuevo.
+- Todas las herramientas siguen siendo de solo lectura, con consultas fijas y el rol `avo_mcp_reader`; el servidor no responde nada en otras rutas (404).
+
+**Variables del servicio** (pestaña Variables en Railway; nunca en un archivo):
+
+| Variable | Qué es |
+|---|---|
+| `DATABASE_URL` | La conexión del rol de solo lectura. **Usa la del «Transaction pooler» de Supabase** (puerto 6543, usuario `avo_mcp_reader.<proyecto>`): la conexión directa solo funciona con IPv6 y Railway no lo tiene. |
+| `MCP_PUBLIC_URL` | La dirección pública del servicio, `https://...up.railway.app`, sin barra final. |
+| `MCP_TOKEN_SECRET` | Clave que firma todo (mínimo 32 caracteres, al azar). |
+| `MCP_OWNER_KEY` | La clave que escribe el dueño al conectar Claude (mínimo 20 caracteres, al azar; guárdala en tu gestor de contraseñas). |
+| `MCP_TOKEN_EPOCH` | Opcional (1 por defecto). Súbela para cortar todo acceso. |
+| `NEXT_PUBLIC_CLARITY_PROJECT_ID` | Opcional, para armar enlaces a Clarity. |
+
+Genera las dos claves en tu computadora (cada comando da una distinta):
+
+```bash
+node -e "console.log(require('crypto').randomBytes(48).toString('base64url'))"
+```
+
+**Pasos.**
+1. Railway: servicio nuevo desde el repositorio; en Settings > Config as Code pon `/packages/mcp-analytics/railway.toml`.
+2. En Variables, las de arriba. Despliega y, en Settings > Networking, genera el dominio público; ponlo en `MCP_PUBLIC_URL` y vuelve a desplegar.
+3. Comprueba `https://<tu-dominio>/health` (debe decir `{"ok":true}`).
+4. Claude (claude.ai o Desktop) > Settings > Connectors > Add custom connector: `https://<tu-dominio>/mcp`. Se abre la pantalla de acceso: escribe `MCP_OWNER_KEY`.
+
+Probar en local: `pnpm --filter @avocado/mcp-analytics test` incluye `tests/http.test.ts` (el flujo completo: registro, acceso, PKCE, renovación, bloqueo y corte de emergencia).
+
 ## Ejemplo de diagnóstico cruzado
 
 > Usa el servidor avotalent-analytics. La conversión de las visitas que entran por las vacantes de .NET bajó esta semana.

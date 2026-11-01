@@ -11,12 +11,14 @@
     "build": "tsc -p tsconfig.json",
     "start": "node dist/index.js",
     "dev": "tsx src/index.ts",
-    "test": "vitest run"
+    "test": "vitest run",
+    "start:http": "node dist/http.js"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.32.2",
     "pg": "^8.23.0",
-    "zod": "^3.25.28"
+    "zod": "^3.25.28",
+    "express": "^5.2.1"
   },
   "devDependencies": {
     "@electric-sql/pglite": "^0.5.13",
@@ -24,6 +26,7 @@
     "@types/pg": "^8.23.1",
     "tsx": "^4.7.1",
     "typescript": "^5.4.5",
-    "vitest": "1.6.0"
+    "vitest": "1.6.0",
+    "@types/express": "^5.0.0"
   }
 }

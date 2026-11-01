@@ -1,0 +1,16 @@
+# Servicio de Railway del servidor MCP REMOTO de analítica (aparte del backend, que usa el railway.toml de la raíz).
+# En Railway: crea un servicio nuevo desde el mismo repositorio y, en Settings > "Config as Code", apunta a
+# /packages/mcp-analytics/railway.toml. Las variables (DATABASE_URL, MCP_PUBLIC_URL, MCP_TOKEN_SECRET, MCP_OWNER_KEY) se ponen
+# en la pestaña Variables del servicio, nunca en este archivo. Guía completa: packages/mcp-analytics/README.md (sección "Servidor remoto").
+[build]
+builder = "nixpacks"
+buildCommand = "npx pnpm@9.3.0 install && npx pnpm@9.3.0 --filter @avocado/mcp-analytics build"
+
+[build.env]
+NODE_VERSION = "20"
+
+[deploy]
+startCommand = "node packages/mcp-analytics/dist/http.js"
+healthcheckPath = "/health"
+healthcheckTimeout = 100
+restartPolicyType = "ON_FAILURE"
