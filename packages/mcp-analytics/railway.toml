@@ -1,16 +1,21 @@
 # Servicio de Railway del servidor MCP REMOTO de analítica (aparte del backend, que usa el railway.toml de la raíz).
-# En Railway: crea un servicio nuevo desde el mismo repositorio y, en Settings > "Config as Code", apunta a
-# /packages/mcp-analytics/railway.toml. Las variables (DATABASE_URL, MCP_PUBLIC_URL, MCP_TOKEN_SECRET, MCP_OWNER_KEY) se ponen
-# en la pestaña Variables del servicio, nunca en este archivo. Guía completa: packages/mcp-analytics/README.md (sección "Servidor remoto").
+#
+# CÓMO SE USA: en Railway, servicio nuevo desde este repositorio y en Settings > Source > "Root Directory" pon
+#   packages/mcp-analytics
+# Con eso Railway trabaja SOLO dentro de esta carpeta (no ve el resto del monorepo) y toma ESTE archivo en lugar del de la raíz.
+# («Config as Code» ya no se puede activar en servicios nuevos, por eso se usa el Root Directory.)
+# Por eso esta carpeta se instala sola con npm (package-lock.json), sin el espacio de trabajo de pnpm.
+# Las variables (DATABASE_URL, MCP_PUBLIC_URL, MCP_TOKEN_SECRET, MCP_OWNER_KEY) van en la pestaña Variables, nunca aquí.
+# Guía completa: README.md, sección "Servidor remoto (Railway)".
 [build]
 builder = "nixpacks"
-buildCommand = "npx pnpm@9.3.0 install && npx pnpm@9.3.0 --filter @avocado/mcp-analytics build"
+buildCommand = "npm run build"
 
 [build.env]
 NODE_VERSION = "20"
 
 [deploy]
-startCommand = "node packages/mcp-analytics/dist/http.js"
+startCommand = "node dist/http.js"
 healthcheckPath = "/health"
 healthcheckTimeout = 100
 restartPolicyType = "ON_FAILURE"

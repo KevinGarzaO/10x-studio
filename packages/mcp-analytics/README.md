@@ -171,7 +171,7 @@ node -e "console.log(require('crypto').randomBytes(48).toString('base64url'))"
 ```
 
 **Pasos.**
-1. Railway: servicio nuevo desde el repositorio; en Settings > Config as Code pon `/packages/mcp-analytics/railway.toml`.
+1. Railway: servicio nuevo desde el repositorio; en Settings > Source > **Root Directory** pon `packages/mcp-analytics`. Con eso Railway trabaja solo dentro de esta carpeta y toma su `railway.toml` (no el del backend). Esta carpeta se instala sola con npm (`package-lock.json`); si cambias dependencias, regenéralo con `npm install` dentro de la carpeta. ("Config as Code" ya no se puede activar en servicios nuevos de Railway.)
 2. En Variables, las de arriba. Despliega y, en Settings > Networking, genera el dominio público; ponlo en `MCP_PUBLIC_URL` y vuelve a desplegar.
 3. Comprueba `https://<tu-dominio>/health` (debe decir `{"ok":true}`).
 4. Claude (claude.ai o Desktop) > Settings > Connectors > Add custom connector: `https://<tu-dominio>/mcp`. Se abre la pantalla de acceso: escribe `MCP_OWNER_KEY`.
