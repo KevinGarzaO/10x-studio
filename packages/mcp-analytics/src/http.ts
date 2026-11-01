@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import './http/polyfills' // PRIMERO: el SDK necesita `crypto` global (ver polyfills.ts)
 import { createReadOnlyDb } from './db'
 import { createRemoteApp } from './http/app'
 import { DEFAULT_ALLOWED_REDIRECTS } from './http/provider'
