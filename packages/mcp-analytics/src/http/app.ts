@@ -35,6 +35,19 @@ export function createRemoteApp(options: RemoteAppOptions): { app: Express; prov
   // Railway pone un proxy delante: sin esto todas las visitas parecerían venir de la misma dirección (y el bloqueo de intentos sería de todos).
   app.set('trust proxy', 1)
 
+  // Registro de accesos para saber qué pide cada cliente y qué se le contesta. Solo método, ruta (sin parámetros: ahí viajan los códigos),
+  // resultado, duración, el método MCP y los primeros caracteres del navegador/cliente. NUNCA cabeceras, cuerpos, claves ni tokens.
+  app.use((req, res, next) => {
+    const started = Date.now()
+    res.on('finish', () => {
+      if (req.path === '/health') return
+      const rpc = typeof res.locals.rpcMethod === 'string' ? ` rpc=${res.locals.rpcMethod}` : ''
+      const agent = String(req.get('user-agent') ?? '-').replace(/[^ -~]/g, '').slice(0, 40)
+      console.log(`[acceso] ${req.method} ${req.path} -> ${res.statusCode} (${Date.now() - started} ms)${rpc} ua="${agent}"`)
+    })
+    next()
+  })
+
   app.get('/health', (_req, res) => { res.json({ ok: true }) })
 
   app.use(
@@ -54,6 +67,8 @@ export function createRemoteApp(options: RemoteAppOptions): { app: Express; prov
   const auth = asHandler(requireBearerAuth({ verifier: provider, requiredScopes: [SCOPE], resourceMetadataUrl: getOAuthProtectedResourceMetadataUrl(mcpUrl) }))
 
   app.post('/mcp', auth, express.json({ limit: '1mb' }), async (req: Request, res: Response) => {
+    const body = req.body as { method?: unknown } | unknown[] | undefined
+    res.locals.rpcMethod = Array.isArray(body) ? 'batch' : String((body as { method?: unknown } | undefined)?.method ?? '').replace(/[^\w/.-]/g, '').slice(0, 40)
     const server = createServer(options.db, { clarityProjectId: options.clarityProjectId })
     const transport = new StreamableHTTPServerTransport({ sessionIdGenerator: undefined, enableJsonResponse: true })
     res.on('close', () => { void transport.close(); void server.close() })

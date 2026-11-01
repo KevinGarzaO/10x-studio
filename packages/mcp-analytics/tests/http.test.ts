@@ -237,6 +237,45 @@ describe('code, tokens and renewal', () => {
   })
 })
 
+describe('a real MCP client (initialize, then tools)', () => {
+  it('connects with the token, lists the tools and calls one, the way Claude does', async () => {
+    const { client, verifier, code } = await login()
+    const tokens = await (await exchange(client.client_id, code!, verifier)).json()
+
+    const { Client } = await import('@modelcontextprotocol/sdk/client/index.js')
+    const { StreamableHTTPClientTransport } = await import('@modelcontextprotocol/sdk/client/streamableHttp.js')
+    const mcp = new Client({ name: 'prueba', version: '0.0.0' })
+    await mcp.connect(new StreamableHTTPClientTransport(new URL(`${base}/mcp`), { requestInit: { headers: { Authorization: `Bearer ${tokens.access_token}` } } }))
+    const listed = await mcp.listTools()
+    expect(listed.tools.length).toBeGreaterThanOrEqual(10)
+    const called = await mcp.callTool({ name: 'get_server_speed', arguments: { days: 1 } })
+    expect(JSON.parse((called.content as { text: string }[])[0].text)).toMatchObject({ hours: 24 })
+    await mcp.close()
+  })
+})
+
+describe('the access log', () => {
+  it('records who asked for what, never a key, a token, a code or a query string', async () => {
+    const lines: string[] = []
+    const original = console.log
+    console.log = (...args: unknown[]) => { lines.push(args.join(' ')) }
+    try {
+      const { client, verifier, code } = await login()
+      const tokens = await (await exchange(client.client_id, code!, verifier)).json()
+      await rpc(tokens.access_token, 'tools/list')
+      await fetch(`${base}/authorize?client_id=${client.client_id}&code_challenge=secreto-en-la-direccion`)
+    } finally {
+      console.log = original
+    }
+    const log = lines.join(' | ')
+    expect(log).toContain('[acceso] POST /mcp -> 200')
+    expect(log).toContain('rpc=tools/list')
+    expect(log).toContain('[acceso] POST /oauth/consent -> 302')
+    expect(log).not.toMatch(new RegExp(`${OWNER_KEY}|secreto-en-la-direccion|code=|Bearer`))
+    expect(log).not.toContain(SECRET)
+  })
+})
+
 describe('the emergency switch', () => {
   it('raising the epoch invalidates every token, code and client already issued', async () => {
     const { client, verifier, code } = await login()
