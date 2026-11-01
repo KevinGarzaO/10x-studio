@@ -327,6 +327,8 @@ Un agente que hace de **jefe de producto de AvoTalent**: lee los datos, detecta 
 - [ ] Proyecto con instrucciones de jefe de producto: separar datos de suposiciones, citar siempre la consulta y el periodo de cada cifra, avisar cuando la muestra es chica, no confundir correlación con causa, no inventar, no mostrar datos personales.
 - [ ] Documento de contexto: qué es AvoTalent, para quién, el backlog, las **decisiones ya tomadas** (para no reproponer lo descartado) y la definición de cada métrica (activo, nuevo, recurrente, conversión).
 - [x] Más herramientas en el MCP, **primera tanda (1 de noviembre de 2026)**: retención y cohortes, personas nuevas contra recurrentes, origen de los registros, Ritmo de la semana, Velocidad del servidor y la bitácora de cambios.
+- [x] **El servidor MCP corre en Railway** (1 de noviembre de 2026): el agente ya no depende de ninguna laptop; inicio de sesión de un solo dueño (OAuth), todas las herramientas de solo lectura, botón de emergencia con `MCP_TOKEN_EPOCH`. Verificado de punta a punta con la base real.
+- [ ] **Siguiente del agente:** contexto del equipo (quién desarrolló qué, rama y entorno, cargos y responsabilidades), registro de propuestas con su estado, una herramienta que lea el `BACKLOG.md` vivo y una clave por persona del equipo (solo lectura).
 - [ ] Más herramientas en el MCP, **pendientes**: desempeño de cada vacante, calidad de "Para ti", oferta y demanda de skills y puestos, resultados de correos y de LinkedIn, y el botón de feedback (cuando exista).
 - [ ] Formato fijo de propuesta: problema, evidencia (cifras con periodo y tamaño de muestra), hipótesis, métrica que debería moverse, esfuerzo (S/M/L), riesgo, nivel de confianza y cómo se medirá después.
 
