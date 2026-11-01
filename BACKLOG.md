@@ -125,9 +125,12 @@ Pedido el 31 de octubre. Un sábado entraron 8 visitantes y ninguno vino de Link
 
 ### D. Velocidad real — P1 · M
 Ya se aceleró la capa común del admin y "Para ti"; falta comprobarlo con datos de verdad.
-- [ ] Medir los tiempos de carga con tu base y tu conexión, en las dos apps.
-- [ ] Revisar una por una las demás secciones lentas del admin (hasta ahora solo se aceleró la capa común).
-- [ ] Corregir lo que siga lento.
+**Primero medir (1 de noviembre de 2026).** Las pantallas que se sienten lentas hoy son el feed y la vacante. Antes de acelerar nada se construyó la medición, con un resumen por hora (suficiente para decidir, sin guardar peticiones sueltas):
+- [x] **Servidor:** cada petición a `/api` se mide y se resume por hora, método y ruta (`backend/services/performance/api-timing.ts`, migración `api-timing-migration.sql`). Pantalla Tráfico web > **Velocidad**: mediana, p95, máximo, errores y qué parte del tiempo consume cada ruta, con un cuadro aparte para las rutas del feed y de la vacante.
+- [x] **Navegador:** cuánto tarda el feed en mostrar sus primeras tarjetas y la vacante en mostrarse (`apps/community/lib/page-timing.ts`), como los flujos «Ver el feed» y «Ver una vacante» en Tráfico web > Flujos críticos, con su abandono y su frustración (más de 2.5 s). La primera página de una visita (por ejemplo, desde LinkedIn) lleva además lo que tardó en cargar completa.
+- [ ] Dejarlo correr 2 o 3 días con uso real y leer la pantalla Velocidad: las 10 rutas que consumen más tiempo y las de p95 mayor a 1 s.
+- [ ] Corregir lo que salga (feed y vacante primero). Candidatos que se sospechan, sin medición todavía: las dos fuentes del feed (vacantes y artículos) más «Para ti» aparte, y las estadísticas de popularidad de cada vacante.
+- [ ] Revisar una por una las demás secciones lentas del admin (hasta ahora solo se aceleró la capa común); la pantalla Velocidad también mide `/api/admin/analytics/*`.
 
 ### E. Vacantes que no le sirven a nadie y conteo de la cola — P2 · S
 - [ ] Decidir si se retiran del feed las **156 vacantes** publicadas que no le sirven a nadie (elegiste aplicar la regla solo a las nuevas). Se propone no retirar las que tengan comentarios o guardados.

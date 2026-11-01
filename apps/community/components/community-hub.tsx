@@ -2,6 +2,7 @@
 
 import { useMemo, useState, useEffect, useCallback, useRef } from 'react'
 import { flowFor } from '../lib/flow-tracker'
+import { usePageReady } from '../lib/page-timing'
 import Link from 'next/link'
 import { usePathname, useRouter, useSearchParams } from 'next/navigation'
 import {
@@ -732,6 +733,8 @@ export function Feed() {
   // así "Para ti" entra desde la primera carga y las tarjetas no se reacomodan.
   const [snapshot, setSnapshot] = useState<FeedSnapshot | null>(null)
   const [loading, setLoading] = useState(true)
+  // Cuánto tarda el feed en mostrar sus primeras tarjetas (Tráfico web > Flujos críticos > Ver el feed)
+  usePageReady('view_feed', !loading && !!snapshot)
   const snapshotRef = useRef<FeedSnapshot | null>(null)
   const loadingRef = useRef(false)
   const cacheKeyRef = useRef('guest')

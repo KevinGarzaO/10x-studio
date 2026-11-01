@@ -9,6 +9,7 @@ import { dailyQuota, daysUntilNextBatch, nextBatchFrom } from '../../../services
 import { loadAlerts } from '../../../services/analytics/alerts-data'
 import { IMPACT_WINDOWS, loadChangeImpact } from '../../../services/analytics/changes'
 import { loadRhythm } from '../../../services/analytics/rhythm'
+import { loadTimingSummary } from '../../../services/performance/api-timing'
 import { stepsByFlow, type FlowStepRow } from '../../../services/analytics/flows'
 import { loadMatchingOverview } from '../../../services/analytics/matching-data'
 import {
@@ -129,6 +130,16 @@ router.get('/changes', handle('cambios', async (req, res) => {
 router.get('/web/rhythm', handle('ritmo de la semana', async (req, res) => {
   const requested = parseInt(String(req.query.days ?? '30'), 10)
   res.json(await loadRhythm(requested === 7 || requested === 90 ? requested : 30))
+}))
+
+/**
+ * Velocidad del servidor: cuánto tarda cada ruta de la API en las últimas 24 horas, 7 o 30 días (backend/sql/api-timing-migration.sql).
+ * Las más lentas por tiempo total primero; mediana y p95 son estimados con rangos (hasta N ms).
+ */
+router.get('/performance', handle('velocidad del servidor', async (req, res) => {
+  const requested = parseInt(String(req.query.days ?? '1'), 10)
+  const days = requested === 7 || requested === 30 ? requested : 1
+  res.json(await loadTimingSummary(days * 24))
 }))
 
 /** El match: qué tan bien encajan las vacantes con la gente que hay, con el mismo motor de "Para ti". */

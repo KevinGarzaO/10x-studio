@@ -39,6 +39,8 @@ const LABEL: Record<string, string> = {
   auth_register: 'Crear cuenta',
   job_search_filter: 'Buscar y filtrar vacantes',
   job_application: 'Postularse a una vacante',
+  view_feed: 'Ver el feed (hasta las primeras tarjetas)',
+  view_vacancy: 'Ver una vacante (hasta mostrarla)',
 }
 
 /** 1250 -> "1.3 s"; 420 -> "420 ms". */

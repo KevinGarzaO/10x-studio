@@ -2,6 +2,7 @@
 
 import { trackEvent } from '../../../../lib/web-analytics'
 import { pageLoadMs } from '../../../../lib/flow-tracker'
+import { usePageReady } from '../../../../lib/page-timing'
 import { hadSessionBefore } from '../../../../lib/session-marker'
 import { useFlowTracker } from '../../../../lib/use-flow-tracker'
 import { DetailSkeleton } from '@/components/skeletons'
@@ -203,6 +204,8 @@ export default function VacancyPage() {
   const goBack = () => router.back()
   const [post, setPost] = useState<PostData | null>(null)
   const [loading, setLoading] = useState(true)
+  // Cuánto tarda la vacante en mostrarse (Tráfico web > Flujos críticos > Ver una vacante)
+  usePageReady('view_vacancy', !loading && !!post, slug)
   const [error, setError] = useState<string | null>(null)
   const [saved, setSaved] = useState(false)
   const [historyId, setHistoryId] = useState<string | null>(null)

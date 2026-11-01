@@ -47,6 +47,7 @@ import scraperRoutes from './routes/scraper'
 import path from 'path'
 import { captureServerError } from './services/web-analytics/telemetry'
 import { recordDeployFromEnv } from './services/analytics/changes'
+import { apiTiming, startTimingFlush } from './services/performance/api-timing'
 
 dotenv.config()
 
@@ -72,6 +73,8 @@ app.use(cors({
   },
   credentials: true,
 }))
+// Mide cuánto tarda cada ruta de /api (resumen por hora; ver services/performance/api-timing.ts)
+app.use(apiTiming())
 app.use(express.json({ limit: '15mb' }))
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')))
 
@@ -155,6 +158,7 @@ app.use((err: unknown, req: express.Request, _res: express.Response, next: expre
 
 // Start Cron
 initCron()
+startTimingFlush()
 
 // Anota el despliegue en la bitácora de cambios (solo en Railway, una vez por commit; nunca estorba al arranque)
 void recordDeployFromEnv().then((result) => { if (result.saved) console.log('[Cambios] despliegue anotado') })
