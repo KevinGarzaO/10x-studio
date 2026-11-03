@@ -16,6 +16,7 @@ import { loadMatchingOverview } from '../../../services/analytics/matching-data'
 import {
   acquisitionBySource,
   registrationOrigins,
+  weeklyAccounts,
   buildOverview,
   change,
   dayKey,
@@ -505,6 +506,21 @@ router.get('/acquisition', handle('adquisición', async (req, res) => {
       { step: 'Completaron su perfil (cuentas del periodo)', count: completed, pctOfPrevious: pct(completed, users.length) },
       { step: 'Volvieron otro día (cuentas del periodo)', count: returned, pctOfPrevious: returned === null ? null : pct(returned, completed || users.length) },
     ],
+  })
+}))
+
+/**
+ * Cuentas nuevas por semana (lunes a domingo, hora de Monterrey) con su cambio contra la semana anterior, y el total de cuentas con su
+ * porcentaje de perfiles completos. Son las cuentas reales (sin pruebas ni perfiles del scraper). `weeks` = 1 a 26.
+ */
+router.get('/accounts/weekly', handle('cuentas por semana', async (req, res) => {
+  const weeks = Math.min(Math.max(parseInt(String(req.query.weeks ?? req.query.limit ?? '8'), 10) || 8, 1), 26)
+  const users = await realUsers('2020-01-01T00:00:00Z')
+  const completed = users.filter((user) => user.profile_completed).length
+  res.json({
+    weeks: weeklyAccounts(users, weeks),
+    totals: { accounts: users.length, completedProfiles: completed, completedPct: pct(completed, users.length) },
+    note: 'Cuentas reales creadas (sin pruebas ni perfiles del scraper), semana de lunes a domingo en hora de Monterrey. La semana en curso es parcial.',
   })
 }))
 

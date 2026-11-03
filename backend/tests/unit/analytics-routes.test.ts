@@ -161,6 +161,17 @@ describe('GET /analytics/linkedin', () => {
   })
 })
 
+describe('GET /analytics/accounts/weekly', () => {
+  it('gives the weeks (Monday to Sunday), the total of accounts and the share with a complete profile', async () => {
+    const res = await request(app()).get('/analytics/accounts/weekly?weeks=3').expect(200)
+    expect(res.body.weeks).toHaveLength(3)
+    expect(res.body.weeks[2].partial === true || res.body.weeks[2].daysCounted === 7).toBe(true)
+    expect(res.body.totals.accounts).toBeGreaterThan(0)
+    expect(res.body.totals.completedProfiles).toBeLessThanOrEqual(res.body.totals.accounts)
+    expect(typeof res.body.note).toBe('string')
+  })
+})
+
 describe('GET /analytics/acquisition', () => {
   it('splits the traffic by origin, with no-origin as direct', async () => {
     const res = await request(app()).get('/analytics/acquisition?days=7').expect(200)

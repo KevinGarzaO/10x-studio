@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest'
 import {
   acquisitionBySource,
   registrationOrigins,
+  weeklyAccounts,
   buildOverview,
   periodStart,
   hourKey,
@@ -389,4 +390,33 @@ describe('registrationOrigins', () => {
   })
 
   it('is empty without accounts', () => { expect(registrationOrigins([])).toEqual([]) })
+})
+
+describe('weeklyAccounts', () => {
+  // Lunes 2 de noviembre de 2026 (hora de Monterrey) a las 12:00.
+  const now = new Date('2026-11-02T18:00:00Z')
+  const at = (iso: string, done = false) => ({ created_at: iso, profile_completed: done })
+
+  it('counts Monday-to-Sunday weeks in Monterrey time, oldest first, with the change against the week before', () => {
+    const users = [
+      at('2026-10-19T20:00:00Z'), at('2026-10-21T20:00:00Z', true), // semana del 19 al 25: 2
+      at('2026-10-26T15:00:00Z'), at('2026-10-27T15:00:00Z', true), at('2026-10-28T15:00:00Z'), at('2026-10-31T15:00:00Z'), // semana del 26 al 1: 4
+      // domingo 1 nov a las 23:30 en Monterrey = lunes 2 UTC 05:30: sigue siendo de la semana que cerró
+      at('2026-11-02T05:30:00Z'),
+      at('2026-11-02T17:00:00Z'), // lunes 2, semana en curso
+    ]
+    const rows = weeklyAccounts(users, 3, now)
+    expect(rows.map(row => [row.weekStart, row.weekEnd, row.registrations])).toEqual([
+      ['2026-10-19', '2026-10-25', 2], ['2026-10-26', '2026-11-01', 5], ['2026-11-02', '2026-11-08', 1],
+    ])
+    expect(rows[1]).toMatchObject({ changeAbs: 3, changePct: 150, completedProfiles: 1, partial: false })
+    expect(rows[2]).toMatchObject({ partial: true, daysCounted: 1, changeAbs: -4 })
+    expect(rows[0]).toMatchObject({ changeAbs: null, changePct: null })
+  })
+
+  it('does not divide by a week with no accounts', () => {
+    const rows = weeklyAccounts([at('2026-10-27T15:00:00Z')], 2, now)
+    expect(rows[0].registrations).toBe(1)
+    expect(weeklyAccounts([], 2, new Date('2026-11-08T20:00:00Z'))[1]).toMatchObject({ registrations: 0, changePct: null, partial: false })
+  })
 })

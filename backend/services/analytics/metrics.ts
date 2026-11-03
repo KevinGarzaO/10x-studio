@@ -308,6 +308,67 @@ export function registrationOrigins(users: UserRow[]): { source: string; medium:
     .sort((a, b) => b.registrations - a.registrations || a.source.localeCompare(b.source))
 }
 
+export interface WeeklyAccountsRow {
+  /** Lunes de la semana (día de Monterrey, AAAA-MM-DD). */
+  weekStart: string
+  /** Domingo de la semana. */
+  weekEnd: string
+  registrations: number
+  completedProfiles: number
+  /** Contra la semana anterior: diferencia y %; `changePct` es null si la anterior fue 0 (no se puede dividir) o no existe. */
+  changeAbs: number | null
+  changePct: number | null
+  /** La semana en curso: aún no termina, no se compara como si estuviera completa. */
+  partial: boolean
+  daysCounted: number
+}
+
+/**
+ * Cuentas creadas por semana de lunes a domingo (hora de Monterrey), de la más antigua a la más reciente, con su cambio contra la
+ * semana anterior. La semana en curso va marcada como parcial. Solo cuenta lo que se le pasa (el panel manda las cuentas reales).
+ */
+export function weeklyAccounts(users: { created_at: string; profile_completed: boolean | null }[], weeks: number, now: Date = new Date()): WeeklyAccountsRow[] {
+  const toDate = (key: string) => new Date(`${key}T00:00:00Z`)
+  const key = (date: Date) => date.toISOString().slice(0, 10)
+  const today = toDate(dayKey(now.toISOString()))
+  const sinceMonday = (today.getUTCDay() + 6) % 7
+  const currentMonday = new Date(today.getTime() - sinceMonday * DAY_MS)
+
+  const byDay = new Map<string, { n: number; done: number }>()
+  for (const user of users) {
+    const day = dayKey(user.created_at)
+    const row = byDay.get(day) ?? { n: 0, done: 0 }
+    row.n++
+    if (user.profile_completed) row.done++
+    byDay.set(day, row)
+  }
+
+  const rows: WeeklyAccountsRow[] = []
+  for (let i = weeks - 1; i >= 0; i--) {
+    const monday = new Date(currentMonday.getTime() - i * 7 * DAY_MS)
+    let registrations = 0
+    let completedProfiles = 0
+    for (let d = 0; d < 7; d++) {
+      const day = byDay.get(key(new Date(monday.getTime() + d * DAY_MS)))
+      registrations += day?.n ?? 0
+      completedProfiles += day?.done ?? 0
+    }
+    const partial = i === 0 && sinceMonday < 6
+    const previous = rows[rows.length - 1]
+    rows.push({
+      weekStart: key(monday),
+      weekEnd: key(new Date(monday.getTime() + 6 * DAY_MS)),
+      registrations,
+      completedProfiles,
+      changeAbs: previous ? registrations - previous.registrations : null,
+      changePct: previous && previous.registrations > 0 ? Math.round(((registrations - previous.registrations) / previous.registrations) * 1000) / 10 : null,
+      partial,
+      daysCounted: i === 0 ? sinceMonday + 1 : 7,
+    })
+  }
+  return rows
+}
+
 /** Las páginas por las que más gente entra. */
 export function topLandingPages(visits: VisitRow[], limit = 10): { path: string; visitors: number }[] {
   const byPath = new Map<string, VisitRow[]>()
