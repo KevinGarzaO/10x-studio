@@ -6,6 +6,7 @@ import { usePageReady } from '../../../../lib/page-timing'
 import { hadSessionBefore } from '../../../../lib/session-marker'
 import { useFlowTracker } from '../../../../lib/use-flow-tracker'
 import { useCompactLayout } from '../../../../lib/use-compact-layout'
+import { useSeenOnce } from '../../../../lib/use-seen'
 import { APPLICATION_CHANGED, isApplied, recordApplicationClick, type ApplicationChange, type ApplicationStatus } from '../../../../lib/applications'
 import { DetailSkeleton } from '@/components/skeletons'
 import Link from 'next/link'
@@ -228,6 +229,8 @@ export default function VacancyPage() {
   }, [vacancyId])
   // Telemetría de los flujos (ver lib/flow-tracker.ts).
   const applyFlow = useFlowTracker('job_application')
+  // «Llegó a ver el botón»: una vez por vacante, cuando «Postularse» entra de verdad en pantalla (distingue «no lo vio» de «lo vio y no lo tocó»).
+  const applyButtonRef = useSeenOnce(slug, () => { void trackEvent('apply_button_seen', { slug }) })
   const searchFlow = useFlowTracker('job_search_filter')
 
   // Opening a vacancy shouldn't inherit whatever scroll depth the feed was
@@ -507,7 +510,7 @@ export default function VacancyPage() {
                 {/* En pantallas chicas el panel de la empresa queda al final: el botón de postularse va aquí, arriba. */}
                 {compact && applyAction && (
                   <div className="detail-apply-inline">
-                    <button type="button" className="detail-action" onClick={applyAction}>Postularse</button>
+                    <button type="button" className="detail-action" ref={applyButtonRef} onClick={applyAction}>Postularse</button>
                     {applyExtras}
                   </div>
                 )}
@@ -688,7 +691,7 @@ export default function VacancyPage() {
                 { label: 'Salario', value: meta.salary },
               ]}
             >
-              {!compact && applyAction && <button type="button" className="detail-action" onClick={applyAction}>Postularse</button>}
+              {!compact && applyAction && <button type="button" className="detail-action" ref={applyButtonRef} onClick={applyAction}>Postularse</button>}
               {!compact && applyAction && applyExtras}
             </SideCard>
 

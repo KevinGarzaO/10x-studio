@@ -25,6 +25,7 @@ export const PANEL_METRICS = {
   web_events: { path: '/web/events', about: 'Eventos clave y su conteo.' },
   web_errors: { path: '/web/errors', about: 'Errores agrupados.' },
   web_flows: { path: '/web/flows', about: 'Flujos críticos: intentos, completos, abandonos.' },
+  web_apply_funnel: { path: '/web/apply-funnel', about: 'Embudo de postulación por dispositivo (móvil/escritorio) y con/sin cuenta: abrieron la vacante, vieron el botón, lo tocaron, salieron al sitio de la empresa.' },
   web_rhythm: { path: '/web/rhythm', about: 'Ritmo de la semana (días y horas).' },
   web_retention: { path: '/web/retention', about: 'Retención de las sesiones nuevas (personas activas que vuelven), sin listas de personas.' },
 } as const

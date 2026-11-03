@@ -8,6 +8,7 @@ import { emptySegment, isMissingMigration, loadSegments, trackingSince, SEGMENT_
 import { dailyQuota, daysUntilNextBatch, nextBatchFrom } from '../../../services/scraper/quota'
 import { loadAlerts } from '../../../services/analytics/alerts-data'
 import { IMPACT_WINDOWS, loadChangeImpact } from '../../../services/analytics/changes'
+import { loadApplyFunnel } from '../../../services/analytics/apply-funnel'
 import { loadRhythm } from '../../../services/analytics/rhythm'
 import { loadTimingSummary } from '../../../services/performance/api-timing'
 import { stepsByFlow, type FlowStepRow } from '../../../services/analytics/flows'
@@ -121,6 +122,11 @@ router.get('/changes', handle('cambios', async (req, res) => {
   const windowDays = (IMPACT_WINDOWS as readonly number[]).includes(requested) ? requested : 7
   const limit = Math.min(Math.max(parseInt(String(req.query.limit ?? '100'), 10) || 100, 1), 200)
   res.json(await loadChangeImpact(windowDays, limit))
+}))
+
+/** Embudo de postulación: dispositivo x con/sin cuenta x paso (abrió, vio el botón, tocó, salió). Ver backend/sql/apply-funnel-migration.sql. */
+router.get('/web/apply-funnel', handle('embudo de postulación', async (req, res) => {
+  res.json(await loadApplyFunnel(periodOf(req)))
 }))
 
 /**
