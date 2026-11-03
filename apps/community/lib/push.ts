@@ -37,10 +37,14 @@ async function call(path: string, init: RequestInit = {}): Promise<Response | nu
   }
 }
 
+/** El último motivo por el que activar no funcionó (para mostrarlo en Ajustes y poder diagnosticar sin abrir la consola). */
+export let lastPushProblem = ''
+const problem = (text: string) => { lastPushProblem = text }
+
 /** La llave pública del servidor, o null si los push no están encendidos (503 not_ready). */
 async function fetchPublicKey(): Promise<string | null> {
   const res = await call('/public-key')
-  if (!res?.ok) return null
+  if (!res?.ok) { problem(`llave pública: ${res ? res.status : 'sin conexión'}`); return null }
   const data = await res.json().catch(() => null)
   return typeof data?.key === 'string' ? data.key : null
 }
@@ -108,15 +112,16 @@ export async function enablePush(surface: PushSurface): Promise<EnableResult> {
     return 'denied'
   }
   const reg = await registration()
-  if (!reg) return 'unavailable'
+  if (!reg) { problem('no se pudo registrar el service worker'); return 'unavailable' }
   try {
     const existing = await reg.pushManager.getSubscription()
     const sub = existing ?? (await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: keyToBytes(key) as unknown as BufferSource }))
     const res = await call('/subscribe', { method: 'POST', body: JSON.stringify({ subscription: sub.toJSON(), surface }) })
-    if (!res?.ok) return 'unavailable'
+    if (!res?.ok) { problem(`guardar el dispositivo: ${res ? res.status : 'sin conexión'}`); return 'unavailable' }
     void trackEvent('push_enabled', { surface })
     return 'enabled'
-  } catch {
+  } catch (error) {
+    problem(`suscripción del navegador: ${error instanceof Error ? error.message.slice(0, 120) : 'error'}`)
     return 'unavailable'
   }
 }

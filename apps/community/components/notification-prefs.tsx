@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { fetchEmailPrefs, saveEmailPrefs, type EmailPrefs } from '../lib/notifications'
-import { disablePush, enablePush, isPushActive, pushPermission, type PushStatus } from '../lib/push'
+import { disablePush, enablePush, isPushActive, lastPushProblem, pushPermission, type PushStatus } from '../lib/push'
 
 const OPTIONS: { key: keyof EmailPrefs; title: string; detail: string }[] = [
   { key: 'digest', title: 'Resumen semanal de vacantes', detail: 'Una vez por semana, las vacantes nuevas que más encajan con tu perfil.' },
@@ -36,7 +36,7 @@ function PushDevice() {
       setPermission(pushPermission())
       if (result === 'enabled') setActive(true)
       else if (result === 'denied') setNote('El navegador bloqueó los avisos. Puedes permitirlos desde los permisos del sitio.')
-      else setNote('Los avisos push todavía no están disponibles. Intenta más tarde.')
+      else setNote(`Los avisos push todavía no están disponibles. Intenta más tarde.${lastPushProblem ? ` (Detalle: ${lastPushProblem})` : ''}`)
     }
     setBusy(false)
   }
