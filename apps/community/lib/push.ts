@@ -55,9 +55,19 @@ function keyToBytes(key: string): Uint8Array {
   return Uint8Array.from(raw, char => char.charCodeAt(0))
 }
 
+/**
+ * El service worker registrado y YA ACTIVO. Registrarlo no basta: si se pide la suscripción mientras todavía se instala, el navegador
+ * contesta «no active Service Worker». `serviceWorker.ready` espera a que esté activo (con un tope de 10 s para no quedarse colgado).
+ */
 async function registration(): Promise<ServiceWorkerRegistration | null> {
   try {
-    return (await navigator.serviceWorker.getRegistration('/')) ?? (await navigator.serviceWorker.register(`/sw.js?api=${encodeURIComponent(API_URL)}`, { scope: '/' }))
+    const found = (await navigator.serviceWorker.getRegistration('/')) ?? (await navigator.serviceWorker.register(`/sw.js?api=${encodeURIComponent(API_URL)}`, { scope: '/' }))
+    if (found.active) return found
+    const ready = await Promise.race([
+      navigator.serviceWorker.ready,
+      new Promise<null>(resolve => setTimeout(() => resolve(null), 10_000)),
+    ])
+    return ready ?? null
   } catch {
     return null
   }
