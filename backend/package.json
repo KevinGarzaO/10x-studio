@@ -50,7 +50,8 @@
     "pg": "^8.23.0",
     "resend": "^6.35.0",
     "swagger-jsdoc": "^6.2.8",
-    "swagger-ui-express": "^5.0.0"
+    "swagger-ui-express": "^5.0.0",
+    "web-push": "^3.6.7"
   },
   "devDependencies": {
     "@electric-sql/pglite": "^0.5.13",
@@ -62,6 +63,7 @@
     "@types/supertest": "^6.0.2",
     "@types/swagger-jsdoc": "^6.0.4",
     "@types/swagger-ui-express": "^4.1.6",
+    "@types/web-push": "^3.6.4",
     "supertest": "^7.0.0",
     "ts-node": "^10.9.2",
     "tsx": "^4.7.1",

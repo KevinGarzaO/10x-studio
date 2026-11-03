@@ -15,6 +15,7 @@ export interface EmailPrefs {
   digest: boolean
   alerts: boolean
   followups: boolean
+  push: boolean
 }
 
 async function call(path: string, init: RequestInit = {}): Promise<Response | null> {

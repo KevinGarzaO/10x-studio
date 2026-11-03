@@ -1,4 +1,5 @@
 import { supabase } from '../supabase.service'
+import { pushToUser } from '../push/push'
 
 export type NotificationType = 'comment' | 'match' | 'skill' | 'application'
 
@@ -15,6 +16,8 @@ export interface NotifyInput {
 export async function notify(input: NotifyInput): Promise<void> {
   try {
     await supabase.from('community_notifications').insert({ user_id: input.userId, type: input.type, message: input.message, link: input.link, meta: input.meta ?? {} })
+    // El mismo aviso, también al dispositivo si la persona activó los push (solo seguimiento y coincidencias; con topes). Nunca lanza.
+    void pushToUser({ userId: input.userId, type: input.type, message: input.message, link: input.link })
   } catch (error) {
     console.error('[Notificaciones] No se pudo guardar el aviso:', error)
   }

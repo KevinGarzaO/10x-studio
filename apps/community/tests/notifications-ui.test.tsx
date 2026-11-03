@@ -13,12 +13,12 @@ const iso = (minutesAgo: number) => new Date(NOW - minutesAgo * 60000).toISOStri
 
 const calls: { url: string; method: string; body?: string }[] = []
 let listResponse: unknown = { notifications: [], unread: 0 }
-let prefs = { digest: true, alerts: true, followups: true }
+let prefs = { digest: true, alerts: true, followups: true, push: true }
 
 beforeEach(() => {
   calls.length = 0
   listResponse = { notifications: [], unread: 0 }
-  prefs = { digest: true, alerts: true, followups: true }
+  prefs = { digest: true, alerts: true, followups: true, push: true }
   global.fetch = vi.fn(async (url: string, init?: RequestInit) => {
     calls.push({ url: String(url), method: init?.method ?? 'GET', body: init?.body as string | undefined })
     if (String(url).endsWith('/preferences') && init?.method === 'PUT') {
@@ -79,7 +79,7 @@ describe('la página de notificaciones', () => {
 
 describe('los correos que quiere recibir', () => {
   it('muestra los dos interruptores con lo guardado', async () => {
-    prefs = { digest: false, alerts: true, followups: true }
+    prefs = { digest: false, alerts: true, followups: true, push: true }
     render(<NotificationPrefs />)
 
     expect(await screen.findByRole('checkbox', { name: 'Resumen semanal de vacantes' })).not.toBeChecked()

@@ -20,6 +20,7 @@ de notas al inicio del archivo, nunca reescribiendo el texto original.
 | 010 | [Bitácora de cambios y Ritmo de la semana](010-change-log-and-weekly-rhythm.md) | Sin spec: implementación directa | Construido y migraciones corridas |
 | 011 | [Velocidad: medir el servidor y las pantallas del feed y la vacante](011-speed-measurement.md) | Sin spec: implementación directa | Construido y migración corrida |
 | 012 | [Mis postulaciones: preguntar al volver, «Postulada» y seguimiento](012-my-applications.md) | Sin spec: implementación directa | Construido; falta correr la migración |
+| 013 | [Avisos push: invitación al contestar «¿Ya te postulaste?» y su medición](013-push-notifications.md) | Sin spec: implementación directa | Construido; falta migración y llaves VAPID |
 
 ## Cómo agregar uno nuevo
 

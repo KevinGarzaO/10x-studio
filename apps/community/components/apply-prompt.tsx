@@ -2,10 +2,11 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
-import { Check, Send } from 'lucide-react'
+import { Bell, Check, Send } from 'lucide-react'
 import { trackEvent } from '../lib/web-analytics'
 import { answerApplication, fetchPendingApplication, type Application, type ApplyAnswer } from '../lib/applications'
 import { formatCompanyName } from '../lib/company'
+import { enablePush, recordPushEvent, rememberPushDismissed, shouldOfferPush } from '../lib/push'
 
 /**
  * «¿Ya te postulaste a X?». Cuando la persona sale al sitio de la empresa a postularse y regresa a AvoTalent, aparece esta franja para
@@ -21,6 +22,8 @@ export function ApplyPrompt({ enabled }: { enabled: boolean }) {
   const [application, setApplication] = useState<Application | null>(null)
   const [thanks, setThanks] = useState(false)
   const [busy, setBusy] = useState(false)
+  // Después de contestar (cualquiera de las tres), se invita a activar los avisos push para darle seguimiento a esa vacante.
+  const [pushOffer, setPushOffer] = useState<{ choice: ApplyAnswer; title: string } | null>(null)
   const lastAsk = useRef(0)
   const asking = useRef(false)
 
@@ -65,14 +68,60 @@ export function ApplyPrompt({ enabled }: { enabled: boolean }) {
     if (!result) return // no se pudo guardar: la franja se queda para intentarlo otra vez
     void trackEvent('application_answer', { answer: choice })
     setApplication(null)
+    if (shouldOfferPush()) {
+      setPushOffer({ choice, title: application.title })
+      void recordPushEvent('prompt_shown', 'application_answer')
+      return
+    }
+    finish(choice)
+  }
+
+  function finish(choice: ApplyAnswer) {
     if (choice === 'applied') {
       setThanks(true)
       window.setTimeout(() => setThanks(false), 8000)
     }
   }
 
+  async function activatePush() {
+    if (!pushOffer || busy) return
+    setBusy(true)
+    await enablePush('application_answer')
+    setBusy(false)
+    const { choice } = pushOffer
+    setPushOffer(null)
+    finish(choice)
+  }
+
+  function skipPush() {
+    if (!pushOffer) return
+    rememberPushDismissed()
+    void recordPushEvent('prompt_dismissed', 'application_answer')
+    const { choice } = pushOffer
+    setPushOffer(null)
+    finish(choice)
+  }
+
   answerRef.current = answer
 
+  if (pushOffer) {
+    const hint = pushOffer.choice === 'applied'
+      ? 'Te avisamos cuando toque ver cómo te fue y si aparece algo parecido, para que no se te pase nada.'
+      : 'Te avisamos cuando toque volver a revisarla, para que no se te pase.'
+    return (
+      <div className="apply-modal-backdrop" onClick={event => { if (event.target === event.currentTarget) skipPush() }}>
+        <div className="apply-modal" role="dialog" aria-modal="true" aria-labelledby="push-offer-title">
+          <p className="apply-modal-eyebrow"><Bell size={14} aria-hidden="true" /> Avisos</p>
+          <h2 id="push-offer-title">¿Quieres estar más atento a <strong>{pushOffer.title}</strong>?</h2>
+          <p className="apply-modal-hint">Activa los avisos para darle mejor seguimiento y no perderte de nada. {hint}</p>
+          <div className="apply-modal-actions">
+            <button type="button" className="apply-modal-yes" disabled={busy} autoFocus onClick={activatePush}>Sí, activar avisos</button>
+            <button type="button" disabled={busy} onClick={skipPush}>Ahora no</button>
+          </div>
+        </div>
+      </div>
+    )
+  }
   if (thanks) {
     return (
       <div className="apply-prompt is-thanks" role="status">

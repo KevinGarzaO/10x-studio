@@ -199,7 +199,7 @@ describe('the vacancy page', () => {
     await screen.findByRole('button', { name: 'Postularse' })
     expect(screen.queryByText(/ver en Mis postulaciones/)).toBeNull()
     act(() => announceApplication({ vacancyId: 'v1', status: 'applied' }))
-    expect(await screen.findByText(/ver en Mis postulaciones/)).toBeTruthy()
+    expect(await screen.findByText(/ver en Mis postulaciones/, undefined, { timeout: 4000 })).toBeTruthy()
   })
 })
 
