@@ -17,18 +17,19 @@ interface PushData {
 
 const PERIODS = [{ days: 1, label: '24 horas' }, { days: 7, label: '7 días' }, { days: 30, label: '30 días' }, { days: 90, label: '90 días' }]
 const TYPE: Record<string, string> = { application: 'Seguimiento de postulación', match: 'Vacante para ti', welcome: 'Aviso de muestra' }
-interface TestResult { enabled: boolean; hasKeys: boolean; devices: { id: string; ok: boolean; reason?: string }[] }
+interface TestResult { enabled: boolean; hasKeys: boolean; devices: { id: string; ok: boolean; reason?: string }[]; account?: string; notFound?: boolean }
 
 /** Manda un aviso de prueba a TUS dispositivos activos y explica qué pasó con cada uno. */
 function TestPush({ onDone }: { onDone: () => void }) {
   const [busy, setBusy] = useState(false)
   const [result, setResult] = useState<TestResult | null>(null)
   const [failed, setFailed] = useState('')
+  const [account, setAccount] = useState('')
 
   async function send() {
     setBusy(true); setFailed(''); setResult(null)
     try {
-      setResult(await api<TestResult>('/api/admin/analytics/push/test', { method: 'POST' }))
+      setResult(await api<TestResult>('/api/admin/analytics/push/test', { method: 'POST', body: JSON.stringify({ account: account.trim() }) }))
       onDone()
     } catch (error) {
       setFailed(error instanceof Error ? error.message : 'No se pudo mandar')
@@ -38,13 +39,15 @@ function TestPush({ onDone }: { onDone: () => void }) {
 
   return (
     <Card title="Probar con mis dispositivos" hint="Manda un aviso de prueba a los dispositivos que activaste con tu cuenta">
+      <p><label>Otra cuenta tuya (usuario o correo, opcional) <input value={account} onChange={event => setAccount(event.target.value)} placeholder="vacío = la cuenta con la que entraste al panel" style={{ minWidth: 280 }} /></label></p>
       <button type="button" className="panel-btn" disabled={busy} onClick={send}>{busy ? 'Enviando…' : 'Mandarme un aviso de prueba'}</button>
       {failed && <p>{failed}</p>}
       {result && (
         <ul>
+          {result.notFound && <li>No encontré una cuenta con «{result.account}».</li>}
           {!result.hasKeys && <li>Al servidor le faltan las llaves VAPID (VAPID_PUBLIC_KEY y VAPID_PRIVATE_KEY en Railway).</li>}
           {result.hasKeys && !result.enabled && <li>Los avisos están apagados en el servidor (falta PUSH_NOTIFICATIONS=on en Railway).</li>}
-          {result.hasKeys && result.devices.length === 0 && <li>Tu cuenta no tiene ningún dispositivo activo. Actívalo desde la ventana «¿Ya te postulaste?» o en Ajustes → Notificaciones.</li>}
+          {result.hasKeys && !result.notFound && result.devices.length === 0 && <li>La cuenta {result.account ?? ''} no tiene ningún dispositivo activo. Actívalo desde la ventana «¿Ya te postulaste?» o en Ajustes → Notificaciones.</li>}
           {result.devices.map((device, index) => (
             <li key={device.id}>Dispositivo {index + 1}: {device.ok ? 'el servidor lo entregó al navegador; si no lo ves, revisa las notificaciones del sistema y del navegador.' : `falló (${device.reason})`}</li>
           ))}

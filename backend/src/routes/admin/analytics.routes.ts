@@ -138,9 +138,21 @@ router.get('/push', handle('avisos push', async (req, res) => {
  * y devuelve el detalle de cada dispositivo. Sirve para comprobar que los push funcionan de punta a punta.
  */
 router.post('/push/test', handle('aviso de prueba', async (req, res) => {
-  const userId = (req as Request & { userId?: string }).userId
-  if (!userId) return res.status(401).json({ error: 'Sin sesión' })
-  res.json(await pushTest(userId))
+  const ownId = (req as Request & { userId?: string }).userId
+  if (!ownId) return res.status(401).json({ error: 'Sin sesión' })
+  // Por defecto, la cuenta con la que se entró al panel. `account` (usuario o correo) permite probar con OTRA cuenta propia: una sola por
+  // petición, nunca un grupo. Lo que se escribe va dentro de un filtro de PostgREST: sin comas, paréntesis ni comodines.
+  const account = String(req.body?.account ?? '').replace(/[,()%*]/g, ' ').replace(/\\/g, ' ').trim().slice(0, 100)
+  let userId = ownId
+  let label = 'tu cuenta del panel'
+  if (account) {
+    const { data } = await supabase.from('users').select('id, username, email').or(`username.eq.${account},email.eq.${account}`).limit(1)
+    const found = (data ?? [])[0] as { id: string; username: string | null; email: string | null } | undefined
+    if (!found) return res.json({ enabled: true, hasKeys: true, devices: [], account: account, notFound: true })
+    userId = found.id
+    label = found.username ?? account
+  }
+  res.json({ ...(await pushTest(userId)), account: label })
 }))
 
 /** Embudo de postulación: dispositivo x con/sin cuenta x paso (abrió, vio el botón, tocó, salió). Ver backend/sql/apply-funnel-migration.sql. */
