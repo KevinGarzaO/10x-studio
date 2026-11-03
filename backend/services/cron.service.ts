@@ -180,6 +180,21 @@ export const initCron = () => {
     }
   })
 
+  // 3b-sexies. SEGUIMIENTO DE «MIS POSTULACIONES» (services/applications/followup.ts): todos los días 10:20 AM Monterrey (16:20 UTC).
+  //     A los 5 días de haberse postulado: «¿Cómo te fue con X?» (aviso en la app y, si lo quiere, un correo; como máximo uno por semana
+  //     por persona) y, a quien salió a postularse y nunca contestó, un solo recordatorio en la app a los 2 días.
+  //     Apagado hasta que se active APPLICATION_FOLLOWUPS=on en el servidor.
+  cron.schedule('20 16 * * *', async () => {
+    if (process.env.APPLICATION_FOLLOWUPS !== 'on') return
+    try {
+      const { runApplicationFollowups } = require('./applications/followup')
+      const outcome = await runApplicationFollowups()
+      console.log(`[Seguimiento] ${outcome.status === 'skipped' ? `omitido: ${outcome.reason}` : `avisos ${outcome.notified}, correos ${outcome.emailed}, en espera ${outcome.waiting}`}`)
+    } catch (error) {
+      console.error('[Seguimiento] Error:', error)
+    }
+  })
+
   //     Resumen semanal: martes y miércoles 10:05 AM Monterrey (16:05 UTC); el miércoles solo completa a quien no alcanzó
   //     el martes (cada persona recibe uno cada 6 días como máximo). Apagado hasta que se active MATCH_DIGEST=on.
   cron.schedule('5 16 * * 2,3', async () => {

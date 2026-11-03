@@ -182,9 +182,12 @@ Plan completo en [requirements/006-resend-webhook-and-crm.md](requirements/006-r
 - [ ] Banco de preguntas más grande: hoy el examen tiene pocas preguntas. Plan: preguntas redactadas con IA para los 15 skills más pedidos y aprobadas por ti en el admin.
 
 ### L. Mis postulaciones — P3 · M
-- [ ] Marcar "ya me postulé".
-- [ ] Estado sencillo de cada postulación.
-- [ ] Recordatorios.
+**Hecho el 2 de noviembre de 2026** (ver `requirements/012-my-applications.md`). Falta correr `vacancy-applications-migration.sql` en Supabase y, para el seguimiento automático, `APPLICATION_FOLLOWUPS=on` en Railway.
+- [x] Marcar "ya me postulé": al volver de postularse aparece «¿Ya te postulaste a X?» (Sí, ya / Todavía no / Más tarde).
+- [x] Estado sencillo de cada postulación (por postularme, postulada, en proceso, con oferta, no avanzó) en la página Mis postulaciones y la marca «Postulada» en el feed y el detalle.
+- [x] Recordatorios: a los 5 días de postularse «¿Cómo te fue?» (aviso en la app y correo, máximo uno por semana) y, a quien salió y no contestó, un aviso a los 2 días.
+- [x] Señales de confianza antes de salir (dominio de la empresa y «sitio oficial»).
+- [ ] Pendiente: mostrar en Telemetry y en el MCP cuánta gente dice haberse postulado (es el dato real de postulaciones completas).
 
 ### M. Filtro de señal humana en la analítica — P3 · M · en espera
 El 29 de octubre, de 10:15 a 12:50 (Monterrey), hubo 167 vistas de 167 visitantes nuevos, en 150 vacantes distintas, sin origen y sin ninguna acción (0 postulaciones, guardados ni registros). Casi seguro fue un navegador automático: distorsiona visitantes, conversión y la popularidad del feed. Lo pusiste en espera.

@@ -5,13 +5,13 @@ import { communityAuthMiddleware, AuthRequest } from '../../../middleware/commun
 const router = Router()
 router.use(communityAuthMiddleware)
 
-/** Los correos de "Para ti" que se pueden apagar. Sin valor guardado, todo está encendido. */
-export const EMAIL_PREF_KEYS = ['digest', 'alerts'] as const
+/** Los correos que se pueden apagar ("Para ti" y el seguimiento de postulaciones). Sin valor guardado, todo está encendido. */
+export const EMAIL_PREF_KEYS = ['digest', 'alerts', 'followups'] as const
 export type EmailPrefs = Record<(typeof EMAIL_PREF_KEYS)[number], boolean>
 
 export const withDefaults = (stored: unknown): EmailPrefs => {
   const source = stored && typeof stored === 'object' ? (stored as Record<string, unknown>) : {}
-  return { digest: source.digest !== false, alerts: source.alerts !== false }
+  return { digest: source.digest !== false, alerts: source.alerts !== false, followups: source.followups !== false }
 }
 
 // Los avisos de la persona: los 50 más recientes y cuántos no ha leído.

@@ -5,6 +5,7 @@ import { fetchEmailPrefs, saveEmailPrefs, type EmailPrefs } from '../lib/notific
 
 const OPTIONS: { key: keyof EmailPrefs; title: string; detail: string }[] = [
   { key: 'digest', title: 'Resumen semanal de vacantes', detail: 'Una vez por semana, las vacantes nuevas que más encajan con tu perfil.' },
+  { key: 'followups', title: 'Seguimiento de tus postulaciones', detail: 'Unos días después de postularte, un recordatorio para que cuentes cómo te fue. Como máximo uno por semana.' },
   { key: 'alerts', title: 'Alertas de coincidencia fuerte', detail: 'Cuando se publica una vacante con 80 % o más de compatibilidad contigo. Como máximo una al día y tres por semana.' },
 ]
 

@@ -4,7 +4,7 @@ const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'
 
 export interface AppNotification {
   id: string
-  type: 'comment' | 'match' | 'skill' | string
+  type: 'comment' | 'match' | 'skill' | 'application' | string
   message: string
   link: string | null
   read: boolean
@@ -14,6 +14,7 @@ export interface AppNotification {
 export interface EmailPrefs {
   digest: boolean
   alerts: boolean
+  followups: boolean
 }
 
 async function call(path: string, init: RequestInit = {}): Promise<Response | null> {

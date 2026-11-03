@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
-import { Award, Bell, Briefcase, Check, MessageCircle, Settings2 } from 'lucide-react'
+import { Award, Bell, Briefcase, Check, MessageCircle, Send, Settings2 } from 'lucide-react'
 import { EmptyState, ListSkeleton } from './skeletons'
 import { fetchNotifications, markAllNotificationsRead, markNotificationRead, timeAgo, type AppNotification } from '../lib/notifications'
 
@@ -10,6 +10,7 @@ const ICONS: Record<string, { icon: typeof Bell; className: string }> = {
   comment: { icon: MessageCircle, className: 'reply' },
   match: { icon: Briefcase, className: 'job' },
   skill: { icon: Award, className: 'vote' },
+  application: { icon: Send, className: 'job' },
 }
 
 /** Los avisos reales de la persona (comentarios en sus publicaciones, vacantes que encajan, skills validados). */

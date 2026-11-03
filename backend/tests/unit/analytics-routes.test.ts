@@ -258,7 +258,8 @@ describe('GET /analytics/retention', () => {
   })
 
   it('does not count or list the team: only real people', async () => {
-    const today = new Date().toISOString().slice(0, 10)
+    // El día es de Monterrey (UTC-6), no UTC: entre las 18:00 y la medianoche de Monterrey ya es otro día en UTC.
+    const today = new Date(Date.now() - 6 * 3600_000).toISOString().slice(0, 10)
     data.tables.users = [
       ...data.tables.users,
       { id: 'adm', username: 'admin', display_name: 'Admin', photo_url: null, user_kind: 'superadmin', created_at: hoursAgo(900), profile_completed: true },

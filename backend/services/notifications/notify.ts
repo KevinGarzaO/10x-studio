@@ -1,6 +1,6 @@
 import { supabase } from '../supabase.service'
 
-export type NotificationType = 'comment' | 'match' | 'skill'
+export type NotificationType = 'comment' | 'match' | 'skill' | 'application'
 
 export interface NotifyInput {
   userId: string
