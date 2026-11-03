@@ -47,7 +47,7 @@ function TestPush({ onDone }: { onDone: () => void }) {
           {result.notFound && <li>No encontré una cuenta con «{result.account}».</li>}
           {!result.hasKeys && <li>Al servidor le faltan las llaves VAPID (VAPID_PUBLIC_KEY y VAPID_PRIVATE_KEY en Railway).</li>}
           {result.hasKeys && !result.enabled && <li>Los avisos están apagados en el servidor (falta PUSH_NOTIFICATIONS=on en Railway).</li>}
-          {result.hasKeys && !result.notFound && result.devices.length === 0 && <li>La cuenta {result.account ?? ''} no tiene ningún dispositivo activo. Actívalo desde la ventana «¿Ya te postulaste?» o en Ajustes → Notificaciones.</li>}
+          {result.hasKeys && !result.notFound && result.devices.length === 0 && <li>{result.account === 'tu cuenta del panel' ? 'La cuenta con la que entraste al panel' : `La cuenta ${result.account ?? ''}`} no tiene ningún dispositivo activo. Si activaste los avisos con otra cuenta tuya, escribe su usuario o correo en el campo de arriba. Actívalo desde la ventana «¿Ya te postulaste?» o en Ajustes → Notificaciones.</li>}
           {result.devices.map((device, index) => (
             <li key={device.id}>Dispositivo {index + 1}: {device.ok ? 'el servidor lo entregó al navegador; si no lo ves, revisa las notificaciones del sistema y del navegador.' : `falló (${device.reason})`}</li>
           ))}
