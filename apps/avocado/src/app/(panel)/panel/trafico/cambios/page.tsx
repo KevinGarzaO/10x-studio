@@ -26,7 +26,7 @@ interface Change {
   nearbyChanges: number
   confidence: Confidence
 }
-interface ChangesData { ready: boolean; windowDays?: number; changes?: Change[] }
+interface ChangesData { ready: boolean; windowDays?: number; changes?: Change[]; withoutExpectedMetric?: number }
 
 const WINDOWS = [3, 7, 14]
 
@@ -76,6 +76,11 @@ export default function CambiosPage() {
 
       {data?.ready && (
         <>
+          {(data.withoutExpectedMetric ?? 0) > 0 && (
+            <Card title={`${data.withoutExpectedMetric} cambios sin métrica esperada`} hint="Sin ella no se puede evaluar si el cambio sirvió">
+              <p>Al hacer un commit, añade en el cuerpo una línea <code>Expects: qué métrica debe moverse y hacia dónde</code>.</p>
+            </Card>
+          )}
           {changes.length === 0 ? (
             <Card title="Todavía no hay cambios anotados"><Empty>Corre <code>npm run log-changes -- --apply</code> en el backend para traer lo que ya se subió; desde ahora cada despliegue se anota solo.</Empty></Card>
           ) : (

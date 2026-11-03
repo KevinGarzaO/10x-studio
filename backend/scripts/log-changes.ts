@@ -1,6 +1,6 @@
 import 'dotenv/config'
 import { execFileSync } from 'child_process'
-import { parseCommitSubject, recordChange } from '../services/analytics/changes'
+import { parseCommitSubject, parseExpectedMetric, recordChange } from '../services/analytics/changes'
 
 /**
  * Trae de git a la bitácora de cambios lo que se subió (solo feat / fix / perf, con la hora del commit).
@@ -17,10 +17,10 @@ async function main() {
   const since = sinceIndex > -1 ? process.argv[sinceIndex + 1] : new Date(Date.now() - 30 * 86400_000).toISOString().slice(0, 10)
   if (!/^\d{4}-\d{2}-\d{2}$/.test(since ?? '')) throw new Error('--since pide una fecha AAAA-MM-DD')
 
-  const raw = execFileSync('git', ['log', `--since=${since}`, '--no-merges', '--format=%H%x1f%cI%x1f%s%x1e'], { encoding: 'utf8', maxBuffer: 20 * 1024 * 1024 })
+  const raw = execFileSync('git', ['log', `--since=${since}`, '--no-merges', '--format=%H%x1f%cI%x1f%s%x1f%b%x1e'], { encoding: 'utf8', maxBuffer: 20 * 1024 * 1024 })
   const commits = raw.split('\x1e').map((entry) => entry.trim()).filter(Boolean).map((entry) => {
-    const [sha, date, subject] = entry.split('\x1f')
-    return { sha, date, subject, parsed: parseCommitSubject(subject) }
+    const [sha, date, subject, body] = entry.split('\x1f')
+    return { sha, date, subject, parsed: parseCommitSubject(subject), expectedMetric: parseExpectedMetric(`${subject}\n${body ?? ''}`) }
   })
   const counted = commits.filter((commit) => commit.parsed)
   console.log(`${commits.length} commits desde ${since}; ${counted.length} son cambios que se miden (feat / fix / perf).`)
@@ -32,7 +32,7 @@ async function main() {
       console.log(`${commit.date.slice(0, 16)}  ${kind.padEnd(7)} ${area.padEnd(14)} ${title}`)
       continue
     }
-    const result = await recordChange({ title, kind, area, commitSha: commit.sha, source: 'git', shippedAt: new Date(commit.date) })
+    const result = await recordChange({ title, kind, area, expectedMetric: commit.expectedMetric, commitSha: commit.sha, source: 'git', shippedAt: new Date(commit.date) })
     if (!result.saved && result.reason) { console.error(result.reason); process.exit(1) }
     saved += 1
   }

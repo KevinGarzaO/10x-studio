@@ -42,6 +42,18 @@ export function parseCommitSubject(subject: string): { kind: ChangeKind; area: s
   return title.length >= 3 ? { kind, area: slugArea(match[2]), title } : null
 }
 
+/**
+ * La métrica que se espera mover, escrita en el cuerpo del commit con una línea `Expects: <qué métrica y hacia dónde>`
+ * (también vale `Espera:` o `Esperado:`). Sin esa línea el cambio queda sin métrica esperada y la bitácora lo marca.
+ */
+export function parseExpectedMetric(message: string | null | undefined): string | null {
+  if (!message) return null
+  const body = message.split('\n').slice(1).join('\n')
+  const found = /^\s*(?:expects|espera|esperado)\s*:\s*(.+?)\s*$/im.exec(body)
+  const value = found?.[1]?.trim().slice(0, 300)
+  return value && value.length >= 3 ? value : null
+}
+
 const clean = (value: string | null | undefined) => (value && value.trim() ? value.trim() : null)
 
 const MISSING = 'Falta correr product-changes-migration.sql.'
@@ -78,15 +90,16 @@ export async function recordDeployFromEnv(env: NodeJS.ProcessEnv = process.env, 
   if (!sha || !message) return { saved: false, reason: 'no es un despliegue de Railway' }
   const parsed = parseCommitSubject(message.split('\n')[0])
   if (!parsed) return { saved: false, reason: 'el commit no es un cambio que se mida' }
+  const expectedMetric = parseExpectedMetric(message)
   try {
     const existing = await supabase.from('product_changes').select('id, source').eq('commit_sha', sha).maybeSingle()
     if (existing.error) return { saved: false, reason: isMissingMigration(existing.error.message) ? MISSING : existing.error.message }
     if (existing.data) {
       if (existing.data.source !== 'git') return { saved: false, reason: 'ya estaba anotado' }
-      const { error } = await supabase.from('product_changes').update({ shipped_at: now.toISOString(), source: 'deploy' }).eq('id', existing.data.id)
+      const { error } = await supabase.from('product_changes').update({ shipped_at: now.toISOString(), source: 'deploy', ...(expectedMetric ? { expected_metric: expectedMetric } : {}) }).eq('id', existing.data.id)
       return error ? { saved: false, reason: error.message } : { saved: true }
     }
-    return await recordChange({ ...parsed, commitSha: sha, source: 'deploy', shippedAt: now })
+    return await recordChange({ ...parsed, expectedMetric, commitSha: sha, source: 'deploy', shippedAt: now })
   } catch (error) {
     return { saved: false, reason: error instanceof Error ? error.message : String(error) }
   }
@@ -168,11 +181,13 @@ export function describeImpact(row: ImpactRow, windowDays: number): ChangeImpact
 export const IMPACT_WINDOWS = [3, 7, 14] as const
 
 /** El antes/después de los últimos cambios. `{ ready: false }` si falta la migración. */
-export async function loadChangeImpact(windowDays: number, limit: number, since?: Date): Promise<{ ready: false } | { ready: true; windowDays: number; changes: ChangeImpact[] }> {
+export async function loadChangeImpact(windowDays: number, limit: number, since?: Date): Promise<{ ready: false } | { ready: true; windowDays: number; changes: ChangeImpact[]; withoutExpectedMetric: number }> {
   const { data, error } = await supabase.rpc('analytics_change_impact', { p_window_days: windowDays, p_limit: limit, p_since: since ? since.toISOString() : null })
   if (error) {
     if (isMissingMigration(error.message)) return { ready: false }
     throw new Error(error.message)
   }
-  return { ready: true, windowDays, changes: ((data ?? []) as ImpactRow[]).map((row) => describeImpact(row, windowDays)) }
+  const changes = ((data ?? []) as ImpactRow[]).map((row) => describeImpact(row, windowDays))
+  // Sin métrica esperada la bitácora no puede evaluar si el cambio sirvió: se cuenta cuántos (de los que la gente ve) quedaron así.
+  return { ready: true, windowDays, changes, withoutExpectedMetric: changes.filter((change) => !change.expectedMetric && (change.kind === 'feature' || change.kind === 'fix')).length }
 }

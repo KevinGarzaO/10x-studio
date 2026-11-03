@@ -23,7 +23,7 @@ vi.mock('../../services/supabase.service', () => ({
   },
 }))
 
-import { confidenceOf, describeImpact, parseCommitSubject, perDay, recordChange, recordDeployFromEnv, shift, slugArea, type ImpactRow } from '../../services/analytics/changes'
+import { confidenceOf, describeImpact, parseCommitSubject, parseExpectedMetric, perDay, recordChange, recordDeployFromEnv, shift, slugArea, type ImpactRow } from '../../services/analytics/changes'
 import router from '../../src/routes/admin/analytics.routes'
 
 beforeEach(() => {
@@ -91,6 +91,14 @@ describe('recordDeployFromEnv', () => {
     db.existing = { id: 'row1', source: 'deploy' }
     expect((await recordDeployFromEnv(env, now)).saved).toBe(false)
   })
+  it('keeps the expected metric written in the commit body (Expects:)', async () => {
+    const withMetric = { ...env, RAILWAY_GIT_COMMIT_MESSAGE: 'feat(apply): embudo por dispositivo\n\ncuerpo\nExpects: clic en Postularse en móvil sube' } as NodeJS.ProcessEnv
+    await recordDeployFromEnv(withMetric, now)
+    expect(db.upserted.at(-1)!.row.expected_metric).toBe('clic en Postularse en móvil sube')
+    db.existing = { id: 'row1', source: 'git' }
+    await recordDeployFromEnv(withMetric, now)
+    expect(db.updated.at(-1)).toMatchObject({ source: 'deploy', expected_metric: 'clic en Postularse en móvil sube' })
+  })
   it('never throws', async () => {
     db.error = 'boom'
     await expect(recordDeployFromEnv(env, now)).resolves.toMatchObject({ saved: false })
@@ -143,5 +151,17 @@ describe('GET /changes', () => {
     rpc.mockResolvedValue({ data: null, error: { message: 'function analytics_change_impact does not exist' } })
     const res = await request(app()).get('/analytics/changes?window=14')
     expect(res.body).toEqual({ ready: false })
+  })
+})
+
+describe('parseExpectedMetric', () => {
+  it('reads Expects / Espera / Esperado from the body, never from the subject, and ignores empty ones', () => {
+    expect(parseExpectedMetric('feat: algo\n\nExpects: registros suben')).toBe('registros suben')
+    expect(parseExpectedMetric('feat: algo\n\nEspera:   menos abandono  ')).toBe('menos abandono')
+    expect(parseExpectedMetric('feat: algo\nEsperado: más clics')).toBe('más clics')
+    expect(parseExpectedMetric('Expects: en el titulo no cuenta')).toBeNull()
+    expect(parseExpectedMetric('feat: algo\n\nExpects:')).toBeNull()
+    expect(parseExpectedMetric('feat: algo')).toBeNull()
+    expect(parseExpectedMetric(null)).toBeNull()
   })
 })
