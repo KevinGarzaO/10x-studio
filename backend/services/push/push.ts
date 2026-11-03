@@ -66,7 +66,7 @@ export const defaultPushDeps: PushDeps = {
   },
   sentLast24h: async (userId, now) => {
     const since = new Date(now.getTime() - PUSH_WINDOW_HOURS * 3600_000).toISOString()
-    const { count } = await supabase.from('push_events').select('id', { count: 'exact', head: true }).eq('user_id', userId).eq('kind', 'sent').neq('notification_type', WELCOME_TYPE).gte('created_at', since)
+    const { count } = await supabase.from('push_events').select('id', { count: 'exact', head: true }).eq('user_id', userId).eq('kind', 'sent').neq('notification_type', WELCOME_TYPE).neq('notification_type', TEST_TYPE).gte('created_at', since)
     return count ?? 0
   },
   subscriptions: async (userId) => {
@@ -81,7 +81,8 @@ export const defaultPushDeps: PushDeps = {
       return { ok: true }
     } catch (error) {
       const status = (error as { statusCode?: number }).statusCode
-      return { ok: false, gone: status === 404 || status === 410, reason: `${status ?? 'error'}` }
+      const body = ((error as { body?: string }).body ?? (error as Error).message ?? '').toString().replace(/\s+/g, ' ').slice(0, 160)
+      return { ok: false, gone: status === 404 || status === 410, reason: `${status ?? 'error'}${body ? `: ${body}` : ''}` }
     }
   },
   revoke: async (id, reason) => { await supabase.from('push_subscriptions').update({ revoked_at: new Date().toISOString(), revoked_reason: reason }).eq('id', id) },
@@ -116,6 +117,33 @@ export async function pushWelcome(input: { userId: string; subscription: Subscri
     console.error('[Push] No se pudo mandar la notificación de muestra:', error instanceof Error ? error.message : error)
     return { status: 'skipped', reason: 'error' }
   }
+}
+
+/**
+ * Aviso de prueba para quien lo pide (el superadmin desde Telemetry): se manda a TODOS sus dispositivos activos y se devuelve el detalle
+ * de cada uno (si salió o por qué falló), para diagnosticar sin entrar a los registros del servidor. No cuenta para el tope.
+ */
+export const TEST_TYPE = 'test'
+export interface PushTestResult {
+  enabled: boolean
+  hasKeys: boolean
+  devices: { id: string; ok: boolean; reason?: string }[]
+}
+
+export async function pushTest(userId: string, deps: PushDeps = defaultPushDeps): Promise<PushTestResult> {
+  const config = deps.config()
+  const result: PushTestResult = { enabled: deps.enabled(), hasKeys: config !== null, devices: [] }
+  if (!config) return result
+  const subs = await deps.subscriptions(userId)
+  const nid = randomUUID()
+  const payload: PushPayload = { title: 'AvoTalent', body: 'Aviso de prueba: si lo ves, los avisos funcionan en este dispositivo.', url: '/postulaciones?utm_source=push&utm_medium=notificacion&utm_campaign=test', type: TEST_TYPE, nid }
+  for (const sub of subs) {
+    const sent = await deps.send(sub, payload, config)
+    if (!sent.ok && sent.gone) await deps.revoke(sub.id, 'dado de baja por el navegador')
+    await deps.record({ user_id: userId, subscription_id: sub.id, kind: sent.ok ? 'sent' : 'failed', notification_type: TEST_TYPE, nid })
+    result.devices.push(sent.ok ? { id: sub.id, ok: true } : { id: sub.id, ok: false, reason: sent.reason })
+  }
+  return result
 }
 
 export type PushOutcome = { status: 'skipped'; reason: string } | { status: 'done'; sent: number; failed: number }

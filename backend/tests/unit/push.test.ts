@@ -24,7 +24,7 @@ vi.mock('../../middleware/community-auth.middleware', () => ({
 }))
 
 import pushRoutes from '../../src/routes/community/push.routes'
-import { buildPayload, canPush, pushConfig, pushEnabled, pushToUser, pushWelcome, MAX_PUSHES_PER_DAY, type PushDeps } from '../../services/push/push'
+import { buildPayload, canPush, pushConfig, pushEnabled, pushToUser, pushWelcome, pushTest, MAX_PUSHES_PER_DAY, type PushDeps } from '../../services/push/push'
 import { buildPushSummary } from '../../services/analytics/push'
 
 const config = { publicKey: 'pub', privateKey: 'priv', subject: 'mailto:a@b.c' }
@@ -151,5 +151,19 @@ describe('pushWelcome (la notificación de muestra)', () => {
     const { value, log } = deps({ send: async () => ({ ok: false, gone: true, reason: '410' }) })
     expect(await pushWelcome({ userId: 'ana', subscription: SUB }, value)).toEqual({ status: 'done', sent: 0, failed: 1 })
     expect(log.revoked).toEqual(['s1'])
+  })
+})
+
+describe('pushTest (aviso de prueba del panel)', () => {
+  it('says what is missing when push is not configured', async () => {
+    expect(await pushTest('ana', deps({ config: () => null, enabled: () => false }).value)).toEqual({ enabled: false, hasKeys: false, devices: [] })
+    expect(await pushTest('ana', deps({ enabled: () => false }).value)).toMatchObject({ enabled: false, hasKeys: true })
+  })
+  it('sends to every device, gives the detail of each one and ignores the daily cap', async () => {
+    const results = [{ ok: true as const }, { ok: false as const, gone: false, reason: '403: bad key' }]
+    let n = 0
+    const { value, log } = deps({ sentLast24h: async () => 99, subscriptions: async () => [SUB, { ...SUB, id: 's2', endpoint: 'https://push.example/def' }], send: async () => results[n++] })
+    expect((await pushTest('ana', value)).devices).toEqual([{ id: 's1', ok: true }, { id: 's2', ok: false, reason: '403: bad key' }])
+    expect(log.recorded.map(event => [event.kind, event.notification_type])).toEqual([['sent', 'test'], ['failed', 'test']])
   })
 })

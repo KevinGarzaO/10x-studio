@@ -9,6 +9,7 @@ import { dailyQuota, daysUntilNextBatch, nextBatchFrom } from '../../../services
 import { loadAlerts } from '../../../services/analytics/alerts-data'
 import { IMPACT_WINDOWS, loadChangeImpact } from '../../../services/analytics/changes'
 import { loadPushSummary } from '../../../services/analytics/push'
+import { pushTest } from '../../../services/push/push'
 import { loadApplyFunnel } from '../../../services/analytics/apply-funnel'
 import { loadRhythm } from '../../../services/analytics/rhythm'
 import { loadTimingSummary } from '../../../services/performance/api-timing'
@@ -130,6 +131,16 @@ router.get('/changes', handle('cambios', async (req, res) => {
 /** Avisos push: la invitación, los dispositivos activos y lo enviado / tocado por tipo (backend/sql/push-notifications-migration.sql). */
 router.get('/push', handle('avisos push', async (req, res) => {
   res.json(await loadPushSummary(periodOf(req)))
+}))
+
+/**
+ * Manda un aviso de prueba a los dispositivos de quien lo pide (solo superadmin: esta ruta no pasa por la llave de servicio, que solo lee)
+ * y devuelve el detalle de cada dispositivo. Sirve para comprobar que los push funcionan de punta a punta.
+ */
+router.post('/push/test', handle('aviso de prueba', async (req, res) => {
+  const userId = (req as Request & { userId?: string }).userId
+  if (!userId) return res.status(401).json({ error: 'Sin sesión' })
+  res.json(await pushTest(userId))
 }))
 
 /** Embudo de postulación: dispositivo x con/sin cuenta x paso (abrió, vio el botón, tocó, salió). Ver backend/sql/apply-funnel-migration.sql. */

@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { api } from '@/lib/api'
 import { Card, ErrorBox, fmtNum, Loading, PageHeader, Stat, usePanelData } from '@/components/panel/ui'
 import { TrafficNotReady } from '@/components/panel/traffic'
 
@@ -16,6 +17,43 @@ interface PushData {
 
 const PERIODS = [{ days: 1, label: '24 horas' }, { days: 7, label: '7 días' }, { days: 30, label: '30 días' }, { days: 90, label: '90 días' }]
 const TYPE: Record<string, string> = { application: 'Seguimiento de postulación', match: 'Vacante para ti', welcome: 'Aviso de muestra' }
+interface TestResult { enabled: boolean; hasKeys: boolean; devices: { id: string; ok: boolean; reason?: string }[] }
+
+/** Manda un aviso de prueba a TUS dispositivos activos y explica qué pasó con cada uno. */
+function TestPush({ onDone }: { onDone: () => void }) {
+  const [busy, setBusy] = useState(false)
+  const [result, setResult] = useState<TestResult | null>(null)
+  const [failed, setFailed] = useState('')
+
+  async function send() {
+    setBusy(true); setFailed(''); setResult(null)
+    try {
+      setResult(await api<TestResult>('/api/admin/analytics/push/test', { method: 'POST' }))
+      onDone()
+    } catch (error) {
+      setFailed(error instanceof Error ? error.message : 'No se pudo mandar')
+    }
+    setBusy(false)
+  }
+
+  return (
+    <Card title="Probar con mis dispositivos" hint="Manda un aviso de prueba a los dispositivos que activaste con tu cuenta">
+      <button type="button" className="panel-btn" disabled={busy} onClick={send}>{busy ? 'Enviando…' : 'Mandarme un aviso de prueba'}</button>
+      {failed && <p>{failed}</p>}
+      {result && (
+        <ul>
+          {!result.hasKeys && <li>Al servidor le faltan las llaves VAPID (VAPID_PUBLIC_KEY y VAPID_PRIVATE_KEY en Railway).</li>}
+          {result.hasKeys && !result.enabled && <li>Los avisos están apagados en el servidor (falta PUSH_NOTIFICATIONS=on en Railway).</li>}
+          {result.hasKeys && result.devices.length === 0 && <li>Tu cuenta no tiene ningún dispositivo activo. Actívalo desde la ventana «¿Ya te postulaste?» o en Ajustes → Notificaciones.</li>}
+          {result.devices.map((device, index) => (
+            <li key={device.id}>Dispositivo {index + 1}: {device.ok ? 'el servidor lo entregó al navegador; si no lo ves, revisa las notificaciones del sistema y del navegador.' : `falló (${device.reason})`}</li>
+          ))}
+        </ul>
+      )}
+    </Card>
+  )
+}
+
 const pct = (value: number | null | undefined) => (value === null || value === undefined ? '—' : `${value.toLocaleString('es-MX', { maximumFractionDigits: 1 })} %`)
 
 export default function PushPage() {
@@ -43,6 +81,7 @@ export default function PushPage() {
             <Stat label="Aceptan la invitación" value={pct(data.invitation.acceptRatePct)} caption={`${fmtNum(data.invitation.accepted)} de ${fmtNum(data.invitation.shown)} veces que se mostró`} />
             <Stat label="Avisos que se tocan" value={pct(data.delivery.clickRatePct)} caption={`${fmtNum(data.delivery.clicked)} clics de ${fmtNum(data.delivery.sent)} enviados`} />
           </div>
+          <TestPush onDone={reload} />
           <Card title="La invitación" hint="Después de contestar «¿Ya te postulaste?» y en Ajustes">
             <table className="panel-table">
               <tbody>
