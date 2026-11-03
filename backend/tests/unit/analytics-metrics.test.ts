@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import {
   acquisitionBySource,
+  registrationOrigins,
   buildOverview,
   periodStart,
   hourKey,
@@ -374,4 +375,18 @@ describe('the last 24 hours', () => {
   it('labels the hours in Monterrey time', () => {
     expect(hourKey('2026-10-24T18:30:00Z')).toBe('2026-10-24T12')
   })
+})
+
+describe('registrationOrigins', () => {
+  const user = (source: string | null, completed: boolean, medium: string | null = null, campaign: string | null = null) =>
+    ({ id: Math.random().toString(), created_at: '2026-11-01T00:00:00Z', profile_completed: completed, signup_source: source, signup_medium: medium, signup_campaign: campaign, signup_content: null })
+
+  it('groups the accounts by the origin saved at sign-up, counts complete profiles, and calls a missing origin (directo)', () => {
+    const rows = registrationOrigins([user('linkedin', true, 'social', 'vacante'), user('linkedin', false, 'social', 'vacante'), user('email', true, 'invitacion', 'invitacion-1'), user(null, false)])
+    expect(rows[0]).toEqual({ source: 'linkedin', medium: 'social', campaign: 'vacante', registrations: 2, completedProfiles: 1 })
+    expect(rows.map(row => row.source).sort()).toEqual(['(directo)', 'email', 'linkedin'])
+    expect(rows.reduce((sum, row) => sum + row.registrations, 0)).toBe(4)
+  })
+
+  it('is empty without accounts', () => { expect(registrationOrigins([])).toEqual([]) })
 })

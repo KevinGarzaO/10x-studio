@@ -5,12 +5,14 @@ import { useState } from 'react'
 import { Card, Empty, ErrorBox, fmtNum, fmtPct, InlineBar, Loading, PageHeader, PeriodPicker, usePanelData } from '@/components/panel/ui'
 import { SegmentSummary, SegmentsNotReady, SegmentTable, type SegmentCounts } from '@/components/panel/segments'
 
+interface RegistrationOrigin { source: string; medium: string; campaign: string; registrations: number; completedProfiles: number }
 type Funnel = { step: string; count: number | null; pctOfPrevious: number | null }[]
 
 /** Con LA distinción de personas: nuevas / recurrentes, activas / solo visita, registradas / anónimas. */
 interface SegmentAcquisition {
   days: number
   source: 'segments'
+  registrationOrigins: RegistrationOrigin[]
   trackingSince: string | null
   partial: boolean
   totals: SegmentCounts
@@ -23,6 +25,7 @@ interface SegmentAcquisition {
 interface LegacyAcquisition {
   days: number
   source: 'legacy'
+  registrationOrigins: RegistrationOrigin[]
   sources: { source: string; medium: string; campaign: string; visitors: number; visits: number; signups: number; conversionPct: number | null }[]
   landingPages: { path: string; visitors: number }[]
   funnel: Funnel
@@ -60,6 +63,19 @@ export default function AdquisicionPage() {
                 </span>
               </div>
             ))}
+          </Card>
+
+          <Card title="De dónde venían al registrarse" hint="El origen que quedó guardado al crear la cuenta (último enlace marcado) · no es de dónde vienen las visitas">
+            {(data.registrationOrigins ?? []).length === 0 ? <Empty>Sin registros en este periodo.</Empty> : (
+              <table className="panel-table">
+                <thead><tr><th>Origen</th><th>Medio</th><th>Campaña</th><th className="num">Registros</th><th className="num">Con perfil completo</th></tr></thead>
+                <tbody>
+                  {data.registrationOrigins.map(row => (
+                    <tr key={`${row.source}|${row.medium}|${row.campaign}`}><td>{row.source}</td><td>{row.medium}</td><td>{row.campaign}</td><td className="num">{row.registrations}</td><td className="num">{row.completedProfiles}</td></tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
           </Card>
 
           {data.source === 'segments' ? (

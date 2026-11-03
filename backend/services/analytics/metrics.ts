@@ -289,6 +289,25 @@ export function acquisitionBySource(input: { visits: VisitRow[]; users: UserRow[
     .sort((a, b) => b.signups - a.signups || b.visitors - a.visitors)
 }
 
+/**
+ * Las cuentas creadas en el periodo según el origen que quedó guardado AL REGISTRARSE (`users.signup_*`): el último enlace marcado que
+ * traía el navegador antes de crear la cuenta. No es «de dónde vienen las visitas»: es de dónde venía quien terminó registrándose.
+ * Sin origen guardado cuenta como (direct).
+ */
+export function registrationOrigins(users: UserRow[]): { source: string; medium: string; campaign: string; registrations: number; completedProfiles: number }[] {
+  const rows = new Map<string, { registrations: number; completedProfiles: number }>()
+  for (const user of users) {
+    const key = JSON.stringify([user.signup_source ?? DIRECT, user.signup_medium ?? '-', user.signup_campaign ?? '-'])
+    const row = rows.get(key) ?? { registrations: 0, completedProfiles: 0 }
+    row.registrations++
+    if (user.profile_completed) row.completedProfiles++
+    rows.set(key, row)
+  }
+  return [...rows.entries()]
+    .map(([key, row]) => { const [source, medium, campaign] = JSON.parse(key) as [string, string, string]; return { source, medium, campaign, ...row } })
+    .sort((a, b) => b.registrations - a.registrations || a.source.localeCompare(b.source))
+}
+
 /** Las páginas por las que más gente entra. */
 export function topLandingPages(visits: VisitRow[], limit = 10): { path: string; visitors: number }[] {
   const byPath = new Map<string, VisitRow[]>()

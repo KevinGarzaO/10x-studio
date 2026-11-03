@@ -160,7 +160,8 @@ export function createServer(db: Queryable, options: ServerOptions = {}): McpSer
       title: 'De dónde llegan los registros',
       description:
         'Por canal (origen / medio / campaña), por publicación de LinkedIn y el total de LinkedIn: personas nuevas activas, cuántas se registraron y la conversión. También cuántas cuentas reales se crearon en el periodo. ' +
-        'Una persona cuenta una vez en cada canal que visitó; los canales no suman el total. Con pocas personas por canal, 0 % o 100 % casi siempre es azar.',
+        'Una persona cuenta una vez en cada canal que visitó; los canales no suman el total. Con pocas personas por canal, 0 % o 100 % casi siempre es azar. ' +
+        'OJO: esto son los canales que VISITÓ la gente. Para saber de dónde venía quien terminó REGISTRÁNDOSE (el origen guardado al crear la cuenta) usa get_panel_metric con metric acquisition y lee `registrationOrigins`.',
       inputSchema: {
         days: z.number().int().min(1).max(90).default(30),
         limit: z.number().int().min(1).max(30).default(12).describe('Cuántos canales y publicaciones mostrar.'),

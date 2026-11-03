@@ -72,6 +72,7 @@ En el panel de Telemetry (telemetry.avotalent.app) hay: Resumen, LinkedIn, Vacan
 - `get_change_log`: lo que se cambió y cuándo, con su antes/después.
 - `get_retention_and_cohorts`: personas nuevas contra recurrentes, solo visitaron, conversión, activas por día/semana/mes, cuántas volvieron y las cohortes semanales.
 - `get_signup_sources`: de dónde llegan las personas nuevas y los registros (canal, publicación de LinkedIn, total de LinkedIn) y su conversión.
+- `get_panel_metric`: lee la MISMA pantalla del panel de Telemetry (mismos números). Para saber de dónde venía quien terminó registrándose (el origen guardado al crear la cuenta) usa `metric: acquisition` y lee `registrationOrigins`; `get_signup_sources` cuenta canales que la gente VISITÓ, no el origen del registro. Para el embudo de postulación por móvil/escritorio y con/sin cuenta usa `metric: web_apply_funnel`.
 - `get_weekly_rhythm`: cada día contra el mismo día de otras semanas, días flojos, origen y las horas con más gente.
 - `get_server_speed`: cuánto tarda cada ruta del servidor (mediana y p95 estimados) y qué parte del tiempo consume.
 

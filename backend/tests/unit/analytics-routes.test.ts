@@ -169,6 +169,12 @@ describe('GET /analytics/acquisition', () => {
     expect(res.body.sources.some((row: { source: string }) => row.source === '(directo)')).toBe(true)
   })
 
+  it('also gives the origin saved when each account was created, apart from the visited channels', async () => {
+    const res = await request(app()).get('/analytics/acquisition?days=7').expect(200)
+    expect(res.body.registrationOrigins.reduce((sum: number, row: { registrations: number }) => sum + row.registrations, 0)).toBe(1)
+    expect(res.body.registrationOrigins[0]).toMatchObject({ source: 'linkedin', registrations: 1 })
+  })
+
   it('walks the funnel from visitors to the people who came back', async () => {
     data.tables.user_activity_daily = [{ user_id: 'u1', day: '2999-01-01' }]
     const res = await request(app()).get('/analytics/acquisition?days=7').expect(200)

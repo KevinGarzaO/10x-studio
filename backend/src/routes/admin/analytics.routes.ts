@@ -15,6 +15,7 @@ import { stepsByFlow, type FlowStepRow } from '../../../services/analytics/flows
 import { loadMatchingOverview } from '../../../services/analytics/matching-data'
 import {
   acquisitionBySource,
+  registrationOrigins,
   buildOverview,
   change,
   dayKey,
@@ -473,6 +474,7 @@ router.get('/acquisition', handle('adquisición', async (req, res) => {
     return res.json({
       days,
       source: 'legacy',
+      registrationOrigins: registrationOrigins(users),
       sources: acquisitionBySource({ visits, users }),
       landingPages: topLandingPages(visits, 10),
       funnel: [
@@ -490,6 +492,7 @@ router.get('/acquisition', handle('adquisición', async (req, res) => {
     source: 'segments',
     trackingSince: trackedSince,
     partial: isPartial(trackedSince, from),
+    registrationOrigins: registrationOrigins(users),
     totals: all,
     channels,
     landing,
