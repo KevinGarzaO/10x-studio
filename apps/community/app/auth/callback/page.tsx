@@ -68,6 +68,11 @@ export default function AuthCallbackPage() {
         const justCreated = data.user?.created_at ? Date.now() - Date.parse(data.user.created_at) < 2 * 60 * 1000 : false
         void trackEvent(justCreated ? 'user_registration_success' : 'login_success', { method: data.user?.provider ?? 'oauth' }).then(() => identifyUser())
         // El intento de entrar (o de registrarse) empezó en la página anterior, antes de ir al proveedor: aquí se cierra.
+        // Lo que de verdad pasó manda: una cuenta nueva es un REGISTRO y una existente es un INICIO DE SESIÓN. Si no hay un intento
+        // abierto de ese tipo (la persona no pasó por /signup ni por el aviso de la vacante, o su navegador perdió el intento), se
+        // abre aquí mismo para que no se pierda un registro real.
+        const happened = justCreated ? 'auth_register' : 'auth_login'
+        if (!flowFor(happened).isActive()) flowFor(happened).startFlow({ reuse: true })
         for (const name of ['auth_register', 'auth_login'] as const) flowFor(name).completeFlow('oauth_success')
         router.replace(data.user?.profile_completed ? '/' : '/onboarding')
         router.refresh()

@@ -3,6 +3,7 @@
 import { useMemo, useState, useEffect, useCallback, useRef } from 'react'
 import { flowFor } from '../lib/flow-tracker'
 import { usePageReady } from '../lib/page-timing'
+import { hadSessionBefore } from '../lib/session-marker'
 import Link from 'next/link'
 import { usePathname, useRouter, useSearchParams } from 'next/navigation'
 import {
@@ -659,6 +660,12 @@ export function AuthModal({ onClose, request, locked = false, gate = false }: { 
     // La vacante se recuerda también en el OAuth: al terminar el onboarding se
     // vuelve a ella igual que con los botones de correo.
     saveReturnTo(window.location.pathname)
+    // Esta pantalla es por donde más gente se registra (llega de LinkedIn a una vacante), y antes NO medía nada: solo /signup y /login
+    // abrían el intento, así que esos registros no aparecían como completos. Aquí no se sabe si es un registro o un inicio de sesión;
+    // se usa la marca de que este navegador ya tuvo sesión, y al volver (auth/callback) se corrige con lo que de verdad pasó.
+    const flow = flowFor(hadSessionBefore() ? 'auth_login' : 'auth_register')
+    flow.startFlow({ reuse: true })
+    flow.trackStep('oauth_redirect', 1)
     window.location.href = `${API_URL}/api/community/auth/oauth/${provider}`
   }
 
