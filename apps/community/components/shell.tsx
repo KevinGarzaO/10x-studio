@@ -13,6 +13,7 @@ import { ProfileGate } from './profile-gate'
 import { ThemeToggle } from './theme-toggle'
 import { SearchBox } from './search-box'
 import { HeroBanner } from './hero-banner'
+import { ApplyPrompt } from './apply-prompt'
 
 export function CommunityShell({ children }: { children: ReactNode }) {
   const pathname = usePathname()
@@ -80,6 +81,8 @@ export function CommunityShell({ children }: { children: ReactNode }) {
   return (
     <ShellContext.Provider value={contextValue}>
       <ProfileGate />
+      {/* «¿Ya te postulaste?»: al volver de postularse en el sitio de la empresa */}
+      <ApplyPrompt enabled={!!user} />
       <div className="app-shell">
         <header className="topbar">
           <button className="mobile-menu-button icon-button" onClick={() => setMobileMenu(!mobileMenu)} aria-label={mobileMenu ? 'Cerrar menú' : 'Abrir menú'} aria-expanded={mobileMenu}>{mobileMenu ? <X size={20} /> : <Menu size={20} />}</button>

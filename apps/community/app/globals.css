@@ -1375,3 +1375,22 @@ button { cursor: pointer; }
 .detail-apply-inline .detail-action { width: 100%; justify-content: center; padding: 13px 16px; font-size: 15px; box-sizing: border-box; }
 .detail-apply-note { margin: 8px 0 0; font-size: 12.5px; line-height: 1.45; color: var(--text-muted); }
 .detail-apply-note a { color: var(--accent-text); font-weight: 600; }
+/* Mis postulaciones: franja «¿Ya te postulaste?», marca de postulada, aviso del sitio oficial. Todo con los colores del tema. */
+.apply-prompt { position: fixed; z-index: 70; top: 62px; left: 50%; transform: translateX(-50%); width: min(640px, calc(100vw - 24px)); box-sizing: border-box; display: flex; align-items: center; justify-content: space-between; gap: 12px 18px; flex-wrap: wrap; padding: 12px 16px; background: var(--surface); color: var(--text); border: 1px solid var(--line); border-left: 3px solid var(--brand); border-radius: 10px; box-shadow: 0 8px 28px rgba(0,0,0,.22); font-size: 14px; line-height: 1.4; }
+.apply-prompt-text { min-width: 0; flex: 1 1 260px; }
+.apply-prompt-text a { color: var(--accent-text); font-weight: 600; }
+.apply-prompt-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+.apply-prompt-actions button { border: 1px solid var(--line); background: var(--bg); color: var(--text-2); font-size: 13px; font-weight: 600; padding: 8px 14px; border-radius: 8px; cursor: pointer; }
+.apply-prompt-actions button:hover:not(:disabled) { border-color: var(--text-muted); }
+.apply-prompt-actions .apply-prompt-yes { background: var(--brand); border-color: var(--brand); color: var(--on-accent); }
+.apply-prompt-actions button:disabled { opacity: .55; cursor: default; }
+.apply-prompt.is-thanks { border-left-color: var(--brand); }
+.detail-apply-trust { margin: 8px 0 0; font-size: 12.5px; line-height: 1.45; color: var(--text-muted); }
+.detail-apply-trust strong { color: var(--text-2); font-weight: 600; }
+.detail-applied { margin: 8px 0 0; display: flex; align-items: center; gap: 6px; flex-wrap: wrap; font-size: 13px; font-weight: 600; color: var(--accent-text); }
+.detail-applied a { color: inherit; text-decoration: underline; }
+.jc-applied { display: inline-flex; align-items: center; gap: 4px; font-size: 12px; font-weight: 700; color: var(--accent-text); }
+.application-status { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; margin-top: 10px; }
+.application-status select { background: var(--bg); color: var(--text-2); border: 1px solid var(--line); border-radius: 8px; padding: 7px 10px; font-size: 13px; }
+.application-status-label { display: block; font-size: 11px; font-weight: 600; letter-spacing: .04em; text-transform: uppercase; color: var(--text-faint); margin-bottom: 4px; }
+.application-host { display: inline-flex; align-items: center; gap: 4px; font-size: 12px; color: var(--text-faint); }

@@ -6,6 +6,7 @@ import { usePageReady } from '../../../../lib/page-timing'
 import { hadSessionBefore } from '../../../../lib/session-marker'
 import { useFlowTracker } from '../../../../lib/use-flow-tracker'
 import { useCompactLayout } from '../../../../lib/use-compact-layout'
+import { APPLICATION_CHANGED, isApplied, recordApplicationClick, type ApplicationChange, type ApplicationStatus } from '../../../../lib/applications'
 import { DetailSkeleton } from '@/components/skeletons'
 import Link from 'next/link'
 import { useParams, useRouter } from 'next/navigation'
@@ -212,8 +213,19 @@ export default function VacancyPage() {
   const [fullContent, setFullContent] = useState<string | null>(null)
   // Se abrió el sitio de la empresa en otra pestaña: se avisa y se deja el enlace por si el navegador bloqueó la ventana.
   const [applyNote, setApplyNote] = useState(false)
+  // Cómo va la postulación de ESTA persona a esta vacante (lo que ella contestó); viene con el detalle y se actualiza si contesta la franja.
+  const [appStatus, setAppStatus] = useState<ApplicationStatus | null>(null)
   const compact = useCompactLayout()
   useEffect(() => { setApplyNote(false) }, [slug])
+  const vacancyId = post?.id
+  useEffect(() => {
+    function onChange(event: Event) {
+      const change = (event as CustomEvent<ApplicationChange>).detail
+      if (change && change.vacancyId === vacancyId) setAppStatus(change.status)
+    }
+    window.addEventListener(APPLICATION_CHANGED, onChange)
+    return () => window.removeEventListener(APPLICATION_CHANGED, onChange)
+  }, [vacancyId])
   // Telemetría de los flujos (ver lib/flow-tracker.ts).
   const applyFlow = useFlowTracker('job_application')
   const searchFlow = useFlowTracker('job_search_filter')
@@ -247,6 +259,7 @@ export default function VacancyPage() {
         setPost(data)
         setSaved(!!data.isSaved)
         setHistoryId(data.historyId ?? null)
+        setAppStatus(data.applicationStatus ?? null)
         setComments(commentsOf(data))
         setLoading(false)
 
@@ -433,15 +446,25 @@ export default function VacancyPage() {
     // navegador no dice si bloqueó la ventana, por eso el aviso de abajo siempre deja el enlace a la mano.
     window.open(applyUrl, '_blank', 'noopener,noreferrer')
     setApplyNote(true)
+    // Se guarda el intento: al volver, la franja de AvoTalent pregunta «¿Ya te postulaste?» y queda en Mis postulaciones.
+    void recordApplicationClick(current.id).then(saved => { if (saved) setAppStatus(status => status ?? saved.status) })
     // Salir a postular al sitio de la empresa es el final de lo que se puede medir (lo que pase allá no lo vemos).
     applyFlow.completeFlow('external_apply')
   }
 
+  const applyHost = (() => { try { return applyUrl ? new URL(applyUrl).hostname.replace(/^www\./, '') : null } catch { return null } })()
+  const applyTrustBlock = user && applyUrl && applyHost && !applyNote && (
+    <p className="detail-apply-trust">Te llevamos al <strong>sitio oficial de la empresa</strong> ({applyHost}). AvoTalent no recibe lo que escribas allá.</p>
+  )
+  const appliedBlock = isApplied(appStatus) && (
+    <p className="detail-applied" role="status"><Check size={14} aria-hidden="true" /> Postulada · <Link href="/postulaciones">ver en Mis postulaciones</Link></p>
+  )
   const applyNoteBlock = applyNote && applyUrl && (
     <p className="detail-apply-note" role="status">
       Abrimos el sitio de {companyName} en otra pestaña. Si no la ves, <a href={applyUrl} target="_blank" rel="noopener noreferrer">ábrelo aquí</a>.
     </p>
   )
+  const applyExtras = <>{applyTrustBlock}{applyNoteBlock}{appliedBlock}</>
   const commentsTotal = comments.length || post.commentsCount || 0
   // Sin cuenta el servidor no entrega el enlace de postulación (ni el contenido): "Postularse" existe igual y lleva al registro.
   const applyAction = expired || (!applyUrl && user)
@@ -485,7 +508,7 @@ export default function VacancyPage() {
                 {compact && applyAction && (
                   <div className="detail-apply-inline">
                     <button type="button" className="detail-action" onClick={applyAction}>Postularse</button>
-                    {applyNoteBlock}
+                    {applyExtras}
                   </div>
                 )}
 
@@ -666,7 +689,7 @@ export default function VacancyPage() {
               ]}
             >
               {!compact && applyAction && <button type="button" className="detail-action" onClick={applyAction}>Postularse</button>}
-              {!compact && applyAction && applyNoteBlock}
+              {!compact && applyAction && applyExtras}
             </SideCard>
 
             <RelatedCard postKey={post.slug || slug} />

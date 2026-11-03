@@ -13,6 +13,7 @@ import { loadAllowedTags, findInvalidTags } from '../../../services/community/po
 import { isRangeNotSatisfiable } from '../../../services/community/pagination'
 import { getOptionalUserId } from '../../../services/community/viewer'
 import { redactListForGuest } from '../../../services/community/guest-view'
+import { statusMap as applicationStatusMap } from '../../../services/applications/applications'
 
 const router = Router()
 
@@ -192,7 +193,8 @@ router.get('/', async (req: Request, res: Response) => {
 
       const viewerId = await getOptionalUserId(req)
       const savedMap = await getSavedMap(viewerId, ordered.map((p: any) => p.id))
-      ordered = ordered.map((p: any) => ({ ...p, stats: statsOf(p), isSaved: savedMap.has(p.id), historyId: savedMap.get(p.id) ?? null }))
+      const applications = await applicationStatusMap(viewerId, ordered.filter((p: any) => p.type === 'job').map((p: any) => p.id))
+      ordered = ordered.map((p: any) => ({ ...p, stats: statsOf(p), isSaved: savedMap.has(p.id), historyId: savedMap.get(p.id) ?? null, applicationStatus: applications.get(p.id) ?? null }))
       if (!viewerId) ordered = redactListForGuest(ordered)
 
       return res.json({
@@ -313,7 +315,8 @@ router.get('/', async (req: Request, res: Response) => {
     const savedMap = await getSavedMap(viewerId, mapped.map((p: any) => p.id))
     const statsOf = type === 'job' ? await loadVacancyStats() : null
     const votedSet = await getVotedSet(viewerId, mapped.map((p: any) => p.id))
-    mapped = mapped.map((p: any) => ({ ...p, ...(statsOf ? { stats: statsOf(p) } : {}), isSaved: savedMap.has(p.id), historyId: savedMap.get(p.id) ?? null, hasVoted: votedSet.has(p.id) }))
+    const applications = await applicationStatusMap(viewerId, mapped.filter((p: any) => p.type === 'job').map((p: any) => p.id))
+    mapped = mapped.map((p: any) => ({ ...p, ...(statsOf ? { stats: statsOf(p) } : {}), isSaved: savedMap.has(p.id), historyId: savedMap.get(p.id) ?? null, hasVoted: votedSet.has(p.id), applicationStatus: applications.get(p.id) ?? null }))
     if (!viewerId) mapped = redactListForGuest(mapped)
 
     res.json({
@@ -466,9 +469,12 @@ router.get('/:id', async (req: Request, res: Response) => {
 
       const stats: VacancyStats | null = (post as any).type === 'job' ? (await loadVacancyStats())(post as any) : null
 
+      const applications = (post as any).type === 'job' ? await applicationStatusMap(viewerId, [(post as any).id]) : new Map<string, string>()
+
       return res.json({
         ...post,
         match,
+        applicationStatus: applications.get((post as any).id) ?? null,
         ...(stats ? { stats } : {}),
         author: normalizeAuthor(post.author),
         community_comments: ((post as any).community_comments || []).map((c: any) => ({ ...c, author: normalizeAuthor(c.author) })),

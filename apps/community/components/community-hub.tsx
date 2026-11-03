@@ -4,6 +4,7 @@ import { useMemo, useState, useEffect, useCallback, useRef } from 'react'
 import { flowFor } from '../lib/flow-tracker'
 import { usePageReady } from '../lib/page-timing'
 import { hadSessionBefore } from '../lib/session-marker'
+import { APPLICATION_CHANGED, isApplied, type ApplicationChange, type ApplicationStatus } from '../lib/applications'
 import Link from 'next/link'
 import { usePathname, useRouter, useSearchParams } from 'next/navigation'
 import {
@@ -83,6 +84,8 @@ interface EditorialPost {
   seniority_level?: string | null
   isSaved?: boolean
   historyId?: string | null
+  /** Cómo va la postulación de quien mira a esta vacante (solo con sesión): lo que ella contestó en «¿Ya te postulaste?». */
+  applicationStatus?: ApplicationStatus | null
   /** Si quien mira ya votó esta publicación (discusiones y proyectos). */
   hasVoted?: boolean
   /** Cuánta gente abrió, guardó y se postuló a la vacante (solo en vacantes). */
@@ -205,6 +208,7 @@ export function LeftSidebar({ activeTag, onTagClick }: { activeTag: string | nul
         { href: '/empleos', label: 'Empleos por skill', icon: <BriefcaseBusiness size={18} /> },
         { href: '/puestos', label: 'Empleos por puesto', icon: <Target size={18} /> },
         { href: '/saved', label: 'Guardadas', icon: <Bookmark size={18} /> },
+        { href: '/postulaciones', label: 'Mis postulaciones', icon: <Send size={18} /> },
       ].map(item => (
         <Link key={item.href} href={item.href} className={`side-nav-link ${pathname === item.href ? 'active' : ''}`} aria-current={pathname === item.href ? 'page' : undefined}>
           {item.icon}{item.label}
@@ -371,6 +375,17 @@ function buildApplyUrl(platform: string | null, sourceUrl: string | null): strin
 
 export function PostCard({ post, onAuthRequired }: { post: FeedPost; onAuthRequired?: () => void }) {
   const router = useRouter(); const [voted, setVoted] = useState(!!post.hasVoted); const [saved, setSaved] = useState(!!post.isSaved)
+  // «Postulada»: viene con la vacante y se actualiza si la persona contesta la franja «¿Ya te postulaste?» sin recargar el feed.
+  const [appStatus, setAppStatus] = useState<ApplicationStatus | null>(post.applicationStatus ?? null)
+  useEffect(() => { setAppStatus(post.applicationStatus ?? null) }, [post.applicationStatus])
+  useEffect(() => {
+    function onChange(event: Event) {
+      const change = (event as CustomEvent<ApplicationChange>).detail
+      if (change && change.vacancyId === post.id) setAppStatus(change.status)
+    }
+    window.addEventListener(APPLICATION_CHANGED, onChange)
+    return () => window.removeEventListener(APPLICATION_CHANGED, onChange)
+  }, [post.id])
   const [historyId, setHistoryId] = useState<string | null>(post.historyId ?? null)
   // Session comes from the shared shell context — every card used to fetch
   // its own copy, which meant one request per card rendered on the page.
@@ -458,6 +473,7 @@ export function PostCard({ post, onAuthRequired }: { post: FeedPost; onAuthRequi
         </ProfileHoverCard>
         <span className="jc-time">{time}</span>
         <span className="post-type-badge">VACANTE</span>
+        {isApplied(appStatus) && <span className="jc-applied"><Check size={12} aria-hidden="true" /> Postulada</span>}
         <span className="footer-spacer" />
         <button className={`icon-button ${saved ? 'saved' : ''}`} onClick={handleSaveClick} aria-label="Guardar"><Bookmark size={17} fill={saved ? 'currentColor' : 'none'} /></button>
       </div>

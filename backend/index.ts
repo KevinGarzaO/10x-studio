@@ -36,6 +36,7 @@ import communitySkillProposalsRoutes from './src/routes/community/skill-proposal
 import communityCompaniesRoutes from './src/routes/community/companies.routes'
 import communityNotificationsRoutes from './src/routes/community/notifications.routes'
 import communityCardsRoutes from './src/routes/community/cards.routes'
+import communityApplicationsRoutes from './src/routes/community/applications.routes'
 // import communityCompanyClaimsRoutes from './src/routes/community/company-claims.routes'
 
 // Admin routes
@@ -124,6 +125,7 @@ app.use('/api/community/favicon', faviconRoutes)
 app.use('/api/community/stats', communityStatsRoutes)
 app.use('/api/community/discover', communityDiscoverRoutes)
 app.use('/api/community/seo', communitySeoRoutes)
+app.use('/api/community/applications', communityApplicationsRoutes)
 app.use('/api/community/attribution', communityAttributionRoutes)
 app.use('/api/community/feed', communityFeedRoutes)
 app.use('/api/community/history', communityHistoryRoutes)

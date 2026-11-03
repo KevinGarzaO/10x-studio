@@ -7,7 +7,7 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useState, FormEvent, useEffect } from 'react'
 import {
-  ArrowLeft, Bell, Bookmark, Check, Mail, Moon,
+  ArrowLeft, Bell, Bookmark, Check, Mail, Moon, Send,
   Save, Settings, UserRound, MapPin, ExternalLink,
   Eye, EyeOff, MessageCircle, Heart, Loader2, Tag
 } from 'lucide-react'
@@ -193,6 +193,7 @@ export function AccountLayout({ children, active }: { children: React.ReactNode;
             <Link className={active === 'profile' ? 'active' : ''} href="/profile"><UserRound size={15} /> Perfil</Link>
             <Link className={active === 'settings' ? 'active' : ''} href="/settings"><Settings size={15} /> Configuración</Link>
             <Link className={active === 'saved' ? 'active' : ''} href="/saved"><Bookmark size={15} /> Guardados</Link>
+            <Link className={active === 'applications' ? 'active' : ''} href="/postulaciones"><Send size={15} /> Mis postulaciones</Link>
             <Link className={active === 'notifications' ? 'active' : ''} href="/notifications"><Bell size={15} /> Notificaciones</Link>
           </nav>
           <main>{children}</main>
