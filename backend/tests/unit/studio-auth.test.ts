@@ -107,7 +107,7 @@ describe('the server wiring', () => {
 
   it('guards every Studio route group and the analytics panel', () => {
     for (const mount of ["'/api/substack'", "'/api/users'", "'/api/blog'", "'/api/linkedin'", "'/api/admin/analytics'"]) {
-      expect(index).toMatch(new RegExp(`app\\.use\\(${mount.replace(/\//g, '\\/')}, studioAuth\\(`))
+      expect(index).toMatch(new RegExp(`app\\.use\\(${mount.replace(/\//g, '\\/')}, (analyticsAccess\\()?studioAuth\\(`))
     }
     expect(index.match(/app\.use\('\/api', studioAuth\(\{ onlyFor/g)).toHaveLength(2)
   })
