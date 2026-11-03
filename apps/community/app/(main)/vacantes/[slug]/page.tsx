@@ -5,10 +5,11 @@ import { pageLoadMs } from '../../../../lib/flow-tracker'
 import { usePageReady } from '../../../../lib/page-timing'
 import { hadSessionBefore } from '../../../../lib/session-marker'
 import { useFlowTracker } from '../../../../lib/use-flow-tracker'
+import { useCompactLayout } from '../../../../lib/use-compact-layout'
 import { DetailSkeleton } from '@/components/skeletons'
 import Link from 'next/link'
 import { useParams, useRouter } from 'next/navigation'
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect } from 'react'
 import { ArrowLeft, BadgeCheck, Check, LockKeyhole, MapPin, Minus, X } from 'lucide-react'
 import { marked } from 'marked'
 import { useShell } from '../../../../lib/shell-context'
@@ -52,12 +53,6 @@ const SENIORITY_FIT_TEXT = { exact: 'Tu nivel', near: 'Un nivel de diferencia', 
 const MODALITY_FIT_TEXT = { match: 'Tu modalidad', compatible: 'Modalidad compatible', unknown: 'No indica modalidad', mismatch: 'Otra modalidad' }
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'
-
-// Only these ATS providers are known to allow being embedded in an iframe.
-// Everything else (e.g. Platzi) sends X-Frame-Options/CSP headers that block
-// embedding silently — the iframe just spins forever with no error, so for
-// those we open the apply link in a new tab instead.
-const IFRAME_EMBEDDABLE_PLATFORMS = new Set(['greenhouse', 'lever', 'workable'])
 
 marked.setOptions({ breaks: true, gfm: true })
 
@@ -215,12 +210,13 @@ export default function VacancyPage() {
   const [commentError, setCommentError] = useState<string | null>(null)
   const [redirecting, setRedirecting] = useState(false)
   const [fullContent, setFullContent] = useState<string | null>(null)
-  const [applyOpen, setApplyOpen] = useState(false)
+  // Se abrió el sitio de la empresa en otra pestaña: se avisa y se deja el enlace por si el navegador bloqueó la ventana.
+  const [applyNote, setApplyNote] = useState(false)
+  const compact = useCompactLayout()
+  useEffect(() => { setApplyNote(false) }, [slug])
   // Telemetría de los flujos (ver lib/flow-tracker.ts).
   const applyFlow = useFlowTracker('job_application')
   const searchFlow = useFlowTracker('job_search_filter')
-  const [applySuccess, setApplySuccess] = useState(false)
-  const iframeRef = useRef<HTMLIFrameElement>(null)
 
   // Opening a vacancy shouldn't inherit whatever scroll depth the feed was
   // at — it should always start at the top. router.back() to return to the
@@ -229,34 +225,6 @@ export default function VacancyPage() {
   useEffect(() => {
     window.scrollTo(0, 0)
   }, [slug])
-
-  // Detect postMessage from ATS iframes (application submitted)
-  useEffect(() => {
-    function handleMessage(e: MessageEvent) {
-      const data = e.data
-      if (typeof data === 'string' && /submit|applied|success|application.?sent/i.test(data)) {
-        setApplySuccess(true)
-        return
-      }
-      if (typeof data === 'object' && data && /submit|applied|success/i.test(String(data.type || data.event || data.action))) {
-        setApplySuccess(true)
-      }
-    }
-    if (applyOpen) {
-      window.addEventListener('message', handleMessage)
-      return () => window.removeEventListener('message', handleMessage)
-    }
-  }, [applyOpen])
-
-  // Reset success state when modal closes
-  useEffect(() => {
-    if (!applyOpen) setApplySuccess(false)
-  }, [applyOpen])
-
-  // La confirmación de la postulación dentro de la página (cuando el sitio de la empresa se abre en un marco).
-  useEffect(() => {
-    if (applySuccess) applyFlow.completeFlow('confirmed')
-  }, [applySuccess, applyFlow])
 
   useEffect(() => {
     setLoading(true)
@@ -392,7 +360,6 @@ export default function VacancyPage() {
   const isScraped = post.is_scraper_post
   const companyName = formatCompanyName(post.company || meta.company) || 'Comunidad'
   const applyUrl = buildApplyUrl(post.platform ?? null, post.source_url ?? null)
-  const canEmbedApply = !!post.platform && IFRAME_EMBEDDABLE_PLATFORMS.has(post.platform)
 
   // Con contenido traído del ATS se prefiere ese cuerpo, que es más completo.
   // Y si el parseo no encontró nada, se cae al markdown: el peor caso es lo
@@ -457,19 +424,24 @@ export default function VacancyPage() {
   function handleApplyClick() {
     trackVacancyEvent(current.slug || slug, 'apply')
     if (!applyUrl) return
-    // Con sesión, "Postularse" abre el sitio de la empresa: empieza a postular y sale a postular de verdad.
+    // Con sesión, "Postularse" abre el sitio de la empresa en otra pestaña. Antes algunos ATS se abrían dentro de un marco de esta
+    // página, pero muchos sitios (y los navegadores que bloquean cookies de terceros) lo dejan en blanco: ya no se usa ningún marco.
     void trackEvent('click_start_apply', { slug: current.slug || slug })
     void trackEvent('click_external_apply', { slug: current.slug || slug })
     applyFlow.trackStep('click_apply', 2)
-    if (canEmbedApply) {
-      setApplyOpen(true)
-    } else {
-      window.open(applyUrl, '_blank', 'noopener,noreferrer')
-      // Se abre el sitio de la empresa: no hay una confirmación que ver, salir a postular es el final de lo que medimos.
-      applyFlow.completeFlow('external_apply')
-    }
+    // Sin enviarle a la empresa de dónde viene el clic (noreferrer) ni darle acceso a esta página (noopener). Con esas opciones el
+    // navegador no dice si bloqueó la ventana, por eso el aviso de abajo siempre deja el enlace a la mano.
+    window.open(applyUrl, '_blank', 'noopener,noreferrer')
+    setApplyNote(true)
+    // Salir a postular al sitio de la empresa es el final de lo que se puede medir (lo que pase allá no lo vemos).
+    applyFlow.completeFlow('external_apply')
   }
 
+  const applyNoteBlock = applyNote && applyUrl && (
+    <p className="detail-apply-note" role="status">
+      Abrimos el sitio de {companyName} en otra pestaña. Si no la ves, <a href={applyUrl} target="_blank" rel="noopener noreferrer">ábrelo aquí</a>.
+    </p>
+  )
   const commentsTotal = comments.length || post.commentsCount || 0
   // Sin cuenta el servidor no entrega el enlace de postulación (ni el contenido): "Postularse" existe igual y lleva al registro.
   const applyAction = expired || (!applyUrl && user)
@@ -508,6 +480,14 @@ export default function VacancyPage() {
                 />
 
                 <h1>{post.title}</h1>
+
+                {/* En pantallas chicas el panel de la empresa queda al final: el botón de postularse va aquí, arriba. */}
+                {compact && applyAction && (
+                  <div className="detail-apply-inline">
+                    <button type="button" className="detail-action" onClick={applyAction}>Postularse</button>
+                    {applyNoteBlock}
+                  </div>
+                )}
 
                 {expired && (
                   <section className="detail-expired" role="status">
@@ -685,53 +665,14 @@ export default function VacancyPage() {
                 { label: 'Salario', value: meta.salary },
               ]}
             >
-              {applyAction && <button type="button" className="detail-action" onClick={applyAction}>Postularse</button>}
+              {!compact && applyAction && <button type="button" className="detail-action" onClick={applyAction}>Postularse</button>}
+              {!compact && applyAction && applyNoteBlock}
             </SideCard>
 
             <RelatedCard postKey={post.slug || slug} />
           </aside>
         </div>
       </div>
-
-      {applyOpen && applyUrl && (
-        <div
-          style={{ position: 'fixed', inset: 0, zIndex: 1000, background: 'rgba(0,0,0,0.7)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: window.innerWidth < 640 ? 8 : 20 }}
-          onMouseDown={e => e.target === e.currentTarget && setApplyOpen(false)}
-        >
-          {applySuccess ? (
-            <div style={{ width: '100%', maxWidth: 400, background: 'var(--surface)', borderRadius: 12, border: '1px solid var(--line)', padding: '40px 24px', textAlign: 'center' }}>
-              <div style={{ fontSize: 48, marginBottom: 16 }}>✅</div>
-              <h3 style={{ color: 'var(--text-2)', fontSize: 18, marginBottom: 8 }}>¡Aplicación enviada!</h3>
-              <p style={{ color: 'var(--text-muted)', fontSize: 14, marginBottom: 20 }}>Tu postulación a <strong style={{ color: 'var(--text-2)' }}>{companyName}</strong> fue enviada exitosamente.</p>
-              <button onClick={() => setApplyOpen(false)} style={{ background: 'var(--brand)', color: 'var(--bg)', border: 'none', padding: '10px 24px', borderRadius: 6, fontWeight: 600, fontSize: 14, cursor: 'pointer' }}>Cerrar</button>
-            </div>
-          ) : (
-            <div style={{ width: '100%', maxWidth: 750, height: window.innerWidth < 640 ? '95vh' : '90vh', background: 'var(--surface)', borderRadius: window.innerWidth < 640 ? 8 : 12, border: '1px solid var(--line)', overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 14px', borderBottom: '1px solid var(--line)', background: 'var(--bg)' }}>
-                <span style={{ color: 'var(--text-2)', fontSize: 13, fontWeight: 600 }}>Postularse — {companyName}</span>
-                <button
-                  onClick={() => setApplyOpen(false)}
-                  style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', fontSize: 20, padding: 4 }}
-                  aria-label="Cerrar"
-                >
-                  ×
-                </button>
-              </div>
-              {post.platform === 'greenhouse' && (
-                <div style={{ padding: '6px 14px', background: 'var(--surface-2)', borderBottom: '1px solid var(--line)', fontSize: 11, color: 'var(--text-muted)' }}>
-                  Haz clic en <strong style={{ color: 'var(--brand)' }}>Apply</strong> dentro del formulario para completar tu postulación
-                </div>
-              )}
-              <iframe
-                ref={iframeRef}
-                src={applyUrl}
-                style={{ flex: 1, width: '100%', border: 'none', background: '#fff' }}
-                title="Formulario de aplicación"
-              />
-            </div>
-          )}
-        </div>
-      )}
     </>
   )
 }

@@ -1370,3 +1370,8 @@ button { cursor: pointer; }
   :root .mobile-drawer { top: 56px; bottom: 0; padding: 16px 16px 40px; z-index: 9; overflow-y: auto; overscroll-behavior: contain; height: auto; }
   :root .mobile-drawer .left-sidebar { margin-top: 12px; }
 }
+/* Vacante: el botón de postularse va arriba en pantallas chicas (el panel de la empresa queda al final) y avisa que abrió otra pestaña. */
+.detail-apply-inline { margin: 4px 0 18px; }
+.detail-apply-inline .detail-action { width: 100%; justify-content: center; padding: 13px 16px; font-size: 15px; box-sizing: border-box; }
+.detail-apply-note { margin: 8px 0 0; font-size: 12.5px; line-height: 1.45; color: var(--text-muted); }
+.detail-apply-note a { color: var(--accent-text); font-weight: 600; }
