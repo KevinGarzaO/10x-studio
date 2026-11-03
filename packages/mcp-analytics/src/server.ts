@@ -3,11 +3,14 @@ import type { CallToolResult } from '@modelcontextprotocol/sdk/types.js'
 import { z } from 'zod'
 import { getClarityFrustration, getFunnelDropoffs, getUserSessionRecording, type Queryable } from './queries'
 import { getChangeLog, getErrorLogsWithClarityVideo, getFlowPerformanceAnalysis } from './telemetry-queries'
+import { PANEL_METRICS, type PanelClient, type PanelMetric } from './panel'
 import { getRetentionAndCohorts, getServerSpeed, getSignupSources, getWeeklyRhythm } from './product-queries'
 
 export interface ServerOptions {
   /** El proyecto de Clarity (NEXT_PUBLIC_CLARITY_PROJECT_ID), para armar el enlace al panel. */
   clarityProjectId?: string
+  /** Lectura del panel de Telemetry (mismas rutas, mismos números). Sin ella no se registra `get_panel_metric`. */
+  panel?: PanelClient
 }
 
 /** Un resultado JSON legible para Claude; un error se devuelve como error de la herramienta, no tumba el servidor. */
@@ -198,6 +201,34 @@ export function createServer(db: Queryable, options: ServerOptions = {}): McpSer
     },
     (args) => respond(() => getServerSpeed(db, args)),
   )
+
+  const panel = options.panel
+  if (panel) {
+    const names = Object.keys(PANEL_METRICS) as [PanelMetric, ...PanelMetric[]]
+    tool(
+      'get_panel_metric',
+      {
+        title: 'Lo mismo que ve el panel de Telemetry',
+        description:
+          'Lee la MISMA pantalla del panel de Telemetry (mismo código, mismos números: el agente y el panel no pueden discrepar). Las listas de personas ya vienen sin datos personales. ' +
+          'Úsala cuando el dueño o el equipo citen un número del panel, o para comparar contra otra herramienta. Métricas: ' +
+          names.map((name) => `${name} (${PANEL_METRICS[name].about})`).join(' · '),
+        inputSchema: {
+          metric: z.enum(names).describe('Qué pantalla del panel leer.'),
+          days: z.number().int().min(1).max(90).optional().describe('Periodo: 1 = últimas 24 h, 7, 30, 90. Según la pantalla.'),
+          window: z.number().int().min(3).max(14).optional().describe('Solo `changes`: días antes y después de cada cambio.'),
+          list: z.string().max(200).optional().describe('Solo `web_segments`: grupos separados por coma (all, linkedin, channel, landing, device_category, country...).'),
+          limit: z.number().int().min(1).max(200).optional(),
+        },
+        annotations: { readOnlyHint: true, openWorldHint: false },
+      },
+      (args) => respond(async () => {
+        const query: Record<string, string | number> = {}
+        for (const key of ['days', 'window', 'list', 'limit'] as const) if (args[key] !== undefined) query[key] = args[key]
+        return panel.get(PANEL_METRICS[args.metric as PanelMetric].path, query)
+      }),
+    )
+  }
 
   return server
 }

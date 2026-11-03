@@ -2,6 +2,7 @@
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js'
 import { createReadOnlyDb } from './db'
 import { createServer } from './server'
+import { panelFromEnv } from './panel'
 
 /**
  * Servidor MCP de analítica de AvoTalent (se conecta por stdio: Claude Desktop / Claude Code lo lanzan).
@@ -15,7 +16,7 @@ async function main() {
     process.exit(1)
   }
   const db = createReadOnlyDb(url)
-  const server = createServer(db, { clarityProjectId: process.env.NEXT_PUBLIC_CLARITY_PROJECT_ID })
+  const server = createServer(db, { clarityProjectId: process.env.NEXT_PUBLIC_CLARITY_PROJECT_ID, panel: panelFromEnv() })
   await server.connect(new StdioServerTransport())
   console.error('[avotalent-analytics] listo')
 

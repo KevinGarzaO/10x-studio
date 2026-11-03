@@ -14,6 +14,7 @@ import { linkedinCallback } from './controllers/linkedin.controller'
 import { initCron } from './services/cron.service'
 import { studioAuth, STUDIO_ROOT_PATHS, isLinkedInPublic, isBlogPublic } from './middleware/studio-auth.middleware'
 import adminAnalyticsRoutes from './src/routes/admin/analytics.routes'
+import { analyticsAccess } from './middleware/analytics-access.middleware'
 import { communityAuthMiddleware } from './middleware/community-auth.middleware'
 
 // Community Hub routes
@@ -110,7 +111,7 @@ app.use('/api/blog', studioAuth({ isPublic: isBlogPublic }), blogRoutes)
 app.get('/api/linkedin/callback', linkedinCallback)
 app.use('/api/linkedin', studioAuth({ isPublic: isLinkedInPublic }), linkedinRoutes)
 // Panel de analítica de AvoTalent
-app.use('/api/admin/analytics', studioAuth(), adminAnalyticsRoutes)
+app.use('/api/admin/analytics', analyticsAccess(studioAuth()), adminAnalyticsRoutes)
 
 // Analítica web propia (reglas de GA4): la llama el intermediario de la comunidad, no el navegador
 app.use('/api/analytics', webAnalyticsCollectRoutes)

@@ -2,6 +2,7 @@
 import './http/polyfills' // PRIMERO: el SDK necesita `crypto` global (ver polyfills.ts)
 import { createReadOnlyDb } from './db'
 import { createRemoteApp } from './http/app'
+import { panelFromEnv } from './panel'
 import { DEFAULT_ALLOWED_REDIRECTS } from './http/provider'
 
 /**
@@ -38,6 +39,7 @@ async function main() {
     epoch: Number.isFinite(epoch) ? epoch : 1,
     allowedRedirects: process.env.MCP_ALLOWED_REDIRECTS ? process.env.MCP_ALLOWED_REDIRECTS.split(',').map((url) => url.trim()).filter(Boolean) : DEFAULT_ALLOWED_REDIRECTS,
     clarityProjectId: process.env.NEXT_PUBLIC_CLARITY_PROJECT_ID,
+    panel: panelFromEnv(),
   })
 
   const port = Number(process.env.PORT ?? 3000)

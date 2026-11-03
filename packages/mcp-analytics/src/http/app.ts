@@ -6,6 +6,7 @@ import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/
 import { JSONRPCMessageSchema } from '@modelcontextprotocol/sdk/types.js'
 import type { Queryable } from '../queries'
 import { createServer } from '../server'
+import type { PanelClient } from '../panel'
 import { OwnerOAuthProvider, SCOPE, type ProviderOptions } from './provider'
 
 /** El SDK trae su propia versión de los tipos de Express: se pasa por aquí lo que él entrega y recibe. */
@@ -16,6 +17,7 @@ export interface RemoteAppOptions extends ProviderOptions {
   /** La dirección pública del servicio (https://...up.railway.app), sin barra final. */
   publicUrl: string
   clarityProjectId?: string
+  panel?: PanelClient
 }
 
 /**
@@ -83,7 +85,7 @@ export function createRemoteApp(options: RemoteAppOptions): { app: Express; prov
       }
     }
     console.log(`[mcp] ${String(res.locals.rpcMethod)} protocolo=${protocol} accept="${accept}"`)
-    const server = createServer(options.db, { clarityProjectId: options.clarityProjectId })
+    const server = createServer(options.db, { clarityProjectId: options.clarityProjectId, panel: options.panel })
     const transport = new StreamableHTTPServerTransport({ sessionIdGenerator: undefined, enableJsonResponse: true })
     transport.onerror = (error) => { console.log(`[mcp] el transporte rechazó: ${String(error.message).replace(/\s+/g, ' ').slice(0, 200)}`) }
     res.on('close', () => { void transport.close(); void server.close() })
