@@ -38,3 +38,9 @@ Contexto: «Postularse» llevaba a un modal con el formulario de la empresa dent
 ## Pruebas
 
 `backend/tests/unit/vacancy-applications-sql.test.ts` (la tabla contra Postgres real), `vacancy-applications.test.ts` (reglas y rutas, incluido que nadie toque lo de otra persona), `application-followup.test.ts` (quién recibe qué, topes, correo) y `apps/community/tests/applications-ui.test.tsx` (la franja, la marca, el aviso del sitio oficial y la página).
+
+## Ajustes del 2 de nov (después de probarlo)
+
+- **«Ya te postulaste» ya no deja el botón «Postularse».** Quien dijo que sí ve «✓ Ya te postulaste» (lleva a Mis postulaciones) y, abajo, un enlace para abrir otra vez el sitio de la empresa.
+- **«Todavía no» ya tiene seguimiento:** se le vuelve a preguntar a las 48 horas (la ventana, o un aviso en la app si el seguimiento automático está encendido), mientras no pasen 14 días desde que salió. «Más tarde» sigue preguntando al día siguiente.
+- **La pregunta es una ventana que se ve** (al centro en pantallas grandes, subiendo desde abajo en el teléfono), con tres botones grandes. Escape o tocar fuera equivale a «Más tarde».

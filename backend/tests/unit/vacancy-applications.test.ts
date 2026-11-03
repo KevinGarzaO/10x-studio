@@ -92,6 +92,11 @@ describe('when to ask "¿Ya te postulaste?"', () => {
     expect(isPromptDue({ status: 'clicked', clicked_at: ago(15 * 24), remind_at: null }, now)).toBe(false) // pasaron más de 14 días
     expect(isPromptDue({ status: 'clicked', clicked_at: ago(1), remind_at: ago(-5) }, now)).toBe(false) // «más tarde» vigente
     expect(isPromptDue({ status: 'clicked', clicked_at: ago(30), remind_at: ago(2) }, now)).toBe(true) // ya pasó el «más tarde»
+    // «Todavía no» no deja a la persona sola: se le vuelve a preguntar a las 48 horas (y en la app, con un aviso)
+    expect(isPromptDue({ status: 'not_yet', clicked_at: ago(3 * 24), remind_at: null, answered_at: ago(24) }, now)).toBe(false)
+    expect(isPromptDue({ status: 'not_yet', clicked_at: ago(4 * 24), remind_at: null, answered_at: ago(49) }, now)).toBe(true)
+    expect(isPromptDue({ status: 'not_yet', clicked_at: ago(20 * 24), remind_at: null, answered_at: ago(49) }, now)).toBe(false)
+    expect(followupKind({ status: 'not_yet', applied_at: null, clicked_at: ago(4 * 24), answered_at: ago(49), followup_notified_at: null }, now)).toBe('unanswered')
   })
 
   it('each answer changes the row the way the screen promises', () => {

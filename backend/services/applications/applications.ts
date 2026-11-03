@@ -20,6 +20,8 @@ export const ANSWERS: Answer[] = ['applied', 'not_yet', 'later']
 
 /** «Más tarde» no vuelve a preguntar antes de esto. */
 export const LATER_HOURS = 24
+/** «Todavía no»: se le vuelve a preguntar pasado este tiempo (no se le deja solo, pero tampoco se le insiste el mismo día). */
+export const NOT_YET_HOURS = 48
 /** Se pregunta por los intentos de los últimos días; más viejos que esto ya no tiene caso interrumpir. */
 export const ASK_WITHIN_DAYS = 14
 
@@ -60,9 +62,11 @@ export interface ApplicationRow {
 }
 
 /** ¿Toca preguntarle «¿Ya te postulaste?» por este intento? Solo los que salieron y no contestó, recientes y sin «más tarde» vigente. */
-export function isPromptDue(row: Pick<ApplicationRow, 'status' | 'clicked_at' | 'remind_at'>, now: Date = new Date()): boolean {
-  if (row.status !== 'clicked') return false
+export function isPromptDue(row: Pick<ApplicationRow, 'status' | 'clicked_at' | 'remind_at'> & { answered_at?: string | null }, now: Date = new Date()): boolean {
   if (now.getTime() - Date.parse(row.clicked_at) > ASK_WITHIN_DAYS * DAY) return false
+  // «Todavía no»: se vuelve a preguntar 48 horas después de su respuesta (si no, quedaba sin ningún seguimiento).
+  if (row.status === 'not_yet') return !!row.answered_at && now.getTime() - Date.parse(row.answered_at) >= NOT_YET_HOURS * HOUR
+  if (row.status !== 'clicked') return false
   return !row.remind_at || Date.parse(row.remind_at) <= now.getTime()
 }
 
@@ -70,7 +74,7 @@ export function isPromptDue(row: Pick<ApplicationRow, 'status' | 'clicked_at' | 
 export function answerPatch(answer: Answer, now: Date = new Date()): Record<string, unknown> {
   const stamp = now.toISOString()
   if (answer === 'applied') return { status: 'applied', applied_at: stamp, answered_at: stamp, remind_at: null, updated_at: stamp }
-  if (answer === 'not_yet') return { status: 'not_yet', answered_at: stamp, remind_at: null, updated_at: stamp }
+  if (answer === 'not_yet') return { status: 'not_yet', answered_at: stamp, remind_at: null, updated_at: stamp, followup_notified_at: null }
   return { remind_at: new Date(now.getTime() + LATER_HOURS * HOUR).toISOString(), updated_at: stamp }
 }
 
@@ -88,10 +92,11 @@ export function statusPatch(status: ApplicationStatus, current: Pick<Application
  */
 export const FOLLOWUP_AFTER_DAYS = 5
 export const UNANSWERED_AFTER_DAYS = 2
-export function followupKind(row: Pick<ApplicationRow, 'status' | 'applied_at' | 'clicked_at' | 'followup_notified_at'>, now: Date = new Date()): 'applied' | 'unanswered' | null {
+export function followupKind(row: Pick<ApplicationRow, 'status' | 'applied_at' | 'clicked_at' | 'followup_notified_at'> & { answered_at?: string | null }, now: Date = new Date()): 'applied' | 'unanswered' | null {
   if (row.followup_notified_at) return null
   const age = (iso: string | null) => (iso ? now.getTime() - Date.parse(iso) : -1)
   if (row.status === 'applied' && age(row.applied_at) >= FOLLOWUP_AFTER_DAYS * DAY) return 'applied'
+  if (row.status === 'not_yet' && age(row.answered_at ?? null) >= NOT_YET_HOURS * HOUR && age(row.clicked_at) <= ASK_WITHIN_DAYS * DAY) return 'unanswered'
   if (row.status === 'clicked' && age(row.clicked_at) >= UNANSWERED_AFTER_DAYS * DAY && age(row.clicked_at) <= ASK_WITHIN_DAYS * DAY) return 'unanswered'
   return null
 }
@@ -147,7 +152,7 @@ export async function recordClick(userId: string, vacancy: VacancyForClick, now:
 /** Por qué intento preguntar ahora (el más reciente que toque), o null. */
 export async function pendingFor(userId: string, now: Date = new Date()): Promise<ApplicationRow | null> {
   const since = new Date(now.getTime() - ASK_WITHIN_DAYS * DAY).toISOString()
-  const { data, error } = await supabase.from('vacancy_applications').select('*').eq('user_id', userId).eq('status', 'clicked').gte('clicked_at', since).order('clicked_at', { ascending: false }).limit(5)
+  const { data, error } = await supabase.from('vacancy_applications').select('*').eq('user_id', userId).in('status', ['clicked', 'not_yet']).gte('clicked_at', since).order('clicked_at', { ascending: false }).limit(5)
   if (error) throw new Error(error.message)
   return ((data ?? []) as ApplicationRow[]).find((row) => isPromptDue(row, now)) ?? null
 }

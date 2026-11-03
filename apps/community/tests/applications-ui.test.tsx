@@ -70,11 +70,11 @@ describe('the "¿Ya te postulaste?" strip', () => {
   it('shows up when the server has an attempt to ask about, naming the vacancy and the company', async () => {
     pending = application()
     render(<ApplyPrompt enabled />)
-    const strip = await screen.findByRole('status')
+    const strip = await screen.findByRole('dialog')
     expect(strip.textContent).toContain('¿Ya te postulaste a Backend Engineer en Stripe?')
-    expect(within(strip).getByRole('button', { name: 'Sí, ya' })).toBeTruthy()
-    expect(within(strip).getByRole('button', { name: 'Todavía no' })).toBeTruthy()
-    expect(within(strip).getByRole('button', { name: 'Más tarde' })).toBeTruthy()
+    expect(within(strip).getByRole('button', { name: /^Sí, ya/ })).toBeTruthy()
+    expect(within(strip).getByRole('button', { name: /^Todavía no/ })).toBeTruthy()
+    expect(within(strip).getByRole('button', { name: /^Más tarde/ })).toBeTruthy()
   })
 
   it('shows nothing when there is nothing to ask, when the person has no session, or when it is not enabled', async () => {
@@ -93,7 +93,7 @@ describe('the "¿Ya te postulaste?" strip', () => {
   it.each([['Sí, ya', 'applied'], ['Todavía no', 'not_yet'], ['Más tarde', 'later']])('"%s" sends the answer %s and closes the strip', async (label, answer) => {
     pending = application()
     render(<ApplyPrompt enabled />)
-    fireEvent.click(await screen.findByRole('button', { name: label as string }))
+    fireEvent.click(await screen.findByRole('button', { name: new RegExp('^' + (label as string)) }))
 
     await waitFor(() => expect(calls.some(call => call.method === 'POST' && call.url.endsWith('/applications/a1/answer') && call.body.answer === answer)).toBe(true))
     await waitFor(() => expect(screen.queryByText(/¿Ya te postulaste a/)).toBeNull())
@@ -102,7 +102,7 @@ describe('the "¿Ya te postulaste?" strip', () => {
   it('on "Sí, ya" thanks the person and points to Mis postulaciones', async () => {
     pending = application()
     render(<ApplyPrompt enabled />)
-    fireEvent.click(await screen.findByRole('button', { name: 'Sí, ya' }))
+    fireEvent.click(await screen.findByRole('button', { name: /^Sí, ya/ }))
 
     const thanks = await screen.findByText(/La guardamos en/)
     expect(within(thanks.parentElement as HTMLElement).getByRole('link', { name: 'Mis postulaciones' }).getAttribute('href')).toBe('/postulaciones')
@@ -112,7 +112,7 @@ describe('the "¿Ya te postulaste?" strip', () => {
     pending = application()
     failAnswers = true
     render(<ApplyPrompt enabled />)
-    fireEvent.click(await screen.findByRole('button', { name: 'Sí, ya' }))
+    fireEvent.click(await screen.findByRole('button', { name: /^Sí, ya/ }))
     await waitFor(() => expect(calls.some(call => call.url.endsWith('/answer'))).toBe(true))
     await act(async () => { await Promise.resolve() })
     expect(screen.getByText(/¿Ya te postulaste a/)).toBeTruthy()
@@ -123,7 +123,7 @@ describe('the "¿Ya te postulaste?" strip', () => {
     const seen: unknown[] = []
     window.addEventListener('avo:application-changed', event => seen.push((event as CustomEvent).detail))
     render(<ApplyPrompt enabled />)
-    fireEvent.click(await screen.findByRole('button', { name: 'Sí, ya' }))
+    fireEvent.click(await screen.findByRole('button', { name: /^Sí, ya/ }))
     await waitFor(() => expect(seen).toContainEqual({ vacancyId: 'v1', status: 'applied' }))
   })
 })
@@ -186,7 +186,10 @@ describe('the vacancy page', () => {
 
   it('marks the vacancy as "Postulada" when the person already applied, and when they answer the strip', async () => {
     renderPage(vacancy({ applicationStatus: 'applied' }))
-    await screen.findByRole('button', { name: 'Postularse' })
+    expect(await screen.findByText('Ya te postulaste')).toBeTruthy()
+    // ya dijo que se postuló: no vuelve a ver «Postularse», pero puede abrir otra vez el sitio de la empresa
+    expect(screen.queryByRole('button', { name: 'Postularse' })).toBeNull()
+    expect(screen.getByRole('link', { name: 'abrir el sitio de la empresa otra vez' })).toBeTruthy()
     expect(screen.getByRole('status').textContent).toContain('Postulada')
     expect(within(screen.getByRole('status')).getByRole('link', { name: 'ver en Mis postulaciones' }).getAttribute('href')).toBe('/postulaciones')
   })

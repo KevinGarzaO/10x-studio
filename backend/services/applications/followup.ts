@@ -93,7 +93,7 @@ export const defaultFollowupDeps: FollowupDeps = {
   mailConfig: mailConfigFromEnv,
   loadDue: async (now) => {
     // Lo candidato: nunca avisadas, postuladas o sin contestar. followupKind decide cuáles ya tocan.
-    const { data, error } = await supabase.from('vacancy_applications').select('*').in('status', ['applied', 'clicked']).is('followup_notified_at', null)
+    const { data, error } = await supabase.from('vacancy_applications').select('*').in('status', ['applied', 'clicked', 'not_yet']).is('followup_notified_at', null)
       .gte('clicked_at', new Date(now.getTime() - 120 * 86_400_000).toISOString()).limit(2000)
     if (error) throw new Error(error.message)
     return (data ?? []) as ApplicationRow[]

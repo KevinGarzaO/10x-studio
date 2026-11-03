@@ -459,8 +459,12 @@ export default function VacancyPage() {
   const applyTrustBlock = user && applyUrl && applyHost && !applyNote && (
     <p className="detail-apply-trust">Te llevamos al <strong>sitio oficial de la empresa</strong> ({applyHost}). AvoTalent no recibe lo que escribas allá.</p>
   )
-  const appliedBlock = isApplied(appStatus) && (
-    <p className="detail-applied" role="status"><Check size={14} aria-hidden="true" /> Postulada · <Link href="/postulaciones">ver en Mis postulaciones</Link></p>
+  const alreadyApplied = isApplied(appStatus)
+  const appliedBlock = alreadyApplied && (
+    <p className="detail-applied" role="status">
+      <Check size={14} aria-hidden="true" /> Postulada · <Link href="/postulaciones">ver en Mis postulaciones</Link>
+      {applyUrl && <> · <a href={applyUrl} target="_blank" rel="noopener noreferrer">abrir el sitio de la empresa otra vez</a></>}
+    </p>
   )
   const applyNoteBlock = applyNote && applyUrl && (
     <p className="detail-apply-note" role="status">
@@ -476,6 +480,13 @@ export default function VacancyPage() {
       ? handleApplyClick
       // Sin cuenta, "Postularse" lleva a registrarse y de vuelta a esta vacante.
       : () => { trackVacancyEvent(post.slug || slug, 'apply'); void trackEvent('click_start_apply', { slug: post.slug || slug }); applyFlow.trackStep('click_apply_needs_account', 2); requestAuth({ variant: 'vacancy', subject: `${post.title} — ${companyName}` }) }
+
+  // Quien ya dijo que se postuló no vuelve a ver «Postularse»: ve que ya está hecha (y desde aquí sigue su postulación).
+  const applyControl = (
+    alreadyApplied
+      ? <Link href="/postulaciones" className="detail-action is-done"><Check size={15} aria-hidden="true" /> Ya te postulaste</Link>
+      : <button type="button" className="detail-action" ref={applyButtonRef} onClick={applyAction ?? undefined}>Postularse</button>
+  )
 
   return (
     <>
@@ -510,7 +521,7 @@ export default function VacancyPage() {
                 {/* En pantallas chicas el panel de la empresa queda al final: el botón de postularse va aquí, arriba. */}
                 {compact && applyAction && (
                   <div className="detail-apply-inline">
-                    <button type="button" className="detail-action" ref={applyButtonRef} onClick={applyAction}>Postularse</button>
+                    {applyControl}
                     {applyExtras}
                   </div>
                 )}
@@ -691,7 +702,7 @@ export default function VacancyPage() {
                 { label: 'Salario', value: meta.salary },
               ]}
             >
-              {!compact && applyAction && <button type="button" className="detail-action" ref={applyButtonRef} onClick={applyAction}>Postularse</button>}
+              {!compact && applyAction && applyControl}
               {!compact && applyAction && applyExtras}
             </SideCard>
 

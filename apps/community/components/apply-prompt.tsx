@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
-import { Check } from 'lucide-react'
+import { Check, Send } from 'lucide-react'
 import { trackEvent } from '../lib/web-analytics'
 import { answerApplication, fetchPendingApplication, type Application, type ApplyAnswer } from '../lib/applications'
 import { formatCompanyName } from '../lib/company'
@@ -36,6 +36,14 @@ export function ApplyPrompt({ enabled }: { enabled: boolean }) {
     }
   }, [enabled])
 
+  // Escape = «Más tarde».
+  useEffect(() => {
+    if (!application) return
+    const onKey = (event: KeyboardEvent) => { if (event.key === 'Escape') void answerRef.current('later') }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [application])
+
   useEffect(() => {
     if (!enabled) { setApplication(null); return }
     void ask()
@@ -48,6 +56,7 @@ export function ApplyPrompt({ enabled }: { enabled: boolean }) {
     }
   }, [enabled, ask])
 
+  const answerRef = useRef<(choice: ApplyAnswer) => Promise<void>>(async () => {})
   async function answer(choice: ApplyAnswer) {
     if (!application || busy) return
     setBusy(true)
@@ -62,6 +71,8 @@ export function ApplyPrompt({ enabled }: { enabled: boolean }) {
     }
   }
 
+  answerRef.current = answer
+
   if (thanks) {
     return (
       <div className="apply-prompt is-thanks" role="status">
@@ -72,16 +83,22 @@ export function ApplyPrompt({ enabled }: { enabled: boolean }) {
   if (!application) return null
 
   const company = formatCompanyName(application.company)
+  // Una ventana que se ve (no una franja pequeña): es la única manera de saber si la persona llegó a postularse. En pantallas chicas sube
+  // desde abajo. Escape o tocar fuera equivale a «Más tarde», para que nunca deje a nadie atrapado.
   return (
-    <div className="apply-prompt" role="status" aria-live="polite">
-      <span className="apply-prompt-text">
-        ¿Ya te postulaste a <strong>{application.title}</strong>{company ? <> en <strong>{company}</strong></> : null}?
-      </span>
-      <span className="apply-prompt-actions">
-        <button type="button" className="apply-prompt-yes" disabled={busy} onClick={() => answer('applied')}>Sí, ya</button>
-        <button type="button" disabled={busy} onClick={() => answer('not_yet')}>Todavía no</button>
-        <button type="button" disabled={busy} onClick={() => answer('later')}>Más tarde</button>
-      </span>
+    <div className="apply-modal-backdrop" onClick={event => { if (event.target === event.currentTarget) void answer('later') }}>
+      <div className="apply-modal" role="dialog" aria-modal="true" aria-labelledby="apply-modal-title">
+        <p className="apply-modal-eyebrow"><Send size={14} aria-hidden="true" /> Mis postulaciones</p>
+        <h2 id="apply-modal-title">
+          ¿Ya te postulaste a <strong>{application.title}</strong>{company ? <> en <strong>{company}</strong></> : null}?
+        </h2>
+        <p className="apply-modal-hint">La postulación se hace en el sitio de la empresa y desde aquí no la vemos. Cuéntanos y te ayudamos a llevar el seguimiento.</p>
+        <div className="apply-modal-actions">
+          <button type="button" className="apply-modal-yes" disabled={busy} autoFocus onClick={() => answer('applied')}>Sí, ya me postulé</button>
+          <button type="button" disabled={busy} onClick={() => answer('not_yet')}>Todavía no<span>te lo volvemos a preguntar en 2 días</span></button>
+          <button type="button" disabled={busy} onClick={() => answer('later')}>Más tarde<span>te preguntamos mañana</span></button>
+        </div>
+      </div>
     </div>
   )
 }

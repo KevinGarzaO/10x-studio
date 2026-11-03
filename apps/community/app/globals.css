@@ -1394,3 +1394,25 @@ button { cursor: pointer; }
 .application-status select { background: var(--bg); color: var(--text-2); border: 1px solid var(--line); border-radius: 8px; padding: 7px 10px; font-size: 13px; }
 .application-status-label { display: block; font-size: 11px; font-weight: 600; letter-spacing: .04em; text-transform: uppercase; color: var(--text-faint); margin-bottom: 4px; }
 .application-host { display: inline-flex; align-items: center; gap: 4px; font-size: 12px; color: var(--text-faint); }
+
+/* «¿Ya te postulaste?»: ventana que se ve (abajo en pantallas chicas, al centro en las grandes) y el estado «ya te postulaste» del botón. */
+.apply-modal-backdrop { position: fixed; inset: 0; z-index: 90; display: flex; align-items: center; justify-content: center; padding: 16px; background: rgba(15, 23, 42, .55); backdrop-filter: blur(2px); }
+.apply-modal { width: min(460px, 100%); box-sizing: border-box; padding: 28px 28px 24px; background: var(--surface); color: var(--text); border: 1px solid var(--line); border-top: 4px solid var(--brand); border-radius: 16px; box-shadow: 0 24px 60px rgba(0, 0, 0, .35); }
+.apply-modal-eyebrow { display: inline-flex; align-items: center; gap: 6px; margin: 0 0 10px; color: var(--accent-text); font-size: 12px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; }
+.apply-modal h2 { margin: 0 0 10px; font-size: 22px; line-height: 1.25; letter-spacing: -.02em; }
+.apply-modal h2 strong { font-weight: 800; }
+.apply-modal-hint { margin: 0 0 20px; color: var(--text-muted); font-size: 14px; line-height: 1.5; }
+.apply-modal-actions { display: flex; flex-direction: column; gap: 10px; }
+.apply-modal-actions button { display: flex; flex-direction: column; align-items: center; gap: 2px; width: 100%; padding: 13px 16px; border: 1px solid var(--line); border-radius: 12px; background: var(--bg); color: var(--text); font-size: 15px; font-weight: 700; cursor: pointer; }
+.apply-modal-actions button span { color: var(--text-muted); font-size: 12px; font-weight: 500; }
+.apply-modal-actions button:hover:not(:disabled) { border-color: var(--brand); }
+.apply-modal-actions .apply-modal-yes { padding: 15px 16px; background: var(--brand); border-color: var(--brand); color: var(--on-accent); font-size: 16px; }
+.apply-modal-actions .apply-modal-yes:hover:not(:disabled) { background: var(--accent-text); }
+.apply-modal-actions button:disabled { opacity: .55; cursor: default; }
+@media (max-width: 700px) {
+  .apply-modal-backdrop { align-items: flex-end; padding: 0; }
+  .apply-modal { width: 100%; border-radius: 20px 20px 0 0; padding: 24px 20px calc(20px + env(safe-area-inset-bottom)); }
+  .apply-modal h2 { font-size: 21px; }
+}
+.detail-action.is-done { background: var(--accent-soft); color: var(--accent-text); border: 1px solid var(--accent-line); gap: 6px; justify-content: center; text-decoration: none; }
+.detail-action.is-done:hover { background: var(--accent-soft); filter: brightness(.97); }
