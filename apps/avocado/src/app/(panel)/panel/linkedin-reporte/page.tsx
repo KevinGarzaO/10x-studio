@@ -10,7 +10,7 @@ type Verdict = 'cuadra' | 'revisar' | 'pierde' | 'sin_clics' | 'sin_medicion' | 
 interface PostLine {
   postKey: string; url: string | null; publishedOn: string | null; slug: string | null; company: string | null; role: string | null
   impressions: number | null; linkClicks: number | null; clickRatePct: number | null; arrivals: number | null; registrations: number | null
-  arrivalPct: number | null; verdict: Verdict; note: string
+  arrivalPct: number | null; conversionPct: number | null; inExcel: boolean; verdict: Verdict; note: string
 }
 interface Week { from: string; to: string; impressions: number; interactions: number; newFollowers: number; days: number }
 interface Report {
@@ -19,6 +19,7 @@ interface Report {
   upload?: { uploadedAt: string; fileName: string | null; periodStart: string | null; periodEnd: string | null; impressions: number | null; membersReached: number | null; followersTotal: number | null; followersSincePrevious: number | null }
   week?: { current: Week; previous: Week; change: { impressions: number | null; interactions: number | null; newFollowers: number | null } }
   verdicts?: Record<string, number>
+  top?: { byArrivals: PostLine[]; byRegistrations: PostLine[] }
   posts?: PostLine[]
   roles?: { role: string; posts: number; impressions: number; linkClicks: number; arrivals: number; registrations: number; arrivalsPer1000: number | null }[]
   audience?: { source: string; category: string; value: string; pct: number | null; rank: number }[]
@@ -100,23 +101,38 @@ export default function ReporteLinkedInPage() {
             <Stat label="Seguidores nuevos (últimos 7 días)" value={fmtNum(week.current.newFollowers)} caption={`${n(data.upload.followersTotal)} en total${data.upload.followersSincePrevious !== null ? ` · ${data.upload.followersSincePrevious >= 0 ? '+' : ''}${data.upload.followersSincePrevious} desde la subida anterior` : ''}`} delta={week.change.newFollowers} />
           </div>
 
+          <div className="panel-grid cols-2">
+            <Card title="Las que más gente trajeron" hint="Personas que AvoTalent midió entrando desde cada publicación">
+              {(data.top?.byArrivals ?? []).length === 0 ? <Empty>Todavía no hay llegadas medidas.</Empty> : (
+                <ol>{(data.top?.byArrivals ?? []).map(row => <li key={row.postKey}>{row.company ?? row.slug ?? 'Publicación'}{row.role ? ` · ${row.role}` : ''} ({day(row.publishedOn)}): <strong>{n(row.arrivals)}</strong> personas, {n(row.registrations)} registros</li>)}</ol>
+              )}
+            </Card>
+            <Card title="Las que más registros dieron" hint="Registros de gente que llegó desde cada publicación">
+              {(data.top?.byRegistrations ?? []).length === 0 ? <Empty>Todavía ninguna publicación ha traído un registro.</Empty> : (
+                <ol>{(data.top?.byRegistrations ?? []).map(row => <li key={row.postKey}>{row.company ?? row.slug ?? 'Publicación'}{row.role ? ` · ${row.role}` : ''} ({day(row.publishedOn)}): <strong>{n(row.registrations)}</strong> de {n(row.arrivals)} que llegaron ({pct(row.conversionPct)})</li>)}</ol>
+              )}
+            </Card>
+          </div>
+
           <Card title="¿Cuadra con lo que medimos?" hint="Solo las publicaciones para las que LinkedIn dio el detalle">
+            <p>* Sin detalle de LinkedIn en el Excel: solo se ve lo que midió AvoTalent.</p>
             <p>{Object.entries(data.verdicts ?? {}).map(([key, count]) => `${VERDICT[key as Verdict]?.label ?? key}: ${count}`).join(' · ') || 'Sin publicaciones.'}</p>
             <DataTable
               rows={posts}
               rowKey={row => row.postKey}
               searchText={row => `${row.company ?? ''} ${row.role ?? ''} ${row.slug ?? ''} ${VERDICT[row.verdict].label}`}
               searchLabel="Buscar empresa, puesto o resultado"
-              head={<tr><th>Publicada</th><th>Vacante</th><th className="num">Impresiones</th><th className="num">Clics (LinkedIn)</th><th className="num">% clic</th><th className="num">Llegadas medidas</th><th className="num">Registros</th><th>Resultado</th></tr>}
+              head={<tr><th>Publicada</th><th>Vacante</th><th className="num">Impresiones</th><th className="num">Clics (LinkedIn)</th><th className="num">% clic</th><th className="num">Llegadas medidas</th><th className="num">Registros</th><th className="num">% se registró</th><th>Resultado</th></tr>}
               renderRow={row => (
                 <tr>
-                  <td>{row.url ? <a href={row.url} target="_blank" rel="noopener noreferrer">{day(row.publishedOn)}</a> : day(row.publishedOn)}</td>
+                  <td>{row.url ? <a href={row.url} target="_blank" rel="noopener noreferrer">{day(row.publishedOn)}</a> : day(row.publishedOn)}{row.inExcel ? '' : ' *'}</td>
                   <td>{row.company ?? '—'}{row.role ? <> · {row.role}</> : null}</td>
                   <td className="num">{n(row.impressions)}</td>
                   <td className="num">{n(row.linkClicks)}</td>
                   <td className="num">{pct(row.clickRatePct)}</td>
                   <td className="num">{n(row.arrivals)}</td>
                   <td className="num">{n(row.registrations)}</td>
+                  <td className="num">{pct(row.conversionPct)}</td>
                   <td title={row.note}><span className={`panel-delta ${VERDICT[row.verdict].tone}`}>{VERDICT[row.verdict].label}</span></td>
                 </tr>
               )}

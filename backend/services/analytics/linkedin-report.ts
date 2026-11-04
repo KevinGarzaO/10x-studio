@@ -299,6 +299,10 @@ export interface PostLine {
   registrations: number | null
   /** Llegadas medidas / clics que dice LinkedIn. */
   arrivalPct: number | null
+  /** Registros / llegadas medidas: de la gente que llegó desde esta publicación, cuánta se registró. */
+  conversionPct: number | null
+  /** LinkedIn dio el detalle de esta publicación en el Excel (si no, solo se ve lo que midió AvoTalent). */
+  inExcel: boolean
   verdict: Verdict
   note: string
 }
@@ -369,22 +373,45 @@ export function buildLinkedInReport(input: ReportInput) {
       clickRatePct: post.impressions && post.link_clicks !== null ? pct(post.link_clicks, post.impressions) : null,
       arrivals, arrivalsActive: measured ? seen?.active ?? 0 : null, registrations: measured ? seen?.registered ?? 0 : null,
       arrivalPct: arrivals !== null && post.link_clicks ? pct(arrivals, post.link_clicks) : null,
+      conversionPct: arrivals ? pct(measured ? seen?.registered ?? 0 : 0, arrivals) : null,
+      inExcel: true,
       verdict: judgement.verdict, note: judgement.note,
     }
-  }).sort((a, b) => (b.publishedOn ?? '').localeCompare(a.publishedOn ?? '') || (b.impressions ?? 0) - (a.impressions ?? 0))
+  })
+
+  // Lo que LinkedIn no dio en el Excel (solo trae el detalle de unas cuantas) pero AvoTalent sí midió: se muestra igual, porque saber qué
+  // publicación trajo más gente o registró más no depende del Excel sino de nuestras visitas.
+  const inExcel = new Set(input.posts.map((post) => post.post_key))
+  for (const mine of input.ours) {
+    if (inExcel.has(mine.post_key) || !tracking || !input.visits || !mine.vacancy_slug) continue
+    const publishedOn = mine.published_at?.slice(0, 10) ?? null
+    if (!publishedOn || publishedOn < tracking) continue
+    const seen = input.visits.get(mine.vacancy_slug) ?? null
+    const arrivals = seen?.people ?? 0
+    lines.push({
+      postKey: mine.post_key, url: null, publishedOn, slug: mine.vacancy_slug, company: mine.company, role: mine.role_category,
+      impressions: null, membersReached: null, linkClicks: null, interactions: null, followersGained: null, clickRatePct: null,
+      arrivals, arrivalsActive: seen?.active ?? 0, registrations: seen?.registered ?? 0, arrivalPct: null,
+      conversionPct: arrivals ? pct(seen?.registered ?? 0, arrivals) : null, inExcel: false,
+      verdict: 'sin_medicion', note: 'LinkedIn no dio el detalle de esta publicación en el Excel: solo se ve lo que midió AvoTalent.',
+    })
+  }
+  lines.sort((a, b) => (b.publishedOn ?? '').localeCompare(a.publishedOn ?? '') || (b.impressions ?? 0) - (a.impressions ?? 0))
 
   // Qué tipo de vacante funciona: solo con publicaciones nuestras y medidas.
   const byRole = new Map<string, RoleLine>()
+  // Las llegadas por cada 1,000 impresiones solo cuentan las publicaciones de las que LinkedIn dio impresiones (si no, saldría subestimado).
+  const arrivalsWithImpressions = new Map<string, number>()
   for (const line of lines.filter((item) => item.role && item.arrivals !== null)) {
     const row = byRole.get(line.role!) ?? { role: line.role!, posts: 0, impressions: 0, linkClicks: 0, arrivals: 0, registrations: 0, arrivalsPer1000: null }
     row.posts += 1
-    row.impressions += line.impressions ?? 0
+    if (line.impressions !== null) { row.impressions += line.impressions; arrivalsWithImpressions.set(line.role!, (arrivalsWithImpressions.get(line.role!) ?? 0) + (line.arrivals ?? 0)) }
     row.linkClicks += line.linkClicks ?? 0
     row.arrivals += line.arrivals ?? 0
     row.registrations += line.registrations ?? 0
     byRole.set(line.role!, row)
   }
-  const roles = [...byRole.values()].map((row) => ({ ...row, arrivalsPer1000: row.impressions > 0 ? Math.round((row.arrivals / row.impressions) * 10000) / 10 : null })).sort((a, b) => b.arrivals - a.arrivals)
+  const roles = [...byRole.values()].map((row) => ({ ...row, arrivalsPer1000: row.impressions > 0 ? Math.round(((arrivalsWithImpressions.get(row.role) ?? 0) / row.impressions) * 10000) / 10 : null })).sort((a, b) => b.arrivals - a.arrivals)
 
   // La semana de lunes a domingo más reciente completa contra la anterior (con los días que LinkedIn ya entregó).
   const lastDay = input.daily.length > 0 ? input.daily[input.daily.length - 1].day : input.today
@@ -393,6 +420,13 @@ export function buildLinkedInReport(input: ReportInput) {
   const current = weekOf(input.daily, addDays(end, -6), end)
   const previous = weekOf(input.daily, addDays(end, -13), addDays(end, -7))
   const change = (now: number, before: number) => (before > 0 ? Math.round(((now - before) / before) * 1000) / 10 : null)
+
+  // Las que más gente trajeron y las que más registros dieron (solo publicaciones nuestras con medición).
+  const measuredLines = lines.filter((line) => line.arrivals !== null)
+  const top = {
+    byArrivals: [...measuredLines].filter((line) => (line.arrivals ?? 0) > 0).sort((a, b) => (b.arrivals ?? 0) - (a.arrivals ?? 0) || (b.registrations ?? 0) - (a.registrations ?? 0)).slice(0, 5),
+    byRegistrations: [...measuredLines].filter((line) => (line.registrations ?? 0) > 0).sort((a, b) => (b.registrations ?? 0) - (a.registrations ?? 0) || (b.arrivals ?? 0) - (a.arrivals ?? 0)).slice(0, 5),
+  }
 
   const counts = lines.reduce<Record<string, number>>((acc, line) => ({ ...acc, [line.verdict]: (acc[line.verdict] ?? 0) + 1 }), {})
 
@@ -410,6 +444,7 @@ export function buildLinkedInReport(input: ReportInput) {
     },
     daily: input.daily.slice(-60),
     verdicts: counts,
+    top,
     posts: lines,
     roles,
     audience: input.audience,

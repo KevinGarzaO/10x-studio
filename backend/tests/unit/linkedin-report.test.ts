@@ -152,6 +152,28 @@ describe('buildLinkedInReport', () => {
     expect(report.upload.followersSincePrevious).toBe(29)
   })
 
+  it('also shows our measured posts that LinkedIn gave no detail for, and ranks who brought the most people and the most signups', () => {
+    const report = buildLinkedInReport(input({
+      ours: [
+        ...input().ours,
+        { post_key: '444444444444444444', vacancy_slug: 'data-c', company: 'Globex', role_category: 'data', published_at: '2026-11-01T15:00:00Z' },
+        { post_key: '555555555555555555', vacancy_slug: 'viejo-d', company: 'Vieja', role_category: 'data', published_at: '2026-10-01T15:00:00Z' },
+      ],
+      visits: new Map([['backend-a', { people: 8, active: 6, registered: 1 }], ['data-c', { people: 30, active: 20, registered: 4 }]]),
+    }))
+    if (!report.ready || report.empty) throw new Error('vacío')
+    const byKey = Object.fromEntries(report.posts.map((post) => [post.postKey, post]))
+    // sin detalle de LinkedIn, pero con lo que midió AvoTalent
+    expect(byKey['444444444444444444']).toMatchObject({ inExcel: false, arrivals: 30, registrations: 4, conversionPct: 13.3, impressions: null, url: null })
+    // anterior a la medición propia: no se muestra
+    expect(byKey['555555555555555555']).toBeUndefined()
+    expect(report.top.byArrivals.map((line) => line.postKey)).toEqual(['444444444444444444', '111111111111111111'])
+    expect(report.top.byRegistrations.map((line) => line.postKey)).toEqual(['444444444444444444', '111111111111111111'])
+    // las llegadas por 1,000 impresiones no se subestiman con publicaciones sin impresiones
+    expect(report.roles.find((row) => row.role === 'data')).toMatchObject({ posts: 1, impressions: 0, arrivals: 30, arrivalsPer1000: null })
+    expect(report.roles.find((row) => row.role === 'backend')?.arrivalsPer1000).toBe(16)
+  })
+
   it('says it is empty before the first upload', () => {
     expect(buildLinkedInReport(input({ upload: null }))).toEqual({ ready: true, empty: true })
   })
