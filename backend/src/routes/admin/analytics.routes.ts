@@ -1,4 +1,4 @@
-import { Router, Request, Response } from 'express'
+import express, { Router, Request, Response } from 'express'
 import { supabase } from '../../../services/supabase.service'
 import { siteUrl } from '../../../services/linkedin/vacancy-publisher'
 import { nextPublication } from '../../../services/analytics/schedule'
@@ -9,6 +9,8 @@ import { dailyQuota, daysUntilNextBatch, nextBatchFrom } from '../../../services
 import { loadAlerts } from '../../../services/analytics/alerts-data'
 import { IMPACT_WINDOWS, loadChangeImpact } from '../../../services/analytics/changes'
 import { loadPushSummary } from '../../../services/analytics/push'
+import { parseLinkedInReport } from '../../../services/analytics/linkedin-report'
+import { loadLinkedInReport, saveLinkedInReport } from '../../../services/analytics/linkedin-report-data'
 import { pushTest } from '../../../services/push/push'
 import { loadApplyFunnel } from '../../../services/analytics/apply-funnel'
 import { loadRhythm } from '../../../services/analytics/rhythm'
@@ -126,6 +128,33 @@ router.get('/changes', handle('cambios', async (req, res) => {
   const windowDays = (IMPACT_WINDOWS as readonly number[]).includes(requested) ? requested : 7
   const limit = Math.min(Math.max(parseInt(String(req.query.limit ?? '100'), 10) || 100, 1), 200)
   res.json(await loadChangeImpact(windowDays, limit))
+}))
+
+/**
+ * Reporte semanal de LinkedIn (el Excel «Análisis conjunto»): lo que LinkedIn dice contra lo que mide AvoTalent, por publicación y por
+ * tipo de vacante. Se sube con POST (el archivo .xlsx tal cual, hasta 8 MB) y se lee con GET. SQL: backend/sql/linkedin-report-migration.sql.
+ */
+router.get('/linkedin-report', handle('reporte de LinkedIn', async (_req, res) => {
+  res.json(await loadLinkedInReport())
+}))
+
+router.post('/linkedin-report', express.raw({ type: ['application/octet-stream', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'], limit: '8mb' }), handle('subida del reporte de LinkedIn', async (req, res) => {
+  const body = req.body as unknown
+  if (!Buffer.isBuffer(body) || body.length < 100) return res.status(400).json({ error: 'Sube el archivo .xlsx que exporta LinkedIn (Análisis conjunto).' })
+  // Un .xlsx es un zip: empieza con «PK». Cualquier otra cosa no es el archivo.
+  if (body[0] !== 0x50 || body[1] !== 0x4b) return res.status(400).json({ error: 'Ese archivo no es un Excel (.xlsx).' })
+  let parsed
+  try {
+    parsed = await parseLinkedInReport(body)
+  } catch {
+    return res.status(400).json({ error: 'No pude leer el Excel. ¿Es el de «Análisis conjunto» de LinkedIn sin modificar?' })
+  }
+  if (parsed.daily.length === 0 && parsed.posts.length === 0) return res.status(400).json({ error: 'El archivo no trae las hojas de LinkedIn que espero.', warnings: parsed.warnings })
+  const userId = (req as Request & { userId?: string }).userId ?? null
+  const fileName = typeof req.query.name === 'string' ? req.query.name : null
+  const saved = await saveLinkedInReport(parsed, { fileName, userId })
+  if (!saved.ready) return res.status(503).json({ error: 'Falta correr linkedin-report-migration.sql en Supabase.' })
+  res.json({ ...saved, warnings: parsed.warnings, period: { start: parsed.periodStart, end: parsed.periodEnd } })
 }))
 
 /** Avisos push: la invitación, los dispositivos activos y lo enviado / tocado por tipo (backend/sql/push-notifications-migration.sql). */

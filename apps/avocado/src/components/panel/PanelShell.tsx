@@ -35,6 +35,7 @@ export const NAV_GROUPS: NavGroup[] = [
     items: [
       { href: '/panel', label: 'Resumen', icon: '▦', exact: true },
       { href: '/panel/linkedin', label: 'LinkedIn', icon: 'in' },
+      { href: '/panel/linkedin-reporte', label: 'Reporte LinkedIn', icon: '📑' },
       { href: '/panel/vacantes', label: 'Vacantes', icon: '▤' },
       { href: '/panel/match', label: 'Match', icon: '✦' },
       { href: '/panel/adquisicion', label: 'Adquisición', icon: '⇢' },

@@ -21,6 +21,7 @@ de notas al inicio del archivo, nunca reescribiendo el texto original.
 | 011 | [Velocidad: medir el servidor y las pantallas del feed y la vacante](011-speed-measurement.md) | Sin spec: implementación directa | Construido y migración corrida |
 | 012 | [Mis postulaciones: preguntar al volver, «Postulada» y seguimiento](012-my-applications.md) | Sin spec: implementación directa | Construido; falta correr la migración |
 | 013 | [Avisos push: invitación al contestar «¿Ya te postulaste?» y su medición](013-push-notifications.md) | Sin spec: implementación directa | Construido; falta migración y llaves VAPID |
+| 014 | [Reporte semanal de LinkedIn: subir el Excel y cuadrarlo con lo que medimos](014-linkedin-report-upload.md) | Sin spec: implementación directa | Construido; falta correr la migración |
 
 ## Cómo agregar uno nuevo
 
