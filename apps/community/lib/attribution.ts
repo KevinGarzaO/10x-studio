@@ -33,6 +33,11 @@ interface Stored extends Attribution {
 
 /** Lo que trae la dirección y el sitio de referencia de ESTA visita. */
 export function readAttribution(search: string, referrer: string, ownHost: string, path: string): Attribution | null {
+  // Volver del inicio de sesión con LinkedIn, GitHub o Google (/auth/callback) NO es una visita nueva con un origen: el «sitio de
+  // referencia» es el proveedor. Antes esa vuelta reemplazaba el origen real (el enlace de la publicación) por «linkedin.com» sin UTM, y
+  // casi todos los registros por esos proveedores quedaban como «directo» con página de entrada /auth/callback.
+  if (path === '/auth' || path.startsWith('/auth/')) return null
+
   const params = new URLSearchParams(search)
   const pick = (name: string) => params.get(name)?.trim() || null
 

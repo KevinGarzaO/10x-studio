@@ -153,3 +153,28 @@ describe('the team opts out of the measurements', () => {
     expect(fetchMock).toHaveBeenCalledTimes(1)
   })
 })
+
+describe('coming back from the sign-in provider', () => {
+  const fresh = () => { try { localStorage.clear(); sessionStorage.clear() } catch { /* sin almacenamiento */ } }
+
+  it('is not a new origin: the provider is not a referrer', () => {
+    expect(readAttribution('', 'https://github.com/', 'avotalent.com', '/auth/callback')).toBeNull()
+    expect(readAttribution('', 'https://www.linkedin.com/', 'avotalent.com', '/auth/callback')).toBeNull()
+    expect(readAttribution('?code=abc', 'https://accounts.google.com/', 'avotalent.com', '/auth')).toBeNull()
+  })
+
+  it('keeps the real origin (the post link) when the person returns from LinkedIn to register', () => {
+    fresh()
+    const original = { source: 'linkedin', medium: 'social', campaign: 'vacante-auto', content: 'mi-vacante', referrer: null, landingPath: '/vacantes/mi-vacante' }
+    localStorage.setItem('avo_attribution', JSON.stringify({ ...original, capturedAt: Date.now() }))
+    // la vuelta del proveedor: otra página, el referrer es linkedin.com y la dirección ya no trae UTM
+    window.history.pushState({}, '', '/auth/callback')
+    Object.defineProperty(document, 'referrer', { configurable: true, value: 'https://www.linkedin.com/' })
+    vi.stubGlobal('fetch', vi.fn(async () => ({ ok: true })))
+    captureAttribution()
+    expect(getAttribution()).toEqual(original)
+    vi.unstubAllGlobals()
+    Object.defineProperty(document, 'referrer', { configurable: true, value: '' })
+    window.history.pushState({}, '', '/')
+  })
+})

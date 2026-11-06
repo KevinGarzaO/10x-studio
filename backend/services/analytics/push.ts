@@ -58,9 +58,23 @@ export async function loadPushSummary(days: number, now: Date = new Date()): Pro
     if (isMissingMigration(error.message)) return { ready: false }
     throw new Error(error.message)
   }
-  const [active, fresh] = await Promise.all([
-    supabase.from('push_subscriptions').select('id', { count: 'exact', head: true }).is('revoked_at', null),
-    supabase.from('push_subscriptions').select('id', { count: 'exact', head: true }).gte('created_at', from.toISOString()),
-  ])
-  return buildPushSummary((data ?? []) as PushRow[], days, { active: active.count ?? 0, activatedInPeriod: fresh.count ?? 0 })
+  // Los dispositivos del equipo, de cuentas de prueba y de perfiles del scraper no cuentan (igual que los eventos): si no, salían
+  // «3 dispositivos activos» contra «0 aceptaron» porque los 3 eran del equipo.
+  const subs = await supabase.from('push_subscriptions').select('user_id, created_at').is('revoked_at', null).limit(5000)
+  const rows = ((subs.data ?? []) as { user_id: string; created_at: string }[])
+  const real = await realUserIds([...new Set(rows.map((row) => row.user_id))])
+  const mine = rows.filter((row) => real.has(row.user_id))
+  return buildPushSummary((data ?? []) as PushRow[], days, { active: mine.length, activatedInPeriod: mine.filter((row) => row.created_at >= from.toISOString()).length })
+}
+
+/** De esos ids, cuáles son personas reales (no equipo, ni cuentas de prueba, ni perfiles del scraper). */
+async function realUserIds(ids: string[]): Promise<Set<string>> {
+  const real = new Set<string>()
+  for (let i = 0; i < ids.length; i += 200) {
+    const { data } = await supabase.from('users').select('id, user_kind, is_test_account, is_scraper_profile').in('id', ids.slice(i, i + 200))
+    for (const row of (data ?? []) as { id: string; user_kind: string; is_test_account: boolean | null; is_scraper_profile: boolean | null }[]) {
+      if (row.user_kind === 'user' && !row.is_test_account && !row.is_scraper_profile) real.add(row.id)
+    }
+  }
+  return real
 }
