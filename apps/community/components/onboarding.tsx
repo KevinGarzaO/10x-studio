@@ -1,6 +1,7 @@
 'use client'
 
 import { trackEvent } from '../lib/web-analytics'
+import { flowFor } from '../lib/flow-tracker'
 import { useRouter } from 'next/navigation'
 import { useEffect, useRef, useState } from 'react'
 import { Loader2, MapPin, Tag } from 'lucide-react'
@@ -54,6 +55,10 @@ const styles = `
 }
 `
 
+/** Los tres pasos del perfil, con el nombre que se mide (el de foto no existe cuando la cuenta ya traía la suya). */
+const STEP_NAMES = ['photo', 'basics', 'skills'] as const
+const profileFlow = flowFor('profile_setup')
+
 export function OnboardingPage() {
   const router = useRouter()
 
@@ -72,6 +77,17 @@ export function OnboardingPage() {
   // true cuando la cuenta ya traía foto al entrar (subida antes o tomada de la
   // red social): entonces el paso de foto no existe y el flujo tiene solo 2 pasos.
   const [photoPrefilled, setPhotoPrefilled] = useState(false)
+
+  // Medición del perfil paso por paso (flujo profile_setup): empieza al ver el formulario, anota cada paso que se muestra, qué campo
+  // bloqueó y cuándo se completa. Un intento sin cierre por 30 min cuenta como abandonado (lo calcula el servidor).
+  useEffect(() => {
+    if (checkingSession) return
+    profileFlow.startFlow({ reuse: true })
+  }, [checkingSession])
+  useEffect(() => {
+    if (checkingSession) return
+    profileFlow.trackStep(`view_${STEP_NAMES[step]}`, 2 * step + 1)
+  }, [checkingSession, step])
   const { catalog, failed: catalogFailed } = useSkillCatalog()
   const addSkill = (name: string) => setSkills(prev => (prev.includes(name) ? prev : [...prev, name]))
   const { proposals, message: proposalMessage, propose } = useSkillProposals(addSkill)
@@ -143,25 +159,33 @@ export function OnboardingPage() {
   // Validación por paso: quien falle ve el problema en el paso donde está, no
   // al final de un formulario largo. El envío final sigue validando TODO con el
   // schema real del backend.
-  function stepError(n: number): string {
+  // Devuelve el campo que falta (para medir DÓNDE se atora la gente) y el mensaje que se le muestra.
+  function stepBlock(n: number): { field: string; message: string } | null {
     if (n === 0) {
-      if (!photoPreview) return 'Tu foto de perfil es obligatoria'
+      if (!photoPreview) return { field: 'photo', message: 'Tu foto de perfil es obligatoria' }
     }
     if (n === 1) {
-      if (!roleCategory) return 'Elige tu categoría de rol'
-      if (!seniority) return 'Elige tu nivel'
-      if (!workModality) return 'Elige tu modalidad'
+      if (!roleCategory) return { field: 'role', message: 'Elige tu categoría de rol' }
+      if (!seniority) return { field: 'level', message: 'Elige tu nivel' }
+      if (!workModality) return { field: 'modality', message: 'Elige tu modalidad' }
     }
     if (n === 2) {
-      if (skills.length === 0) return 'Elige al menos un skill del catálogo'
-      if (!location.trim()) return 'Tu ubicación es obligatoria'
+      if (skills.length === 0) return { field: 'skills', message: 'Elige al menos un skill del catálogo' }
+      if (!location.trim()) return { field: 'location', message: 'Tu ubicación es obligatoria' }
     }
-    return ''
+    return null
   }
+  const stepError = (n: number): string => stepBlock(n)?.message ?? ''
 
   function nextStep() {
-    const msg = stepError(step)
-    if (msg) { setError(msg); return }
+    const block = stepBlock(step)
+    if (block) {
+      // Se mide qué campo bloqueó a la persona: el flujo dice «de N personas que llegaron al paso, M se quedaron sin el campo X».
+      profileFlow.trackStep(`blocked_${block.field}`, 10 + step)
+      setError(block.message)
+      return
+    }
+    profileFlow.trackStep(`${STEP_NAMES[step]}_done`, 2 * step + 2)
     setError('')
     setStep(s => Math.min(s + 1, 2))
   }
@@ -203,16 +227,21 @@ export function OnboardingPage() {
       })
       const data = await res.json()
       if (!res.ok) {
+        // Un error del servidor (5xx) rompe el intento; uno de validación (4xx) es un tropiezo normal de la persona, no un fallo.
+        if (res.status >= 500) profileFlow.failFlow('save_failed', new Error(`HTTP ${res.status}`))
+        else profileFlow.trackStep('save_rejected', 20)
         setError(data.message || data.error || 'Error al guardar tu perfil')
         setSaving(false)
         return
       }
       localStorage.setItem('avocado_user', JSON.stringify(data.user))
       void trackEvent('profile_completed', { role: roleCategory ?? undefined, seniority: seniority ?? undefined })
+      profileFlow.completeFlow('profile_completed')
       // Termina el recorrido: si venía de una vacante, vuelve a ella.
       router.push(takeReturnTo() ?? '/')
       router.refresh()
     } catch {
+      profileFlow.failFlow('save_failed', new Error('connection'))
       setError('Error de conexión. Intenta de nuevo.')
       setSaving(false)
     }

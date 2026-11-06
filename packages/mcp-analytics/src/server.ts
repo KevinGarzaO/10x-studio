@@ -108,7 +108,7 @@ export function createServer(db: Queryable, options: ServerOptions = {}): McpSer
     {
       title: 'Rendimiento de los flujos críticos',
       description:
-        'Por flujo (auth_login, auth_register, job_search_filter, job_application): intentos, personas, tasa de completitud y de abandono, intentos con error técnico, duración y tiempo de carga promedio, ' +
+        'Por flujo (auth_login, auth_register, job_search_filter, job_application, profile_setup = el perfil paso por paso y qué campo bloquea): intentos, personas, tasa de completitud y de abandono, intentos con error técnico, duración y tiempo de carga promedio, ' +
         'intentos con frustración (carga > 2.5 s o rage clicks), paso a paso cuántos llegan y cuántos se pierden hacia el siguiente, y los rage/dead clicks de Clarity en las páginas por donde pasa cada flujo. ' +
         'Equivocarse de contraseña no cuenta como error del flujo. Opcional `flow` para uno solo.',
       inputSchema: {

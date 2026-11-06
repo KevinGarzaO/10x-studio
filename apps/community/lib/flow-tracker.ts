@@ -13,7 +13,7 @@ import { normalizeError } from './error-reporter'
  * Los tiempos los mide el navegador (performance.now); la frustración la decide el servidor (carga > 2500 ms, o rage clicks).
  */
 
-export type FlowName = 'auth_login' | 'auth_register' | 'job_search_filter' | 'job_application' | 'view_feed' | 'view_vacancy'
+export type FlowName = 'auth_login' | 'auth_register' | 'job_search_filter' | 'job_application' | 'view_feed' | 'view_vacancy' | 'profile_setup'
 
 const FLOW_URL = '/api/a/flow'
 const STORAGE_KEY = 'avo_flows'

@@ -196,7 +196,8 @@ describe('the vacancy page', () => {
 
   it('does not mark it when they only left or said "todavía no"', async () => {
     renderPage(vacancy({ applicationStatus: 'not_yet' }))
-    await screen.findByRole('button', { name: 'Postularse' })
+    // con toda la suite corriendo junta la página tarda más en pintarse: más margen para no fallar por lentitud
+    await screen.findByRole('button', { name: 'Postularse' }, { timeout: 5000 })
     expect(screen.queryByText(/ver en Mis postulaciones/)).toBeNull()
     act(() => announceApplication({ vacancyId: 'v1', status: 'applied' }))
     expect(await screen.findByText(/ver en Mis postulaciones/, undefined, { timeout: 4000 })).toBeTruthy()

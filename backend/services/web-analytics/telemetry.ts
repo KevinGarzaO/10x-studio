@@ -195,7 +195,7 @@ export function captureServerError(error: unknown, info: { path?: string; userId
 // ------------------------------------------------------------------------------------------------
 
 /** Los flujos que se miden hoy. Una lista cerrada: un navegador no puede inventar flujos nuevos. */
-export const FLOWS = ['auth_login', 'auth_register', 'job_search_filter', 'job_application', 'view_feed', 'view_vacancy'] as const
+export const FLOWS = ['auth_login', 'auth_register', 'job_search_filter', 'job_application', 'view_feed', 'view_vacancy', 'profile_setup'] as const
 export type FlowName = (typeof FLOWS)[number]
 
 export interface FlowRecord {

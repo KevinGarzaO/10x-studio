@@ -41,6 +41,7 @@ const LABEL: Record<string, string> = {
   job_application: 'Postularse a una vacante',
   view_feed: 'Ver el feed (hasta las primeras tarjetas)',
   view_vacancy: 'Ver una vacante (hasta mostrarla)',
+  profile_setup: 'Completar el perfil (paso por paso y campo por campo)',
 }
 
 /** 1250 -> "1.3 s"; 420 -> "420 ms". */
