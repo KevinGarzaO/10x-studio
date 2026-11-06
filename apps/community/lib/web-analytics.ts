@@ -294,6 +294,9 @@ export async function identifyUser(): Promise<void> {
  * Arranca la medición en esta pestaña: tiempo activo, latidos y envío final. Devuelve la función que lo apaga.
  * La primera página se avisa con `trackPageView` desde el componente que escucha las rutas.
  */
+/** La sesión en la que ya se anotó la señal humana (para anotarla una sola vez). */
+let humanSignalSession: string | null = null
+
 export function startWebAnalytics(): () => void {
   if (!enabled()) return () => {}
 
@@ -312,6 +315,18 @@ export function startWebAnalytics(): () => void {
     sendHeartbeat(true)
   }
 
+  // Señal humana: la primera vez que, en esta sesión, se mueve el mouse, se hace scroll, se toca la pantalla o se teclea. Un servidor o un
+  // revisor automático de enlaces abre la página y espera, pero no la toca. Se anota UNA vez por sesión (un evento `human_signal`); la
+  // regla de «posible bot» todavía no la usa (ver web-analytics-bots-migration.sql): primero se junta el dato.
+  const onHuman = (event: Event) => {
+    const id = currentSessionId()
+    if (!id || humanSignalSession === id) return
+    humanSignalSession = id
+    void trackEvent('human_signal', { by: event.type })
+  }
+  const humanEvents = ['pointermove', 'pointerdown', 'scroll', 'keydown', 'touchstart'] as const
+  for (const name of humanEvents) window.addEventListener(name, onHuman, { passive: true, capture: true })
+
   document.addEventListener('visibilitychange', onVisibility)
   window.addEventListener('pagehide', onPageHide)
   const interval = window.setInterval(() => {
@@ -319,6 +334,7 @@ export function startWebAnalytics(): () => void {
   }, HEARTBEAT_MS)
 
   return () => {
+    for (const name of humanEvents) window.removeEventListener(name, onHuman, { capture: true })
     document.removeEventListener('visibilitychange', onVisibility)
     window.removeEventListener('pagehide', onPageHide)
     window.clearInterval(interval)
@@ -332,6 +348,7 @@ export function resetWebAnalyticsForTests(): void {
   started = false
   lastSentSeconds = -1
   lastPage = null
+  humanSignalSession = null
   queue = Promise.resolve()
 }
 

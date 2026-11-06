@@ -252,3 +252,31 @@ describe('opting out', () => {
     expect(sent).toHaveLength(0)
   })
 })
+
+describe('human signal', () => {
+  const humanEvents = () => sent.filter(item => item.body?.type === 'event' && item.body?.name === 'human_signal')
+
+  it('is noted ONCE per session the first time the person moves, scrolls, taps or types, and not for a page that is only opened', async () => {
+    await trackPageView('/vacantes/x')
+    const stop = startWebAnalytics()
+    await new Promise(resolve => setTimeout(resolve, 0))
+    expect(humanEvents()).toHaveLength(0) // abrir la página y esperar no es una señal
+
+    window.dispatchEvent(new Event('pointermove'))
+    window.dispatchEvent(new Event('scroll'))
+    window.dispatchEvent(new Event('keydown'))
+    await new Promise(resolve => setTimeout(resolve, 0))
+    expect(humanEvents()).toHaveLength(1)
+    expect(humanEvents()[0].body.params).toEqual({ by: 'pointermove' })
+    stop()
+  })
+
+  it('stops listening when the measurement is stopped', async () => {
+    await trackPageView('/vacantes/x')
+    const stop = startWebAnalytics()
+    stop()
+    window.dispatchEvent(new Event('pointerdown'))
+    await new Promise(resolve => setTimeout(resolve, 0))
+    expect(humanEvents()).toHaveLength(0)
+  })
+})

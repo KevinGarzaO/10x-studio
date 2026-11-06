@@ -64,6 +64,7 @@ export const NAV_GROUPS: NavGroup[] = [
       { href: '/panel/trafico/flujos', label: 'Flujos críticos', icon: '⇢' },
       { href: '/panel/trafico/velocidad', label: 'Velocidad', icon: '⚡' },
       { href: '/panel/trafico/postulacion', label: 'Postulación', icon: '📨' },
+      { href: '/panel/trafico/bots', label: 'Posibles bots', icon: '🤖' },
       { href: '/panel/trafico/push', label: 'Avisos push', icon: '🔔' },
       { href: '/panel/trafico/ritmo', label: 'Ritmo de la semana', icon: '▦' },
       { href: '/panel/trafico/cambios', label: 'Cambios', icon: '✎' },
