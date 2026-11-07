@@ -14,6 +14,7 @@ import { loadWallFunnel } from '../../../services/analytics/wall-funnel'
 import { loadProviderFunnel } from '../../../services/analytics/provider-funnel'
 import { loadExperiment } from '../../../services/linkedin/experiment-data'
 import { loadSupply } from '../../../services/analytics/supply-data'
+import { loadFeedVisible } from '../../../services/analytics/feed-visible'
 import { loadFeedbackSummary } from '../../../services/analytics/feedback-summary'
 import { parseLinkedInReport } from '../../../services/analytics/linkedin-report'
 import { loadLinkedInReport, saveLinkedInReport } from '../../../services/analytics/linkedin-report-data'
@@ -179,6 +180,11 @@ router.get('/feedback', handle('feedback', async (_req, res) => {
 }))
 
 /** Oferta y cola de vacantes por puesto, y cuántos días de reserva le quedan a LinkedIn. Solo mide: no cambia qué se publica. */
+/** El feed visible: de las vacantes abiertas, cuántas se ven y cuántas están ocultas (no le sirven a nadie), por puesto. SQL: feed-visibility-migration.sql. */
+router.get('/feed-visible', handle('feed visible', async (_req, res) => {
+  res.json(await loadFeedVisible())
+}))
+
 router.get('/supply', handle('oferta y cola', async (_req, res) => {
   res.json(await loadSupply())
 }))

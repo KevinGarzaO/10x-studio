@@ -15,12 +15,15 @@ interface Supply {
   notes?: string[]
 }
 
+interface FeedVisible { ready: boolean; open?: number; visible?: number; hidden?: number; hiddenPct?: number | null; lastHiddenAt?: string | null; byRole?: { role: string; open: number; visible: number; hidden: number }[]; notes?: string[] }
+
 const pct = (value: number | null | undefined) => (value === null || value === undefined ? '—' : `${value.toLocaleString('es-MX', { maximumFractionDigits: 1 })} %`)
 /** «Sobran 274» / «Faltan 34»: el saldo al llegar el lote nuevo. */
 const balance = (value: number) => (value >= 0 ? `sobrarían ${fmtNum(value)}` : `faltarían ${fmtNum(-value)}`)
 
 export default function OfertaPage() {
   const { data, loading, error, reload } = usePanelData<Supply>('/api/admin/analytics/supply', { keepPrevious: true })
+  const feed = usePanelData<FeedVisible>('/api/admin/analytics/feed-visible', { keepPrevious: true }).data
 
   return (
     <>
@@ -37,6 +40,14 @@ export default function OfertaPage() {
             <Stat label="LinkedIn hasta el próximo lote" value={`${fmtNum(data.linkedin.reserve)} de ${fmtNum(data.linkedin.needed)}`} tone={data.linkedin.coversWindow ? undefined : 'warn'} caption={`vacantes útiles sin publicar contra las que pide la ventana (${data.linkedin.windowDays} días × ${data.linkedin.perDay}) · al llegar el lote ${balance(data.linkedin.balanceAtRefresh)}`} />
           </div>
 
+          {feed?.ready && feed.byRole && (
+            <Card title="Feed visible" hint={`${fmtNum(feed.visible ?? 0)} se ven y ${fmtNum(feed.hidden ?? 0)} están ocultas de ${fmtNum(feed.open ?? 0)} abiertas (${pct(feed.hiddenPct)} ocultas). Lo oculto no se borra: sigue abriendo por enlace directo.`}>
+              <table className="panel-table">
+                <thead><tr><th>Puesto</th><th className="num">Abiertas</th><th className="num">Se ven</th><th className="num">Ocultas</th></tr></thead>
+                <tbody>{feed.byRole.map(row => <tr key={row.role}><td>{row.role}</td><td className="num">{fmtNum(row.open)}</td><td className="num">{fmtNum(row.visible)}</td><td className="num">{fmtNum(row.hidden)}</td></tr>)}</tbody>
+              </table>
+            </Card>
+          )}
           <Card title="Por puesto" hint="Puestos con más candidatas primero · «foco» = se publican en LinkedIn">
             <table className="panel-table">
               <thead><tr><th>Puesto</th><th className="num">Candidatas</th><th className="num">Abiertas</th><th className="num">Le sirven a alguien</th><th className="num">En cola</th><th className="num">Cola que sirve</th><th className="num">Reserva LinkedIn</th></tr></thead>
