@@ -118,6 +118,13 @@ export async function enablePush(surface: PushSurface): Promise<EnableResult> {
   if (!key) return 'unavailable'
   const permission = await Notification.requestPermission()
   if (permission !== 'granted') {
+    // Cerrar el aviso del navegador sin elegir deja el permiso en «default»: no es un «no» definitivo, pero tampoco se le vuelve a
+    // ofrecer enseguida (antes se ofrecía de nuevo en la siguiente respuesta). Un «bloquear» sí queda como negado.
+    if (permission === 'default') {
+      rememberPushDismissed()
+      void recordPushEvent('prompt_dismissed', surface)
+      return 'denied'
+    }
     void recordPushEvent('permission_denied', surface)
     return 'denied'
   }

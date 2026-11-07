@@ -7,6 +7,7 @@ import { hadSessionBefore } from '../../../../lib/session-marker'
 import { useFlowTracker } from '../../../../lib/use-flow-tracker'
 import { useCompactLayout } from '../../../../lib/use-compact-layout'
 import { useSeenOnce } from '../../../../lib/use-seen'
+import { currentInAppBrowser } from '../../../../lib/in-app-browser'
 import { APPLICATION_CHANGED, isApplied, recordApplicationClick, type ApplicationChange, type ApplicationStatus } from '../../../../lib/applications'
 import { DetailSkeleton } from '@/components/skeletons'
 import Link from 'next/link'
@@ -319,7 +320,7 @@ export default function VacancyPage() {
   useEffect(() => {
     if (!post || !userLoaded || user) return
     // Telemetría: cuántas veces se muestra el aviso y si ESTE navegador ya había tenido una sesión (la persona la perdió) o nunca.
-    void trackEvent('auth_wall_shown', { surface: 'vacancy', had_session_before: hadSessionBefore() })
+    void trackEvent('auth_wall_shown', { surface: 'vacancy', had_session_before: hadSessionBefore(), in_app: currentInAppBrowser() ?? 'no' })
     requestAuth({ variant: 'vacancy', subject: [post.title, formatCompanyName(post.company)].filter(Boolean).join(' — ') })
   }, [post, userLoaded, user, slug, requestAuth])
 

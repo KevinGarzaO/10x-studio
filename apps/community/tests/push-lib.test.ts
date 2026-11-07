@@ -42,4 +42,10 @@ describe('enablePush', () => {
     expect(await enablePush('settings')).toBe('unavailable')
     expect(lastPushProblem).toContain('503')
   })
+
+  it('remembers that the person closed the browser prompt without choosing (permission stays default), so it is not offered again right away', async () => {
+    ;(globalThis as any).Notification = { permission: 'default', requestPermission: async () => 'default' }
+    expect(await enablePush('application_answer')).toBe('denied')
+    expect(localStorage.getItem('avo_push_dismissed_at')).not.toBeNull()
+  })
 })

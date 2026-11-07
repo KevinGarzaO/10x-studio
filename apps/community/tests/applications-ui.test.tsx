@@ -199,8 +199,12 @@ describe('the vacancy page', () => {
     // con toda la suite corriendo junta la página tarda más en pintarse: más margen para no fallar por lentitud
     await screen.findByRole('button', { name: 'Postularse' }, { timeout: 5000 })
     expect(screen.queryByText(/ver en Mis postulaciones/)).toBeNull()
-    act(() => announceApplication({ vacancyId: 'v1', status: 'applied' }))
-    expect(await screen.findByText(/ver en Mis postulaciones/, undefined, { timeout: 4000 })).toBeTruthy()
+    // La página se pone a escuchar el aviso en un efecto: bajo carga puede tardar un poco, y un aviso mandado antes se perdería.
+    // Por eso se repite el aviso (es idempotente) hasta que la página lo recibe.
+    await waitFor(() => {
+      act(() => announceApplication({ vacancyId: 'v1', status: 'applied' }))
+      expect(screen.getByText(/ver en Mis postulaciones/)).toBeTruthy()
+    }, { timeout: 5000 })
   })
 })
 

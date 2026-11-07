@@ -1,6 +1,8 @@
 'use client'
 
 import { useMemo, useState, useEffect, useCallback, useRef } from 'react'
+import { trackEvent } from '../lib/web-analytics'
+import { currentInAppBrowser } from '../lib/in-app-browser'
 import { flowFor } from '../lib/flow-tracker'
 import { usePageReady } from '../lib/page-timing'
 import { hadSessionBefore } from '../lib/session-marker'
@@ -658,7 +660,13 @@ export function AuthModal({ onClose, request, locked = false, gate = false }: { 
 
   // Se recuerda la página en la que estaba: al terminar el registro (y el onboarding) se
   // le regresa a ella en lugar de mandarla al inicio.
+  // Dentro del navegador de otra app (LinkedIn, Facebook...) el inicio de sesión con LinkedIn o GitHub suele atorarse: se avisa cómo salir.
+  const inApp = useMemo(() => currentInAppBrowser(), [])
+  // Qué botón del aviso se toca (y desde qué tipo de navegador): sin esto solo se sabía cuántos lo veían y cuántos se registraban.
+  const noteClick = (method: string) => { void trackEvent('auth_wall_click', { method, in_app: inApp ?? 'no', surface: vacancy ? 'vacancy' : gate ? 'gate' : 'other' }) }
+
   function go(path: '/signup' | '/login') {
+    noteClick(path === '/signup' ? 'signup' : 'login')
     saveReturnTo(window.location.pathname)
     onClose()
     router.push(path)
@@ -673,6 +681,7 @@ export function AuthModal({ onClose, request, locked = false, gate = false }: { 
     : 'Regístrate para acceder a los datos de contacto y unirte a la conversación.'
 
   function oauth(provider: 'linkedin' | 'github') {
+    noteClick(provider)
     // La vacante se recuerda también en el OAuth: al terminar el onboarding se
     // vuelve a ella igual que con los botones de correo.
     saveReturnTo(window.location.pathname)
@@ -685,7 +694,7 @@ export function AuthModal({ onClose, request, locked = false, gate = false }: { 
     window.location.href = `${API_URL}/api/community/auth/oauth/${provider}`
   }
 
-  return <div className={`modal-backdrop${locked ? ' is-locked' : ''}`} role="presentation" onMouseDown={e => !locked && e.target === e.currentTarget && onClose()}><section className="auth-modal" role="dialog" aria-modal="true" aria-labelledby="auth-title">{!locked && <button className="modal-close icon-button" onClick={onClose} aria-label="Cerrar"><X size={19} /></button>}<div className="lock-orb"><LockKeyhole size={20} /></div><p className="eyebrow">{eyebrow}</p><h2 id="auth-title">{title}</h2>{vacancy && request?.subject && <p className="auth-subject"><strong>{request.subject}</strong></p>}<p>{text}</p><div className="oauth-stack"><button type="button" className="oauth-btn" onClick={() => oauth('linkedin')}><svg width="16" height="16" viewBox="0 0 24 24" fill="#0A66C2" aria-hidden="true"><path d="M20.45 20.45h-3.56v-5.57c0-1.33-.02-3.04-1.85-3.04-1.85 0-2.13 1.45-2.13 2.94v5.67H9.35V9h3.41v1.56h.05c.47-.9 1.63-1.85 3.36-1.85 3.6 0 4.27 2.37 4.27 5.46v6.28zM5.34 7.43a2.06 2.06 0 1 1 0-4.12 2.06 2.06 0 0 1 0 4.12zM7.12 20.45H3.56V9h3.56v11.45z"/></svg>Continuar con LinkedIn</button><button type="button" className="oauth-btn" onClick={() => oauth('github')}><svg width="16" height="16" viewBox="0 0 24 24" fill="var(--text)" aria-hidden="true"><path d="M12 .3a12 12 0 0 0-3.8 23.4c.6.1.8-.3.8-.6v-2c-3.3.7-4-1.6-4-1.6-.5-1.4-1.3-1.8-1.3-1.8-1.1-.7.1-.7.1-.7 1.2 0 1.8 1.2 1.8 1.2 1.1 1.8 2.8 1.3 3.5 1 .1-.8.4-1.3.8-1.6-2.7-.3-5.5-1.3-5.5-5.9 0-1.3.5-2.4 1.2-3.2-.1-.3-.5-1.5.1-3.2 0 0 1-.3 3.3 1.2a11.5 11.5 0 0 1 6 0C17 4.6 18 4.9 18 4.9c.7 1.7.3 2.9.2 3.2.8.8 1.2 1.9 1.2 3.2 0 4.6-2.8 5.6-5.5 5.9.4.4.8 1.1.8 2.2v3.3c0 .3.2.7.8.6A12 12 0 0 0 12 .3z"/></svg>Continuar con GitHub</button><div className="oauth-divider"><span>o continúa con tu correo</span></div></div><button className="oauth-button" style={{ width: '100%', marginBottom: 10, background: 'var(--brand)', color: 'var(--bg)', border: 'none', padding: '12px 16px', borderRadius: 8, fontWeight: 700, fontSize: 14, cursor: 'pointer' }} onClick={() => go('/signup')}>Crear cuenta gratis</button><button className="oauth-button" style={{ width: '100%', background: 'transparent', color: 'var(--text-2)', border: '1px solid var(--line)', padding: '12px 16px', borderRadius: 8, fontSize: 14, cursor: 'pointer' }} onClick={() => go('/login')}>Iniciar sesión</button><small style={{ display: 'block', textAlign: 'center', marginTop: 12, color: 'var(--text-muted)', fontSize: 11 }}>Al continuar aceptas nuestras reglas de comunidad.</small></section></div>
+  return <div className={`modal-backdrop${locked ? ' is-locked' : ''}`} role="presentation" onMouseDown={e => !locked && e.target === e.currentTarget && onClose()}><section className="auth-modal" role="dialog" aria-modal="true" aria-labelledby="auth-title">{!locked && <button className="modal-close icon-button" onClick={onClose} aria-label="Cerrar"><X size={19} /></button>}<div className="lock-orb"><LockKeyhole size={20} /></div><p className="eyebrow">{eyebrow}</p><h2 id="auth-title">{title}</h2>{vacancy && request?.subject && <p className="auth-subject"><strong>{request.subject}</strong></p>}<p>{text}</p>{inApp && <p className="auth-inapp-hint" role="note">¿Abriste esto desde otra app? Si el inicio de sesión no avanza, toca el menú <strong>⋯</strong> y elige <strong>«Abrir en el navegador»</strong>, o crea tu cuenta con tu correo.</p>}<div className="oauth-stack"><button type="button" className="oauth-btn" onClick={() => oauth('linkedin')}><svg width="16" height="16" viewBox="0 0 24 24" fill="#0A66C2" aria-hidden="true"><path d="M20.45 20.45h-3.56v-5.57c0-1.33-.02-3.04-1.85-3.04-1.85 0-2.13 1.45-2.13 2.94v5.67H9.35V9h3.41v1.56h.05c.47-.9 1.63-1.85 3.36-1.85 3.6 0 4.27 2.37 4.27 5.46v6.28zM5.34 7.43a2.06 2.06 0 1 1 0-4.12 2.06 2.06 0 0 1 0 4.12zM7.12 20.45H3.56V9h3.56v11.45z"/></svg>Continuar con LinkedIn</button><button type="button" className="oauth-btn" onClick={() => oauth('github')}><svg width="16" height="16" viewBox="0 0 24 24" fill="var(--text)" aria-hidden="true"><path d="M12 .3a12 12 0 0 0-3.8 23.4c.6.1.8-.3.8-.6v-2c-3.3.7-4-1.6-4-1.6-.5-1.4-1.3-1.8-1.3-1.8-1.1-.7.1-.7.1-.7 1.2 0 1.8 1.2 1.8 1.2 1.1 1.8 2.8 1.3 3.5 1 .1-.8.4-1.3.8-1.6-2.7-.3-5.5-1.3-5.5-5.9 0-1.3.5-2.4 1.2-3.2-.1-.3-.5-1.5.1-3.2 0 0 1-.3 3.3 1.2a11.5 11.5 0 0 1 6 0C17 4.6 18 4.9 18 4.9c.7 1.7.3 2.9.2 3.2.8.8 1.2 1.9 1.2 3.2 0 4.6-2.8 5.6-5.5 5.9.4.4.8 1.1.8 2.2v3.3c0 .3.2.7.8.6A12 12 0 0 0 12 .3z"/></svg>Continuar con GitHub</button><div className="oauth-divider"><span>o continúa con tu correo</span></div></div><button className="oauth-button" style={{ width: '100%', marginBottom: 10, background: 'var(--brand)', color: 'var(--bg)', border: 'none', padding: '12px 16px', borderRadius: 8, fontWeight: 700, fontSize: 14, cursor: 'pointer' }} onClick={() => go('/signup')}>Crear cuenta gratis</button><button className="oauth-button" style={{ width: '100%', background: 'transparent', color: 'var(--text-2)', border: '1px solid var(--line)', padding: '12px 16px', borderRadius: 8, fontSize: 14, cursor: 'pointer' }} onClick={() => go('/login')}>Iniciar sesión</button><small style={{ display: 'block', textAlign: 'center', marginTop: 12, color: 'var(--text-muted)', fontSize: 11 }}>Al continuar aceptas nuestras reglas de comunidad.</small></section></div>
 }
 
 // The feed's content column — rendered as {children} inside the shared

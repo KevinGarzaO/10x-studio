@@ -177,7 +177,7 @@ describe('the vacancy page for someone without an account', () => {
       const requestAuth = renderPage({ user: null, userLoaded: true })
       await waitFor(() => expect(requestAuth).toHaveBeenCalledTimes(1))
       await waitFor(() => expect(walls).toHaveLength(1))
-      expect(walls[0]).toEqual({ surface: 'vacancy', had_session_before: true })
+      expect(walls[0]).toEqual({ surface: 'vacancy', had_session_before: true, in_app: 'no' })
     } finally {
       ;(globalThis as any).__avoAnalyticsTest = false
     }

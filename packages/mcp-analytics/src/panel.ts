@@ -30,6 +30,7 @@ export const PANEL_METRICS = {
   push: { path: '/push', about: 'Avisos push: cuántas personas aceptan la invitación, dispositivos activos, enviados, fallidos y tocados por tipo de aviso.' },
   linkedin_report: { path: '/linkedin-report', about: 'Reporte semanal de LinkedIn (Excel que sube el dueño los lunes): impresiones, clics y seguidores por semana contra la semana anterior, cada publicación con lo que dice LinkedIn contra lo que mide AvoTalent (cuadra, revisar, pierde, sin clics), qué tipo de vacante funciona y a quién le llega.' },
   web_bots: { path: '/web/bots', about: 'Posibles bots: cuántas personas nuevas activas parecen servidores o revisores automáticos (centros de datos, pantallas de navegador sin cabeza), por país y ciudad, y las nuevas activas sin ellos. Solo marca; no cambia los demás números.' },
+  web_wall: { path: '/web/wall', about: 'La ventana de registro sobre una vacante: personas que la ven, tocan un botón (LinkedIn, GitHub, correo) y se registran, por dispositivo (móvil/escritorio) y por navegador interno de otra app (LinkedIn, Facebook...).' },
   web_rhythm: { path: '/web/rhythm', about: 'Ritmo de la semana (días y horas).' },
   web_retention: { path: '/web/retention', about: 'Retención de las sesiones nuevas (personas activas que vuelven), sin listas de personas.' },
 } as const

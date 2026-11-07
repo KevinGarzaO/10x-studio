@@ -10,6 +10,7 @@ import { loadAlerts } from '../../../services/analytics/alerts-data'
 import { IMPACT_WINDOWS, loadChangeImpact } from '../../../services/analytics/changes'
 import { loadPushSummary } from '../../../services/analytics/push'
 import { loadBotSummary } from '../../../services/analytics/bot-traffic'
+import { loadWallFunnel } from '../../../services/analytics/wall-funnel'
 import { parseLinkedInReport } from '../../../services/analytics/linkedin-report'
 import { loadLinkedInReport, saveLinkedInReport } from '../../../services/analytics/linkedin-report-data'
 import { pushTest } from '../../../services/push/push'
@@ -156,6 +157,11 @@ router.post('/linkedin-report', express.raw({ type: ['application/octet-stream',
   const saved = await saveLinkedInReport(parsed, { fileName, userId })
   if (!saved.ready) return res.status(503).json({ error: 'Falta correr linkedin-report-migration.sql en Supabase.' })
   res.json({ ...saved, warnings: parsed.warnings, period: { start: parsed.periodStart, end: parsed.periodEnd } })
+}))
+
+/** La ventana de registro sobre una vacante: quién la ve, qué botón toca y quién se registra, por dispositivo y navegador interno. SQL: wall-funnel-migration.sql. */
+router.get('/web/wall', handle('ventana de registro', async (req, res) => {
+  res.json(await loadWallFunnel(periodOf(req)))
 }))
 
 /** Posibles bots: cuánto del tráfico parece de servidores y dónde. Solo marca, no cambia los demás números. SQL: web-analytics-bots-migration.sql. */

@@ -1416,3 +1416,7 @@ button { cursor: pointer; }
 }
 .detail-action.is-done { background: var(--accent-soft); color: var(--accent-text); border: 1px solid var(--accent-line); gap: 6px; justify-content: center; text-decoration: none; }
 .detail-action.is-done:hover { background: var(--accent-soft); filter: brightness(.97); }
+.auth-inapp-hint { margin: 0 0 14px; padding: 10px 12px; border: 1px solid var(--warn-line, var(--line)); background: var(--warn-soft, var(--surface-2)); color: var(--text-2); border-radius: 10px; font-size: 13px; line-height: 1.45; }
+.push-preview { display: flex; flex-direction: column; gap: 2px; margin: 0 0 16px; padding: 12px 14px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface-2); font-size: 13px; line-height: 1.4; box-shadow: 0 4px 14px rgba(0,0,0,.08); }
+.push-preview-app { color: var(--text-muted); font-size: 11px; font-weight: 600; letter-spacing: .02em; }
+.push-preview strong { font-size: 14px; }

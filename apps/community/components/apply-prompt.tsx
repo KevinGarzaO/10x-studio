@@ -114,6 +114,11 @@ export function ApplyPrompt({ enabled }: { enabled: boolean }) {
           <p className="apply-modal-eyebrow"><Bell size={14} aria-hidden="true" /> Avisos</p>
           <h2 id="push-offer-title">¿Quieres estar más atento a <strong>{pushOffer.title}</strong>?</h2>
           <p className="apply-modal-hint">Activa los avisos para darle mejor seguimiento y no perderte de nada. {hint}</p>
+          <div className="push-preview" aria-hidden="true">
+            <span className="push-preview-app">AvoTalent · ahora</span>
+            <strong>{pushOffer.choice === 'applied' ? 'Tu postulación' : 'Una vacante te espera'}</strong>
+            <span>{pushOffer.choice === 'applied' ? `¿Cómo te fue con «${pushOffer.title}»? Cuéntanos.` : `Te recordamos revisar «${pushOffer.title}».`}</span>
+          </div>
           <div className="apply-modal-actions">
             <button type="button" className="apply-modal-yes" disabled={busy} autoFocus onClick={activatePush}>Sí, activar avisos</button>
             <button type="button" disabled={busy} onClick={skipPush}>Ahora no</button>
