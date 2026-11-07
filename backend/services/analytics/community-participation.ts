@@ -131,21 +131,35 @@ export function buildCommunityParticipation(
 
 export interface CommunityParticipation {
   weeks: CommunityWeek[]
+  /** false = la tabla de votos aún no guarda la fecha (falta community-votes-created-at-migration.sql): los votos no se cuentan por semana. */
+  votesDated: boolean
   notes: string[]
 }
 
 export async function loadCommunityParticipation(weeks: number, now: Date = new Date()): Promise<CommunityParticipation> {
   const since = new Date(now.getTime() - (weeks + 2) * 7 * DAY_MS).toISOString()
-  const [users, posts, comments, votes, activity] = await Promise.all([
+  // La tabla de votos no guardaba la fecha hasta community-votes-created-at-migration.sql: sin ella, los votos no se pueden poner en una semana
+  // y se dejan fuera (con un aviso), en vez de romper toda la lectura.
+  const readVotes = async (): Promise<VoteRow[] | null> => {
+    try {
+      return await readAll<VoteRow>((from, to) => supabase.from('community_votes').select('user_id, created_at').gte('created_at', since).range(from, to))
+    } catch {
+      return null
+    }
+  }
+  const [users, posts, comments, votesRead, activity] = await Promise.all([
     readAll<{ id: string }>((from, to) => supabase.from('users').select('id').eq('user_kind', 'user').eq('is_test_account', false).not('is_scraper_profile', 'is', true).range(from, to)),
     readAll<PostRow>((from, to) => supabase.from('community_posts').select('id, author_id, created_at').eq('type', 'discussion').gte('created_at', since).range(from, to)),
     readAll<CommentRow>((from, to) => supabase.from('community_comments').select('author_id, post_id, created_at').gte('created_at', since).range(from, to)),
-    readAll<VoteRow>((from, to) => supabase.from('community_votes').select('user_id, created_at').gte('created_at', since).range(from, to)),
+    readVotes(),
     readAll<ActivityRow>((from, to) => supabase.from('user_activity_daily').select('user_id, day').gte('day', since.slice(0, 10)).range(from, to)),
   ])
+  const votes = votesRead ?? []
   return {
+    votesDated: votesRead !== null,
     weeks: buildCommunityParticipation({ posts, comments, votes, activity, realIds: new Set(users.map((user) => user.id)) }, weeks, now),
     notes: [
+      ...(votesRead === null ? ['Los votos todavía no se cuentan por semana: falta correr community-votes-created-at-migration.sql (la tabla no guardaba la fecha de cada voto). Discusiones y comentarios sí se cuentan.'] : []),
       'Cuenta cuentas reales (sin equipo, pruebas ni perfiles del scraper). Semana de lunes a domingo en hora de Monterrey; la semana en curso es parcial.',
       'Participar = crear una discusión, un comentario o un voto. «Cuentas activas» sale de la actividad diaria de las cuentas.',
       '«Sin respuesta tras 24 horas» solo cuenta discusiones que ya cumplieron 24 horas y que nadie más contestó en ese plazo.',
