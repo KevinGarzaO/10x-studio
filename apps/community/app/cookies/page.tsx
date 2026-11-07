@@ -109,6 +109,11 @@ export default function CookiesPage() {
           la visita y errores. No vendemos esta información. Se usa para mejorar la plataforma. Si no tienes cuenta, te identificamos solo por
           tu navegador. Si te registras, unimos tus visitas anteriores a tu cuenta.
         </p>
+        <p>
+          En los correos que te enviamos medimos los clics en sus enlaces. Esto no usa una cookie de este sitio: el enlace pasa por el dominio de
+          seguimiento de nuestro proveedor de correo (Resend) antes de llevarte a AvoTalent, y así sabemos qué enlace tocaste. Está explicado en el
+          <Link href="/privacidad"> Aviso de privacidad</Link>.
+        </p>
       </LegalSection>
 
       <LegalSection title="4. Grabaciones de sesión">

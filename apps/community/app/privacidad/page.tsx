@@ -30,7 +30,7 @@ export default function PrivacyPage() {
           <li><strong>Grabaciones de sesión:</strong> una muestra de sesiones se graba con Microsoft Clarity para entender dónde se atoran las personas. Los campos de texto y los datos de perfil se enmascaran en las grabaciones.</li>
           <li><strong>Avisos:</strong> si activas notificaciones push, guardamos el identificador de tu dispositivo para enviártelas.</li>
           <li><strong>Comentarios que nos envíes:</strong> opiniones y respuestas a formularios de la plataforma, que guardamos ligados a tu cuenta.</li>
-          <li><strong>Comunicaciones:</strong> registramos los correos que te enviamos y si se entregaron.</li>
+          <li><strong>Comunicaciones:</strong> registramos los correos que te enviamos, si se entregaron, si rebotaron o los marcaste como spam, y los clics que haces en sus enlaces. Para saber qué enlace tocaste, los enlaces de nuestros correos pasan primero por el dominio de seguimiento de nuestro proveedor de correo (Resend), que nos avisa qué enlace se tocó y cuándo. Nosotros guardamos, ligado a tu cuenta, solo el tipo de aviso, la fecha y la dirección del enlace sin sus parámetros; no guardamos tu dirección IP ni tu navegador. Resend sí puede tratar esos datos al registrar el clic. No usamos las aperturas de correo.</li>
         </ul>
         <p>
           No pedimos datos personales sensibles (salud, origen étnico, religión, orientación sexual, afiliación política o sindical). Te pedimos
@@ -51,6 +51,7 @@ export default function PrivacyPage() {
         <ul>
           <li>Enviarte alertas de vacantes que te pueden interesar, un resumen semanal, seguimiento de tus postulaciones y avisos push.</li>
           <li>Medir y mejorar la plataforma (qué funciona, qué no, qué tan rápido carga).</li>
+          <li>Ubicar a las personas más activas para invitarlas a participar o a darnos su opinión. Para eso asignamos a cada cuenta una puntuación interna a partir de lo que haces en la plataforma (por ejemplo, completar tu perfil, guardar vacantes, tocar postular, volver otro día, participar en la comunidad y tocar enlaces de nuestros correos). Solo la ve el equipo y no decide nada sobre tu acceso ni sobre las vacantes que ves. Puedes limitar las invitaciones apagando «Novedades e invitaciones de la comunidad» en Configuración, Notificaciones, o escribiéndonos al correo de arriba.</li>
           <li>Pedirte tu opinión para mejorar el producto.</li>
           <li>Invitaciones por correo a personas suscritas al newsletter de Kevin Garza, máximo 2 correos por persona; después no se les vuelve a escribir.</li>
         </ul>
@@ -61,7 +62,7 @@ export default function PrivacyPage() {
         <ul>
           <li><strong>Alojamiento y base de datos:</strong> Supabase (Estados Unidos) y Railway.</li>
           <li><strong>Sitio web:</strong> Vercel.</li>
-          <li><strong>Envío de correos:</strong> Resend.</li>
+          <li><strong>Envío de correos, y seguimiento de entrega y de clics:</strong> Resend.</li>
           <li><strong>Medición de uso:</strong> Google Analytics (Google).</li>
           <li><strong>Grabaciones de sesión:</strong> Microsoft Clarity.</li>
           <li><strong>Inicio de sesión:</strong> GitHub y LinkedIn, según el método que elijas.</li>

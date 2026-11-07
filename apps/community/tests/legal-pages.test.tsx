@@ -28,6 +28,21 @@ describe('legal pages', () => {
     for (const provider of ['Google Analytics', 'Microsoft Clarity', 'Supabase', 'Railway', 'Vercel', 'Resend', 'GitHub', 'LinkedIn']) expect(text).toContain(provider)
   })
 
+  it('says that email clicks are tracked through Resend, what is kept and what is not, and that the activity score and the opt-out exist', () => {
+    render(<PrivacyPage />)
+    const text = document.body.textContent ?? ''
+    expect(text).toContain('los clics que haces en sus enlaces')
+    expect(text).toContain('dominio de seguimiento de nuestro proveedor de correo (Resend)')
+    expect(text).toContain('no guardamos tu dirección IP ni tu navegador')
+    expect(text).toContain('puntuación interna')
+    expect(text).toContain('Novedades e invitaciones de la comunidad')
+  })
+
+  it('the cookies page says email clicks are measured without a cookie of this site', () => {
+    render(<CookiesPage />)
+    expect(document.body.textContent).toContain('En los correos que te enviamos medimos los clics en sus enlaces')
+  })
+
   it('says the truth about the CV: private by default, and when public anyone with the link can see it (even without an account)', () => {
     render(<PrivacyPage />)
     const text = document.body.textContent ?? ''
