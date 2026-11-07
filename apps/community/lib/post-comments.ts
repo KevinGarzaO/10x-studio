@@ -22,6 +22,7 @@ export function commentsOf(post: {
 
 export type CreateCommentResult = { comment: DetailComment } | { error: string }
 
+import { trackCommentCreated } from './community-events'
 /** Publica un comentario de verdad en el backend (requiere sesión). */
 export async function createComment(postId: string, content: string): Promise<CreateCommentResult> {
   const token = getToken()
@@ -37,6 +38,7 @@ export async function createComment(postId: string, content: string): Promise<Cr
     if (!res.ok || !data.comment) {
       return { error: data.error || 'No pudimos publicar tu comentario' }
     }
+    trackCommentCreated(postId)
     return { comment: data.comment as DetailComment }
   } catch {
     return { error: 'Error de conexión. Intenta de nuevo' }

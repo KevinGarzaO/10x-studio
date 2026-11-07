@@ -7,6 +7,7 @@ import { Bold, Code, Heading2, ImagePlus, Italic, Link as LinkIcon, List, ListOr
 import { getToken } from '../lib/session'
 import { renderUserMarkdown } from '../lib/user-markdown'
 import { applyFormat, insertAtCursor, type FormatAction } from '../lib/markdown-toolbar'
+import { trackDiscussionCreated } from '../lib/community-events'
 import { clearFeedCache } from './community-hub'
 import { TagPicker } from './tag-picker'
 
@@ -207,6 +208,7 @@ export function PublishForm() {
         return
       }
       try { localStorage.removeItem(DRAFT_KEY) } catch { /* nada que borrar */ }
+      trackDiscussionCreated(data.post?.id)
       clearFeedCache() // el feed vuelve a pedirse y la publicación aparece
       router.push(`/post/${data.post.id}`)
     } catch {

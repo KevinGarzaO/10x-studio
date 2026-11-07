@@ -15,6 +15,7 @@ import { loadProviderFunnel } from '../../../services/analytics/provider-funnel'
 import { loadExperiment } from '../../../services/linkedin/experiment-data'
 import { loadSupply } from '../../../services/analytics/supply-data'
 import { loadFeedVisible } from '../../../services/analytics/feed-visible'
+import { loadCommunityParticipation } from '../../../services/analytics/community-participation'
 import { loadFeedbackSummary } from '../../../services/analytics/feedback-summary'
 import { parseLinkedInReport } from '../../../services/analytics/linkedin-report'
 import { loadLinkedInReport, saveLinkedInReport } from '../../../services/analytics/linkedin-report-data'
@@ -180,6 +181,15 @@ router.get('/feedback', handle('feedback', async (_req, res) => {
 }))
 
 /** Oferta y cola de vacantes por puesto, y cuántos días de reserva le quedan a LinkedIn. Solo mide: no cambia qué se publica. */
+/**
+ * ¿La comunidad da motivos para volver? Por semana (lunes a domingo, Monterrey): quién participa sobre las cuentas activas, discusiones sin
+ * respuesta tras 24 horas y el regreso de la semana siguiente de quien participó contra quien no. Sin nombres ni correos. `weeks` = 1 a 12.
+ */
+router.get('/community', handle('comunidad', async (req, res) => {
+  const weeks = Math.min(Math.max(parseInt(String(req.query.weeks ?? req.query.limit ?? '6'), 10) || 6, 1), 12)
+  res.json(await loadCommunityParticipation(weeks))
+}))
+
 /** El feed visible: de las vacantes abiertas, cuántas se ven y cuántas están ocultas (no le sirven a nadie), por puesto. SQL: feed-visibility-migration.sql. */
 router.get('/feed-visible', handle('feed visible', async (_req, res) => {
   res.json(await loadFeedVisible())

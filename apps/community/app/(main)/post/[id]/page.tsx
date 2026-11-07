@@ -17,6 +17,7 @@ import { SideCard } from '../../../../components/post-detail/SideCard'
 import { RelatedCard } from '../../../../components/post-detail/RelatedCard'
 import { ROLE_CATEGORY_LABELS, SENIORITY_LABELS } from '../../../../lib/profile-options'
 import { DetailConversation, type DetailComment } from '../../../../components/post-detail/DetailConversation'
+import { trackDiscussionViewed, trackVoteGiven } from '../../../../lib/community-events'
 import { commentsOf, createComment } from '../../../../lib/post-comments'
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'
@@ -131,6 +132,8 @@ export default function PostPage() {
       })
       .then(data => {
         setPost(data)
+        // Una discusión de un miembro que se abre cuenta como vista (el texto nunca se manda, solo el identificador).
+        if (data?.type === 'discussion') trackDiscussionViewed(data.id)
         setComments(commentsOf(data))
         setVotes(data.votesCount || 0)
         setVoted(!!data.hasVoted)
@@ -172,6 +175,7 @@ export default function PostPage() {
     try {
       const res = await fetch(`${API_URL}/api/community/posts/${post!.id}/vote`, { method: 'POST', headers: { Authorization: `Bearer ${getToken()}` } })
       if (!res.ok) setVoted(!next)
+      else if (next) trackVoteGiven(post!.id)
     } catch {
       setVoted(!next)
     }

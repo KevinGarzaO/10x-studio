@@ -12,7 +12,7 @@ import { Request, Response, NextFunction } from 'express'
  */
 export const SERVICE_READABLE = new Set([
   '/overview', '/acquisition', '/linkedin', '/vacancies', '/matching', '/alerts', '/changes', '/performance', '/retention',
-  '/web', '/web/segments', '/web/geo', '/web/pages', '/web/events', '/web/errors', '/web/flows', '/web/rhythm', '/feedback', '/supply', '/feed-visible','/linkedin-experiment', '/web/wall', '/web/providers','/web/bots', '/linkedin-report', '/push', '/accounts/weekly', '/web/apply-funnel', '/web/retention',
+  '/web', '/web/segments', '/web/geo', '/web/pages', '/web/events', '/web/errors', '/web/flows', '/web/rhythm', '/feedback', '/supply', '/feed-visible', '/community', '/linkedin-experiment', '/web/wall', '/web/providers','/web/bots', '/linkedin-report', '/push', '/accounts/weekly', '/web/apply-funnel', '/web/retention',
 ])
 
 /** Claves que nunca salen por la llave de servicio: listas de personas y sus datos de contacto. */

@@ -21,6 +21,7 @@ import { companySlug, formatCompanyName } from '../lib/company'
 import { ROLE_CATEGORY_LABELS, SENIORITY_LABELS } from '../lib/profile-options'
 import { useShell, type AuthRequest } from '../lib/shell-context'
 import { noteProviderClick } from '../lib/auth-provider'
+import { trackVoteGiven } from '../lib/community-events'
 import { saveReturnTo } from '../lib/return-to'
 import { DEFAULT_ROLES, DEFAULT_TAGS, assignHues, tagHref, type SidebarRole, type SidebarTag } from '../lib/tag-colors'
 import { getToken, clearSession } from '../lib/session'
@@ -424,6 +425,7 @@ export function PostCard({ post, onAuthRequired }: { post: FeedPost; onAuthRequi
     try {
       const res = await fetch(`${API_URL}/api/community/posts/${post.id}/vote`, { method: 'POST', headers: { Authorization: `Bearer ${getToken()}` } })
       if (!res.ok) setVoted(!next)
+      else if (next) trackVoteGiven(post.id)
     } catch {
       setVoted(!next)
     }
