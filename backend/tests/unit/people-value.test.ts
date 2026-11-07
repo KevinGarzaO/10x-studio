@@ -2,70 +2,121 @@ import { describe, it, expect, vi } from 'vitest'
 
 vi.mock('../../services/supabase.service', () => ({ supabase: {} }))
 
-import { MAX_PER_ACTION, TEMPERATURE, VALUE_POINTS, buildPeopleValue, summarize, temperatureOf, type PersonSignals } from '../../services/analytics/people-value'
+import { ENGAGEMENT_DAYS, MAX_PER_ACTION, TEMPERATURE, VALUE_POINTS, buildPeopleValue, reasonOf, summarize, temperatureOf, type DatedAction, type PersonInput } from '../../services/analytics/people-value'
 
 // Sábado 7 de noviembre de 2026, mediodía en Monterrey.
 const NOW = new Date('2026-11-07T18:00:00Z')
-const empty = (): PersonSignals => ({ savedVacancies: new Map(), tappedApply: new Map(), applied: new Map(), activeDays: new Map(), participated: new Set(), emailClicks: new Map() })
-const person = (id: string, over: Partial<{ email: string; created_at: string; profile_completed: boolean }> = {}) => ({ id, email: `${id}@example.com`, created_at: '2026-10-20T18:00:00Z', profile_completed: false, ...over })
+const ago = (days: number) => new Date(NOW.getTime() - days * 86_400_000).toISOString()
+const person = (id: string, over: Partial<PersonInput> = {}): PersonInput => ({ id, email: `${id}@example.com`, name: `Persona ${id}`, photo_url: null, created_at: '2026-10-20T18:00:00Z', profile_completed: false, email_opt_out: false, email_prefs: null, ...over })
+const run = (people: PersonInput[], actions: Record<string, DatedAction[]> = {}, days: Record<string, string[]> = {}) =>
+  buildPeopleValue(people, new Map(Object.entries(actions)), new Map(Object.entries(days)), NOW)
 
-describe('temperatureOf', () => {
-  it('is hot up to 3 days, warm up to 7, and cold beyond or when never active', () => {
-    expect([0, 3].map(temperatureOf)).toEqual(['caliente', 'caliente'])
-    expect([4, 7].map(temperatureOf)).toEqual(['tibio', 'tibio'])
-    expect([8, 40].map(temperatureOf)).toEqual(['frio', 'frio'])
-    expect(temperatureOf(null)).toBe('frio')
-    expect(TEMPERATURE.hotWithinDays).toBe(3)
+describe('temperatureOf (it comes from the engagement)', () => {
+  it('is hot from the hot threshold, warm from the warm one, cold below', () => {
+    expect(temperatureOf(TEMPERATURE.hotAtLeast)).toBe('caliente')
+    expect(temperatureOf(TEMPERATURE.hotAtLeast - 1)).toBe('tibio')
+    expect(temperatureOf(TEMPERATURE.warmAtLeast)).toBe('tibio')
+    expect(temperatureOf(TEMPERATURE.warmAtLeast - 1)).toBe('frio')
+    expect(temperatureOf(0)).toBe('frio')
   })
 })
 
-describe('buildPeopleValue', () => {
-  it('adds the points of each action and reads the temperature from the last active day', () => {
-    const signals = empty()
-    signals.activeDays.set('a', ['2026-10-20', '2026-11-05']) // volvió otro día; hace 2 días: caliente
-    signals.savedVacancies.set('a', 2)
-    signals.tappedApply.set('a', 1)
-    signals.applied.set('a', 1)
-    signals.participated.add('a')
-    const [row] = buildPeopleValue([person('a', { profile_completed: true })], signals, NOW)
-    expect(row.value).toBe(VALUE_POINTS.profileComplete + 2 * VALUE_POINTS.savedVacancy + VALUE_POINTS.tappedApply + VALUE_POINTS.applied + VALUE_POINTS.returnedAnotherDay + VALUE_POINTS.participated)
-    expect(row).toMatchObject({ temperature: 'caliente', lastActiveDay: '2026-11-05', daysSinceActive: 2 })
+describe('value (accumulated) and engagement (only the last days)', () => {
+  it('splits the same actions between the two numbers by date', () => {
+    const [row] = run([person('a', { profile_completed: true })], {
+      a: [
+        { action: 'profileComplete', at: ago(20) }, // viejo: solo valor
+        { action: 'tappedApply', at: ago(30) }, // viejo: solo valor
+        { action: 'tappedApply', at: ago(2) }, // reciente: valor y enganche
+        { action: 'applied', at: ago(1) }, // reciente: valor y enganche
+      ],
+    })
+    expect(row.value).toBe(VALUE_POINTS.profileComplete + 2 * VALUE_POINTS.tappedApply + VALUE_POINTS.applied)
+    expect(row.engagement).toBe(VALUE_POINTS.tappedApply + VALUE_POINTS.applied)
   })
 
-  it('a repeated action stops adding after the cap, and the signup day alone is not "came back"', () => {
-    const signals = empty()
-    signals.savedVacancies.set('b', 50)
-    signals.activeDays.set('b', ['2026-10-20']) // solo el día de su registro
-    const [row] = buildPeopleValue([person('b')], signals, NOW)
-    expect(row.parts.savedVacancies).toBe(MAX_PER_ACTION)
-    expect(row.parts.returnedAnotherDay).toBe(false)
+  it('applies the cap of repetitions to each number on its own', () => {
+    // 5 guardados viejos y 5 recientes: el valor topa en 3 y el enganche topa en 3 (de los recientes).
+    const actions: DatedAction[] = [
+      ...Array.from({ length: 5 }, (_, i) => ({ action: 'savedVacancy' as const, at: ago(30 + i) })),
+      ...Array.from({ length: 5 }, (_, i) => ({ action: 'savedVacancy' as const, at: ago(1 + i * 0.1) })),
+    ]
+    const [row] = run([person('b')], { b: actions })
     expect(row.value).toBe(MAX_PER_ACTION * VALUE_POINTS.savedVacancy)
-    expect(row.temperature).toBe('frio') // 18 días sin actividad
+    expect(row.engagement).toBe(MAX_PER_ACTION * VALUE_POINTS.savedVacancy)
   })
 
-  it('a person with no activity at all is cold with value 0', () => {
-    const [row] = buildPeopleValue([person('c')], empty(), NOW)
-    expect(row).toMatchObject({ value: 0, temperature: 'frio', lastActiveDay: null, daysSinceActive: null })
+  it('an action with no known date counts in the value, never in the engagement', () => {
+    const [row] = run([person('c')], { c: [{ action: 'participated', at: null }] })
+    expect(row.value).toBe(VALUE_POINTS.participated)
+    expect(row.engagement).toBe(0)
+    expect(row.events[0]).toMatchObject({ at: null, valuePoints: VALUE_POINTS.participated, engagementPoints: 0 })
   })
 
-  it('email clicks add points once the webhook feeds them, and opens never do', () => {
-    const signals = empty()
-    signals.emailClicks.set('d', 2)
-    expect(buildPeopleValue([person('d')], signals, NOW)[0].value).toBe(2 * VALUE_POINTS.emailClick)
+  it('an action that happens once is worth its points once, even if it is repeated', () => {
+    const [row] = run([person('d')], { d: [{ action: 'participated', at: ago(1) }, { action: 'participated', at: ago(2) }] })
+    expect(row.value).toBe(VALUE_POINTS.participated)
+    expect(row.engagement).toBe(VALUE_POINTS.participated)
+    expect(row.events.map((event) => event.valuePoints).sort()).toEqual([0, VALUE_POINTS.participated])
+  })
+
+  it('the engagement period follows ENGAGEMENT_DAYS', () => {
+    const edge = run([person('e')], { e: [{ action: 'tappedApply', at: ago(ENGAGEMENT_DAYS - 0.5) }, { action: 'applied', at: ago(ENGAGEMENT_DAYS + 0.5) }] })[0]
+    expect(edge.engagement).toBe(VALUE_POINTS.tappedApply)
+    expect(edge.value).toBe(VALUE_POINTS.tappedApply + VALUE_POINTS.applied)
+  })
+})
+
+describe('temperature, reason, photo and news', () => {
+  it('the temperature follows the engagement, not the last activity', () => {
+    // Entró hoy pero no hizo nada que sume: frío. Otra hizo mucho hace 2 días: caliente.
+    const rows = run([person('x'), person('y')], {
+      y: [{ action: 'applied', at: ago(2) }, { action: 'tappedApply', at: ago(2) }],
+    }, { x: ['2026-11-07'], y: ['2026-11-05'] })
+    expect(rows[0]).toMatchObject({ temperature: 'frio', engagement: 0, daysSinceActive: 0, lastActiveDay: '2026-11-07' })
+    expect(rows[1]).toMatchObject({ temperature: 'caliente', engagement: VALUE_POINTS.applied + VALUE_POINTS.tappedApply })
+  })
+
+  it('writes the sentence that explains the temperature', () => {
+    expect(reasonOf(8, 'caliente')).toBe(`Caliente porque sumó 8 puntos en los últimos ${ENGAGEMENT_DAYS} días (desde ${TEMPERATURE.hotAtLeast} es caliente).`)
+    expect(reasonOf(0, 'frio')).toBe(`Frío porque no sumó puntos en los últimos ${ENGAGEMENT_DAYS} días.`)
+    expect(reasonOf(1, 'frio')).toContain('sumó solo 1 punto')
+  })
+
+  it('passes the photo and name for the table, and whether the person accepts community news', () => {
+    const rows = run([person('p', { photo_url: 'https://x/p.png' }), person('q', { email_prefs: { community: false } }), person('r', { email_opt_out: true })])
+    expect(rows[0]).toMatchObject({ photoUrl: 'https://x/p.png', name: 'Persona p', acceptsCommunityNews: true })
+    expect(rows[1].acceptsCommunityNews).toBe(false)
+    expect(rows[2].acceptsCommunityNews).toBe(false)
+  })
+
+  it('"came back another day" is valued once, and in the engagement only when a recent day exists', () => {
+    const old = run([person('s')], { s: [{ action: 'returnedAnotherDay', at: ago(20) }] })[0]
+    expect(old).toMatchObject({ value: VALUE_POINTS.returnedAnotherDay, engagement: 0 })
+    const recent = run([person('t')], { t: [{ action: 'returnedAnotherDay', at: ago(20) }, { action: 'returnedAnotherDay', at: ago(1) }] })[0]
+    expect(recent).toMatchObject({ value: VALUE_POINTS.returnedAnotherDay, engagement: VALUE_POINTS.returnedAnotherDay })
+  })
+
+  it('email clicks add to the value and to the engagement, with the same cap', () => {
+    const row = run([person('u')], { u: Array.from({ length: 6 }, (_, i) => ({ action: 'emailClick' as const, at: ago(i * 0.2) })) })[0]
+    expect(row.value).toBe(MAX_PER_ACTION * VALUE_POINTS.emailClick)
+    expect(row.engagement).toBe(MAX_PER_ACTION * VALUE_POINTS.emailClick)
+    expect(row.emailClicks).toBe(6)
   })
 })
 
 describe('summarize (what the product agent reads)', () => {
-  it('only counts by temperature and by value range, with no emails, names or ids', () => {
-    const signals = empty()
-    signals.activeDays.set('a', ['2026-11-06']); signals.participated.add('a')
-    signals.activeDays.set('b', ['2026-11-02'])
-    const summary = summarize(buildPeopleValue([person('a', { profile_completed: true }), person('b'), person('c')], signals, NOW))
+  it('only counts, with the engagement distribution, and no emails, names, photos or ids', () => {
+    const rows = run([person('a', { photo_url: 'https://x/a.png' }), person('b'), person('c')], {
+      a: [{ action: 'applied', at: ago(1) }, { action: 'tappedApply', at: ago(1) }],
+      b: [{ action: 'savedVacancy', at: ago(40) }],
+    })
+    const summary = summarize(rows)
     expect(summary.total).toBe(3)
-    expect(summary.byTemperature).toEqual({ caliente: 1, tibio: 1, frio: 1 })
-    expect(summary.byValueRange.find((row) => row.range === '8 a 14')?.people).toBe(1) // a: 3 + 5 = 8
+    expect(summary.byTemperature).toEqual({ caliente: 1, tibio: 0, frio: 2 })
+    expect(summary.engagementDistribution).toEqual([{ points: 0, people: 2 }, { points: 6, people: 1 }])
+    expect(summary.byEngagementRange.find((row) => row.range === '4 a 7')?.people).toBe(1)
     const text = JSON.stringify(summary)
-    expect(text).not.toContain('example.com')
-    expect(text).not.toMatch(/"id"|"email"/)
+    expect(text).not.toMatch(/example\.com|x\/a\.png|Persona|"id"|"email"|photo/)
   })
 })

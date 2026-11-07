@@ -277,3 +277,50 @@
 .panel-seg-tile.muted { background: #f8fafc; }
 .panel-seg-pair { font-size: 12px; }
 @media (max-width: 640px) { .panel-seg-row { grid-template-columns: 1fr; } .panel-seg-arrow { display: none; } }
+
+/* Personas de valor: etiqueta de temperatura, avatar con iniciales, ordenar, detalle y barras. */
+.pv-tag { display: inline-block; padding: 3px 10px; border-radius: 999px; font-size: 12px; font-weight: 700; white-space: nowrap; }
+.pv-tag.caliente { background: #fee2e2; color: #b91c1c; }
+.pv-tag.tibio { background: #fef3c7; color: #b45309; }
+.pv-tag.frio { background: #e0f2fe; color: #0369a1; }
+.pv-avatar { border-radius: 50%; object-fit: cover; flex: none; background: #e2e8f0; }
+.pv-initials { display: inline-flex; align-items: center; justify-content: center; font-weight: 700; color: #334155; background: #e2e8f0; }
+.pv-person { display: flex; align-items: center; gap: 10px; background: transparent; border: 0; padding: 0; text-align: left; font: inherit; color: inherit; cursor: pointer; min-width: 0; max-width: 100%; }
+.pv-person > span { display: flex; flex-direction: column; min-width: 0; }
+.pv-person strong { font-size: 13px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pv-person small { color: var(--p-muted); font-size: 12px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pv-row { cursor: pointer; }
+.pv-row:hover td { background: #f8fafc; }
+.pv-sort { background: transparent; border: 0; padding: 0; font: inherit; color: inherit; text-transform: inherit; letter-spacing: inherit; font-weight: inherit; cursor: pointer; white-space: nowrap; }
+.pv-sort:hover { color: var(--p-text); }
+.pv-backdrop { position: fixed; inset: 0; background: rgba(15,23,42,.45); display: flex; align-items: flex-start; justify-content: center; padding: 5vh 14px; overflow-y: auto; z-index: 60; }
+.pv-dialog { background: #fff; border-radius: 16px; width: min(640px, 100%); padding: 20px 22px 24px; box-shadow: 0 24px 60px rgba(15,23,42,.3); }
+.pv-dialog-head { display: flex; align-items: center; gap: 14px; margin-bottom: 14px; }
+.pv-dialog-head h2 { margin: 0; font-size: 18px; }
+.pv-dialog-head p { margin: 2px 0 0; color: var(--p-muted); font-size: 13px; overflow-wrap: anywhere; }
+.pv-dialog-head > div { min-width: 0; flex: 1; }
+.pv-close { margin-left: auto; border: 0; background: transparent; font-size: 26px; line-height: 1; cursor: pointer; color: var(--p-muted); }
+.pv-reason { background: #f8fafc; border: 1px solid var(--p-line); border-radius: 12px; padding: 12px 14px; font-size: 14px; line-height: 1.5; }
+.pv-numbers { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; margin: 14px 0; }
+.pv-numbers > div { border: 1px solid var(--p-line); border-radius: 12px; padding: 10px 12px; }
+.pv-numbers span { display: block; font-size: 11px; color: var(--p-muted); text-transform: uppercase; letter-spacing: .04em; font-weight: 700; }
+.pv-numbers strong { font-size: 18px; }
+.pv-dialog h3 { font-size: 13px; text-transform: uppercase; letter-spacing: .05em; color: var(--p-muted); margin: 18px 0 8px; }
+.pv-scroll { overflow-x: auto; }
+.pv-list { margin: 0; padding-left: 18px; font-size: 14px; line-height: 1.7; }
+.pv-bars { display: flex; flex-direction: column; gap: 6px; margin-bottom: 10px; }
+.pv-bar-row { display: grid; grid-template-columns: 78px minmax(0, 1fr) 34px; align-items: center; gap: 10px; font-size: 13px; }
+.pv-bar-label { color: var(--p-muted); }
+.pv-bar-track { background: #f1f5f9; border-radius: 6px; height: 14px; overflow: hidden; }
+.pv-bar-fill { display: block; height: 100%; border-radius: 6px; }
+.pv-bar-fill.caliente { background: #ef4444; }
+.pv-bar-fill.tibio { background: #f59e0b; }
+.pv-bar-fill.frio { background: #38bdf8; }
+.pv-bar-count { text-align: right; font-variant-numeric: tabular-nums; font-weight: 700; }
+@media (max-width: 700px) {
+  .pv-hide-sm { display: none; }
+  .pv-numbers { grid-template-columns: 1fr; }
+  .pv-dialog { padding: 16px 14px 20px; }
+  .pv-person strong { max-width: 150px; }
+  .pv-person small { max-width: 150px; }
+}
