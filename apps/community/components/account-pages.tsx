@@ -26,6 +26,7 @@ import { ProfileGate } from './profile-gate'
 import { getAttribution } from '../lib/attribution'
 import { peekReturnTo } from '../lib/return-to'
 
+import { noteProviderClick } from '../lib/auth-provider'
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'
 
 interface User {
@@ -507,7 +508,7 @@ export function AuthPage({ mode }: { mode: 'login' | 'signup' }) {
             <button
               type="button"
               className="oauth-btn"
-              onClick={() => { flow.trackStep('oauth_redirect', 1); window.location.href = `${API_URL}/api/community/auth/oauth/linkedin` }}
+              onClick={() => { noteProviderClick('linkedin', signup ? 'signup' : 'login'); flow.trackStep('oauth_redirect', 1); window.location.href = `${API_URL}/api/community/auth/oauth/linkedin` }}
             >
               <svg width="16" height="16" viewBox="0 0 24 24" fill="#0A66C2" aria-hidden="true">
                 <path d="M20.45 20.45h-3.56v-5.57c0-1.33-.02-3.04-1.85-3.04-1.85 0-2.13 1.45-2.13 2.94v5.67H9.35V9h3.41v1.56h.05c.47-.9 1.63-1.85 3.36-1.85 3.6 0 4.27 2.37 4.27 5.46v6.28zM5.34 7.43a2.06 2.06 0 1 1 0-4.12 2.06 2.06 0 0 1 0 4.12zM7.12 20.45H3.56V9h3.56v11.45z"/>
@@ -517,7 +518,7 @@ export function AuthPage({ mode }: { mode: 'login' | 'signup' }) {
             <button
               type="button"
               className="oauth-btn"
-              onClick={() => { flow.trackStep('oauth_redirect', 1); window.location.href = `${API_URL}/api/community/auth/oauth/github` }}
+              onClick={() => { noteProviderClick('github', signup ? 'signup' : 'login'); flow.trackStep('oauth_redirect', 1); window.location.href = `${API_URL}/api/community/auth/oauth/github` }}
             >
               <svg width="16" height="16" viewBox="0 0 24 24" fill="var(--text)" aria-hidden="true">
                 <path d="M12 .3a12 12 0 0 0-3.8 23.4c.6.1.8-.3.8-.6v-2c-3.3.7-4-1.6-4-1.6-.5-1.4-1.3-1.8-1.3-1.8-1.1-.7.1-.7.1-.7 1.2 0 1.8 1.2 1.8 1.2 1.1 1.8 2.8 1.3 3.5 1 .1-.8.4-1.3.8-1.6-2.7-.3-5.5-1.3-5.5-5.9 0-1.3.5-2.4 1.2-3.2-.1-.3-.5-1.5.1-3.2 0 0 1-.3 3.3 1.2a11.5 11.5 0 0 1 6 0C17 4.6 18 4.9 18 4.9c.7 1.7.3 2.9.2 3.2.8.8 1.2 1.9 1.2 3.2 0 4.6-2.8 5.6-5.5 5.9.4.4.8 1.1.8 2.2v3.3c0 .3.2.7.8.6A12 12 0 0 0 12 .3z"/>

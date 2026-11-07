@@ -20,6 +20,7 @@ import {
 import { companySlug, formatCompanyName } from '../lib/company'
 import { ROLE_CATEGORY_LABELS, SENIORITY_LABELS } from '../lib/profile-options'
 import { useShell, type AuthRequest } from '../lib/shell-context'
+import { noteProviderClick } from '../lib/auth-provider'
 import { saveReturnTo } from '../lib/return-to'
 import { DEFAULT_ROLES, DEFAULT_TAGS, assignHues, tagHref, type SidebarRole, type SidebarTag } from '../lib/tag-colors'
 import { getToken, clearSession } from '../lib/session'
@@ -701,6 +702,7 @@ export function AuthModal({ onClose, request, locked = false, gate = false }: { 
 
   function oauth(provider: 'linkedin' | 'github') {
     noteClick(provider)
+    noteProviderClick(provider, 'wall')
     // La vacante se recuerda también en el OAuth: al terminar el onboarding se
     // vuelve a ella igual que con los botones de correo.
     saveReturnTo(window.location.pathname)

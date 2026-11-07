@@ -11,6 +11,7 @@ import { IMPACT_WINDOWS, loadChangeImpact } from '../../../services/analytics/ch
 import { loadPushSummary } from '../../../services/analytics/push'
 import { loadBotSummary } from '../../../services/analytics/bot-traffic'
 import { loadWallFunnel } from '../../../services/analytics/wall-funnel'
+import { loadProviderFunnel } from '../../../services/analytics/provider-funnel'
 import { loadExperiment } from '../../../services/linkedin/experiment-data'
 import { loadSupply } from '../../../services/analytics/supply-data'
 import { loadFeedbackSummary } from '../../../services/analytics/feedback-summary'
@@ -165,6 +166,11 @@ router.post('/linkedin-report', express.raw({ type: ['application/octet-stream',
 /** La ventana de registro sobre una vacante: quién la ve, qué botón toca y quién se registra, por dispositivo y navegador interno. SQL: wall-funnel-migration.sql. */
 router.get('/web/wall', handle('ventana de registro', async (req, res) => {
   res.json(await loadWallFunnel(periodOf(req)))
+}))
+
+/** El registro con LinkedIn / GitHub por proveedor: quién toca, quién vuelve con sesión, quién se pierde y por qué. SQL: provider-funnel-migration.sql. */
+router.get('/web/providers', handle('registro por proveedor', async (req, res) => {
+  res.json(await loadProviderFunnel(periodOf(req)))
 }))
 
 /** Lo que dice la gente dentro de la app (botón «¿Qué te faltó?»): sin ids ni correos, con el contexto de quien respondió. SQL: feedback-migration.sql. */

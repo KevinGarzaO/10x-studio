@@ -8,6 +8,7 @@ import { Loader2 } from 'lucide-react'
 import { captureSessionFromUrl, getToken } from '@/lib/session'
 import { getAttribution } from '@/lib/attribution'
 
+import { noteProviderReturn } from '../../../lib/auth-provider'
 import { takeReturnTo } from '../../../lib/return-to'
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'
 
@@ -28,6 +29,9 @@ export default function AuthCallbackPage() {
         const params = new URLSearchParams(hash)
         const hashError = params.get('error_description') || params.get('error')
         if (hashError && !params.get('access_token')) {
+          // Se mide cómo volvió del proveedor: solo un código de una lista cerrada, nunca el texto del proveedor (lib/auth-provider.ts).
+          const code = params.get('error') ?? params.get('error_code')
+          noteProviderReturn(code === 'access_denied' ? 'denied' : 'error', { reason: code })
           setError(hashError)
           window.history.replaceState(null, '', window.location.pathname + window.location.search)
           return
@@ -38,6 +42,7 @@ export default function AuthCallbackPage() {
       const token = getToken()
 
       if (!token) {
+        noteProviderReturn('no_session')
         setError('No pudimos completar el inicio de sesión. Intenta de nuevo.')
         return
       }
@@ -58,6 +63,7 @@ export default function AuthCallbackPage() {
         })
 
         if (!res.ok) {
+          noteProviderReturn('sync_failed')
           const data = await res.json().catch(() => ({}))
           setError(data.error || 'No pudimos crear tu cuenta. Intenta de nuevo.')
           return
@@ -72,6 +78,7 @@ export default function AuthCallbackPage() {
         // Lo que de verdad pasó manda: una cuenta nueva es un REGISTRO y una existente es un INICIO DE SESIÓN. Si no hay un intento
         // abierto de ese tipo (la persona no pasó por /signup ni por el aviso de la vacante, o su navegador perdió el intento), se
         // abre aquí mismo para que no se pierda un registro real.
+        noteProviderReturn('success', { isNew: justCreated })
         const happened = justCreated ? 'auth_register' : 'auth_login'
         if (!flowFor(happened).isActive()) flowFor(happened).startFlow({ reuse: true })
         for (const name of ['auth_register', 'auth_login'] as const) flowFor(name).completeFlow('oauth_success')
@@ -79,6 +86,7 @@ export default function AuthCallbackPage() {
         router.replace(data.user?.profile_completed ? (takeReturnTo() ?? '/') : '/onboarding')
         router.refresh()
       } catch {
+        noteProviderReturn('network')
         setError('Error de conexión. Intenta de nuevo.')
       }
     }
