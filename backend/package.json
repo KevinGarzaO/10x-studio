@@ -21,6 +21,7 @@
     "backfill-vacancies": "tsx scripts/backfill-vacancy-enrichment.ts",
     "clean-vacancies": "tsx scripts/clean-vacancies.ts",
     "feed-visibility": "tsx scripts/feed-visibility.ts",
+    "engagement-snapshot": "tsx scripts/engagement-snapshot.ts",
     "linkedin-vacancy-preview": "tsx scripts/linkedin-vacancy-preview.ts",
     "signup-sources": "tsx scripts/signup-sources.ts",
     "weekly-report": "tsx scripts/weekly-acquisition.ts",

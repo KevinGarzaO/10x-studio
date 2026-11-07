@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Card, ErrorBox, fmtNum, Loading, PageHeader, Stat, usePanelData } from '@/components/panel/ui'
 import { DataTable } from '@/components/panel/DataTable'
+import { api } from '@/lib/api'
 
 type Temperature = 'caliente' | 'tibio' | 'frio'
 interface PersonEvent { action: string; at: string | null; valuePoints: number; engagementPoints: number; notes: string[] }
@@ -19,6 +20,7 @@ interface Person {
   activeDays7List: string[]
   activeDayPoints: number
   temperature: Temperature
+  state: string | null
   reason: string
   lastActiveDay: string | null
   daysSinceActive: number | null
@@ -34,7 +36,11 @@ interface Summary {
   byEngagementRange: { range: string; people: number }[]
   notes: string[]
 }
+interface HistoryWeek { weekStart: string; kind: string; value: number | null; engagement: number | null; temperature: string | null; activeDays: number | null; discussions: number | null; comments: number | null; votes: number | null; repliesGiven: number | null; repliesReceived: number | null; emailsSent: number | null; emailClicks: number | null; pushClicks: number | null }
+interface PersonHistory { ready: boolean; weeks?: HistoryWeek[]; keyDates?: { registeredAt: string | null; profileCompletedAt: string | null; firstApplyTapAt: string | null; firstAppliedAt: string | null; firstCommunityAt: string | null; lastCommunityAt: string | null; invitedManuallyAt: string | null } | null }
 interface Response {
+  stateLabels: Record<string, string>
+  stateReady: boolean
   people: Person[]
   config: { points: Record<string, number>; maxPerAction: number; onceActions: string[]; engagementDays: number; engagementExcluded: string[]; activeDayPoints: number; temperature: { hotAtLeast: number; warmAtLeast: number } }
   summary: Summary
@@ -70,6 +76,8 @@ function Avatar({ person, size = 34 }: { person: Pick<Person, 'name' | 'email' |
   return <span className="pv-avatar pv-initials" aria-hidden="true" style={{ width: size, height: size, fontSize: Math.round(size * 0.38) }}>{initialsOf(person)}</span>
 }
 
+const StateTag = ({ state, labels }: { state: string | null; labels: Record<string, string> }) => (state ? <span className={`pv-state ${state}`}>{labels[state] ?? state}</span> : <span className="panel-hint">—</span>)
+
 const Tag = ({ temperature }: { temperature: Temperature }) => <span className={`pv-tag ${temperature}`}>{LABEL[temperature]}</span>
 
 /** Cada celda entre comillas, para que una coma o un salto de línea no desarme el CSV; y sin que una fórmula se ejecute al abrirlo en Excel. */
@@ -79,11 +87,11 @@ const cell = (value: string | number | null) => {
   return `"${safe.replace(/"/g, '""')}"`
 }
 
-function exportCsv(people: Person[]) {
-  const head = ['correo', 'registro', 'valor', 'enganche', 'dias_activos_7d', 'temperatura', 'ultima_actividad', 'dias_sin_actividad', 'clics_en_correos', 'acepta_novedades']
+function exportCsv(people: Person[], stateLabels: Record<string, string>) {
+  const head = ['correo', 'registro', 'valor', 'enganche', 'dias_activos_7d', 'temperatura', 'estado', 'ultima_actividad', 'dias_sin_actividad', 'clics_en_correos', 'acepta_novedades']
   const lines = [head.map(cell).join(',')]
   for (const person of people) {
-    lines.push([person.email, person.createdAt.slice(0, 10), person.value, person.engagement, person.activeDays7, LABEL[person.temperature], person.lastActiveDay, person.daysSinceActive, person.emailClicks, person.acceptsCommunityNews ? 'Sí' : 'No'].map(cell).join(','))
+    lines.push([person.email, person.createdAt.slice(0, 10), person.value, person.engagement, person.activeDays7, LABEL[person.temperature], person.state ? stateLabels[person.state] ?? person.state : '', person.lastActiveDay, person.daysSinceActive, person.emailClicks, person.acceptsCommunityNews ? 'Sí' : 'No'].map(cell).join(','))
   }
   // BOM para que Excel lea bien los acentos.
   const blob = new Blob(['﻿' + lines.join('\r\n')], { type: 'text/csv;charset=utf-8' })
@@ -96,7 +104,64 @@ function exportCsv(people: Person[]) {
 }
 
 /** El detalle de una persona: por qué tiene ese valor, ese enganche y esa temperatura. */
-function Detail({ person, config, onClose }: { person: Person; config: Response['config']; onClose: () => void }) {
+function History({ person }: { person: Person }) {
+  const { data } = usePanelData<PersonHistory>(`/api/admin/analytics/people-value/${person.id}/history`, { keepPrevious: true, refreshMs: false })
+  const [invited, setInvited] = useState<string | null | undefined>(undefined)
+  const [busy, setBusy] = useState(false)
+  const keyDates = data?.keyDates
+  const invitedAt = invited === undefined ? keyDates?.invitedManuallyAt ?? null : invited
+
+  async function toggleInvited() {
+    setBusy(true)
+    try {
+      await api('/api/admin/analytics/people-value/' + person.id + '/invited', { method: 'POST', body: JSON.stringify({ invited: !invitedAt }) })
+      setInvited(invitedAt ? null : new Date().toISOString())
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  if (!data) return null
+  if (!data.ready) return <p className="panel-hint">El historial por semanas empieza cuando se corra engagement-history-migration.sql.</p>
+  const weeks = data.weeks ?? []
+  const max = Math.max(1, ...weeks.map(week => week.engagement ?? week.activeDays ?? 0))
+  return (
+    <>
+      <h3>Evolución por semanas</h3>
+      {weeks.length === 0 ? <p className="panel-hint">Todavía no hay fotos de esta persona. La primera semanal sale el lunes.</p> : (
+        <div className="pv-scroll">
+          <table className="panel-table">
+            <thead><tr><th>Semana</th><th>Enganche</th><th className="num">Días activos</th><th className="num">Comunidad</th><th className="num">Respuestas (dadas / recibidas)</th><th className="num">Correos (clics / enviados)</th></tr></thead>
+            <tbody>
+              {weeks.map(week => (
+                <tr key={`${week.kind}-${week.weekStart}`}>
+                  <td>{dayLabel(week.weekStart)}{week.kind === 'reconstruida' ? ' ·  reconstruida' : week.kind === 'base' ? ' · foto base' : ''}</td>
+                  <td>{week.engagement === null ? <span className="panel-hint">sin dato</span> : <span className="pv-spark"><span style={{ width: `${Math.max(3, (week.engagement / max) * 100)}%` }} />{week.engagement}{week.temperature ? ` · ${LABEL[week.temperature as Temperature] ?? week.temperature}` : ''}</span>}</td>
+                  <td className="num">{week.activeDays ?? '—'}</td>
+                  <td className="num">{week.kind === 'base' ? '—' : `${week.discussions ?? 0} / ${week.comments ?? 0} / ${week.votes ?? 0}`}</td>
+                  <td className="num">{week.kind === 'base' ? '—' : `${week.repliesGiven ?? 0} / ${week.repliesReceived ?? 0}`}</td>
+                  <td className="num">{week.kind === 'base' ? '—' : `${week.emailClicks ?? 0} / ${week.emailsSent ?? 0}`}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+      <p className="panel-hint">Comunidad = discusiones / comentarios / votos de la semana. Una foto por semana, guardada para siempre.</p>
+
+      <h3>Fechas clave</h3>
+      <ul className="pv-list">
+        <li>Registro: <strong>{dateOf(keyDates?.registeredAt ?? person.createdAt)}</strong></li>
+        <li>Perfil completo: <strong>{keyDates?.profileCompletedAt ? dateOf(keyDates.profileCompletedAt) : 'sin fecha'}</strong></li>
+        <li>Primer toque en postular: <strong>{keyDates?.firstApplyTapAt ? dateOf(keyDates.firstApplyTapAt) : '—'}</strong> · dijo que se postuló: <strong>{keyDates?.firstAppliedAt ? dateOf(keyDates.firstAppliedAt) : '—'}</strong></li>
+        <li>Comunidad, primera acción: <strong>{keyDates?.firstCommunityAt ? dateOf(keyDates.firstCommunityAt) : '—'}</strong> · última: <strong>{keyDates?.lastCommunityAt ? dateOf(keyDates.lastCommunityAt) : '—'}</strong></li>
+        <li>Invitada a mano: <strong>{invitedAt ? dateOf(invitedAt) : 'no'}</strong> <button type="button" className="panel-btn pv-mini" disabled={busy} onClick={toggleInvited}>{invitedAt ? 'Quitar marca' : 'Marcar como invitada'}</button></li>
+      </ul>
+    </>
+  )
+}
+
+function Detail({ person, config, stateLabels, onClose }: { person: Person; config: Response['config']; stateLabels: Record<string, string>; onClose: () => void }) {
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => { if (event.key === 'Escape') onClose() }
     window.addEventListener('keydown', onKey)
@@ -116,6 +181,7 @@ function Detail({ person, config, onClose }: { person: Person; config: Response[
         </header>
 
         <p className="pv-reason"><Tag temperature={person.temperature} /> {person.reason}</p>
+        {person.state && <p className="pv-reason"><StateTag state={person.state} labels={stateLabels} /> Estado de compromiso, calculado desde sus fotos semanales.</p>}
 
         <div className="pv-numbers">
           <div><span>Valor (acumulado)</span><strong>{fmtNum(person.value)}</strong></div>
@@ -151,6 +217,8 @@ function Detail({ person, config, onClose }: { person: Person; config: Response[
           <li>Días distintos con actividad: <strong>{person.activeDays7}</strong>{person.activeDays7 > 0 ? ` (${person.activeDays7List.map(dayLabel).join(', ')})` : ''} × {config.activeDayPoints} = <strong>{fmtNum(person.activeDayPoints)}</strong> {person.activeDayPoints === 1 ? 'punto' : 'puntos'}</li>
           <li>Total de enganche: <strong>{fmtNum(person.engagement)}</strong>. Completar el perfil cuenta en el valor, no en el enganche.</li>
         </ul>
+
+        <History person={person} />
 
         <h3>Correos</h3>
         <ul className="pv-list">
@@ -188,7 +256,7 @@ export default function PersonasPage() {
   return (
     <>
       <PageHeader title="Personas de valor" subtitle="Una fila por cuenta real (sin equipo, pruebas ni perfiles del scraper). Valor = lo que ha hecho en total; enganche = lo que hizo en los últimos días; la temperatura sale del enganche. Solo para el fundador: lleva correos.">
-        {data && <button type="button" className="panel-btn" onClick={() => exportCsv(people)}>Exportar CSV</button>}
+        {data && <button type="button" className="panel-btn" onClick={() => exportCsv(people, data.stateLabels)}>Exportar CSV</button>}
       </PageHeader>
 
       {error && <ErrorBox message={error} onRetry={reload} />}
@@ -213,7 +281,7 @@ export default function PersonasPage() {
                 options: [{ value: 'caliente', label: 'Calientes' }, { value: 'tibio', label: 'Tibias' }, { value: 'frio', label: 'Frías' }],
                 test: (person, value) => person.temperature === value,
               }}
-              head={<tr><th>Persona</th><th className="pv-hide-sm">Registro</th>{header('value', 'Valor', 'num')}{header('engagement', `Enganche ${data.config.engagementDays} d`, 'num')}{header('activeDays', `Días activos (${data.config.engagementDays} d)`, 'num pv-hide-sm')}<th>Temperatura</th>{header('activity', 'Última actividad', 'pv-hide-sm')}</tr>}
+              head={<tr><th>Persona</th><th className="pv-hide-sm">Registro</th>{header('value', 'Valor', 'num')}{header('engagement', `Enganche ${data.config.engagementDays} d`, 'num')}{header('activeDays', `Días activos (${data.config.engagementDays} d)`, 'num pv-hide-sm')}<th>Temperatura</th><th className="pv-hide-sm">Estado</th>{header('activity', 'Última actividad', 'pv-hide-sm')}</tr>}
               renderRow={person => (
                 <tr className="pv-row" onClick={() => setOpenId(person.id)}>
                   <td>
@@ -227,6 +295,7 @@ export default function PersonasPage() {
                   <td className="num"><strong>{fmtNum(person.engagement)}</strong></td>
                   <td className="num pv-hide-sm">{person.activeDays7}</td>
                   <td><Tag temperature={person.temperature} /></td>
+                  <td className="pv-hide-sm"><StateTag state={person.state} labels={data.stateLabels} /></td>
                   <td className="pv-hide-sm">{person.lastActiveDay ? `${person.lastActiveDay}${person.daysSinceActive !== null ? ` · hace ${person.daysSinceActive} d` : ''}` : '—'}</td>
                 </tr>
               )}
@@ -264,7 +333,7 @@ export default function PersonasPage() {
         </>
       )}
 
-      {open && data && <Detail person={open} config={data.config} onClose={() => setOpenId(null)} />}
+      {open && data && <Detail person={open} config={data.config} stateLabels={data.stateLabels} onClose={() => setOpenId(null)} />}
     </>
   )
 }

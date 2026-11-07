@@ -16,6 +16,7 @@ import { loadExperiment } from '../../../services/linkedin/experiment-data'
 import { loadSupply } from '../../../services/analytics/supply-data'
 import { loadFeedVisible } from '../../../services/analytics/feed-visible'
 import { loadCommunityParticipation } from '../../../services/analytics/community-participation'
+import { loadHistorySummary, loadEngagementStates, loadPersonHistory, markInvited, STATE_LABEL } from '../../../services/analytics/engagement-history'
 import { loadPeopleValue, summarize, VALUE_POINTS, MAX_PER_ACTION, TEMPERATURE, ENGAGEMENT_DAYS, ONCE_ACTIONS, ENGAGEMENT_EXCLUDED, ACTIVE_DAY_POINTS } from '../../../services/analytics/people-value'
 import { loadFeedbackSummary } from '../../../services/analytics/feedback-summary'
 import { parseLinkedInReport } from '../../../services/analytics/linkedin-report'
@@ -196,12 +197,37 @@ router.get('/community', handle('comunidad', async (req, res) => {
  * ruta. El agente lee `/people-value/summary`: solo conteos por temperatura y por rango de valor.
  */
 router.get('/people-value', handle('personas de valor', async (_req, res) => {
-  const rows = await loadPeopleValue()
+  const [rows, history] = await Promise.all([loadPeopleValue(), loadEngagementStates().catch(() => null)])
+  // El estado de compromiso sale de las fotos semanales (engagement-history.ts); sin la migración, no hay estado.
+  const stateOf = (id: string) => (history?.ready ? history.states.get(id) ?? null : null)
   res.json({
-    people: rows.sort((a, b) => b.engagement - a.engagement || b.value - a.value || (a.daysSinceActive ?? 9999) - (b.daysSinceActive ?? 9999)),
+    stateLabels: STATE_LABEL,
+    stateReady: !!history?.ready,
+    people: rows.map((row) => ({ ...row, state: stateOf(row.id) })).sort((a, b) => b.engagement - a.engagement || b.value - a.value || (a.daysSinceActive ?? 9999) - (b.daysSinceActive ?? 9999)),
     config: { points: VALUE_POINTS, maxPerAction: MAX_PER_ACTION, onceActions: ONCE_ACTIONS, engagementDays: ENGAGEMENT_DAYS, engagementExcluded: ENGAGEMENT_EXCLUDED, activeDayPoints: ACTIVE_DAY_POINTS, temperature: TEMPERATURE },
     summary: summarize(rows),
   })
+}))
+
+/** La evolución de UNA persona, semana por semana, y sus fechas clave. Solo el fundador: es de una persona concreta. */
+router.get('/people-value/:id/history', handle('historial de una persona', async (req, res) => {
+  const id = String(req.params.id)
+  if (!/^[0-9a-f-]{36}$/i.test(id)) return res.status(400).json({ error: 'Identificador inválido' })
+  const history = await loadPersonHistory(id)
+  res.json(history ? { ready: true, ...history } : { ready: false })
+}))
+
+/** El fundador marca (o quita) a mano que a esta persona se le invitó: distingue a quien participó por invitación de quien lo hizo solo. */
+router.post('/people-value/:id/invited', handle('marcar invitación', async (req, res) => {
+  const id = String(req.params.id)
+  if (!/^[0-9a-f-]{36}$/i.test(id)) return res.status(400).json({ error: 'Identificador inválido' })
+  await markInvited(id, req.body?.invited !== false)
+  res.json({ ok: true })
+}))
+
+/** El historial en conteos, por estado y por horizonte (1 mes, 6 meses, 1 año): sin correos ni nombres. Lo lee el agente. */
+router.get('/engagement-history/summary', handle('historial de compromiso (conteos)', async (_req, res) => {
+  res.json(await loadHistorySummary())
 }))
 
 router.get('/people-value/summary', handle('personas de valor (conteos)', async (_req, res) => {

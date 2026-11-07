@@ -328,3 +328,13 @@
 .pv-note { display: block; color: var(--p-muted); font-size: 11px; margin-top: 2px; }
 
 .pv-ranges { margin-bottom: 14px; max-width: 520px; }
+
+.pv-state { display: inline-block; padding: 3px 10px; border-radius: 999px; font-size: 12px; font-weight: 700; white-space: nowrap; background: #f1f5f9; color: #475569; }
+.pv-state.comprometida { background: #dcfce7; color: #15803d; }
+.pv-state.nueva { background: #e0e7ff; color: #4338ca; }
+.pv-state.en_riesgo { background: #ffedd5; color: #c2410c; }
+.pv-state.dormida { background: #e2e8f0; color: #64748b; }
+.pv-state.reactivada { background: #cffafe; color: #0e7490; }
+.pv-spark { display: inline-flex; align-items: center; gap: 8px; min-width: 150px; }
+.pv-spark > span { display: inline-block; height: 8px; border-radius: 4px; background: #38bdf8; min-width: 3px; max-width: 80px; }
+.pv-mini { padding: 4px 10px; font-size: 12px; margin-left: 8px; }

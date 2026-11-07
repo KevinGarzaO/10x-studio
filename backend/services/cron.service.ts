@@ -124,6 +124,20 @@ export const initCron = () => {
     }
   })
 
+  // 3b-historial. FOTO SEMANAL DE COMPROMISO: cada lunes 00:10 hora de Monterrey (06:10 UTC), una foto por cuenta real de la semana que terminó
+  //     (valor, enganche, temperatura, días activos, comunidad, correos y push), guardada para siempre y sin sobrescribir
+  //     (services/analytics/engagement-history.ts). Encendida por defecto: solo escribe en su propia tabla; se apaga con ENGAGEMENT_SNAPSHOTS=off.
+  cron.schedule('10 6 * * 1', async () => {
+    if (process.env.ENGAGEMENT_SNAPSHOTS === 'off') return
+    try {
+      const { takeWeeklySnapshot } = require('./analytics/engagement-history')
+      const outcome = await takeWeeklySnapshot()
+      console.log(`[FotoSemanal] ${outcome.status === 'skipped' ? `omitida: ${outcome.reason}` : `semana ${outcome.weekStart}: ${outcome.people} cuentas`}`)
+    } catch (error) {
+      console.error('[FotoSemanal] Error:', error)
+    }
+  })
+
   // 3b-bis. RECORDATORIO DE PERFIL POR CORREO: una vez al día, 10:00 AM Monterrey (16:00 UTC), a quien se registró hace
   //     más de un día y sigue sin completar su perfil; un solo correo por persona y máximo 20 por corrida
   //     (services/email/profile-reminder.ts). Apagado hasta que se active PROFILE_REMINDER_EMAILS=on en el servidor.
