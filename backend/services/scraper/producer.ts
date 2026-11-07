@@ -5,6 +5,7 @@ import { fetchGreenhouse } from "./sources/greenhouse";
 import { fetchLever } from "./sources/lever";
 import { hasContact, isRecent } from "./contacts";
 import { enforceSafetyCap } from "./retention";
+import { loadRoleDemand, prioritizeByDemand } from "./demand-priority";
 import type { Post } from "./types";
 
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
@@ -41,6 +42,8 @@ export async function runProduction(
   const sources = await getActiveSources();
   // Only ATS platforms
   const atsSources = sources.filter(s => ["workable", "greenhouse", "lever"].includes(s.platform));
+  // Cambio A: si una fuente trae más del tope, se quedan primero las vacantes de puestos con candidatas (demand-priority.ts).
+  const roleDemand = await loadRoleDemand().catch(() => undefined);
   log(`[Production] ${atsSources.length} fuentes ATS activas (de ${sources.length} totales)`);
 
   let sourcesTested = 0;
@@ -71,14 +74,12 @@ export async function runProduction(
 
       postsFound += posts.length;
 
-      // Most recent postings first, then cap — a board with more open reqs
-      // than the cap loses its oldest listings, not a random slice.
-      const prioritized = [...posts]
-        .sort((a, b) => new Date(b.postDate ?? 0).getTime() - new Date(a.postDate ?? 0).getTime())
-        .slice(0, MAX_POSTS_PER_SOURCE);
+      // Puestos con candidatas primero y, dentro de cada grupo, lo más reciente; luego el tope. Una fuente que
+      // trae más vacantes que el tope pierde las de puestos sin candidatas y las más viejas, no una parte al azar.
+      const prioritized = prioritizeByDemand(posts, roleDemand, MAX_POSTS_PER_SOURCE);
 
       if (posts.length > MAX_POSTS_PER_SOURCE) {
-        log(`[Production] ${source.platform}/${source.source_id}: ${posts.length} posts, recortado a ${MAX_POSTS_PER_SOURCE} más recientes`);
+        log(`[Production] ${source.platform}/${source.source_id}: ${posts.length} posts, recortado a ${MAX_POSTS_PER_SOURCE} (puestos con candidatas primero, luego los más recientes)`);
       }
 
       for (const post of prioritized) {

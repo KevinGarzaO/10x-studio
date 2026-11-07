@@ -2,6 +2,7 @@ import { loadPeopleProfiles, servesSomeone, type PersonProfile } from "../vacanc
 import { dailyQuota, daysUntilNextBatch, nextBatchFrom, MAX_PER_DAY } from "./quota";
 import { getCycleState } from "./cycle";
 import { pickDailyVacancies } from "./daily-selection";
+import { loadRoleDemand } from "./demand-priority";
 import { evaluateVacancy, locationFromText, describeRejections, tallyRejections, type PublishVerdict } from "../vacancies/publish-rule";
 import { loadSkillMatchers } from "../vacancies/catalog";
 import { vacancyTitle } from "../vacancies/text";
@@ -418,25 +419,6 @@ async function getTodayScraperPostCount(): Promise<number> {
  * Sincroniza todos los posts nuevos (no sincronizados aún).
  * Respeta el cupo diario (services/scraper/quota.ts): lo que hay por publicar entre los días que faltan para el próximo lote.
  */
-/**
- * Cuántas personas reales hay por rol, para que el reparto del día siga a la comunidad.
- * Si no se puede leer, el reparto es parejo entre roles: nunca bloquea la publicación.
- */
-async function loadRoleDemand(): Promise<Record<string, number> | undefined> {
-  const { data, error } = await supabase
-    .from("users")
-    .select("role_category")
-    .eq("account_type", "candidate")
-    .eq("is_test_account", false)
-    .eq("is_scraper_profile", false)
-    .not("role_category", "is", null)
-    .limit(20000);
-  if (error || !data) return undefined;
-  const demand: Record<string, number> = {};
-  for (const row of data as { role_category: string }[]) demand[row.role_category] = (demand[row.role_category] || 0) + 1;
-  return demand;
-}
-
 export async function syncAllPending(
   log: (msg: string) => void = () => {}
 ): Promise<{ vacancies: number; profiles: number }> {
