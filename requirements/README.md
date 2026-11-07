@@ -22,6 +22,7 @@ de notas al inicio del archivo, nunca reescribiendo el texto original.
 | 012 | [Mis postulaciones: preguntar al volver, «Postulada» y seguimiento](012-my-applications.md) | Sin spec: implementación directa | Construido; falta correr la migración |
 | 013 | [Avisos push: invitación al contestar «¿Ya te postulaste?» y su medición](013-push-notifications.md) | Sin spec: implementación directa | Construido; falta migración y llaves VAPID |
 | 014 | [Reporte semanal de LinkedIn: subir el Excel y cuadrarlo con lo que medimos](014-linkedin-report-upload.md) | Sin spec: implementación directa | Construido; falta correr la migración |
+| 015 | [Páginas legales: aviso de privacidad, términos y cookies](015-legal-pages.md) | Sin spec: implementación directa | Construido como borrador; falta revisión legal y datos de la empresa |
 
 ## Cómo agregar uno nuevo
 

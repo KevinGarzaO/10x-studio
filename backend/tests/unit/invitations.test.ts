@@ -100,7 +100,8 @@ describe('el correo de cada persona', () => {
   it('los enlaces llevan su código y marcan que vienen de una invitación', () => {
     const email = buildInvitation({ code: 'abc123', first_name: 'Ana' }, 1, vacancies, 443)
     const links = [...email.html.matchAll(/href="([^"]+)"/g)].map(match => match[1].replace(/&amp;/g, '&'))
-    const tracked = links.filter(link => link.includes('avotalent.app'))
+    // Los enlaces legales del pie (privacidad y términos) son fijos: no llevan el código de la invitación ni marcas de origen.
+    const tracked = links.filter(link => link.includes('avotalent.app') && !/\/(privacidad|terminos)$/.test(link))
     expect(tracked.length).toBeGreaterThanOrEqual(2)
     for (const link of tracked) {
       const url = new URL(link)

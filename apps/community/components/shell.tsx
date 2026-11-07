@@ -9,6 +9,7 @@ import { identifyUser } from '../lib/web-analytics'
 import { fetchUnreadCount } from '../lib/notifications'
 import { ShellContext, type AuthRequest } from '../lib/shell-context'
 import { LeftSidebar, RightSidebar, ProfileMenu, AuthModal } from './community-hub'
+import { LegalLinks } from './legal-layout'
 import { ProfileGate } from './profile-gate'
 import { ThemeToggle } from './theme-toggle'
 import { SearchBox } from './search-box'
@@ -113,6 +114,9 @@ export function CommunityShell({ children }: { children: ReactNode }) {
             {user && <RightSidebar onUnlock={requestAuth} />}
           </div>
         )}
+
+        {/* Los legales, en el pie de todas las pantallas (también sin sesión) */}
+        <footer className="app-footer"><LegalLinks /></footer>
 
         {gated && userLoaded && <AuthModal gate locked onClose={() => {}} request={null} />}
         {!gated && authOpen && <AuthModal onClose={() => setAuthOpen(false)} request={authRequest} locked={lockedNotice} />}

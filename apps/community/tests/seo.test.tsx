@@ -115,6 +115,10 @@ describe('the pages and the sitemap read from the backend', () => {
       'https://avotalent.app',
       'https://avotalent.app/empleos',
       'https://avotalent.app/puestos',
+      // las páginas legales: públicas y en el mapa del sitio
+      'https://avotalent.app/privacidad',
+      'https://avotalent.app/terminos',
+      'https://avotalent.app/cookies',
       'https://avotalent.app/puestos/ux-ui',
       'https://avotalent.app/empleos/python',
       'https://avotalent.app/vacantes/backend-engineer-1',
@@ -124,7 +128,7 @@ describe('the pages and the sitemap read from the backend', () => {
   it('the sitemap still answers when the backend is down', async () => {
     global.fetch = vi.fn(async () => { throw new Error('offline') }) as unknown as typeof fetch
     const urls = (await sitemap()).map(entry => entry.url)
-    expect(urls).toEqual(['https://avotalent.app', 'https://avotalent.app/empleos', 'https://avotalent.app/puestos'])
+    expect(urls).toEqual(['https://avotalent.app', 'https://avotalent.app/empleos', 'https://avotalent.app/puestos', 'https://avotalent.app/privacidad', 'https://avotalent.app/terminos', 'https://avotalent.app/cookies'])
   })
 
   it('the directory lists skills and vacancies as plain links a crawler can follow', async () => {

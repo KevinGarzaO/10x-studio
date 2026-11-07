@@ -118,6 +118,9 @@ export function CvSettings({ view, username, initialCv, initialPublic, profile }
           <p className="muted">
             Si lo haces público, cualquiera con el enlace puede verlo sin iniciar sesión. Mientras esté privado, solo lo ves tú.
           </p>
+          <p className="muted">
+            Evita incluir datos sensibles como salud o religión. <Link href="/privacidad" target="_blank">Aviso de privacidad</Link>.
+          </p>
         </div>
         <label className="cv-check cv-public-toggle">
           <input type="checkbox" checked={isPublic} onChange={e => setIsPublic(e.target.checked)} />

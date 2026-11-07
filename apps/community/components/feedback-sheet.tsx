@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
+import Link from 'next/link'
 import { MessageSquare } from 'lucide-react'
 import { trackEvent } from '../lib/web-analytics'
 import { FEEDBACK_CATEGORIES, MAX_FEEDBACK_TEXT, MIN_FEEDBACK_TEXT, recordFeedbackEvent, sendFeedback, type FeedbackCategory } from '../lib/feedback'
@@ -71,6 +72,7 @@ export function FeedbackSheet({ onClose }: { onClose: () => void }) {
             </div>
             <label className="feedback-label" htmlFor="feedback-text">Tu comentario</label>
             <textarea id="feedback-text" className="feedback-text" rows={5} maxLength={MAX_FEEDBACK_TEXT} value={text} autoFocus placeholder="Por ejemplo: busco vacantes de…, me faltó poder…" onChange={event => setText(event.target.value)} />
+            <p className="feedback-legal">Usamos tu respuesta para mejorar AvoTalent y la ligamos a tu cuenta. <Link href="/privacidad" target="_blank">Aviso de privacidad</Link>.</p>
             {error && <p className="feedback-error" role="alert">{error}</p>}
             <div className="apply-modal-actions">
               <button type="button" className="apply-modal-yes" disabled={busy} onClick={submit}>{busy ? 'Enviando…' : 'Enviar'}</button>
