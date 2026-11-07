@@ -63,4 +63,20 @@ describe('buildCommunityParticipation', () => {
     expect(empty).toHaveLength(2)
     expect(empty[0]).toMatchObject({ activeAccounts: 0, participants: 0, participantsPct: null, unansweredAfter24h: 0 })
   })
+
+  it('keeps what the team publishes apart: it never inflates the community participation', () => {
+    const teamIds = new Set(['t1'])
+    const withTeam = buildCommunityParticipation({
+      posts: [{ id: 'pt', author_id: 't1', created_at: '2026-10-27T18:00:00Z' }, ...posts],
+      comments: [{ author_id: 't1', post_id: 'pt', created_at: '2026-10-27T19:00:00Z' }, ...comments],
+      votes: [{ user_id: 't1', created_at: '2026-10-29T18:00:00Z' }, ...votes],
+      activity: [...activity, ...activeIn('t1', '2026-10-27')],
+      realIds: real,
+      teamIds,
+    }, 3, NOW)
+    const w1 = withTeam.find((row) => row.weekStart === '2026-10-26')!
+    // Igual que sin el equipo: 2 personas, 2 discusiones, 2 comentarios, 1 voto, 5 cuentas activas.
+    expect(w1).toMatchObject({ activeAccounts: 5, participants: 2, discussions: 2, comments: 2, votes: 1 })
+    expect(w1.team).toEqual({ discussions: 1, comments: 1, votes: 1 })
+  })
 })

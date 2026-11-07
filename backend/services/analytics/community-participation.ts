@@ -35,6 +35,8 @@ export interface CommunityWeek {
   unansweredAfter24h: number
   /** De las discusiones con las 24 horas ya cumplidas. */
   discussionsOldEnough: number
+  /** Lo que publicó el EQUIPO (cuentas del equipo y de prueba), aparte: nunca entra en las cifras de arriba, que son solo de la comunidad. */
+  team: { discussions: number; comments: number; votes: number }
   /** Regreso en la semana siguiente. null si esa semana aún no termina. */
   nextWeek: { participants: ReturnGroup; others: ReturnGroup } | null
 }
@@ -43,7 +45,7 @@ const share = (part: number, whole: number) => (whole > 0 ? Math.round((part / w
 const group = (active: number, returned: number): ReturnGroup => ({ active, returned, returnedPct: active >= MIN_GROUP ? share(returned, active) : null })
 
 export function buildCommunityParticipation(
-  input: { posts: PostRow[]; comments: CommentRow[]; votes: VoteRow[]; activity: ActivityRow[]; realIds: Set<string> },
+  input: { posts: PostRow[]; comments: CommentRow[]; votes: VoteRow[]; activity: ActivityRow[]; realIds: Set<string>; teamIds?: Set<string> },
   weeks: number,
   now: Date = new Date(),
 ): CommunityWeek[] {
@@ -97,6 +99,18 @@ export function buildCommunityParticipation(
     unanswered.set(week, entry)
   }
 
+  // Lo del equipo, aparte (mismas semanas): para ver cuánto se siembra sin que infle la participación de la comunidad.
+  const teamBy = new Map<string, { discussions: number; comments: number; votes: number }>()
+  const teamBump = (week: string, what: 'discussions' | 'comments' | 'votes') => {
+    const entry = teamBy.get(week) ?? { discussions: 0, comments: 0, votes: 0 }
+    entry[what]++
+    teamBy.set(week, entry)
+  }
+  const isTeam = (id: string | null) => !!id && !!input.teamIds?.has(id)
+  for (const post of input.posts) if (isTeam(post.author_id)) teamBump(weekOf(dayKey(post.created_at)), 'discussions')
+  for (const comment of input.comments) if (isTeam(comment.author_id)) teamBump(weekOf(dayKey(comment.created_at)), 'comments')
+  for (const vote of input.votes) if (isTeam(vote.user_id)) teamBump(weekOf(dayKey(vote.created_at)), 'votes')
+
   const rows: CommunityWeek[] = []
   for (let i = weeks - 1; i >= 0; i--) {
     const monday = new Date(currentMonday.getTime() - i * 7 * DAY_MS)
@@ -121,6 +135,7 @@ export function buildCommunityParticipation(
       ...count,
       unansweredAfter24h: old.none,
       discussionsOldEnough: old.old,
+      team: teamBy.get(week) ?? { discussions: 0, comments: 0, votes: 0 },
       nextWeek: nextDone
         ? { participants: group(part.length, part.filter((id) => next.has(id)).length), others: group(rest.length, rest.filter((id) => next.has(id)).length) }
         : null,
@@ -147,8 +162,10 @@ export async function loadCommunityParticipation(weeks: number, now: Date = new 
       return null
     }
   }
-  const [users, posts, comments, votesRead, activity] = await Promise.all([
+  const [users, teamUsers, posts, comments, votesRead, activity] = await Promise.all([
     readAll<{ id: string }>((from, to) => supabase.from('users').select('id').eq('user_kind', 'user').eq('is_test_account', false).not('is_scraper_profile', 'is', true).range(from, to)),
+    // El equipo: cuentas de superadmin y cuentas de prueba (las del scraper no son el equipo ni la comunidad).
+    readAll<{ id: string }>((from, to) => supabase.from('users').select('id').or('user_kind.eq.superadmin,is_test_account.eq.true').not('is_scraper_profile', 'is', true).range(from, to)),
     readAll<PostRow>((from, to) => supabase.from('community_posts').select('id, author_id, created_at').eq('type', 'discussion').gte('created_at', since).range(from, to)),
     readAll<CommentRow>((from, to) => supabase.from('community_comments').select('author_id, post_id, created_at').gte('created_at', since).range(from, to)),
     readVotes(),
@@ -157,9 +174,10 @@ export async function loadCommunityParticipation(weeks: number, now: Date = new 
   const votes = votesRead ?? []
   return {
     votesDated: votesRead !== null,
-    weeks: buildCommunityParticipation({ posts, comments, votes, activity, realIds: new Set(users.map((user) => user.id)) }, weeks, now),
+    weeks: buildCommunityParticipation({ posts, comments, votes, activity, realIds: new Set(users.map((user) => user.id)), teamIds: new Set(teamUsers.map((user) => user.id)) }, weeks, now),
     notes: [
       ...(votesRead === null ? ['Los votos todavía no se cuentan por semana: falta correr community-votes-created-at-migration.sql (la tabla no guardaba la fecha de cada voto). Discusiones y comentarios sí se cuentan.'] : []),
+      'Las cifras de participación son SOLO de la comunidad: cuentas reales, sin el equipo, sin cuentas de prueba y sin perfiles del scraper. Lo que publica el equipo (cuentas del equipo y de prueba) se ve aparte en «team» y nunca infla la participación.',
       'Cuenta cuentas reales (sin equipo, pruebas ni perfiles del scraper). Semana de lunes a domingo en hora de Monterrey; la semana en curso es parcial.',
       'Participar = crear una discusión, un comentario o un voto. «Cuentas activas» sale de la actividad diaria de las cuentas.',
       '«Sin respuesta tras 24 horas» solo cuenta discusiones que ya cumplieron 24 horas y que nadie más contestó en ese plazo.',
