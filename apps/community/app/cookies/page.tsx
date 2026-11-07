@@ -110,8 +110,9 @@ export default function CookiesPage() {
           tu navegador. Si te registras, unimos tus visitas anteriores a tu cuenta.
         </p>
         <p>
-          En los correos que te enviamos medimos los clics en sus enlaces. Esto no usa una cookie de este sitio: el enlace pasa por el dominio de
-          seguimiento de nuestro proveedor de correo (Resend) antes de llevarte a AvoTalent, y así sabemos qué enlace tocaste. Está explicado en el
+          En los correos que te enviamos medimos los clics en sus enlaces y si se abrieron. Esto no usa una cookie de este sitio: el enlace pasa por el
+          dominio de seguimiento de nuestro proveedor de correo (Resend) antes de llevarte a AvoTalent, y cada correo lleva una imagen invisible
+          de 1 × 1 píxel para saber si se abrió. Está explicado en el
           <Link href="/privacidad"> Aviso de privacidad</Link>.
         </p>
       </LegalSection>

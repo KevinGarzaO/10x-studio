@@ -34,13 +34,16 @@ describe('legal pages', () => {
     expect(text).toContain('los clics que haces en sus enlaces')
     expect(text).toContain('dominio de seguimiento de nuestro proveedor de correo (Resend)')
     expect(text).toContain('no guardamos tu dirección IP ni tu navegador')
+    expect(text).toContain('si se abrieron')
+    expect(text).toContain('imagen invisible de 1 × 1 píxel')
+    expect(text).toContain('no las usamos para la puntuación de actividad')
     expect(text).toContain('puntuación interna')
     expect(text).toContain('Novedades e invitaciones de la comunidad')
   })
 
   it('the cookies page says email clicks are measured without a cookie of this site', () => {
     render(<CookiesPage />)
-    expect(document.body.textContent).toContain('En los correos que te enviamos medimos los clics en sus enlaces')
+    expect(document.body.textContent).toContain('En los correos que te enviamos medimos los clics en sus enlaces y si se abrieron')
   })
 
   it('says the truth about the CV: private by default, and when public anyone with the link can see it (even without an account)', () => {
