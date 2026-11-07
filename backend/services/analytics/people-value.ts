@@ -23,8 +23,9 @@ export const VALUE_POINTS = {
   participated: 5, // creó una discusión, un comentario o un voto (una vez)
 } as const
 export type ActionKey = keyof typeof VALUE_POINTS
-/** Las acciones que no se repiten: valen una vez por periodo. Las demás se repiten hasta MAX_PER_ACTION. */
-const ONCE: ReadonlySet<ActionKey> = new Set(['profileComplete', 'returnedAnotherDay', 'participated'])
+/** Las acciones que se cuentan UNA SOLA VEZ (por periodo): aunque se repitan, solo la primera da puntos. Las demás se repiten hasta MAX_PER_ACTION. */
+export const ONCE_ACTIONS: readonly ActionKey[] = ['profileComplete', 'returnedAnotherDay', 'participated']
+const ONCE: ReadonlySet<ActionKey> = new Set(ONCE_ACTIONS)
 /** Una misma acción repetida no sigue sumando para siempre (en el valor y, aparte, en el enganche). */
 export const MAX_PER_ACTION = 3
 /** Cuántos días hacia atrás cuenta el enganche. */
@@ -60,8 +61,11 @@ export interface PersonInput {
   email_prefs: { community?: boolean } | null
 }
 
-/** Cada acción con los puntos que le dio al valor y al enganche (0 si ya pasó el tope o quedó fuera del periodo). */
-export interface PersonEvent { action: ActionKey; at: string | null; valuePoints: number; engagementPoints: number }
+/**
+ * Cada acción con los puntos que le dio al valor y al enganche. Cuando alguno es 0, `notes` dice POR QUÉ (no una lista de posibles razones):
+ * ya se cuenta una sola vez, ya llegó al tope de repeticiones, no tiene fecha o quedó fuera de los últimos días.
+ */
+export interface PersonEvent { action: ActionKey; at: string | null; valuePoints: number; engagementPoints: number; notes: string[] }
 
 export interface PersonValueRow {
   id: string
@@ -103,19 +107,28 @@ export function reasonOf(engagement: number, temperature: Temperature): string {
  * Reparte los puntos entre las acciones: las repetibles dan puntos hasta MAX_PER_ACTION (las más antiguas primero), las de una sola vez dan sus
  * puntos a la primera. `inWindow` decide qué acciones cuentan (todas para el valor; solo las recientes para el enganche).
  */
-function award(actions: DatedAction[], inWindow: (action: DatedAction) => boolean): number[] {
+function award(actions: DatedAction[], inWindow: (action: DatedAction) => boolean): { points: number[]; why: (null | 'outside' | 'once' | 'cap')[] } {
   const order = actions.map((_, index) => index).sort((a, b) => (actions[a].at ?? '').localeCompare(actions[b].at ?? ''))
   const taken = new Map<ActionKey, number>()
-  const result = new Array<number>(actions.length).fill(0)
+  const points = new Array<number>(actions.length).fill(0)
+  const why = new Array<null | 'outside' | 'once' | 'cap'>(actions.length).fill(null)
   for (const index of order) {
     const item = actions[index]
-    if (!inWindow(item)) continue
+    if (!inWindow(item)) { why[index] = 'outside'; continue }
     const count = taken.get(item.action) ?? 0
-    if (count >= (ONCE.has(item.action) ? 1 : MAX_PER_ACTION)) continue
+    if (count >= (ONCE.has(item.action) ? 1 : MAX_PER_ACTION)) { why[index] = ONCE.has(item.action) ? 'once' : 'cap'; continue }
     taken.set(item.action, count + 1)
-    result[index] = VALUE_POINTS[item.action]
+    points[index] = VALUE_POINTS[item.action]
   }
-  return result
+  return { points, why }
+}
+
+const periodText = () => `los últimos ${ENGAGEMENT_DAYS} días`
+/** La razón concreta de un 0, en palabras. */
+function noteFor(action: ActionKey, at: string | null, why: 'outside' | 'once' | 'cap', target: 'valor' | 'enganche'): string {
+  if (why === 'once') return `${target === 'valor' ? 'Valor' : 'Enganche'}: esta acción se cuenta una sola vez y ya se contó`
+  if (why === 'cap') return `${target === 'valor' ? 'Valor' : 'Enganche'}: ya llegó al tope de ${MAX_PER_ACTION} repeticiones`
+  return at === null ? 'Enganche: no se sabe la fecha, así que no cuenta en el enganche' : `Enganche: pasó hace más de ${periodText().replace('los últimos ', '')}`
 }
 
 /** Pura: valor, enganche y temperatura de cada persona a partir de lo que hizo y cuándo. */
@@ -124,15 +137,25 @@ export function buildPeopleValue(people: PersonInput[], actionsBy: Map<string, D
   const since = now.getTime() - ENGAGEMENT_DAYS * DAY_MS
   return people.map((person) => {
     const actions = actionsBy.get(person.id) ?? []
-    const valueEach = award(actions, () => true)
-    const engagementEach = award(actions, (item) => item.at !== null && Date.parse(item.at) >= since)
+    const valueAward = award(actions, () => true)
+    const engagementAward = award(actions, (item) => item.at !== null && Date.parse(item.at) >= since)
+    const valueEach = valueAward.points
+    const engagementEach = engagementAward.points
     const days = [...(activeDays.get(person.id) ?? [])].sort()
     const last = days.length ? days[days.length - 1] : null
     const daysSince = last ? Math.max(0, Math.round((today - new Date(`${last}T00:00:00Z`).getTime()) / DAY_MS)) : null
     const engagement = engagementEach.reduce((a, b) => a + b, 0)
     const temperature = temperatureOf(engagement)
     const events = actions
-      .map((item, index) => ({ action: item.action, at: item.at, valuePoints: valueEach[index], engagementPoints: engagementEach[index] }))
+      .map((item, index) => {
+        const notes: string[] = []
+        const valueWhy = valueAward.why[index]
+        const engagementWhy = engagementAward.why[index]
+        if (valueWhy) notes.push(noteFor(item.action, item.at, valueWhy, 'valor'))
+        // Si ya se explicó en el valor que es de una sola vez o que topó, no se repite lo mismo para el enganche.
+        else if (engagementWhy && !(engagementWhy !== 'outside' && notes.length)) notes.push(noteFor(item.action, item.at, engagementWhy, 'enganche'))
+        return { action: item.action, at: item.at, valuePoints: valueEach[index], engagementPoints: engagementEach[index], notes }
+      })
       .sort((a, b) => (b.at ?? '').localeCompare(a.at ?? ''))
     return {
       id: person.id,
@@ -162,7 +185,7 @@ export interface PeopleValueSummary {
   engagementDistribution: { points: number; people: number }[]
   /** Temperatura por rango de valor: solo conteos. */
   matrix: { range: string; caliente: number; tibio: number; frio: number }[]
-  config: { points: typeof VALUE_POINTS; maxPerAction: number; engagementDays: number; temperature: typeof TEMPERATURE }
+  config: { points: typeof VALUE_POINTS; maxPerAction: number; onceActions: readonly ActionKey[]; engagementDays: number; temperature: typeof TEMPERATURE }
   notes: string[]
 }
 
@@ -183,7 +206,7 @@ export function summarize(rows: PersonValueRow[]): PeopleValueSummary {
       const group = rows.filter((row) => inRange(row.value, range))
       return { range: range.label, caliente: group.filter((row) => row.temperature === 'caliente').length, tibio: group.filter((row) => row.temperature === 'tibio').length, frio: group.filter((row) => row.temperature === 'frio').length }
     }),
-    config: { points: VALUE_POINTS, maxPerAction: MAX_PER_ACTION, engagementDays: ENGAGEMENT_DAYS, temperature: TEMPERATURE },
+    config: { points: VALUE_POINTS, maxPerAction: MAX_PER_ACTION, onceActions: ONCE_ACTIONS, engagementDays: ENGAGEMENT_DAYS, temperature: TEMPERATURE },
     notes: [
       'Una fila por cuenta real (sin equipo, pruebas ni perfiles del scraper). Los puntos y los umbrales son provisionales y están en un solo lugar del código.',
       `Valor = puntos acumulados. Enganche = los mismos puntos y el mismo tope, solo de los últimos ${ENGAGEMENT_DAYS} días. La temperatura sale del enganche: caliente desde ${TEMPERATURE.hotAtLeast} puntos, tibio desde ${TEMPERATURE.warmAtLeast}, frío por debajo.`,

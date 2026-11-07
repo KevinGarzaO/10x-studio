@@ -5,7 +5,7 @@ import { Card, ErrorBox, fmtNum, Loading, PageHeader, Stat, usePanelData } from 
 import { DataTable } from '@/components/panel/DataTable'
 
 type Temperature = 'caliente' | 'tibio' | 'frio'
-interface PersonEvent { action: string; at: string | null; valuePoints: number; engagementPoints: number }
+interface PersonEvent { action: string; at: string | null; valuePoints: number; engagementPoints: number; notes: string[] }
 interface Person {
   id: string
   email: string | null
@@ -31,7 +31,7 @@ interface Summary {
 }
 interface Response {
   people: Person[]
-  config: { points: Record<string, number>; maxPerAction: number; engagementDays: number; temperature: { hotAtLeast: number; warmAtLeast: number } }
+  config: { points: Record<string, number>; maxPerAction: number; onceActions: string[]; engagementDays: number; temperature: { hotAtLeast: number; warmAtLeast: number } }
   summary: Summary
 }
 
@@ -125,7 +125,7 @@ function Detail({ person, config, onClose }: { person: Person; config: Response[
               <tbody>
                 {person.events.map((event, index) => (
                   <tr key={`${event.action}-${event.at ?? 'x'}-${index}`}>
-                    <td>{ACTION_LABEL[event.action] ?? event.action}</td>
+                    <td>{ACTION_LABEL[event.action] ?? event.action}{event.notes.length > 0 && <small className="pv-note">{event.notes.join(' · ')}</small>}</td>
                     <td>{dateOf(event.at)}</td>
                     <td className="num">{event.valuePoints > 0 ? `+${event.valuePoints}` : '0'}</td>
                     <td className="num">{event.engagementPoints > 0 ? `+${event.engagementPoints}` : '0'}</td>
@@ -136,7 +136,7 @@ function Detail({ person, config, onClose }: { person: Person; config: Response[
             </table>
           </div>
         )}
-        <p className="panel-hint">Un 0 es una acción que ya pasó el tope de {config.maxPerAction} repeticiones, que se cuenta una sola vez, o que quedó fuera de los últimos {config.engagementDays} días. «Sin fecha» cuenta en el valor, no en el enganche.</p>
+        <p className="panel-hint">Cuando una acción da 0, la fila dice por qué. Algunas acciones (perfil completo, volver otro día, participar) se cuentan una sola vez; las demás, hasta {config.maxPerAction} veces. Una acción sin fecha cuenta en el valor, no en el enganche.</p>
 
         <h3>Correos</h3>
         <ul className="pv-list">
@@ -233,11 +233,11 @@ export default function PersonasPage() {
 
           <Card title="Cómo se calcula" hint="Provisional: los puntos, el tope, el periodo y los umbrales están en un solo lugar del código (services/analytics/people-value.ts)">
             <table className="panel-table">
-              <thead><tr><th>Acción</th><th className="num">Puntos</th></tr></thead>
-              <tbody>{Object.entries(data.config.points).map(([key, points]) => <tr key={key}><td>{POINT_LABEL[key] ?? key}</td><td className="num">{points}</td></tr>)}</tbody>
+              <thead><tr><th>Acción</th><th className="num">Puntos</th><th>Cuántas veces cuenta</th></tr></thead>
+              <tbody>{Object.entries(data.config.points).map(([key, points]) => <tr key={key}><td>{POINT_LABEL[key] ?? key}</td><td className="num">{points}</td><td>{data.config.onceActions.includes(key) ? 'Una sola vez' : `Hasta ${data.config.maxPerAction} veces`}</td></tr>)}</tbody>
             </table>
             <ul>
-              <li>Una misma acción repetida suma hasta {data.config.maxPerAction} veces (en el valor y, aparte, en el enganche).</li>
+              <li>Las acciones que se repiten suman hasta {data.config.maxPerAction} veces; las de «una sola vez» dan sus puntos una vez, aunque se repitan. Esto aplica al valor y, aparte, al enganche.</li>
               {data.summary.notes.map(note => <li key={note}>{note}</li>)}
             </ul>
           </Card>

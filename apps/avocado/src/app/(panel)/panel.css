@@ -324,3 +324,5 @@
   .pv-person strong { max-width: 150px; }
   .pv-person small { max-width: 150px; }
 }
+
+.pv-note { display: block; color: var(--p-muted); font-size: 11px; margin-top: 2px; }

@@ -120,3 +120,28 @@ describe('summarize (what the product agent reads)', () => {
     expect(text).not.toMatch(/example\.com|x\/a\.png|Persona|"id"|"email"|photo/)
   })
 })
+
+describe('why an action gives 0', () => {
+  it('"came back another day" counts once: the second return says so, even though the cap of repetitions is 3', () => {
+    const [row] = run([person('a')], { a: [{ action: 'returnedAnotherDay', at: ago(2) }, { action: 'returnedAnotherDay', at: ago(0.5) }] })
+    const [recent, first] = row.events // más reciente primero
+    expect(first).toMatchObject({ valuePoints: VALUE_POINTS.returnedAnotherDay, engagementPoints: VALUE_POINTS.returnedAnotherDay, notes: [] })
+    expect(recent.valuePoints).toBe(0)
+    expect(recent.notes).toEqual(['Valor: esta acción se cuenta una sola vez y ya se contó'])
+  })
+
+  it('a repeatable action past the cap says it reached the cap', () => {
+    const [row] = run([person('b')], { b: Array.from({ length: 4 }, (_, i) => ({ action: 'savedVacancy' as const, at: ago(1 + i * 0.1) })) })
+    expect(row.events.filter((event) => event.valuePoints === 0)).toHaveLength(1)
+    expect(row.events.find((event) => event.valuePoints === 0)!.notes[0]).toContain(`tope de ${MAX_PER_ACTION}`)
+  })
+
+  it('an old action says it is outside the period, and one with no date says the date is unknown', () => {
+    const [row] = run([person('c')], { c: [{ action: 'applied', at: ago(30) }, { action: 'tappedApply', at: null }] })
+    const old = row.events.find((event) => event.action === 'applied')!
+    const undated = row.events.find((event) => event.action === 'tappedApply')!
+    expect(old).toMatchObject({ valuePoints: VALUE_POINTS.applied, engagementPoints: 0 })
+    expect(old.notes[0]).toContain('pasó hace más de')
+    expect(undated.notes[0]).toContain('no se sabe la fecha')
+  })
+})
