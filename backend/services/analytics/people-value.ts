@@ -53,6 +53,7 @@ export interface DatedAction { action: ActionKey; at: string | null }
 export interface PersonInput {
   id: string
   email: string | null
+  /** El nombre que se muestra: ver `displayNameOf` (la columna `users.name` está vacía; el nombre real vive en `display_name`). */
   name: string | null
   photo_url: string | null
   created_at: string
@@ -216,11 +217,18 @@ export function summarize(rows: PersonValueRow[]): PeopleValueSummary {
   }
 }
 
+/** El nombre de una cuenta: `display_name` (donde se guarda el nombre real), si no `name`, si no el usuario. Nunca el correo. */
+export function displayNameOf(row: { display_name?: string | null; name?: string | null; username?: string | null }): string | null {
+  for (const candidate of [row.display_name, row.name, row.username]) if (candidate && candidate.trim()) return candidate.trim()
+  return null
+}
+
 const isoOfDay = (day: string) => `${day}T18:00:00.000Z` // el mediodía de Monterrey de ese día
 
 export async function loadPeopleValue(now: Date = new Date()): Promise<PersonValueRow[]> {
   const [people, saved, applications, activity, posts, comments, votes, clicks, profileEvents] = await Promise.all([
-    readAll<PersonInput>((from, to) => supabase.from('users').select('id, email, name, photo_url, created_at, profile_completed, email_opt_out, email_prefs').eq('user_kind', 'user').eq('is_test_account', false).not('is_scraper_profile', 'is', true).range(from, to)),
+    readAll<PersonInput & { display_name: string | null; username: string | null }>((from, to) => supabase.from('users').select('id, email, name, display_name, username, photo_url, created_at, profile_completed, email_opt_out, email_prefs').eq('user_kind', 'user').eq('is_test_account', false).not('is_scraper_profile', 'is', true).range(from, to))
+      .then((rows) => rows.map((row) => ({ ...row, name: displayNameOf(row) }))),
     readAll<{ user_id: string | null; saved_at: string | null }>((from, to) => supabase.from('community_saved_posts').select('user_id, saved_at').range(from, to)),
     readAll<{ user_id: string | null; status: string; clicked_at: string | null; applied_at: string | null; answered_at: string | null; updated_at: string | null }>((from, to) => supabase.from('vacancy_applications').select('user_id, status, clicked_at, applied_at, answered_at, updated_at').range(from, to)).catch(() => []),
     readAll<{ user_id: string; day: string }>((from, to) => supabase.from('user_activity_daily').select('user_id, day').range(from, to)).catch(() => []),

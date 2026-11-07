@@ -2,7 +2,7 @@ import { describe, it, expect, vi } from 'vitest'
 
 vi.mock('../../services/supabase.service', () => ({ supabase: {} }))
 
-import { ENGAGEMENT_DAYS, MAX_PER_ACTION, TEMPERATURE, VALUE_POINTS, buildPeopleValue, reasonOf, summarize, temperatureOf, type DatedAction, type PersonInput } from '../../services/analytics/people-value'
+import { ENGAGEMENT_DAYS, MAX_PER_ACTION, TEMPERATURE, VALUE_POINTS, buildPeopleValue, displayNameOf, reasonOf, summarize, temperatureOf, type DatedAction, type PersonInput } from '../../services/analytics/people-value'
 
 // Sábado 7 de noviembre de 2026, mediodía en Monterrey.
 const NOW = new Date('2026-11-07T18:00:00Z')
@@ -143,5 +143,14 @@ describe('why an action gives 0', () => {
     expect(old).toMatchObject({ valuePoints: VALUE_POINTS.applied, engagementPoints: 0 })
     expect(old.notes[0]).toContain('pasó hace más de')
     expect(undated.notes[0]).toContain('no se sabe la fecha')
+  })
+})
+
+describe('displayNameOf', () => {
+  it('takes the real name from display_name (users.name is empty), then name, then the username, and never the email', () => {
+    expect(displayNameOf({ display_name: 'Raúl Adolfo Torres Vargas', name: null, username: 'ingrauladolfo' })).toBe('Raúl Adolfo Torres Vargas')
+    expect(displayNameOf({ display_name: '  ', name: 'Ana', username: 'ana1' })).toBe('Ana')
+    expect(displayNameOf({ display_name: null, name: null, username: 'ana1' })).toBe('ana1')
+    expect(displayNameOf({})).toBeNull()
   })
 })
