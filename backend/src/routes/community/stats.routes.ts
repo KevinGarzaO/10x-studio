@@ -1,3 +1,4 @@
+import { feedVisibilityReady } from '../../../services/vacancies/feed-visibility'
 import { Router, Request, Response } from 'express'
 import { supabase } from '../../../services/supabase.service'
 import { FOCUS_ROLES } from '../../../services/audience/role-focus'
@@ -75,10 +76,12 @@ async function openVacancyNumbers() {
   try {
     const open = new Date(Date.now() - 45 * 86400000).toISOString()
     const day = new Date(Date.now() - 86400000).toISOString()
-    const [opened, fresh] = await Promise.all([
-      supabase.from('community_posts').select('*', { count: 'exact', head: true }).eq('type', 'job').gte('created_at', open),
-      supabase.from('community_posts').select('*', { count: 'exact', head: true }).eq('type', 'job').gte('created_at', day),
-    ])
+    const hide = await feedVisibilityReady()
+    const jobs = () => {
+      const base = supabase.from('community_posts').select('*', { count: 'exact', head: true }).eq('type', 'job')
+      return hide ? base.not('hidden_from_feed', 'is', true) : base
+    }
+    const [opened, fresh] = await Promise.all([jobs().gte('created_at', open), jobs().gte('created_at', day)])
     return { openVacancies: opened.error ? undefined : opened.count || 0, newVacanciesToday: fresh.error ? undefined : fresh.count || 0 }
   } catch {
     return {}

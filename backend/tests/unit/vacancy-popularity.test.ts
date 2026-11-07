@@ -4,6 +4,7 @@ import request from 'supertest'
 
 const tables = vi.hoisted(() => ({ data: {} as Record<string, any[]> }))
 
+vi.mock('../../services/vacancies/feed-visibility', () => ({ feedVisibilityReady: async () => false }))
 vi.mock('../../services/supabase.service', () => ({
   supabase: {
     auth: { getUser: async () => ({ data: { user: null }, error: new Error('no') }) },

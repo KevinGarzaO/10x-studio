@@ -6,6 +6,7 @@ import request from 'supertest'
 const log = vi.hoisted(() => ({ calls: [] as string[] }))
 const rows = vi.hoisted(() => ({ list: [] as any[], error: null as null | { code?: string; message: string } }))
 
+vi.mock('../../services/vacancies/feed-visibility', () => ({ feedVisibilityReady: async () => false }))
 vi.mock('../../services/supabase.service', () => ({
   supabase: {
     auth: { getUser: async () => ({ data: { user: null }, error: new Error('no') }) },

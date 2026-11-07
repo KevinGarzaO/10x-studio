@@ -1,3 +1,4 @@
+import { feedVisibilityReady } from '../../../services/vacancies/feed-visibility'
 import { Router, Request, Response } from 'express'
 import { supabase } from '../../../services/supabase.service'
 import { loadVacancyStats, rankByPopularity, type VacancyStats } from '../../../services/vacancies/popularity'
@@ -171,12 +172,15 @@ router.get('/', async (req: Request, res: Response) => {
     // `sort=popular` (vacantes): la más popular primero, y a igual popularidad la más nueva. Lo usa el feed.
     // La popularidad no vive en una columna, así que se ordena aquí y se pagina después.
     if (type === 'job' && (req.query.sort as string | undefined) === 'popular') {
-      const { data: ranks, error: ranksError } = await supabase
+      let ranksQuery = supabase
         .from('community_posts')
         .select('id, slug, created_at')
         .eq('type', 'job')
         .in('platform', ['lever', 'workable', 'greenhouse'])
         .limit(5000)
+      // Las vacantes que no le sirven a nadie salen del feed (siguen abriendo por enlace directo): feed-visibility.ts.
+      if (await feedVisibilityReady()) ranksQuery = ranksQuery.not('hidden_from_feed', 'is', true)
+      const { data: ranks, error: ranksError } = await ranksQuery
       if (ranksError) throw ranksError
 
       const statsOf = await loadVacancyStats()
@@ -224,6 +228,7 @@ router.get('/', async (req: Request, res: Response) => {
     else if (type) query = query.eq('type', type)
     // Only ATS platforms — exclude Telegram/old sources
     if (type === 'job') query = query.in('platform', ['lever', 'workable', 'greenhouse'])
+    if (type === 'job' && (await feedVisibilityReady())) query = query.not('hidden_from_feed', 'is', true)
     if (search) {
       query = query.or(`title.ilike.%${search}%,content.ilike.%${search}%`)
     }

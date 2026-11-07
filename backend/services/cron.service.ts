@@ -109,6 +109,21 @@ export const initCron = () => {
     })
   }
 
+  // 3b-pre. VACANTES OCULTAS DEL FEED: una vez al día, 9:30 AM Monterrey (15:30 UTC), justo después de la sincronización de las 9:00.
+  //     Oculta (sin borrar) las vacantes abiertas que no le sirven a ninguna persona real y vuelve a mostrar las que ya le sirven a alguien
+  //     (services/vacancies/feed-visibility.ts). Apagado hasta que se active FEED_HIDE_UNSERVED=on en el servidor y se corra
+  //     backend/sql/feed-visibility-migration.sql; antes se revisa con `npm run feed-visibility`.
+  cron.schedule('30 15 * * *', async () => {
+    if (process.env.FEED_HIDE_UNSERVED !== 'on') return
+    try {
+      const { refreshFeedVisibility } = require('./vacancies/feed-visibility')
+      const outcome = await refreshFeedVisibility()
+      console.log(`[FeedVisibilidad] ${outcome.status === 'skipped' ? `omitido: ${outcome.reason}` : `ocultas ${outcome.hidden}, vueltas a mostrar ${outcome.shown} de ${outcome.open} abiertas (${outcome.people} personas)`}`)
+    } catch (error) {
+      console.error('[FeedVisibilidad] Error:', error)
+    }
+  })
+
   // 3b-bis. RECORDATORIO DE PERFIL POR CORREO: una vez al día, 10:00 AM Monterrey (16:00 UTC), a quien se registró hace
   //     más de un día y sigue sin completar su perfil; un solo correo por persona y máximo 20 por corrida
   //     (services/email/profile-reminder.ts). Apagado hasta que se active PROFILE_REMINDER_EMAILS=on en el servidor.
