@@ -14,6 +14,10 @@ interface Person {
   createdAt: string
   value: number
   engagement: number
+  actionPoints: number
+  activeDays7: number
+  activeDays7List: string[]
+  activeDayPoints: number
   temperature: Temperature
   reason: string
   lastActiveDay: string | null
@@ -24,6 +28,7 @@ interface Person {
 }
 interface Summary {
   total: number
+  activeDaysDistribution: { days: number; people: number }[]
   byTemperature: Record<Temperature, number>
   engagementDistribution: { points: number; people: number }[]
   byEngagementRange: { range: string; people: number }[]
@@ -31,7 +36,7 @@ interface Summary {
 }
 interface Response {
   people: Person[]
-  config: { points: Record<string, number>; maxPerAction: number; onceActions: string[]; engagementDays: number; temperature: { hotAtLeast: number; warmAtLeast: number } }
+  config: { points: Record<string, number>; maxPerAction: number; onceActions: string[]; engagementDays: number; engagementExcluded: string[]; activeDayPoints: number; temperature: { hotAtLeast: number; warmAtLeast: number } }
   summary: Summary
 }
 
@@ -45,7 +50,8 @@ const POINT_LABEL: Record<string, string> = {
   returnedAnotherDay: 'Volver otro día', emailClick: 'Clic en un correo', participated: 'Participar en la comunidad',
 }
 
-type SortKey = 'engagement' | 'value' | 'activity'
+type SortKey = 'engagement' | 'value' | 'activeDays' | 'activity'
+const dayLabel = (day: string) => new Date(`${day}T12:00:00Z`).toLocaleDateString('es-MX', { day: 'numeric', month: 'short', timeZone: 'UTC' })
 const dateOf = (iso: string | null) => (iso ? new Date(iso).toLocaleDateString('es-MX', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'America/Monterrey' }) : 'sin fecha')
 
 /** Las iniciales de quien no tiene foto (o cuya foto no carga). */
@@ -74,10 +80,10 @@ const cell = (value: string | number | null) => {
 }
 
 function exportCsv(people: Person[]) {
-  const head = ['correo', 'registro', 'valor', 'enganche', 'temperatura', 'ultima_actividad', 'dias_sin_actividad', 'clics_en_correos', 'acepta_novedades']
+  const head = ['correo', 'registro', 'valor', 'enganche', 'dias_activos_7d', 'temperatura', 'ultima_actividad', 'dias_sin_actividad', 'clics_en_correos', 'acepta_novedades']
   const lines = [head.map(cell).join(',')]
   for (const person of people) {
-    lines.push([person.email, person.createdAt.slice(0, 10), person.value, person.engagement, LABEL[person.temperature], person.lastActiveDay, person.daysSinceActive, person.emailClicks, person.acceptsCommunityNews ? 'Sí' : 'No'].map(cell).join(','))
+    lines.push([person.email, person.createdAt.slice(0, 10), person.value, person.engagement, person.activeDays7, LABEL[person.temperature], person.lastActiveDay, person.daysSinceActive, person.emailClicks, person.acceptsCommunityNews ? 'Sí' : 'No'].map(cell).join(','))
   }
   // BOM para que Excel lea bien los acentos.
   const blob = new Blob(['﻿' + lines.join('\r\n')], { type: 'text/csv;charset=utf-8' })
@@ -114,6 +120,7 @@ function Detail({ person, config, onClose }: { person: Person; config: Response[
         <div className="pv-numbers">
           <div><span>Valor (acumulado)</span><strong>{fmtNum(person.value)}</strong></div>
           <div><span>Enganche (últimos {config.engagementDays} días)</span><strong>{fmtNum(person.engagement)}</strong></div>
+          <div><span>Días activos ({config.engagementDays} d)</span><strong>{person.activeDays7} de {config.engagementDays}</strong></div>
           <div><span>Última actividad</span><strong>{person.lastActiveDay ? `${person.lastActiveDay}${person.daysSinceActive !== null ? ` (hace ${person.daysSinceActive} d)` : ''}` : '—'}</strong></div>
         </div>
 
@@ -138,6 +145,13 @@ function Detail({ person, config, onClose }: { person: Person; config: Response[
         )}
         <p className="panel-hint">Cuando una acción da 0, la fila dice por qué. Algunas acciones (perfil completo, volver otro día, participar) se cuentan una sola vez; las demás, hasta {config.maxPerAction} veces. Una acción sin fecha cuenta en el valor, no en el enganche.</p>
 
+        <h3>Cómo sale el enganche</h3>
+        <ul className="pv-list">
+          <li>Acciones de uso en los últimos {config.engagementDays} días: <strong>{fmtNum(person.actionPoints)}</strong> {person.actionPoints === 1 ? 'punto' : 'puntos'}</li>
+          <li>Días distintos con actividad: <strong>{person.activeDays7}</strong>{person.activeDays7 > 0 ? ` (${person.activeDays7List.map(dayLabel).join(', ')})` : ''} × {config.activeDayPoints} = <strong>{fmtNum(person.activeDayPoints)}</strong> {person.activeDayPoints === 1 ? 'punto' : 'puntos'}</li>
+          <li>Total de enganche: <strong>{fmtNum(person.engagement)}</strong>. Completar el perfil cuenta en el valor, no en el enganche.</li>
+        </ul>
+
         <h3>Correos</h3>
         <ul className="pv-list">
           <li>Clics en correos: <strong>{clicks.length}</strong>{clicks.length > 0 ? ` (el último ${dateOf(clicks[0].at)})` : ''}</li>
@@ -155,7 +169,7 @@ export default function PersonasPage() {
 
   const people = useMemo(() => {
     const rows = [...(data?.people ?? [])]
-    const pick = (person: Person) => (sort.key === 'engagement' ? person.engagement : sort.key === 'value' ? person.value : person.daysSinceActive === null ? Number.POSITIVE_INFINITY : -person.daysSinceActive)
+    const pick = (person: Person) => (sort.key === 'engagement' ? person.engagement : sort.key === 'value' ? person.value : sort.key === 'activeDays' ? person.activeDays7 : person.daysSinceActive === null ? Number.POSITIVE_INFINITY : -person.daysSinceActive)
     rows.sort((a, b) => (sort.dir === 'desc' ? pick(b) - pick(a) : pick(a) - pick(b)) || b.engagement - a.engagement || b.value - a.value)
     return rows
   }, [data, sort])
@@ -199,7 +213,7 @@ export default function PersonasPage() {
                 options: [{ value: 'caliente', label: 'Calientes' }, { value: 'tibio', label: 'Tibias' }, { value: 'frio', label: 'Frías' }],
                 test: (person, value) => person.temperature === value,
               }}
-              head={<tr><th>Persona</th><th className="pv-hide-sm">Registro</th>{header('value', 'Valor', 'num')}{header('engagement', `Enganche ${data.config.engagementDays} d`, 'num')}<th>Temperatura</th>{header('activity', 'Última actividad', 'pv-hide-sm')}</tr>}
+              head={<tr><th>Persona</th><th className="pv-hide-sm">Registro</th>{header('value', 'Valor', 'num')}{header('engagement', `Enganche ${data.config.engagementDays} d`, 'num')}{header('activeDays', `Días activos (${data.config.engagementDays} d)`, 'num pv-hide-sm')}<th>Temperatura</th>{header('activity', 'Última actividad', 'pv-hide-sm')}</tr>}
               renderRow={person => (
                 <tr className="pv-row" onClick={() => setOpenId(person.id)}>
                   <td>
@@ -211,6 +225,7 @@ export default function PersonasPage() {
                   <td className="pv-hide-sm">{dateOf(person.createdAt)}</td>
                   <td className="num">{fmtNum(person.value)}</td>
                   <td className="num"><strong>{fmtNum(person.engagement)}</strong></td>
+                  <td className="num pv-hide-sm">{person.activeDays7}</td>
                   <td><Tag temperature={person.temperature} /></td>
                   <td className="pv-hide-sm">{person.lastActiveDay ? `${person.lastActiveDay}${person.daysSinceActive !== null ? ` · hace ${person.daysSinceActive} d` : ''}` : '—'}</td>
                 </tr>
@@ -219,6 +234,10 @@ export default function PersonasPage() {
           </Card>
 
           <Card title={`Distribución del enganche (últimos ${data.config.engagementDays} días)`} hint="Cuántas cuentas tienen exactamente esos puntos. Sirve para fijar los umbrales de temperatura mirando los datos reales.">
+            <table className="panel-table pv-ranges">
+              <thead><tr><th>Rango de enganche</th>{data.summary.byEngagementRange.map(item => <th key={item.range} className="num">{item.range}</th>)}</tr></thead>
+              <tbody><tr><td>Cuentas</td>{data.summary.byEngagementRange.map(item => <td key={item.range} className="num"><strong>{fmtNum(item.people)}</strong></td>)}</tr></tbody>
+            </table>
             <div className="pv-bars">
               {data.summary.engagementDistribution.map(item => (
                 <div key={item.points} className="pv-bar-row">
@@ -237,6 +256,7 @@ export default function PersonasPage() {
               <tbody>{Object.entries(data.config.points).map(([key, points]) => <tr key={key}><td>{POINT_LABEL[key] ?? key}</td><td className="num">{points}</td><td>{data.config.onceActions.includes(key) ? 'Una sola vez' : `Hasta ${data.config.maxPerAction} veces`}</td></tr>)}</tbody>
             </table>
             <ul>
+              <li>Enganche = acciones de uso de los últimos {data.config.engagementDays} días + {data.config.activeDayPoints} {data.config.activeDayPoints === 1 ? 'punto' : 'puntos'} por cada día distinto con actividad (de 0 a {data.config.engagementDays}). No cuenta: {data.config.engagementExcluded.map(key => POINT_LABEL[key] ?? key).join(', ')} (configurar la cuenta no es usar la app).</li>
               <li>Las acciones que se repiten suman hasta {data.config.maxPerAction} veces; las de «una sola vez» dan sus puntos una vez, aunque se repitan. Esto aplica al valor y, aparte, al enganche.</li>
               {data.summary.notes.map(note => <li key={note}>{note}</li>)}
             </ul>

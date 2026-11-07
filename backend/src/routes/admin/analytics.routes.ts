@@ -16,7 +16,7 @@ import { loadExperiment } from '../../../services/linkedin/experiment-data'
 import { loadSupply } from '../../../services/analytics/supply-data'
 import { loadFeedVisible } from '../../../services/analytics/feed-visible'
 import { loadCommunityParticipation } from '../../../services/analytics/community-participation'
-import { loadPeopleValue, summarize, VALUE_POINTS, MAX_PER_ACTION, TEMPERATURE, ENGAGEMENT_DAYS, ONCE_ACTIONS } from '../../../services/analytics/people-value'
+import { loadPeopleValue, summarize, VALUE_POINTS, MAX_PER_ACTION, TEMPERATURE, ENGAGEMENT_DAYS, ONCE_ACTIONS, ENGAGEMENT_EXCLUDED, ACTIVE_DAY_POINTS } from '../../../services/analytics/people-value'
 import { loadFeedbackSummary } from '../../../services/analytics/feedback-summary'
 import { parseLinkedInReport } from '../../../services/analytics/linkedin-report'
 import { loadLinkedInReport, saveLinkedInReport } from '../../../services/analytics/linkedin-report-data'
@@ -199,7 +199,7 @@ router.get('/people-value', handle('personas de valor', async (_req, res) => {
   const rows = await loadPeopleValue()
   res.json({
     people: rows.sort((a, b) => b.engagement - a.engagement || b.value - a.value || (a.daysSinceActive ?? 9999) - (b.daysSinceActive ?? 9999)),
-    config: { points: VALUE_POINTS, maxPerAction: MAX_PER_ACTION, onceActions: ONCE_ACTIONS, engagementDays: ENGAGEMENT_DAYS, temperature: TEMPERATURE },
+    config: { points: VALUE_POINTS, maxPerAction: MAX_PER_ACTION, onceActions: ONCE_ACTIONS, engagementDays: ENGAGEMENT_DAYS, engagementExcluded: ENGAGEMENT_EXCLUDED, activeDayPoints: ACTIVE_DAY_POINTS, temperature: TEMPERATURE },
     summary: summarize(rows),
   })
 }))

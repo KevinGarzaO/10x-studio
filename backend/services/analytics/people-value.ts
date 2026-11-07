@@ -8,7 +8,8 @@ import { wantsCommunityNews } from '../email/community-news'
  * fundador (lleva correos y fotos); el agente de producto lee únicamente conteos (`summarize`), nunca correos ni nombres.
  *
  *   VALOR ....... los puntos de todo lo que la persona ha hecho (acumulado).
- *   ENGANCHE .... los mismos puntos y el mismo tope de repeticiones, pero contando solo las acciones de los últimos ENGAGEMENT_DAYS días.
+ *   ENGANCHE .... el USO de los últimos ENGAGEMENT_DAYS días: las mismas acciones y el mismo tope de repeticiones, SIN las de configurar la cuenta
+ *                 (ENGAGEMENT_EXCLUDED: completar el perfil), más los DÍAS DISTINTOS de actividad en ese periodo (ACTIVE_DAY_POINTS por día).
  *   TEMPERATURA . sale del ENGANCHE (no de la última actividad): caliente, tibio o frío según los umbrales de TEMPERATURE.
  *
  * TODO lo que se puede ajustar está aquí arriba, en un solo lugar: puntos, tope, periodo y umbrales. Cambiar uno no toca nada más.
@@ -30,12 +31,24 @@ const ONCE: ReadonlySet<ActionKey> = new Set(ONCE_ACTIONS)
 export const MAX_PER_ACTION = 3
 /** Cuántos días hacia atrás cuenta el enganche. */
 export const ENGAGEMENT_DAYS = 7
+/** Acciones que cuentan en el VALOR pero no en el enganche: configurar la cuenta no es usar la app (completar el perfil). */
+export const ENGAGEMENT_EXCLUDED: readonly ActionKey[] = ['profileComplete']
+/** Puntos de enganche por cada día distinto de actividad en el periodo (de 0 a ENGAGEMENT_DAYS días). Provisional. */
+export const ACTIVE_DAY_POINTS = 1
 /**
  * Temperatura por ENGANCHE (puntos de los últimos ENGAGEMENT_DAYS días): caliente desde `hotAtLeast`, tibio desde `warmAtLeast`, frío por debajo.
  * PROVISIONALES hasta ver la distribución real (ver `engagementDistribution`).
  */
 export const TEMPERATURE = { hotAtLeast: 6, warmAtLeast: 2 } as const
-/** Rangos de puntos para los resúmenes (valor y enganche). */
+/** Rangos del ENGANCHE para el resumen (y para fijar los cortes de temperatura mirando cuántas cuentas caen en cada uno). */
+export const ENGAGEMENT_RANGES: { label: string; min: number; max: number }[] = [
+  { label: '0', min: 0, max: 0 },
+  { label: '1 a 2', min: 1, max: 2 },
+  { label: '3 a 5', min: 3, max: 5 },
+  { label: '6 a 8', min: 6, max: 8 },
+  { label: '9 o más', min: 9, max: Number.POSITIVE_INFINITY },
+]
+/** Rangos de puntos para el resumen del valor. */
 export const POINT_RANGES: { label: string; min: number; max: number }[] = [
   { label: '0', min: 0, max: 0 },
   { label: '1 a 3', min: 1, max: 3 },
@@ -75,7 +88,13 @@ export interface PersonValueRow {
   photoUrl: string | null
   createdAt: string
   value: number
+  /** Puntos de uso de los últimos días: `actionPoints` (acciones) + `activeDayPoints` (días activos). */
   engagement: number
+  actionPoints: number
+  /** Días distintos con actividad en los últimos ENGAGEMENT_DAYS días (de 0 a ENGAGEMENT_DAYS), del más reciente al más antiguo. */
+  activeDays7: number
+  activeDays7List: string[]
+  activeDayPoints: number
   temperature: Temperature
   reason: string
   lastActiveDay: string | null
@@ -94,27 +113,35 @@ export function temperatureOf(engagement: number): Temperature {
 const LABEL: Record<Temperature, string> = { caliente: 'Caliente', tibio: 'Tibio', frio: 'Frío' }
 const pts = (n: number) => `${n} ${n === 1 ? 'punto' : 'puntos'}`
 
-/** La frase que explica la temperatura. */
-export function reasonOf(engagement: number, temperature: Temperature): string {
+const plural = (n: number, one: string, many: string) => `${n} ${n === 1 ? one : many}`
+
+/** La frase que explica la temperatura: de dónde salen los puntos de uso y, si aplica, que completar el perfil no cuenta como enganche. */
+export function reasonOf(engagement: number, temperature: Temperature, parts: { actionPoints?: number; activeDays?: number; profileComplete?: boolean } = {}): string {
   const days = `en los últimos ${ENGAGEMENT_DAYS} días`
-  if (temperature === 'caliente') return `${LABEL.caliente} porque sumó ${pts(engagement)} ${days} (desde ${TEMPERATURE.hotAtLeast} es caliente).`
-  if (temperature === 'tibio') return `${LABEL.tibio} porque sumó ${pts(engagement)} ${days} (de ${TEMPERATURE.warmAtLeast} a ${TEMPERATURE.hotAtLeast - 1} es tibio).`
+  const profile = parts.profileComplete ? ' Completar el perfil no cuenta como enganche.' : ''
+  const detail = parts.actionPoints !== undefined && (parts.activeDays ?? 0) > 0
+    ? ` (${pts(parts.actionPoints)} por acciones y ${plural(parts.activeDays ?? 0, 'día activo', 'días activos')})`
+    : ''
+  if (temperature === 'caliente') return `${LABEL.caliente}: sumó ${pts(engagement)} de uso ${days}${detail} (desde ${TEMPERATURE.hotAtLeast} es caliente).${profile}`
+  if (temperature === 'tibio') return `${LABEL.tibio}: sumó ${pts(engagement)} de uso ${days}${detail} (de ${TEMPERATURE.warmAtLeast} a ${TEMPERATURE.hotAtLeast - 1} es tibio).${profile}`
   return engagement === 0
-    ? `${LABEL.frio} porque no sumó puntos ${days}.`
-    : `${LABEL.frio} porque sumó solo ${pts(engagement)} ${days} (menos de ${TEMPERATURE.warmAtLeast} es frío).`
+    ? `${LABEL.frio}: no sumó puntos de uso ${days}.${profile}`
+    : `${LABEL.frio}: sumó solo ${pts(engagement)} de uso ${days}${detail} (menos de ${TEMPERATURE.warmAtLeast} es frío).${profile}`
 }
 
 /**
  * Reparte los puntos entre las acciones: las repetibles dan puntos hasta MAX_PER_ACTION (las más antiguas primero), las de una sola vez dan sus
  * puntos a la primera. `inWindow` decide qué acciones cuentan (todas para el valor; solo las recientes para el enganche).
  */
-function award(actions: DatedAction[], inWindow: (action: DatedAction) => boolean): { points: number[]; why: (null | 'outside' | 'once' | 'cap')[] } {
+type Why = null | 'outside' | 'once' | 'cap' | 'setup'
+function award(actions: DatedAction[], inWindow: (action: DatedAction) => boolean, excluded: ReadonlySet<ActionKey> = new Set()): { points: number[]; why: Why[] } {
   const order = actions.map((_, index) => index).sort((a, b) => (actions[a].at ?? '').localeCompare(actions[b].at ?? ''))
   const taken = new Map<ActionKey, number>()
   const points = new Array<number>(actions.length).fill(0)
-  const why = new Array<null | 'outside' | 'once' | 'cap'>(actions.length).fill(null)
+  const why = new Array<Why>(actions.length).fill(null)
   for (const index of order) {
     const item = actions[index]
+    if (excluded.has(item.action)) { why[index] = 'setup'; continue }
     if (!inWindow(item)) { why[index] = 'outside'; continue }
     const count = taken.get(item.action) ?? 0
     if (count >= (ONCE.has(item.action) ? 1 : MAX_PER_ACTION)) { why[index] = ONCE.has(item.action) ? 'once' : 'cap'; continue }
@@ -126,26 +153,37 @@ function award(actions: DatedAction[], inWindow: (action: DatedAction) => boolea
 
 const periodText = () => `los últimos ${ENGAGEMENT_DAYS} días`
 /** La razón concreta de un 0, en palabras. */
-function noteFor(action: ActionKey, at: string | null, why: 'outside' | 'once' | 'cap', target: 'valor' | 'enganche'): string {
+function noteFor(action: ActionKey, at: string | null, why: 'outside' | 'once' | 'cap' | 'setup', target: 'valor' | 'enganche'): string {
+  if (why === 'setup') return 'Enganche: completar el perfil es configurar la cuenta, no usar la app, así que solo cuenta en el valor'
   if (why === 'once') return `${target === 'valor' ? 'Valor' : 'Enganche'}: esta acción se cuenta una sola vez y ya se contó`
   if (why === 'cap') return `${target === 'valor' ? 'Valor' : 'Enganche'}: ya llegó al tope de ${MAX_PER_ACTION} repeticiones`
   return at === null ? 'Enganche: no se sabe la fecha, así que no cuenta en el enganche' : `Enganche: pasó hace más de ${periodText().replace('los últimos ', '')}`
 }
 
 /** Pura: valor, enganche y temperatura de cada persona a partir de lo que hizo y cuándo. */
-export function buildPeopleValue(people: PersonInput[], actionsBy: Map<string, DatedAction[]>, activeDays: Map<string, string[]>, now: Date = new Date()): PersonValueRow[] {
-  const today = new Date(`${dayKey(now.toISOString())}T00:00:00Z`).getTime()
+export interface EngagementRules { excluded: readonly ActionKey[]; activeDayPoints: number }
+export const CURRENT_RULES: EngagementRules = { excluded: ENGAGEMENT_EXCLUDED, activeDayPoints: ACTIVE_DAY_POINTS }
+
+export function buildPeopleValue(people: PersonInput[], actionsBy: Map<string, DatedAction[]>, activeDays: Map<string, string[]>, now: Date = new Date(), rules: EngagementRules = CURRENT_RULES): PersonValueRow[] {
+  const todayKey = dayKey(now.toISOString())
+  const today = new Date(`${todayKey}T00:00:00Z`).getTime()
   const since = now.getTime() - ENGAGEMENT_DAYS * DAY_MS
+  // Los ENGAGEMENT_DAYS días de Monterrey que terminan hoy (hoy y los anteriores).
+  const firstWindowDay = new Date(today - (ENGAGEMENT_DAYS - 1) * DAY_MS).toISOString().slice(0, 10)
+  const excluded = new Set<ActionKey>(rules.excluded)
   return people.map((person) => {
     const actions = actionsBy.get(person.id) ?? []
     const valueAward = award(actions, () => true)
-    const engagementAward = award(actions, (item) => item.at !== null && Date.parse(item.at) >= since)
+    const engagementAward = award(actions, (item) => item.at !== null && Date.parse(item.at) >= since, excluded)
     const valueEach = valueAward.points
     const engagementEach = engagementAward.points
     const days = [...(activeDays.get(person.id) ?? [])].sort()
     const last = days.length ? days[days.length - 1] : null
     const daysSince = last ? Math.max(0, Math.round((today - new Date(`${last}T00:00:00Z`).getTime()) / DAY_MS)) : null
-    const engagement = engagementEach.reduce((a, b) => a + b, 0)
+    const actionPoints = engagementEach.reduce((a, b) => a + b, 0)
+    const windowDays = [...new Set(days.filter((day) => day >= firstWindowDay && day <= todayKey))].sort().reverse()
+    const activeDayPoints = windowDays.length * rules.activeDayPoints
+    const engagement = actionPoints + activeDayPoints
     const temperature = temperatureOf(engagement)
     const events = actions
       .map((item, index) => {
@@ -166,8 +204,12 @@ export function buildPeopleValue(people: PersonInput[], actionsBy: Map<string, D
       createdAt: person.created_at,
       value: valueEach.reduce((a, b) => a + b, 0),
       engagement,
+      actionPoints,
+      activeDays7: windowDays.length,
+      activeDays7List: windowDays,
+      activeDayPoints,
       temperature,
-      reason: reasonOf(engagement, temperature),
+      reason: reasonOf(engagement, temperature, { actionPoints, activeDays: rules.activeDayPoints > 0 ? windowDays.length : 0, profileComplete: actions.some((item) => item.action === 'profileComplete') }),
       lastActiveDay: last,
       daysSinceActive: daysSince,
       acceptsCommunityNews: wantsCommunityNews(person),
@@ -182,11 +224,13 @@ export interface PeopleValueSummary {
   byTemperature: Record<Temperature, number>
   byValueRange: { range: string; people: number }[]
   byEngagementRange: { range: string; people: number }[]
+  /** Cuántas cuentas tienen exactamente N días activos de los últimos ENGAGEMENT_DAYS (de 0 a ENGAGEMENT_DAYS). */
+  activeDaysDistribution: { days: number; people: number }[]
   /** Cuántas cuentas tienen exactamente N puntos de enganche (para fijar los umbrales mirando la distribución real). */
   engagementDistribution: { points: number; people: number }[]
   /** Temperatura por rango de valor: solo conteos. */
   matrix: { range: string; caliente: number; tibio: number; frio: number }[]
-  config: { points: typeof VALUE_POINTS; maxPerAction: number; onceActions: readonly ActionKey[]; engagementDays: number; temperature: typeof TEMPERATURE }
+  config: { points: typeof VALUE_POINTS; maxPerAction: number; onceActions: readonly ActionKey[]; engagementDays: number; engagementExcluded: readonly ActionKey[]; activeDayPoints: number; temperature: typeof TEMPERATURE }
   notes: string[]
 }
 
@@ -201,16 +245,17 @@ export function summarize(rows: PersonValueRow[]): PeopleValueSummary {
     total: rows.length,
     byTemperature,
     byValueRange: POINT_RANGES.map((range) => ({ range: range.label, people: rows.filter((row) => inRange(row.value, range)).length })),
-    byEngagementRange: POINT_RANGES.map((range) => ({ range: range.label, people: rows.filter((row) => inRange(row.engagement, range)).length })),
+    byEngagementRange: ENGAGEMENT_RANGES.map((range) => ({ range: range.label, people: rows.filter((row) => inRange(row.engagement, range)).length })),
+    activeDaysDistribution: Array.from({ length: ENGAGEMENT_DAYS + 1 }, (_, days) => ({ days, people: rows.filter((row) => row.activeDays7 === days).length })),
     engagementDistribution: [...distribution.entries()].sort((a, b) => a[0] - b[0]).map(([points, people]) => ({ points, people })),
     matrix: POINT_RANGES.map((range) => {
       const group = rows.filter((row) => inRange(row.value, range))
       return { range: range.label, caliente: group.filter((row) => row.temperature === 'caliente').length, tibio: group.filter((row) => row.temperature === 'tibio').length, frio: group.filter((row) => row.temperature === 'frio').length }
     }),
-    config: { points: VALUE_POINTS, maxPerAction: MAX_PER_ACTION, onceActions: ONCE_ACTIONS, engagementDays: ENGAGEMENT_DAYS, temperature: TEMPERATURE },
+    config: { points: VALUE_POINTS, maxPerAction: MAX_PER_ACTION, onceActions: ONCE_ACTIONS, engagementDays: ENGAGEMENT_DAYS, engagementExcluded: ENGAGEMENT_EXCLUDED, activeDayPoints: ACTIVE_DAY_POINTS, temperature: TEMPERATURE },
     notes: [
       'Una fila por cuenta real (sin equipo, pruebas ni perfiles del scraper). Los puntos y los umbrales son provisionales y están en un solo lugar del código.',
-      `Valor = puntos acumulados. Enganche = los mismos puntos y el mismo tope, solo de los últimos ${ENGAGEMENT_DAYS} días. La temperatura sale del enganche: caliente desde ${TEMPERATURE.hotAtLeast} puntos, tibio desde ${TEMPERATURE.warmAtLeast}, frío por debajo.`,
+      `Valor = puntos acumulados de todo. Enganche = el uso de los últimos ${ENGAGEMENT_DAYS} días: las acciones de uso (con el mismo tope) más ${ACTIVE_DAY_POINTS} punto por cada día distinto con actividad; completar el perfil cuenta en el valor pero no en el enganche. La temperatura sale del enganche: caliente desde ${TEMPERATURE.hotAtLeast} puntos, tibio desde ${TEMPERATURE.warmAtLeast}, frío por debajo.`,
       'Los clics en correos suman cuando el webhook de Resend los guarda (email_events). Las aperturas no suman nunca (no son confiables).',
       'Solo conteos: sin correos ni nombres. Con pocas personas por grupo, léelos como conteo y no como porcentaje.',
     ],
@@ -225,7 +270,7 @@ export function displayNameOf(row: { display_name?: string | null; name?: string
 
 const isoOfDay = (day: string) => `${day}T18:00:00.000Z` // el mediodía de Monterrey de ese día
 
-export async function loadPeopleValue(now: Date = new Date()): Promise<PersonValueRow[]> {
+export async function loadPeopleValue(now: Date = new Date(), rules: EngagementRules = CURRENT_RULES): Promise<PersonValueRow[]> {
   const [people, saved, applications, activity, posts, comments, votes, clicks, profileEvents] = await Promise.all([
     readAll<PersonInput & { display_name: string | null; username: string | null }>((from, to) => supabase.from('users').select('id, email, name, display_name, username, photo_url, created_at, profile_completed, email_opt_out, email_prefs').eq('user_kind', 'user').eq('is_test_account', false).not('is_scraper_profile', 'is', true).range(from, to))
       .then((rows) => rows.map((row) => ({ ...row, name: displayNameOf(row) }))),
@@ -284,5 +329,5 @@ export async function loadPeopleValue(now: Date = new Date()): Promise<PersonVal
     const signupDay = dayKey(person.created_at)
     for (const day of activeDays.get(person.id) ?? []) if (day > signupDay) add(person.id, 'returnedAnotherDay', isoOfDay(day))
   }
-  return buildPeopleValue(people, byPerson, activeDays, now)
+  return buildPeopleValue(people, byPerson, activeDays, now, rules)
 }

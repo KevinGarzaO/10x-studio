@@ -301,7 +301,7 @@
 .pv-dialog-head > div { min-width: 0; flex: 1; }
 .pv-close { margin-left: auto; border: 0; background: transparent; font-size: 26px; line-height: 1; cursor: pointer; color: var(--p-muted); }
 .pv-reason { background: #f8fafc; border: 1px solid var(--p-line); border-radius: 12px; padding: 12px 14px; font-size: 14px; line-height: 1.5; }
-.pv-numbers { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; margin: 14px 0; }
+.pv-numbers { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 10px; margin: 14px 0; }
 .pv-numbers > div { border: 1px solid var(--p-line); border-radius: 12px; padding: 10px 12px; }
 .pv-numbers span { display: block; font-size: 11px; color: var(--p-muted); text-transform: uppercase; letter-spacing: .04em; font-weight: 700; }
 .pv-numbers strong { font-size: 18px; }
@@ -326,3 +326,5 @@
 }
 
 .pv-note { display: block; color: var(--p-muted); font-size: 11px; margin-top: 2px; }
+
+.pv-ranges { margin-bottom: 14px; max-width: 520px; }
