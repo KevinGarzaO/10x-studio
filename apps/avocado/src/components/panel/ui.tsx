@@ -25,7 +25,11 @@ const seen = new Map<string, unknown>()
 /* ------------------------------------------------------------------ */
 
 /** Cada cuánto se vuelve a pedir lo que hay en pantalla. */
-export const LIVE_MS = 10_000
+/**
+ * Cada cuánto se actualiza solo cada pantalla. Antes eran 10 s, y cada actualización recalculaba todo en el servidor: con el panel abierto
+ * las rutas /api/admin eran cerca de una cuarta parte del tiempo del servidor y le quitaban a las personas. 30 s se siente igual de vivo.
+ */
+export const LIVE_MS = 30_000
 const LIVE_KEY = 'avo_panel_live'
 
 interface LiveState { paused: boolean; updatedAt: number | null }
@@ -62,7 +66,7 @@ export const markLiveUpdate = () => setLive({ updatedAt: Date.now() })
 /**
  * Pide un dato del panel al backend y lo vuelve a pedir cuando cambia la ruta (por ejemplo, el periodo).
  *
- * En vivo: cada `refreshMs` (10 s por defecto; `false` lo apaga) lo vuelve a pedir por detrás, sin recargar la página ni mostrar
+ * En vivo: cada `refreshMs` (30 s por defecto; `false` lo apaga) lo vuelve a pedir por detrás, sin recargar la página ni mostrar
  * "Cargando": solo cambia lo que cambió. Pide siempre la versión fresca (`fresh=1`, que se salta lo que el servidor guarda un minuto),
  * no empieza otra petición si la anterior no ha vuelto, se detiene con la pestaña escondida (y al volver actualiza al instante) y
  * se pausa con el interruptor del encabezado. Si una actualización falla, se queda lo que había y se vuelve a intentar.

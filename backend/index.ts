@@ -25,6 +25,7 @@ import communityUsersRoutes from './src/routes/community/users.routes'
 import communitySavedRoutes from './src/routes/community/saved.routes'
 import faviconRoutes from './src/routes/community/favicon.routes'
 import communityStatsRoutes from './src/routes/community/stats.routes'
+import { publicCache } from './middleware/public-cache.middleware'
 import communityDiscoverRoutes from './src/routes/community/discover.routes'
 import communitySeoRoutes from './src/routes/community/seo.routes'
 import communityAttributionRoutes from './src/routes/community/attribution.routes'
@@ -119,12 +120,17 @@ app.use('/api/analytics', webAnalyticsCollectRoutes)
 
 // Community Hub routes (public auth endpoints, protected community endpoints)
 app.use('/api/community/auth', communityAuthRoutes)
+// Lo que se contesta igual para todos se guarda unos minutos (ver middleware/public-cache.middleware.ts): los artículos del equipo y, solo
+// para quien no tiene sesión, la lista de vacantes. Lo que depende de la cuenta nunca se guarda.
+app.use('/api/community/posts', publicCache(120_000, { only: (path) => path === '/editorial' }))
+app.use('/api/community/posts', publicCache(60_000, { only: (path) => path === '/', guestOnly: true }))
 app.use('/api/community/posts', communityPostsRoutes)
 app.use('/api/community/posts', communityCommentsRoutes)
 app.use('/api/community/users', communityUsersRoutes)
 app.use('/api/community/saved', communityAuthMiddleware, communitySavedRoutes)
 app.use('/api/community/favicon', faviconRoutes)
-app.use('/api/community/stats', communityStatsRoutes)
+// Las estadísticas de la barra lateral (generales, por etiqueta, por puesto) son las mismas para todos: 2 minutos en memoria.
+app.use('/api/community/stats', publicCache(120_000, { only: () => true }), communityStatsRoutes)
 app.use('/api/community/discover', communityDiscoverRoutes)
 app.use('/api/community/seo', communitySeoRoutes)
 app.use('/api/community/applications', communityApplicationsRoutes)

@@ -74,7 +74,7 @@ export const NAV_GROUPS: NavGroup[] = [
 
 const GROUPS_KEY = 'avo_panel_groups'
 
-/** "● En vivo · hace 4 s": las pantallas se actualizan solas cada 10 segundos; un clic las pausa (por ejemplo, para leer con calma). */
+/** "● En vivo · hace 4 s": las pantallas se actualizan solas cada 30 segundos; un clic las pausa (por ejemplo, para leer con calma). */
 function LiveToggle() {
   const { paused, updatedAt, toggle } = useLive()
   const [now, setNow] = useState(() => Date.now())
@@ -89,7 +89,7 @@ function LiveToggle() {
       className={`panel-live${paused ? ' is-paused' : ''}`}
       onClick={toggle}
       aria-pressed={!paused}
-      title={paused ? 'Actualización pausada: haz clic para reanudarla' : 'Las pantallas se actualizan solas cada 10 segundos: haz clic para pausar'}
+      title={paused ? 'Actualización pausada: haz clic para reanudarla' : 'Las pantallas se actualizan solas cada 30 segundos: haz clic para pausar'}
     >
       <i aria-hidden="true" />
       <span>{paused ? 'Pausado' : 'En vivo'}</span>
@@ -151,13 +151,14 @@ export function PanelShell({ children }: { children: React.ReactNode }) {
       .catch(() => setAlerts([]))
   }, [ready, pathname])
 
-  // ...y se vuelven a revisar con el resto de la pantalla (si falla una vez, se quedan las que había).
+  // ...y se vuelven a revisar cada minuto, SIN `fresh=1`: las alarmas son lo más caro de recalcular y el servidor ya guarda su respuesta un
+  // minuto, así que esta revisión casi nunca le cuesta trabajo (si falla una vez, se quedan las que había).
   useEffect(() => {
     if (!ready) return
     const timer = setInterval(() => {
       if (document.visibilityState !== 'visible' || isLivePaused()) return
-      api<{ alerts: Alert[] }>('/api/admin/analytics/alerts?fresh=1').then(result => { setAlerts(result.alerts); markLiveUpdate() }).catch(() => undefined)
-    }, LIVE_MS)
+      api<{ alerts: Alert[] }>('/api/admin/analytics/alerts').then(result => { setAlerts(result.alerts); markLiveUpdate() }).catch(() => undefined)
+    }, LIVE_MS * 2)
     return () => clearInterval(timer)
   }, [ready])
 

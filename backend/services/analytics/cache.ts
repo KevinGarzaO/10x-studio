@@ -8,11 +8,11 @@ interface Entry { at: number; body: unknown }
  * `?fresh=1` se salta lo guardado (el botón de recargar del panel) y deja la respuesta nueva guardada.
  * En pruebas no guarda nada, para que cada prueba vea sus propios datos.
  */
-export function ttlCache(ms: number, skip: (path: string) => boolean = () => false) {
+export function ttlCache(ms: number, skip: (path: string) => boolean = () => false, options: { inTests?: boolean } = {}) {
   const entries = new Map<string, Entry>()
 
   return (req: Request, res: Response, next: NextFunction) => {
-    if (req.method !== 'GET' || ms <= 0 || process.env.NODE_ENV === 'test' || skip(req.path)) return next()
+    if (req.method !== 'GET' || ms <= 0 || (process.env.NODE_ENV === 'test' && !options.inTests) || skip(req.path)) return next()
 
     const key = req.originalUrl.replace(/([?&])fresh=1&?/, '$1').replace(/[?&]$/, '')
     const hit = entries.get(key)
