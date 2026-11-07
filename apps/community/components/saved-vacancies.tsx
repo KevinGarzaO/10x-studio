@@ -8,6 +8,9 @@ import { getToken } from '../lib/session'
 import { formatCompanyName } from '../lib/company'
 import { ROLE_CATEGORY_LABELS, SENIORITY_LABELS } from '../lib/profile-options'
 import { AccountLayout } from './account-pages'
+import { saveReturnTo } from '../lib/return-to'
+/** Quien llega por un enlace (correo) sin sesión vuelve a esta página al entrar o registrarse. */
+const rememberHere = () => saveReturnTo(window.location.pathname)
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'
 
@@ -87,7 +90,7 @@ export function SavedVacancies() {
             <Bookmark size={17} />
             <div>
               <strong>Inicia sesión para ver tus guardados</strong>
-              <span><Link href="/login">Entrar</Link> o <Link href="/signup">crear una cuenta gratis</Link>.</span>
+              <span><Link href="/login" onClick={rememberHere}>Entrar</Link> o <Link href="/signup" onClick={rememberHere}>crear una cuenta gratis</Link>.</span>
             </div>
           </div>
         )}

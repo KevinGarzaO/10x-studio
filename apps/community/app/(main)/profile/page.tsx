@@ -6,6 +6,7 @@ import { PublicProfileView, type PublicProfile } from '../../../components/publi
 import { useShell } from '../../../lib/shell-context'
 import { fetchCurrentUser } from '../../../lib/session'
 
+import { saveReturnTo } from '../../../lib/return-to'
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'
 
 export default function OwnProfilePage() {
@@ -21,7 +22,7 @@ export default function OwnProfilePage() {
     setError(false)
     fetchCurrentUser()
       .then(sessionUser => {
-        if (!sessionUser) { router.replace('/login'); return }
+        if (!sessionUser) { saveReturnTo(window.location.pathname); router.replace('/login'); return }
         return fetch(`${API_URL}/api/community/users/${sessionUser.username}`)
           .then(r => { if (!r.ok) throw new Error(); return r.json() })
           .then(d => setProfile(d.user))

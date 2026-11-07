@@ -8,6 +8,7 @@ import { Loader2 } from 'lucide-react'
 import { captureSessionFromUrl, getToken } from '@/lib/session'
 import { getAttribution } from '@/lib/attribution'
 
+import { takeReturnTo } from '../../../lib/return-to'
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'
 
 // Destino después de OAuth. Los tokens llegan en el hash de la URL (flujo
@@ -74,7 +75,8 @@ export default function AuthCallbackPage() {
         const happened = justCreated ? 'auth_register' : 'auth_login'
         if (!flowFor(happened).isActive()) flowFor(happened).startFlow({ reuse: true })
         for (const name of ['auth_register', 'auth_login'] as const) flowFor(name).completeFlow('oauth_success')
-        router.replace(data.user?.profile_completed ? '/' : '/onboarding')
+        // Quien venía de un enlace (correo, vacante) vuelve a esa página; si falta el perfil, el onboarding la devuelve al terminar.
+        router.replace(data.user?.profile_completed ? (takeReturnTo() ?? '/') : '/onboarding')
         router.refresh()
       } catch {
         setError('Error de conexión. Intenta de nuevo.')
