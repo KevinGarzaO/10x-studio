@@ -11,6 +11,7 @@ import { IMPACT_WINDOWS, loadChangeImpact } from '../../../services/analytics/ch
 import { loadPushSummary } from '../../../services/analytics/push'
 import { loadBotSummary } from '../../../services/analytics/bot-traffic'
 import { loadWallFunnel } from '../../../services/analytics/wall-funnel'
+import { loadExperiment } from '../../../services/linkedin/experiment-data'
 import { parseLinkedInReport } from '../../../services/analytics/linkedin-report'
 import { loadLinkedInReport, saveLinkedInReport } from '../../../services/analytics/linkedin-report-data'
 import { pushTest } from '../../../services/push/push'
@@ -162,6 +163,11 @@ router.post('/linkedin-report', express.raw({ type: ['application/octet-stream',
 /** La ventana de registro sobre una vacante: quién la ve, qué botón toca y quién se registra, por dispositivo y navegador interno. SQL: wall-funnel-migration.sql. */
 router.get('/web/wall', handle('ventana de registro', async (req, res) => {
   res.json(await loadWallFunnel(periodOf(req)))
+}))
+
+/** Experimento de formato de las publicaciones de LinkedIn (la cuarta del día): cuánta gente trae cada formato. SQL: linkedin-experiments-migration.sql. */
+router.get('/linkedin-experiment', handle('experimento de formato', async (_req, res) => {
+  res.json(await loadExperiment())
 }))
 
 /** Posibles bots: cuánto del tráfico parece de servidores y dónde. Solo marca, no cambia los demás números. SQL: web-analytics-bots-migration.sql. */

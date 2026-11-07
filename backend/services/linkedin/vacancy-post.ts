@@ -183,6 +183,15 @@ const OPENERS: ((title: string, company: string) => string)[] = [
 /** La frase que invita a registrarse; es el gancho de todo el post. */
 const CALL_TO_ACTION = '¿Qué tan bien encajas? Regístrate gratis en AvoTalent y ve tu % de match con tus skills.'
 
+/**
+ * El texto con pregunta del experimento de formato (ver experiment.ts): abre hablándole a quien busca ese puesto, en vez de anunciar la
+ * vacante, y la invitación a registrarse llega antes de postularse. Misma información y mismo enlace; solo cambia cómo abre y cierra.
+ */
+function questionOpener(title: string, company: string, role: string | undefined): string {
+  return role ? `🎯 ¿Buscas tu próximo reto como ${role}? ${company} abre la vacante de ${title}` : `🎯 ¿Te ves como ${title}? ${company} está contratando`
+}
+const QUESTION_CALL_TO_ACTION = 'Antes de postularte, mira cuánto encajas: regístrate gratis en AvoTalent y ve tu % de match con tus skills.'
+
 /** Cuántas ubicaciones se escriben cuando la oferta trae varias ("SF • NY • Toronto"). */
 const MAX_LOCATIONS = 2
 
@@ -215,12 +224,15 @@ export function buildPostText(
   url: string,
   variant = 0,
   skillLabels: Record<string, string> = {},
+  style: 'control' | 'pregunta' = 'control',
 ): string {
   const company = (vacancy.company ?? '').trim()
-  const opener = OPENERS[Math.abs(variant) % OPENERS.length](vacancy.title.trim(), company)
   const place = placeOf(vacancy)
 
   const role = ROLE_CATEGORY_LABEL[vacancy.role_category as RoleCategory]
+  const opener = style === 'pregunta'
+    ? questionOpener(vacancy.title.trim(), company, role)
+    : OPENERS[Math.abs(variant) % OPENERS.length](vacancy.title.trim(), company)
   const level = SENIORITY_TEXT[vacancy.seniority_level ?? '']
   const profile = [role ? `Puesto: ${role}` : null, level ? `Nivel: ${level}` : null].filter(Boolean).join(' · ')
 
@@ -235,7 +247,7 @@ export function buildPostText(
   ].filter(Boolean)
 
   // Bloques separados por una línea en blanco; un bloque sin datos no se escribe.
-  return [opener, details.join('\n'), CALL_TO_ACTION, `👉 ${url}`, hashtagsFor(vacancy).join(' ')]
+  return [opener, details.join('\n'), style === 'pregunta' ? QUESTION_CALL_TO_ACTION : CALL_TO_ACTION, `👉 ${url}`, hashtagsFor(vacancy).join(' ')]
     .filter((block) => block !== '')
     .join('\n\n')
 }

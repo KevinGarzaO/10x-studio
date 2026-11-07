@@ -38,6 +38,48 @@ const day = (iso: string | null) => (iso ? new Date(`${iso}T12:00:00`).toLocaleD
 const pct = (value: number | null | undefined) => (value === null || value === undefined ? '—' : `${value.toLocaleString('es-MX', { maximumFractionDigits: 1 })} %`)
 const n = (value: number | null | undefined) => (value === null || value === undefined ? '—' : fmtNum(value))
 
+interface FormatResult { format: string; label: string; posts: number; arrivals: number; registrations: number; avgArrivals: number | null; medianArrivals: number | null; minArrivals: number | null; maxArrivals: number | null; remaining: number }
+interface Experiment {
+  ready: boolean
+  reason?: string
+  comparable?: boolean
+  minPosts?: number
+  formats?: FormatResult[]
+  verdict?: string
+  measuredSince?: string | null
+  recent?: { slug: string | null; format: string | null; publishedAt: string | null; arrivals: number | null; registrations: number | null }[]
+}
+
+/** El experimento de la cuarta publicación del día (texto de siempre contra texto con pregunta): sale de nuestras visitas, no del Excel. */
+function ExperimentCard() {
+  const { data } = usePanelData<Experiment>('/api/admin/analytics/linkedin-experiment', { keepPrevious: true })
+  if (!data) return null
+  if (!data.ready) return <Card title="Experimento de formato (4.ª publicación del día)"><Empty>{data.reason ?? 'Todavía no está listo.'}</Empty></Card>
+  const formats = data.formats ?? []
+  return (
+    <Card title="Experimento de formato (4.ª publicación del día)" hint="Texto de siempre contra texto con pregunta, alternando por día · se mide con nuestras visitas">
+      <table className="panel-table">
+        <thead><tr><th>Formato</th><th className="num">Publicaciones</th><th className="num">Faltan para {data.minPosts}</th><th className="num">Personas que llegaron</th><th className="num">Promedio por publicación</th><th className="num">Mediana</th><th className="num">Mín – máx</th><th className="num">Registros</th></tr></thead>
+        <tbody>
+          {formats.map(row => (
+            <tr key={row.format}>
+              <td>{row.label}</td>
+              <td className="num">{row.posts}</td>
+              <td className="num">{row.remaining}</td>
+              <td className="num">{fmtNum(row.arrivals)}</td>
+              <td className="num">{row.avgArrivals ?? '—'}</td>
+              <td className="num">{row.medianArrivals ?? '—'}</td>
+              <td className="num">{row.minArrivals === null ? '—' : `${row.minArrivals} – ${row.maxArrivals}`}</td>
+              <td className="num">{fmtNum(row.registrations)}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+      <p role="status"><strong>{data.comparable ? 'Ya se puede comparar: ' : 'Todavía no se puede concluir: '}</strong>{data.verdict}</p>
+    </Card>
+  )
+}
+
 interface UploadResult { duplicate: boolean; posts: number; days: number; warnings?: string[]; period?: { start: string | null; end: string | null } }
 
 /** Sube el Excel tal cual lo exporta LinkedIn (Análisis conjunto). Cada lunes. */
@@ -86,6 +128,7 @@ export default function ReporteLinkedInPage() {
   return (
     <>
       <PageHeader title="Reporte de LinkedIn" subtitle="Lo que LinkedIn dice de tus publicaciones contra lo que AvoTalent mide: qué funciona y qué no." />
+      <ExperimentCard />
       <UploadCard onDone={reload} />
 
       {error && <ErrorBox message={error} onRetry={reload} />}

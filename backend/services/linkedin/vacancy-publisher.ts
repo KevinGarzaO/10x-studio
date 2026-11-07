@@ -8,6 +8,7 @@ import {
   type LinkedInVacancy,
   type PostedVacancy,
 } from './vacancy-post'
+import { assignFormat, type Assignment } from './experiment'
 
 /**
  * Publica en el LinkedIn de la persona dueña de la cuenta una vacante del feed, sin IA:
@@ -26,6 +27,9 @@ const FAILED_RETRY_HOURS = 24
  */
 const MIN_GAP_MINUTES = 90
 
+/** Lo que se anota de cada publicación para el experimento de formato: qué formato fue, en cuál turno del día y de qué experimento. */
+export const experimentColumns = (assignment: Assignment) => ({ format: assignment.format, experiment: assignment.experiment, slot: assignment.slot })
+
 export interface PublishResult {
   status: 'published' | 'preview' | 'skipped'
   reason?: string
@@ -33,6 +37,8 @@ export interface PublishResult {
   url?: string
   vacancy?: LinkedInVacancy
   linkedinPostId?: string
+  /** Qué formato de texto tocó (experimento de la cuarta publicación del día). */
+  format?: string
 }
 
 interface Row {
@@ -126,8 +132,10 @@ export async function publishVacancyPost(options: { dryRun?: boolean; slug?: str
   if (!vacancy || !vacancy.slug) return { status: 'skipped', reason: 'no hay vacantes disponibles para publicar' }
 
   const url = vacancyUrl(base, vacancy.slug)
-  const text = buildPostText(vacancy, url, posted, skillLabels)
-  if (options.dryRun) return { status: 'preview', text, url, vacancy }
+  // La cuarta publicación del día alterna el formato del texto (experiment.ts); las demás van con el texto de siempre.
+  const assignment = assignFormat(new Date())
+  const text = buildPostText(vacancy, url, posted, skillLabels, assignment.style)
+  if (options.dryRun) return { status: 'preview', text, url, vacancy, format: assignment.format }
 
   const { data: profile } = await supabase
     .from('linkedin_profiles')
@@ -154,19 +162,20 @@ export async function publishVacancyPost(options: { dryRun?: boolean; slug?: str
 
   // La fila se crea ANTES de publicar: si dos ejecuciones coinciden, el UNIQUE de
   // vacancy_id hace que solo una gane y la otra no publique nada.
-  const { data: claim, error: claimError } = await supabase
-    .from('linkedin_vacancy_posts')
-    .insert({
-      vacancy_id: vacancy.id,
-      vacancy_slug: vacancy.slug,
-      company: vacancy.company,
-      role_category: vacancy.role_category,
-      post_text: text,
-      post_url: url,
-      status: 'pending',
-    })
-    .select('id')
-    .single()
+  const row = {
+    vacancy_id: vacancy.id,
+    vacancy_slug: vacancy.slug,
+    company: vacancy.company,
+    role_category: vacancy.role_category,
+    post_text: text,
+    post_url: url,
+    status: 'pending',
+  }
+  let { data: claim, error: claimError } = await supabase.from('linkedin_vacancy_posts').insert({ ...row, ...experimentColumns(assignment) }).select('id').single()
+  // Mientras no se corra linkedin-experiments-migration.sql las columnas nuevas no existen: se publica igual, sin anotar el formato.
+  if (claimError && /format|experiment|slot|column/i.test(claimError.message)) {
+    ;({ data: claim, error: claimError } = await supabase.from('linkedin_vacancy_posts').insert(row).select('id').single())
+  }
 
   if (claimError || !claim) {
     // Un fallo anterior de esa vacante deja su fila: se reintenta en lugar de quedar atorada.
@@ -187,7 +196,7 @@ export async function publishVacancyPost(options: { dryRun?: boolean; slug?: str
       .update({ status: 'published', linkedin_post_id: linkedinPostId, published_at: new Date().toISOString() })
       .eq('id', claim.id)
 
-    return { status: 'published', text, url, vacancy, linkedinPostId }
+    return { status: 'published', text, url, vacancy, linkedinPostId, format: assignment.format }
   } catch (error) {
     const message = (error as Error).message
     await supabase.from('linkedin_vacancy_posts').update({ status: 'failed', error: message.slice(0, 500) }).eq('id', claim.id)
