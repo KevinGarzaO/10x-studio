@@ -6,12 +6,12 @@ const router = Router()
 router.use(communityAuthMiddleware)
 
 /** Lo que se puede apagar: los correos ("Para ti" y el seguimiento de postulaciones) y los avisos push (`push`). Sin valor guardado, todo está encendido. */
-export const EMAIL_PREF_KEYS = ['digest', 'alerts', 'followups', 'push'] as const
+export const EMAIL_PREF_KEYS = ['digest', 'alerts', 'followups', 'push', 'community'] as const
 export type EmailPrefs = Record<(typeof EMAIL_PREF_KEYS)[number], boolean>
 
 export const withDefaults = (stored: unknown): EmailPrefs => {
   const source = stored && typeof stored === 'object' ? (stored as Record<string, unknown>) : {}
-  return { digest: source.digest !== false, alerts: source.alerts !== false, followups: source.followups !== false, push: source.push !== false }
+  return { digest: source.digest !== false, alerts: source.alerts !== false, followups: source.followups !== false, push: source.push !== false, community: source.community !== false }
 }
 
 // Los avisos de la persona: los 50 más recientes y cuántos no ha leído.

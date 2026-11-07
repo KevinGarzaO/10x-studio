@@ -16,6 +16,7 @@ export interface EmailPrefs {
   alerts: boolean
   followups: boolean
   push: boolean
+  community: boolean
 }
 
 async function call(path: string, init: RequestInit = {}): Promise<Response | null> {

@@ -30,6 +30,7 @@ import communityDiscoverRoutes from './src/routes/community/discover.routes'
 import communitySeoRoutes from './src/routes/community/seo.routes'
 import communityAttributionRoutes from './src/routes/community/attribution.routes'
 import webAnalyticsCollectRoutes from './src/routes/analytics/collect.routes'
+import resendWebhookRoutes from './src/routes/webhooks/resend.routes'
 import communityFeedRoutes from './src/routes/community/feed.routes'
 import communityHistoryRoutes from './src/routes/community/history.routes'
 import communitySkillExamsRoutes from './src/routes/community/skill-exams.routes'
@@ -80,6 +81,8 @@ app.use(cors({
 }))
 // Mide cuánto tarda cada ruta de /api (resumen por hora; ver services/performance/api-timing.ts)
 app.use(apiTiming())
+// El webhook de Resend va ANTES de express.json: su firma se calcula sobre el cuerpo tal como llegó (src/routes/webhooks/resend.routes.ts).
+app.use('/api/webhooks/resend', express.raw({ type: 'application/json', limit: '1mb' }), resendWebhookRoutes)
 app.use(express.json({ limit: '15mb' }))
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')))
 

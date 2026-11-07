@@ -15,7 +15,7 @@ export const VALUE_POINTS = {
   tappedApply: 2, // por cada vez que tocó postular y salió al sitio de la empresa (hasta MAX_PER_ACTION)
   applied: 4, // por cada vacante que dijo haberse postulado (hasta MAX_PER_ACTION)
   returnedAnotherDay: 3, // volvió otro día distinto al de su registro
-  emailClick: 2, // por cada clic en un correo (hasta MAX_PER_ACTION). Aún sin datos: espera el webhook de Resend
+  emailClick: 2, // por cada clic en un correo (hasta MAX_PER_ACTION). Viene del webhook de Resend (email_events)
   participated: 5, // creó una discusión, un comentario o un voto
 } as const
 /** Una misma acción repetida no sigue sumando para siempre. */
@@ -119,7 +119,7 @@ export function summarize(rows: PersonValueRow[]): PeopleValueSummary {
     notes: [
       'Una fila por cuenta real (sin equipo, pruebas ni perfiles del scraper). Los puntos son provisionales y están en un solo lugar del código (VALUE_POINTS).',
       `Temperatura por la última vez activa: caliente hasta ${TEMPERATURE.hotWithinDays} días, tibio hasta ${TEMPERATURE.warmWithinDays}, frío más allá o sin actividad.`,
-      'Los clics en correos todavía no suman: falta el webhook de Resend. Las aperturas no suman nunca (no son confiables).',
+      'Los clics en correos suman cuando el webhook de Resend los guarda (email_events). Las aperturas no suman nunca (no son confiables).',
       'Solo conteos: sin correos ni nombres. Con pocas personas por grupo, léelos como conteo y no como porcentaje.',
     ],
   }
@@ -132,7 +132,7 @@ const countBy = (rows: { user_id: string | null }[]): Map<string, number> => {
 }
 
 export async function loadPeopleValue(now: Date = new Date()): Promise<PersonValueRow[]> {
-  const [people, saved, applications, activity, posts, comments, votes] = await Promise.all([
+  const [people, saved, applications, activity, posts, comments, votes, clicks] = await Promise.all([
     readAll<PersonInput>((from, to) => supabase.from('users').select('id, email, created_at, profile_completed').eq('user_kind', 'user').eq('is_test_account', false).not('is_scraper_profile', 'is', true).range(from, to)),
     readAll<{ user_id: string | null }>((from, to) => supabase.from('community_saved_posts').select('user_id').range(from, to)),
     readAll<{ user_id: string | null; status: string }>((from, to) => supabase.from('vacancy_applications').select('user_id, status').range(from, to)).catch(() => [] as { user_id: string | null; status: string }[]),
@@ -140,6 +140,8 @@ export async function loadPeopleValue(now: Date = new Date()): Promise<PersonVal
     readAll<{ author_id: string | null }>((from, to) => supabase.from('community_posts').select('author_id').in('type', ['discussion']).range(from, to)),
     readAll<{ author_id: string | null }>((from, to) => supabase.from('community_comments').select('author_id').range(from, to)),
     readAll<{ user_id: string | null }>((from, to) => supabase.from('community_votes').select('user_id').range(from, to)),
+    // Los clics en correos (webhook de Resend, email-events-migration.sql). Sin la tabla no suman, y nada se rompe. Las aperturas NUNCA suman.
+    readAll<{ user_id: string | null }>((from, to) => supabase.from('email_events').select('user_id').eq('event_type', 'clicked').not('user_id', 'is', null).range(from, to)).catch(() => [] as { user_id: string | null }[]),
   ])
   const activeDays = new Map<string, string[]>()
   for (const row of activity) {
@@ -153,5 +155,5 @@ export async function loadPeopleValue(now: Date = new Date()): Promise<PersonVal
   for (const row of votes) if (row.user_id) participated.add(row.user_id)
   const tapped = countBy(applications)
   const applied = countBy(applications.filter((row) => ['applied', 'interview', 'offer', 'rejected'].includes(row.status)))
-  return buildPeopleValue(people, { savedVacancies: countBy(saved), tappedApply: tapped, applied, activeDays, participated, emailClicks: new Map() }, now)
+  return buildPeopleValue(people, { savedVacancies: countBy(saved), tappedApply: tapped, applied, activeDays, participated, emailClicks: countBy(clicks) }, now)
 }

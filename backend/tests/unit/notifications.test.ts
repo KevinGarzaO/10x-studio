@@ -87,18 +87,18 @@ describe('la campana', () => {
 
 describe('las preferencias de correo', () => {
   it('sin nada guardado todo está encendido', () => {
-    expect(withDefaults(null)).toEqual({ digest: true, alerts: true, followups: true, push: true })
-    expect(withDefaults({ digest: false })).toEqual({ digest: false, alerts: true, followups: true, push: true })
+    expect(withDefaults(null)).toEqual({ digest: true, alerts: true, followups: true, push: true, community: true })
+    expect(withDefaults({ digest: false })).toEqual({ digest: false, alerts: true, followups: true, push: true, community: true })
   })
 
   it('las lee con lo guardado', async () => {
-    expect((await request(app()).get('/notifications/preferences').expect(200)).body.preferences).toEqual({ digest: false, alerts: true, followups: true, push: true })
+    expect((await request(app()).get('/notifications/preferences').expect(200)).body.preferences).toEqual({ digest: false, alerts: true, followups: true, push: true, community: true })
   })
 
   it('guarda solo claves conocidas y valores booleanos', async () => {
     const res = await request(app()).put('/notifications/preferences').send({ alerts: false, digest: 'no', hack: true }).expect(200)
-    expect(res.body.preferences).toEqual({ digest: false, alerts: false, followups: true, push: true })
-    expect(db.updates.at(-1)?.patch).toEqual({ email_prefs: { digest: false, alerts: false, followups: true, push: true } })
+    expect(res.body.preferences).toEqual({ digest: false, alerts: false, followups: true, push: true, community: true })
+    expect(db.updates.at(-1)?.patch).toEqual({ email_prefs: { digest: false, alerts: false, followups: true, push: true, community: true } })
   })
 })
 
