@@ -12,6 +12,7 @@ import { loadPushSummary } from '../../../services/analytics/push'
 import { loadBotSummary } from '../../../services/analytics/bot-traffic'
 import { loadWallFunnel } from '../../../services/analytics/wall-funnel'
 import { loadExperiment } from '../../../services/linkedin/experiment-data'
+import { loadSupply } from '../../../services/analytics/supply-data'
 import { parseLinkedInReport } from '../../../services/analytics/linkedin-report'
 import { loadLinkedInReport, saveLinkedInReport } from '../../../services/analytics/linkedin-report-data'
 import { pushTest } from '../../../services/push/push'
@@ -163,6 +164,11 @@ router.post('/linkedin-report', express.raw({ type: ['application/octet-stream',
 /** La ventana de registro sobre una vacante: quién la ve, qué botón toca y quién se registra, por dispositivo y navegador interno. SQL: wall-funnel-migration.sql. */
 router.get('/web/wall', handle('ventana de registro', async (req, res) => {
   res.json(await loadWallFunnel(periodOf(req)))
+}))
+
+/** Oferta y cola de vacantes por puesto, y cuántos días de reserva le quedan a LinkedIn. Solo mide: no cambia qué se publica. */
+router.get('/supply', handle('oferta y cola', async (_req, res) => {
+  res.json(await loadSupply())
 }))
 
 /** Experimento de formato de las publicaciones de LinkedIn (la cuarta del día): cuánta gente trae cada formato. SQL: linkedin-experiments-migration.sql. */
