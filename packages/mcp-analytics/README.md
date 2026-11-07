@@ -84,7 +84,7 @@ El servidor ya abre cada consulta como `READ ONLY`, pero lo correcto es que ni s
 ```sql
 CREATE ROLE avo_mcp_reader LOGIN PASSWORD 'CAMBIA-ESTA-CLAVE';
 GRANT USAGE ON SCHEMA public TO avo_mcp_reader;
-GRANT SELECT ON analytics_real_sessions, analytics_sessions, analytics_events, analytics_clarity_metrics, analytics_clarity_links,
+GRANT SELECT ON analytics_real_sessions, analytics_human_sessions, analytics_sessions, analytics_events, analytics_clarity_metrics, analytics_clarity_links,
   analytics_error_logs, analytics_flow_metrics, analytics_flow_runs, product_changes, api_timing_hourly TO avo_mcp_reader;
 GRANT SELECT (id, email, user_kind, created_at, is_test_account, is_scraper_profile) ON users TO avo_mcp_reader;
 GRANT EXECUTE ON FUNCTION analytics_funnel(int), analytics_landing_performance(int, int), analytics_period_start(int),

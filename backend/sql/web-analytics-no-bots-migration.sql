@@ -15,6 +15,9 @@ CREATE OR REPLACE VIEW analytics_human_sessions AS
 SELECT r.*
 FROM analytics_real_sessions r
 WHERE NOT EXISTS (SELECT 1 FROM analytics_likely_bot_sessions b WHERE b.session_id = r.session_id);
+GRANT SELECT ON analytics_human_sessions TO service_role;
+-- El rol de solo lectura del agente (si existe) también la necesita: analytics_segments la lee con sus permisos.
+DO $$ BEGIN IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'avo_mcp_reader') THEN GRANT SELECT ON analytics_human_sessions TO avo_mcp_reader; END IF; END $$;
 
 -- Las personas del periodo agrupadas por lo que se pida (todo el sitio, canal, página de entrada, país, idioma, dispositivo...).
 -- Una persona cuenta una vez en cada grupo donde tuvo sesiones (por eso los grupos no suman el total).

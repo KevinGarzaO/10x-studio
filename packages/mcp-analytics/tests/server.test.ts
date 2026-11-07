@@ -30,7 +30,7 @@ describe('servidor MCP de analítica', () => {
     pg = new PGlite()
     await pg.exec('CREATE ROLE service_role; CREATE ROLE anon; CREATE ROLE authenticated;')
     await pg.exec(`CREATE TABLE users (id uuid PRIMARY KEY, email text, is_test_account boolean DEFAULT false, is_scraper_profile boolean DEFAULT false, user_kind text DEFAULT 'user', created_at timestamptz DEFAULT now())`)
-    for (const file of ['web-analytics-migration.sql', 'web-analytics-detail-migration.sql', 'clarity-migration.sql', 'telemetry-migration.sql', 'web-analytics-segments-migration.sql', 'web-analytics-retention-migration.sql', 'web-analytics-rhythm-migration.sql', 'product-changes-migration.sql', 'api-timing-migration.sql']) await pg.exec(read(file))
+    for (const file of ['web-analytics-migration.sql', 'web-analytics-detail-migration.sql', 'clarity-migration.sql', 'telemetry-migration.sql', 'web-analytics-segments-migration.sql', 'web-analytics-bots-migration.sql', 'web-analytics-no-bots-migration.sql', 'web-analytics-retention-migration.sql', 'web-analytics-rhythm-migration.sql', 'product-changes-migration.sql', 'api-timing-migration.sql']) await pg.exec(read(file))
 
     const ana = uuid(1)
     await pg.exec(`INSERT INTO users (id, email) VALUES ('${ana}', 'ana@example.com')`)
