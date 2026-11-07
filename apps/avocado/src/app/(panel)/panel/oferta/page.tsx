@@ -7,7 +7,7 @@ interface Supply {
   ready: boolean
   people?: number
   totals?: { open: number; openServing: number; openServingPct: number | null; queued: number; queuedServing: number; queuedServingPct: number | null }
-  linkedin?: { perDay: number; reserve: number; reserveDays: number | null; reserveWithQueue: number; reserveWithQueueDays: number | null; focusRoles: string[] }
+  linkedin?: { perDay: number; windowDays: number; needed: number; reserve: number; coveredDays: number; coversWindow: boolean; balanceAtRefresh: number; reserveWithQueue: number; balanceWithQueue: number; focusRoles: string[] }
   nextBatch?: { at: string | null; daysUntil: number | null }
   byRole?: RoleSupply[]
   rolesWithoutPeople?: string[]
@@ -16,7 +16,8 @@ interface Supply {
 }
 
 const pct = (value: number | null | undefined) => (value === null || value === undefined ? '—' : `${value.toLocaleString('es-MX', { maximumFractionDigits: 1 })} %`)
-const dayCount = (value: number | null | undefined) => (value === null || value === undefined ? '—' : `${value.toLocaleString('es-MX', { maximumFractionDigits: 1 })} días`)
+/** «Sobran 274» / «Faltan 34»: el saldo al llegar el lote nuevo. */
+const balance = (value: number) => (value >= 0 ? `sobrarían ${fmtNum(value)}` : `faltarían ${fmtNum(-value)}`)
 
 export default function OfertaPage() {
   const { data, loading, error, reload } = usePanelData<Supply>('/api/admin/analytics/supply', { keepPrevious: true })
@@ -33,7 +34,7 @@ export default function OfertaPage() {
           <div className="panel-grid cols-3">
             <Stat label="Vacantes abiertas que le sirven a alguien" value={pct(data.totals.openServingPct)} caption={`${fmtNum(data.totals.openServing)} de ${fmtNum(data.totals.open)} en el feed · ${fmtNum(data.people ?? 0)} personas`} />
             <Stat label="En la cola del scraper" value={fmtNum(data.totals.queued)} caption={`${fmtNum(data.totals.queuedServing)} le sirven a alguien (${pct(data.totals.queuedServingPct)})${data.nextBatch?.daysUntil !== null && data.nextBatch?.daysUntil !== undefined ? ` · próximo lote en ${data.nextBatch.daysUntil} días` : ''}`} />
-            <Stat label="Reserva para LinkedIn" value={dayCount(data.linkedin.reserveDays)} caption={`${fmtNum(data.linkedin.reserve)} sin publicar, a ${data.linkedin.perDay} por día · con la cola: ${dayCount(data.linkedin.reserveWithQueueDays)}`} />
+            <Stat label="LinkedIn hasta el próximo lote" value={`${fmtNum(data.linkedin.reserve)} de ${fmtNum(data.linkedin.needed)}`} tone={data.linkedin.coversWindow ? undefined : 'warn'} caption={`vacantes útiles sin publicar contra las que pide la ventana (${data.linkedin.windowDays} días × ${data.linkedin.perDay}) · al llegar el lote ${balance(data.linkedin.balanceAtRefresh)}`} />
           </div>
 
           <Card title="Por puesto" hint="Puestos con más candidatas primero · «foco» = se publican en LinkedIn">

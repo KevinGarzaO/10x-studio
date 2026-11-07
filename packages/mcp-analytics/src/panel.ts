@@ -32,7 +32,7 @@ export const PANEL_METRICS = {
   web_bots: { path: '/web/bots', about: 'Posibles bots: cuántas personas nuevas activas parecen servidores o revisores automáticos (centros de datos, pantallas de navegador sin cabeza), por país y ciudad, y las nuevas activas sin ellos. Solo marca; no cambia los demás números.' },
   web_wall: { path: '/web/wall', about: 'La ventana de registro sobre una vacante: personas que la ven, tocan un botón (LinkedIn, GitHub, correo) y se registran, por dispositivo (móvil/escritorio) y por navegador interno de otra app (LinkedIn, Facebook...).' },
   linkedin_experiment: { path: '/linkedin-experiment', about: 'Experimento de formato de las publicaciones de LinkedIn: la cuarta del día alterna texto de siempre y texto con pregunta; cuánta gente y registros trae cada formato, cuántas publicaciones faltan para comparar (10 por formato) y si ya hay una diferencia grande o todavía es azar.' },
-  supply: { path: '/supply', about: 'Oferta y cola de vacantes por puesto: candidatas, vacantes abiertas, en la cola del scraper, cuántas le sirven a alguien y cuántos días de reserva le quedan a LinkedIn (4 al día), más el próximo lote del scraper.' },
+  supply: { path: '/supply', about: 'Oferta y cola de vacantes por puesto: candidatas, vacantes abiertas, en la cola del scraper, cuántas le sirven a alguien y si las vacantes útiles sin publicar alcanzan para las publicaciones de LinkedIn (4 al día) hasta el próximo lote del scraper (cuántas sobrarían o faltarían al llegar el lote nuevo).' },
   web_rhythm: { path: '/web/rhythm', about: 'Ritmo de la semana (días y horas).' },
   web_retention: { path: '/web/retention', about: 'Retención de las sesiones nuevas (personas activas que vuelven), sin listas de personas.' },
 } as const
