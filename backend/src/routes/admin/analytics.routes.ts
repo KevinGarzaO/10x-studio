@@ -13,6 +13,7 @@ import { loadBotSummary } from '../../../services/analytics/bot-traffic'
 import { loadWallFunnel } from '../../../services/analytics/wall-funnel'
 import { loadExperiment } from '../../../services/linkedin/experiment-data'
 import { loadSupply } from '../../../services/analytics/supply-data'
+import { loadFeedbackSummary } from '../../../services/analytics/feedback-summary'
 import { parseLinkedInReport } from '../../../services/analytics/linkedin-report'
 import { loadLinkedInReport, saveLinkedInReport } from '../../../services/analytics/linkedin-report-data'
 import { pushTest } from '../../../services/push/push'
@@ -164,6 +165,11 @@ router.post('/linkedin-report', express.raw({ type: ['application/octet-stream',
 /** La ventana de registro sobre una vacante: quién la ve, qué botón toca y quién se registra, por dispositivo y navegador interno. SQL: wall-funnel-migration.sql. */
 router.get('/web/wall', handle('ventana de registro', async (req, res) => {
   res.json(await loadWallFunnel(periodOf(req)))
+}))
+
+/** Lo que dice la gente dentro de la app (botón «¿Qué te faltó?»): sin ids ni correos, con el contexto de quien respondió. SQL: feedback-migration.sql. */
+router.get('/feedback', handle('feedback', async (_req, res) => {
+  res.json(await loadFeedbackSummary())
 }))
 
 /** Oferta y cola de vacantes por puesto, y cuántos días de reserva le quedan a LinkedIn. Solo mide: no cambia qué se publica. */

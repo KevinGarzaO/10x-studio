@@ -3,6 +3,8 @@
 import { useMemo, useState, useEffect, useCallback, useRef } from 'react'
 import { trackEvent } from '../lib/web-analytics'
 import { currentInAppBrowser } from '../lib/in-app-browser'
+import { fetchFeedbackEligibility } from '../lib/feedback'
+import { FeedbackSheet } from './feedback-sheet'
 import { flowFor } from '../lib/flow-tracker'
 import { usePageReady } from '../lib/page-timing'
 import { hadSessionBefore } from '../lib/session-marker'
@@ -11,7 +13,7 @@ import Link from 'next/link'
 import { usePathname, useRouter, useSearchParams } from 'next/navigation'
 import {
   Bell, Bookmark, BriefcaseBusiness, Flame,
-  Hash, Menu, MessageCircle, PenLine, Search,
+  Hash, Menu, MessageCircle, MessageSquare, PenLine, Search,
   LogOut, Send, Settings, Share2, ShieldCheck, Sparkles, Tag, Target, TrendingUp, Users, X,
   ArrowBigUp, LockKeyhole, CheckCircle2, Building, MapPin, Home as HomeIcon, Mail, Clock, Check, BadgeCheck, Eye
 } from 'lucide-react'
@@ -125,6 +127,17 @@ function Avatar({ initials, tone = 'cyan', avatar }: { initials: string; tone?: 
 export function ProfileMenu({ user }: { user: any }) {
   const [open, setOpen] = useState(false)
   const menuRef = useRef<HTMLDivElement>(null)
+  // «¿Qué te faltó?»: solo lo ven las cuentas que el servidor marca como elegibles (cuenta real con 2 o más días de uso después de
+  // registrarse), y no mientras alguien está viendo una vacante para postularse. Se pregunta al abrir el menú.
+  const [canFeedback, setCanFeedback] = useState(false)
+  const [feedbackOpen, setFeedbackOpen] = useState(false)
+  useEffect(() => {
+    if (!open || !user) return
+    if ((window.location.pathname ?? '').startsWith('/vacantes/')) { setCanFeedback(false); return }
+    let live = true
+    void fetchFeedbackEligibility().then(value => { if (live) setCanFeedback(value) })
+    return () => { live = false }
+  }, [open, user])
 
   useEffect(() => {
     if (!open) return
@@ -159,6 +172,11 @@ export function ProfileMenu({ user }: { user: any }) {
           <Link href="/settings" className="profile-menu-item" role="menuitem" onClick={() => setOpen(false)}>
             <Settings size={15} /> Configuración
           </Link>
+          {canFeedback && (
+            <button type="button" className="profile-menu-item" role="menuitem" onClick={() => { setOpen(false); setFeedbackOpen(true) }}>
+              <MessageSquare size={15} /> ¿Qué te faltó?
+            </button>
+          )}
           <button
             type="button"
             className="profile-menu-item profile-menu-logout"
@@ -169,6 +187,7 @@ export function ProfileMenu({ user }: { user: any }) {
           </button>
         </div>
       )}
+      {feedbackOpen && <FeedbackSheet onClose={() => setFeedbackOpen(false)} />}
     </div>
   )
 }

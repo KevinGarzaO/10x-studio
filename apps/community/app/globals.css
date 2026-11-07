@@ -1420,3 +1420,10 @@ button { cursor: pointer; }
 .push-preview { display: flex; flex-direction: column; gap: 2px; margin: 0 0 16px; padding: 12px 14px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface-2); font-size: 13px; line-height: 1.4; box-shadow: 0 4px 14px rgba(0,0,0,.08); }
 .push-preview-app { color: var(--text-muted); font-size: 11px; font-weight: 600; letter-spacing: .02em; }
 .push-preview strong { font-size: 14px; }
+.feedback-chips { display: flex; flex-wrap: wrap; gap: 8px; margin: 0 0 14px; }
+.feedback-chip { border: 1px solid var(--line); background: var(--bg); color: var(--text-2); font-size: 13px; font-weight: 600; padding: 7px 12px; border-radius: 999px; cursor: pointer; }
+.feedback-chip.active { background: var(--accent-soft); border-color: var(--brand); color: var(--accent-text); }
+.feedback-label { display: block; margin: 0 0 6px; font-size: 13px; font-weight: 600; color: var(--text-2); }
+.feedback-text { width: 100%; box-sizing: border-box; padding: 12px; border: 1px solid var(--line); border-radius: 10px; background: var(--bg); color: var(--text); font: inherit; font-size: 14px; line-height: 1.5; resize: vertical; margin-bottom: 12px; }
+.feedback-text:focus { outline: 2px solid var(--brand); outline-offset: 1px; }
+.feedback-error { margin: 0 0 12px; color: var(--danger, #b91c1c); font-size: 13px; }

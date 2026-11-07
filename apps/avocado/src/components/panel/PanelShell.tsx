@@ -41,6 +41,7 @@ export const NAV_GROUPS: NavGroup[] = [
       { href: '/panel/adquisicion', label: 'Adquisición', icon: '⇢' },
       { href: '/panel/cuentas', label: 'Cuentas por semana', icon: '▦' },
       { href: '/panel/oferta', label: 'Oferta y cola', icon: '📦' },
+      { href: '/panel/feedback', label: 'Feedback', icon: '💬' },
       { href: '/panel/usuarios', label: 'Usuarios', icon: '☺' },
       { href: '/panel/retencion', label: 'Retención', icon: '↻' },
       { href: '/panel/configuracion', label: 'Configuración', icon: '⚙' },
