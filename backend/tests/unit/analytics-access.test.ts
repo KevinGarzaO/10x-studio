@@ -52,6 +52,11 @@ describe('analyticsAccess', () => {
     for (const path of ['/me', '/users', '/web/live', '/web/sessions', '/web/sessions/:id']) expect(SERVICE_READABLE.has(path)).toBe(false)
   })
 
+  it('the list of people with emails is never readable by the key, only the counts are', () => {
+    expect(SERVICE_READABLE.has('/people-value')).toBe(false)
+    expect(SERVICE_READABLE.has('/people-value/summary')).toBe(true)
+  })
+
   it('stripPeople goes through arrays and keeps the numbers', () => {
     expect(stripPeople([{ n: 1, email: 'x' }, { n: 2, profile: {} }])).toEqual([{ n: 1 }, { n: 2 }])
   })

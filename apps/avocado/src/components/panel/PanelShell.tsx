@@ -43,6 +43,7 @@ export const NAV_GROUPS: NavGroup[] = [
       { href: '/panel/oferta', label: 'Oferta y cola', icon: '📦' },
       { href: '/panel/feedback', label: 'Feedback', icon: '💬' },
       { href: '/panel/usuarios', label: 'Usuarios', icon: '☺' },
+      { href: '/panel/personas', label: 'Personas de valor', icon: '★' },
       { href: '/panel/retencion', label: 'Retención', icon: '↻' },
       { href: '/panel/configuracion', label: 'Configuración', icon: '⚙' },
     ],

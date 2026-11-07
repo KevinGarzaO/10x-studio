@@ -16,6 +16,7 @@ import { loadExperiment } from '../../../services/linkedin/experiment-data'
 import { loadSupply } from '../../../services/analytics/supply-data'
 import { loadFeedVisible } from '../../../services/analytics/feed-visible'
 import { loadCommunityParticipation } from '../../../services/analytics/community-participation'
+import { loadPeopleValue, summarize, VALUE_POINTS, MAX_PER_ACTION, TEMPERATURE } from '../../../services/analytics/people-value'
 import { loadFeedbackSummary } from '../../../services/analytics/feedback-summary'
 import { parseLinkedInReport } from '../../../services/analytics/linkedin-report'
 import { loadLinkedInReport, saveLinkedInReport } from '../../../services/analytics/linkedin-report-data'
@@ -188,6 +189,23 @@ router.get('/feedback', handle('feedback', async (_req, res) => {
 router.get('/community', handle('comunidad', async (req, res) => {
   const weeks = Math.min(Math.max(parseInt(String(req.query.weeks ?? req.query.limit ?? '6'), 10) || 6, 1), 12)
   res.json(await loadCommunityParticipation(weeks))
+}))
+
+/**
+ * Personas de valor y temperatura. LA LISTA lleva correos: solo el fundador (sesión + superadmin); la llave de servicio del agente NO abre esta
+ * ruta. El agente lee `/people-value/summary`: solo conteos por temperatura y por rango de valor.
+ */
+router.get('/people-value', handle('personas de valor', async (_req, res) => {
+  const rows = await loadPeopleValue()
+  res.json({
+    people: rows.sort((a, b) => b.value - a.value || (a.daysSinceActive ?? 9999) - (b.daysSinceActive ?? 9999)),
+    config: { points: VALUE_POINTS, maxPerAction: MAX_PER_ACTION, temperature: TEMPERATURE },
+    summary: summarize(rows),
+  })
+}))
+
+router.get('/people-value/summary', handle('personas de valor (conteos)', async (_req, res) => {
+  res.json(summarize(await loadPeopleValue()))
 }))
 
 /** El feed visible: de las vacantes abiertas, cuántas se ven y cuántas están ocultas (no le sirven a nadie), por puesto. SQL: feed-visibility-migration.sql. */
