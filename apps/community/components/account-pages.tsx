@@ -14,6 +14,7 @@ import {
 import { saveSession, getToken, fetchCurrentUser } from '../lib/session'
 import { NotificationPrefs } from './notification-prefs'
 import { LegalLinks } from './legal-layout'
+import { FollowLinkedIn } from './follow-linkedin'
 import { SENIORITY_OPTIONS, MODALITY_OPTIONS, ROLE_CATEGORY_OPTIONS, ROLE_CATEGORY_LABELS, SENIORITY_LABELS } from '../lib/profile-options'
 import { PhotoPicker, SegmentedControl, SkillsInput, RoleCategorySelect } from './profile-form-fields'
 import { useSkillCatalog, skillLabel } from '../lib/skill-catalog'
@@ -564,6 +565,7 @@ export function AuthPage({ mode }: { mode: 'login' | 'signup' }) {
           {signup && <p className="auth-note">Al crear tu cuenta te enviaremos un correo de bienvenida con tus primeros pasos.</p>}
           {signup && <p className="auth-note">Al registrarte aceptas los <Link href="/terminos">Términos y condiciones</Link> y el <Link href="/privacidad">Aviso de privacidad</Link>.</p>}
           {!signup && <LegalLinks className="legal-links auth-legal" />}
+          <p className="auth-note auth-follow"><FollowLinkedIn surface={signup ? 'signup' : 'login'} className="follow-linkedin-inline" /></p>
 
           <div className="auth-switch">
             {signup ? (

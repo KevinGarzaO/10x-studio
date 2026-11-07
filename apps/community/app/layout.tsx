@@ -8,6 +8,7 @@ import { SessionCapture } from '@/components/session-capture'
 import { WebAnalytics } from '@/components/web-analytics'
 import { Inter } from 'next/font/google'
 import { THEME_SCRIPT } from '@/lib/theme'
+import { organizationSchema } from '@/lib/social'
 import './globals.css'
 
 // Inter se carga de verdad. Antes solo se nombraba y, sin estar instalada, el navegador usaba Arial y los títulos en
@@ -39,6 +40,8 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
     <html lang="es" data-theme="light" className={`bg-background ${inter.variable}`} suppressHydrationWarning>
       <head>
         <script dangerouslySetInnerHTML={{ __html: THEME_SCRIPT }} />
+        {/* AvoTalent como organización (con su página de LinkedIn) para los buscadores */}
+        <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(organizationSchema()) }} />
         {GA_MEASUREMENT_ID && (
           <>
             <script async src={`https://www.googletagmanager.com/gtag/js?id=${GA_MEASUREMENT_ID}`} />

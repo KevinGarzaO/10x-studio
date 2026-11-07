@@ -4,13 +4,16 @@ export function emailSiteUrl(): string {
   return (url && !/localhost|127\.0\.0\.1/.test(url) ? url : 'https://avotalent.app').replace(/\/+$/, '')
 }
 
+/** La página de AvoTalent en LinkedIn (la misma que el sitio): los correos invitan a seguirla. */
+export const LINKEDIN_COMPANY_URL = 'https://www.linkedin.com/company/avotalent'
+
 /**
- * La línea con los enlaces legales para el pie de todos los correos (aviso de privacidad y términos), con la dirección pública del sitio.
+ * La línea de enlaces para el pie de todos los correos: seguir a AvoTalent en LinkedIn y los legales (aviso de privacidad y términos), con la dirección pública del sitio.
  * Las páginas viven en /privacidad y /terminos y se abren sin iniciar sesión.
  */
-export function legalFooterHtml(): string {
+export function footerLinksHtml(): string {
   const base = emailSiteUrl()
-  return `<a href="${base}/privacidad" style="color: #9ca3af !important; text-decoration: underline;">Aviso de privacidad</a> · <a href="${base}/terminos" style="color: #9ca3af !important; text-decoration: underline;">Términos y condiciones</a>`
+  return `<a href="${LINKEDIN_COMPANY_URL}" style="color: #9ca3af !important; text-decoration: underline;">Síguenos en LinkedIn</a> · <a href="${base}/privacidad" style="color: #9ca3af !important; text-decoration: underline;">Aviso de privacidad</a> · <a href="${base}/terminos" style="color: #9ca3af !important; text-decoration: underline;">Términos y condiciones</a>`
 }
 
 /** Un enlace del sitio marcado para saber, en el panel, cuánta gente llegó desde un correo. */

@@ -183,3 +183,14 @@ describe('la corrida diaria', () => {
     expect(delivered).toHaveLength(3)
   })
 })
+
+describe('el pie de los correos', () => {
+  it('invita a seguir a AvoTalent en LinkedIn y enlaza el aviso de privacidad y los términos', () => {
+    const vacancies = [{ id: 'v', slug: 's', title: 'Dev', meta: 'Acme', url: 'x', label: 'popular' as const, score: 1 }]
+    const email = buildInvitation({ code: 'abc123', first_name: 'Ana' }, 1, vacancies, 443)
+    expect(email.html).toContain('href="https://www.linkedin.com/company/avotalent"')
+    expect(email.html).toContain('Síguenos en LinkedIn')
+    expect(email.html).toContain('/privacidad')
+    expect(email.html).toContain('/terminos')
+  })
+})

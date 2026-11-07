@@ -1,4 +1,4 @@
-import { legalFooterHtml } from '../links'
+import { footerLinksHtml } from '../links'
 export const PROFILE_REMINDER_SUBJECT = 'Estás a un paso de ver las vacantes que hacen match contigo en AvoTalent'
 
 export interface ReminderVacancy {
@@ -153,7 +153,7 @@ export function renderProfileReminder(data: ProfileReminderData): RenderedEmail 
                 <tr>
                   <td bgcolor="#f8fafc" style="background-color: #f8fafc !important; padding: 20px 30px; border-top: 1px solid #e5e7eb; text-align: center;">
                     <p style="margin: 0 0 6px 0; font-size: 12px; color: #9ca3af !important; line-height: 1.5;">Recibes este correo porque creaste una cuenta en AvoTalent. Es un único recordatorio.</p>
-                    <p style="margin: 0 0 6px 0; font-size: 12px; color: #9ca3af !important;">${legalFooterHtml()}</p>
+                    <p style="margin: 0 0 6px 0; font-size: 12px; color: #9ca3af !important;">${footerLinksHtml()}</p>
                     <p style="margin: 0; font-size: 12px; color: #9ca3af !important;">© 2026 AvoTalent. Todos los derechos reservados.</p>
                   </td>
                 </tr>

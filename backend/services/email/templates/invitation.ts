@@ -1,5 +1,5 @@
 import type { RenderedEmail, ReminderVacancy } from './profile-reminder'
-import { legalFooterHtml } from '../links'
+import { footerLinksHtml } from '../links'
 
 export interface InvitationData {
   /** Primer nombre, si se tiene. Sin nombre el saludo es "Hola". */
@@ -80,7 +80,7 @@ export function shell(subject: string, preheader: string, body: string, footer: 
                 <tr>
                   <td bgcolor="#f8fafc" style="background-color: #f8fafc !important; padding: 20px 30px; border-top: 1px solid #e5e7eb; text-align: center;">
                     <p style="margin: 0 0 6px 0; font-size: 12px; color: #9ca3af !important; line-height: 1.5;">${footer}</p>
-                    <p style="margin: 0 0 6px 0; font-size: 12px; color: #9ca3af !important;">${legalFooterHtml()}</p>
+                    <p style="margin: 0 0 6px 0; font-size: 12px; color: #9ca3af !important;">${footerLinksHtml()}</p>
                     <p style="margin: 0; font-size: 12px; color: #9ca3af !important;">© 2026 AvoTalent. Todos los derechos reservados.</p>
                   </td>
                 </tr>
