@@ -12,12 +12,18 @@ import { isCycleDue, startNewCycle } from "./cycle";
  * - Sync: diario, lunes a viernes
  * Discovery deshabilitado — solo fuentes ATS manuales.
  */
-export function initScraperCron(): void {
+export function initScraperCron(): () => void {
+  const tasks: Array<{ stop: () => unknown }> = []
+  const schedule = ((...args: Parameters<typeof cron.schedule>) => {
+    const task = cron.schedule(...args)
+    tasks.push(task)
+    return task
+  }) as typeof cron.schedule
   // Production cycle check: daily at 4am. A true "every 15 days" isn't a
   // reliable cron pattern (day-of-month step syntax resets at month
   // boundaries), so this checks a persisted cycle_started_at instead and
   // only actually runs when 15 real days have elapsed.
-  cron.schedule("0 4 * * *", async () => {
+  schedule("0 4 * * *", async () => {
     const due = await isCycleDue(15).catch((err) => {
       console.error("[ScraperCron] Error checando el ciclo:", err);
       return false;
@@ -49,7 +55,7 @@ export function initScraperCron(): void {
   });
 
   // Sync: una vez al día, todos los días: el cupo reparte la cola entre los 15 días del ciclo (quota.ts).
-  cron.schedule("0 9 * * *", async () => {
+  schedule("0 9 * * *", async () => {
     console.log(`[ScraperCron] Sync iniciado: ${new Date().toISOString()}`);
 
     try {
@@ -60,4 +66,5 @@ export function initScraperCron(): void {
   });
 
   console.log("[ScraperCron] Crons inicializados (Production=ciclo 15 días, Sync=diario 9am) — ATS only");
+  return () => tasks.forEach((task) => task.stop())
 }

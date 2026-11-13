@@ -29,7 +29,8 @@ export const checksum = (sql: string): string => createHash('sha256').update(sql
 export function lintMigration(file: MigrationFile): string[] {
   const problems: string[] = []
   if (!isMigrationName(file.name)) problems.push('el nombre debe ser AAAAMMDDHHMM_nombre.sql (minúsculas)')
-  const code = file.sql.replace(/--.*$/gm, '').replace(/\/\*[\s\S]*?\*\//g, '')
+  // Se quitan comentarios y cuerpos entre signos de dólar ($$ ... $$): el BEGIN de una función plpgsql no es una transacción.
+  const code = file.sql.replace(/--.*$/gm, '').replace(/\/\*[\s\S]*?\*\//g, '').replace(/\$([A-Za-z_]*)\$[\s\S]*?\$\1\$/g, '')
   if (/^\s*(BEGIN|COMMIT|ROLLBACK|START\s+TRANSACTION)\b/im.test(code)) problems.push('no lleva BEGIN/COMMIT: el corredor ya la envuelve en una transacción')
   if (/\bCREATE\s+(UNIQUE\s+)?INDEX\s+CONCURRENTLY\b|\bVACUUM\b|\bALTER\s+SYSTEM\b|\bCREATE\s+DATABASE\b/i.test(code)) problems.push('contiene un comando que no puede correr dentro de una transacción')
   if (file.sql.trim().length === 0) problems.push('está vacía')

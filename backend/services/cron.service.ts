@@ -46,9 +46,20 @@ export const syncSubstackData = async (userIdStr?: string) => {
 
 import { AutoPublisherService } from './auto_publisher.service'
 
-export const initCron = () => {
+/**
+ * Arranca TODAS las tareas programadas y devuelve una función que las detiene. Quien llama decide cuándo correrlas: el líder elegido por
+ * el arrendamiento de la base (services/workers/leader.ts) las arranca al ganarlo y las detiene al perderlo.
+ */
+export const initCron = (): (() => void) => {
+  const tasks: Array<{ stop: () => unknown }> = []
+  const schedule = ((...args: Parameters<typeof cron.schedule>) => {
+    const task = cron.schedule(...args)
+    tasks.push(task)
+    return task
+  }) as typeof cron.schedule
+
   // 1. Substack Data Sync (Every 15 mins)
-  cron.schedule('*/15 * * * *', async () => {
+  schedule('*/15 * * * *', async () => {
     console.log('Iniciando sincronización programada:', new Date().toISOString())
     await syncSubstackData()
   })
@@ -58,7 +69,7 @@ export const initCron = () => {
 
   // 2. DAILY ORCHESTRATOR (L-D a las 11:45 AM Monterrey = 17:45 UTC)
   //    1 tema → 1 imagen → Blog ES + LinkedIn ES + Newsletter (solo L/M/V) + Blog EN + LinkedIn EN (solo L-V)
-  cron.schedule('45 17 * * *', async () => {
+  schedule('45 17 * * *', async () => {
     console.log('[DailyOrchestrator] Iniciando flujo diario...');
     if (new Date() < GLOBAL_START_DATE) return;
 
@@ -68,7 +79,7 @@ export const initCron = () => {
 
   // 3. ENGLISH 4PM PUBLISHER (L-D a las 4:00 PM Monterrey = 22:00 UTC)
   //    Publica blog EN + LinkedIn EN que fueron programados en el orquestador
-  cron.schedule('0 22 * * *', async () => {
+  schedule('0 22 * * *', async () => {
     console.log('[English4PM] Iniciando publicación de contenido en inglés...');
     if (new Date() < GLOBAL_START_DATE) return;
 
@@ -79,7 +90,7 @@ export const initCron = () => {
   // Microsoft Clarity: una llamada al día (23:55 Monterrey = 05:55 UTC) trae las métricas de frustración por página de las
   //     últimas 24 h y las guarda con la fecha de hoy (services/analytics/clarity.ts). La API de Clarity permite 10 llamadas
   //     al día, así que no se repite. Apagado hasta que se active CLARITY_SYNC=on y CLARITY_API_KEY en el servidor.
-  cron.schedule('55 5 * * *', async () => {
+  schedule('55 5 * * *', async () => {
     if (process.env.CLARITY_SYNC !== 'on') return
     try {
       const { syncClarity } = require('./analytics/clarity')
@@ -98,7 +109,7 @@ export const initCron = () => {
   //     apagado hasta que se active LINKEDIN_VACANCY_POSTS=on en el servidor: antes se
   //     revisan los textos con `npm run linkedin-vacancy-preview`.
   for (const expression of publicationCronExpressions()) {
-    cron.schedule(expression, async () => {
+    schedule(expression, async () => {
       if (process.env.LINKEDIN_VACANCY_POSTS !== 'on') return
       // Solo producción publica en el LinkedIn del fundador (config/app-env.ts): beta y desarrollo no, aunque tengan la variable puesta.
       if (!linkedinPublishingAllowed()) return
@@ -116,7 +127,7 @@ export const initCron = () => {
   //     Oculta (sin borrar) las vacantes abiertas que no le sirven a ninguna persona real y vuelve a mostrar las que ya le sirven a alguien
   //     (services/vacancies/feed-visibility.ts). Apagado hasta que se active FEED_HIDE_UNSERVED=on en el servidor y se corra
   //     backend/sql/feed-visibility-migration.sql; antes se revisa con `npm run feed-visibility`.
-  cron.schedule('30 15 * * *', async () => {
+  schedule('30 15 * * *', async () => {
     if (process.env.FEED_HIDE_UNSERVED !== 'on') return
     try {
       const { refreshFeedVisibility } = require('./vacancies/feed-visibility')
@@ -130,7 +141,7 @@ export const initCron = () => {
   // 3b-historial. FOTO SEMANAL DE COMPROMISO: cada lunes 00:10 hora de Monterrey (06:10 UTC), una foto por cuenta real de la semana que terminó
   //     (valor, enganche, temperatura, días activos, comunidad, correos y push), guardada para siempre y sin sobrescribir
   //     (services/analytics/engagement-history.ts). Encendida por defecto: solo escribe en su propia tabla; se apaga con ENGAGEMENT_SNAPSHOTS=off.
-  cron.schedule('10 6 * * 1', async () => {
+  schedule('10 6 * * 1', async () => {
     if (process.env.ENGAGEMENT_SNAPSHOTS === 'off') return
     try {
       const { takeWeeklySnapshot } = require('./analytics/engagement-history')
@@ -144,7 +155,7 @@ export const initCron = () => {
   // 3b-bis. RECORDATORIO DE PERFIL POR CORREO: una vez al día, 10:00 AM Monterrey (16:00 UTC), a quien se registró hace
   //     más de un día y sigue sin completar su perfil; un solo correo por persona y máximo 20 por corrida
   //     (services/email/profile-reminder.ts). Apagado hasta que se active PROFILE_REMINDER_EMAILS=on en el servidor.
-  cron.schedule('0 16 * * *', async () => {
+  schedule('0 16 * * *', async () => {
     if (process.env.PROFILE_REMINDER_EMAILS !== 'on') return
     try {
       const { runProfileReminderBatch } = require('./email/profile-reminder')
@@ -159,7 +170,7 @@ export const initCron = () => {
   //     bienvenidas y el recordatorio de perfil, que son más urgentes y usan el cupo primero. Primera invitación en el orden de la cola y, a los 5 días, la segunda y última;
   //     con calentamiento (20, 40, luego 70 al día) y dentro del cupo compartido de 100 correos de Resend. Apagado
   //     hasta que se active INVITE_EMAILS=on en el servidor (services/email/invitations.ts).
-  cron.schedule('0 19 * * *', async () => {
+  schedule('0 19 * * *', async () => {
     if (process.env.INVITE_EMAILS !== 'on') return
     try {
       const { runInvitationBatch } = require('./email/invitations')
@@ -173,7 +184,7 @@ export const initCron = () => {
   // 3b-quater. BIENVENIDA POR CORREO. Cada 15 minutos: a quien se registró hace 10 minutos o más (después del
   //     12:00 del 29-oct-2026) se le manda la bienvenida con sus primeros pasos. Corre APARTE del registro: si algo
   //     falla aquí, el onboarding ni se entera. Apagado hasta que se active WELCOME_EMAILS=on en el servidor.
-  cron.schedule('*/15 * * * *', async () => {
+  schedule('*/15 * * * *', async () => {
     if (process.env.WELCOME_EMAILS !== 'on') return
     try {
       const { runWelcomeBatch } = require('./email/welcome')
@@ -186,7 +197,7 @@ export const initCron = () => {
 
   //     "Gracias por ser de los primeros": 12:00 PM Monterrey (18:00 UTC), a quienes ya estaban antes y completaron su
   //     perfil; una sola vez por persona. Apagado hasta WELCOME_FOUNDERS_EMAILS=on.
-  cron.schedule('0 18 * * *', async () => {
+  schedule('0 18 * * *', async () => {
     if (process.env.WELCOME_FOUNDERS_EMAILS !== 'on') return
     try {
       const { runWelcomeBatch } = require('./email/welcome')
@@ -201,7 +212,7 @@ export const initCron = () => {
   //     Alertas: todos los días 8:30 AM Monterrey (14:30 UTC). A cada persona con una vacante nueva de 80 % o más de
   //     compatibilidad le deja un aviso en la campana y, si lo quiere y no pasó de 1 al día ni 3 a la semana, un correo.
   //     Apagado hasta que se active MATCH_ALERTS=on en el servidor.
-  cron.schedule('30 14 * * *', async () => {
+  schedule('30 14 * * *', async () => {
     if (process.env.MATCH_ALERTS !== 'on') return
     try {
       const { runAlertBatch } = require('./email/para-ti-batch')
@@ -216,7 +227,7 @@ export const initCron = () => {
   //     A los 5 días de haberse postulado: «¿Cómo te fue con X?» (aviso en la app y, si lo quiere, un correo; como máximo uno por semana
   //     por persona) y, a quien salió a postularse y nunca contestó, un solo recordatorio en la app a los 2 días.
   //     Apagado hasta que se active APPLICATION_FOLLOWUPS=on en el servidor.
-  cron.schedule('20 16 * * *', async () => {
+  schedule('20 16 * * *', async () => {
     if (process.env.APPLICATION_FOLLOWUPS !== 'on') return
     try {
       const { runApplicationFollowups } = require('./applications/followup')
@@ -229,7 +240,7 @@ export const initCron = () => {
 
   //     Resumen semanal: martes y miércoles 10:05 AM Monterrey (16:05 UTC); el miércoles solo completa a quien no alcanzó
   //     el martes (cada persona recibe uno cada 6 días como máximo). Apagado hasta que se active MATCH_DIGEST=on.
-  cron.schedule('5 16 * * 2,3', async () => {
+  schedule('5 16 * * 2,3', async () => {
     if (process.env.MATCH_DIGEST !== 'on') return
     try {
       const { runDigestBatch } = require('./email/para-ti-batch')
@@ -243,7 +254,7 @@ export const initCron = () => {
   // 3c. ALARMAS: cada hora se revisan las reglas del panel (services/analytics/alerts.ts) y, si aparece
   //     una grave nueva, se deja en el registro del servidor. Es el único aviso fuera del panel.
   let lastAlerts = ''
-  cron.schedule('5 * * * *', async () => {
+  schedule('5 * * * *', async () => {
     try {
       const { loadAlerts } = require('./analytics/alerts-data')
       const bad = (await loadAlerts()).filter((alert: { level: string }) => alert.level === 'bad')
@@ -259,7 +270,7 @@ export const initCron = () => {
 
   // "Para ti": las coincidencias de cada persona se calculan de fondo (no al abrir el inicio). Las vacantes se leen
   // una sola vez para toda la gente.
-  cron.schedule('*/30 * * * *', async () => {
+  schedule('*/30 * * * *', async () => {
     try {
       const { refreshAllMatches } = require('./matching/refresh')
       const { people } = await refreshAllMatches()
@@ -271,13 +282,17 @@ export const initCron = () => {
 
   // 4. Global Scheduler (Every 15 minutes for pending posts)
   const { SchedulerService } = require('./scheduler.service')
-  cron.schedule('*/15 * * * *', async () => {
+  schedule('*/15 * * * *', async () => {
     await SchedulerService.processPendingPosts()
   })
 
   // 5. Scraper crons (Discovery=6h, Production=30min, Sync=35min)
   const { initScraperCron } = require('./scraper/scheduler')
-  initScraperCron()
+  const stopScraper = initScraperCron()
 
   console.log('Cron services initialized (Sync=15m, DailyOrchestrator=11:45AM MT, English4PM=4PM MT daily, Scheduler=15m, Scraper=Discovery6h+Production30m)')
+  return () => {
+    tasks.forEach((task) => task.stop())
+    stopScraper()
+  }
 }

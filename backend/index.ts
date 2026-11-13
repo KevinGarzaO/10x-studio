@@ -11,8 +11,7 @@ import linkedinRoutes from './routes/linkedin'
 import blogRoutes from './routes/blog'
 import sitemapRoutes from './routes/sitemap'
 import { linkedinCallback } from './controllers/linkedin.controller'
-import { initCron } from './services/cron.service'
-import { appEnv, scheduledJobsEnabled } from './config/app-env'
+import { startScheduledJobs } from './services/workers/scheduled-jobs'
 import { studioAuth, STUDIO_ROOT_PATHS, isLinkedInPublic, isBlogPublic } from './middleware/studio-auth.middleware'
 import adminAnalyticsRoutes from './src/routes/admin/analytics.routes'
 import { analyticsAccess } from './middleware/analytics-access.middleware'
@@ -180,8 +179,12 @@ app.use((err: unknown, req: express.Request, _res: express.Response, next: expre
 
 // Tareas programadas (scraper, correos, LinkedIn, fotos semanales...): solo en beta y producción, cada una con su base y sus llaves.
 // Un entorno de desarrollo (tu máquina o el proyecto de Desarrollo) nunca las arranca, aunque tenga llaves puestas (config/app-env.ts).
-if (scheduledJobsEnabled()) initCron()
-else console.log(`[Entorno] ${appEnv()}: tareas programadas apagadas`)
+// Solo corre en el proceso que gana el arrendamiento de la base (services/workers): nunca dos copias a la vez. RUN_CRONS_IN_API=off la deja sin crons
+// cuando el servicio de workers (backend/workers.ts) ya está funcionando.
+const jobsLeader = startScheduledJobs({ role: 'api' })
+for (const signal of ['SIGTERM', 'SIGINT'] as const) {
+  process.on(signal, () => { void (jobsLeader?.stop() ?? Promise.resolve()).finally(() => process.exit(0)) })
+}
 startTimingFlush()
 
 // Anota el despliegue en la bitácora de cambios (solo en Railway, una vez por commit; nunca estorba al arranque)
