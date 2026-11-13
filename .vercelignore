@@ -1,0 +1,12 @@
+# Solo para despliegues hechos con la CLI de Vercel (pre-produccion): no se suben artefactos locales ni lo que no hace falta.
+# (Los despliegues desde git no lo usan.)
+**/.next
+**/.turbo
+**/dist
+**/node_modules
+**/.vercel
+**/.env.local
+docs/semana1
+archive
+backend/uploads
+backend/sql

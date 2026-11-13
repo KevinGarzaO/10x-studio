@@ -42,3 +42,6 @@ test-results/
 playwright-report/
 blob-report/
 playwright/.cache/
+
+# Vinculo local con Vercel (lo crea la CLI; no se sube)
+.vercel

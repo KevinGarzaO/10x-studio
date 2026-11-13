@@ -38,3 +38,13 @@ Cada entorno es un proyecto de Railway con su propia base, autenticación, puert
 3. `migrate status`: sin pendientes. Lecturas (`/stats`, `/posts?type=job`) con datos.
 4. Archivos: subir, leer por `/api/files/...` y enlace firmado de un documento.
 5. El servicio `workers` contesta `{ ok: true, leader: false }` y no corre nada fuera de producción.
+
+## 6. Pantallas en Vercel (pre-producción; mismo método para desarrollo)
+1. Proyecto NUEVO por pantalla (`vercel project add avotalent-staging-community`, `avotalent-staging-telemetry`). Nunca se reutiliza el de producción.
+2. Ajustes del proyecto por API (`vercel api /v9/projects/<id>?teamId=<equipo> -X PATCH --input archivo.json`): `rootDirectory` (`apps/community` o `apps/avocado`), `sourceFilesOutsideRootDirectory: true`, `framework: nextjs` y `nodeVersion: 24.x` (el valor por omisión, 26.x, es inválido y rompe el build).
+3. Variables (`vercel env add NOMBRE production`, valor por stdin; las secretas con `--sensitive`; una `NEXT_PUBLIC_*` que parezca llave pide `--type config` a propósito):
+   - App de personas: `NEXT_PUBLIC_API_URL`, `ANALYTICS_API_URL`, `NEXT_PUBLIC_API_KEY` (identificador del navegador), `API_KEY_SERVER` (secreta), `ANALYTICS_PROXY_SECRET` (secreta), `NEXT_PUBLIC_SITE_URL`, **`NEXT_PUBLIC_TRACKING=off`** (sin esto, un entorno que no es producción usaría el Google Analytics y el Clarity de AvoTalent por omisión).
+   - Panel: `NEXT_PUBLIC_BACKEND_URL`, `NEXT_PUBLIC_COMMUNITY_API_URL`, `NEXT_PUBLIC_API_KEY`.
+4. Despliegue por CLI desde la raíz del repositorio con el vínculo local (`.vercel/project.json`, ignorado por git; para el segundo proyecto, variables `VERCEL_ORG_ID` y `VERCEL_PROJECT_ID`): `vercel deploy --prod --yes`. El `.vercelignore` de la raíz evita subir artefactos locales (`.next`, `node_modules`...): sin él el build remoto falla con errores de fuentes.
+5. Activar la protección de Vercel (Vercel Authentication) antes de compartir la dirección.
+6. Las APIs del entorno necesitan una dirección pública para que Vercel las alcance (`railway domain`), con `API_KEYS` ya puestas y verificadas ANTES de abrirla.

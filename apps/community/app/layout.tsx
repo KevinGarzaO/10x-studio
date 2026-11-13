@@ -17,7 +17,8 @@ import './globals.css'
 // peso 800 salían como "Arial Black".
 const inter = Inter({ subsets: ['latin'], weight: ['400', '500', '600', '700', '800'], variable: '--font-inter', display: 'swap' })
 
-const GA_MEASUREMENT_ID = process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID || 'G-B5F7C83ERC'
+// NEXT_PUBLIC_TRACKING=off lo apaga en los entornos que no son producción (si no, usarían el Google Analytics de AvoTalent por omisión).
+const GA_MEASUREMENT_ID = process.env.NEXT_PUBLIC_TRACKING === 'off' ? '' : process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID || 'G-B5F7C83ERC'
 
 export const metadata: Metadata = {
   title: 'AvoTalent — Comunidad Global de Talento',

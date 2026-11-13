@@ -64,7 +64,7 @@ Una **cuenta de almacenamiento por entorno** (el nombre debe ser único en todo 
 - [x] Staging (`avotalent-beta`): Postgres 18 con el respaldo exacto de Supabase restaurado y anonimizado (conteos verificados), PostgREST v16.5, GoTrue v2.197.0 (misma versión de migraciones que Supabase), puerta de enlace Caddy y backend con `APP_ENV=staging`. Todo privado (sin dirección pública). Registro e inicio de sesión probados.
 - [x] `APP_ENV` en el código (`config/app-env.ts`): tareas programadas y LinkedIn solo en producción.
 - [x] Interruptores por grupo (`02-interruptores.md`).
-- [ ] App de personas y panel apuntando a staging (Vercel), con dirección privada.
+- [x] Pantallas de staging en Vercel (proyectos NUEVOS y separados de producción): `avotalent-staging-community` (https://avotalent-staging-community.vercel.app) y `avotalent-staging-telemetry` (https://avotalent-staging-telemetry.vercel.app), hablando con las APIs públicas de staging (`api-community-beta` y `api-telemetry-beta` en `*.up.railway.app`) que exigen la llave de aplicación. Seguimiento apagado (`NEXT_PUBLIC_TRACKING=off`: ni Google Analytics ni Clarity de producción). **Pendiente tuyo:** activar «Vercel Authentication» en los dos proyectos (Settings → Deployment Protection → todas las implementaciones) para que solo el equipo abra las pantallas.
 - [ ] Local: `infra/docker-compose.dev.yml` (borrador, sin probar; falta Azurite y Docker en la máquina).
 - [ ] Cuentas de Azure por entorno, dominios, apps OAuth de prueba, ramas `develop` y `staging`.
 - [ ] Mudanza de producción (ventana corta de mantenimiento, regreso por variables): `00-plan-migracion.md`.

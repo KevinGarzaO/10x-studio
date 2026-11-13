@@ -16,7 +16,10 @@ const DEFAULT_PROJECT_ID = 'z6emolc22r'
  * En producción se enciende solo con el proyecto de AvoTalent. `NEXT_PUBLIC_CLARITY_PROJECT_ID` lo cambia, y puesta VACÍA
  * (en Vercel) apaga Clarity sin tocar el código. En desarrollo y en las pruebas está apagado, para no ensuciar las grabaciones.
  */
-export const CLARITY_PROJECT_ID = (process.env.NEXT_PUBLIC_CLARITY_PROJECT_ID ?? (process.env.NODE_ENV === 'production' ? DEFAULT_PROJECT_ID : '')).trim()
+// NEXT_PUBLIC_TRACKING=off apaga Clarity (y Google Analytics, ver app/layout.tsx): lo usan los entornos que NO son producción (pre-producción), para
+// que sus visitas no ensucien las métricas reales (sin esto, en modo producción se usaría el proyecto de AvoTalent por omisión).
+export const TRACKING_OFF = process.env.NEXT_PUBLIC_TRACKING === 'off'
+export const CLARITY_PROJECT_ID = TRACKING_OFF ? '' : (process.env.NEXT_PUBLIC_CLARITY_PROJECT_ID ?? (process.env.NODE_ENV === 'production' ? DEFAULT_PROJECT_ID : '')).trim()
 
 type ClarityFn = (command: string, ...args: unknown[]) => unknown
 
