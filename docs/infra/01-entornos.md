@@ -1,38 +1,38 @@
 # Los cuatro entornos de AvoTalent
 
-Decidido el 13 de noviembre de 2026. Cada entorno es una **pila completa e independiente**: su propio proyecto, backend, base de datos, autenticación, archivos y secretos. Ningún entorno comparte base, llaves ni cuentas con otro.
+Decidido el 13 de noviembre de 2026 y **revisado el mismo día**: la beta con personas reales ya no es un entorno aparte, es un **grupo de personas dentro de producción** (interruptores por grupo, `02-interruptores.md`). Es como lo hacen las apps grandes: la gente de la beta usa el producto real, con los datos reales, y ve las funciones nuevas antes que los demás. Un entorno de beta con otra base de datos tendría datos distintos y no probaría nada.
 
-| | **Local** | **Desarrollo** | **Beta** | **Producción** |
+Cada entorno es una **pila completa e independiente**: su propio proyecto, backend, base de datos, autenticación, archivos y secretos. Ningún entorno comparte base, llaves ni cuentas con otro.
+
+| | **Local** | **Desarrollo** | **Pre-producción (staging)** | **Producción** |
 |---|---|---|---|---|
-| Para qué | Programar y probar en tu máquina | Integrar y probar lo que sube el equipo | **Producto beta con personas reales invitadas** | Todo el público |
-| Dónde corre | Docker en tu máquina | Proyecto Railway `avotalent-development` | Proyecto Railway `avotalent-beta` | Proyecto Railway `alert-consideration` (hoy; renombrar a `avotalent-production`) |
-| Rama de git | cualquiera | `develop` | `beta` | `master` |
-| `APP_ENV` | `development` | `development` | `beta` | `production` |
-| Base de datos | Postgres en Docker | Postgres propio | Postgres propio | Postgres propio (el que ya existe) |
-| Autenticación | GoTrue en Docker | GoTrue propio | GoTrue propio | GoTrue propio |
+| Para qué | Programar y probar en tu máquina | Integrar y probar lo que sube el equipo | Ensayar una versión y una migración con una copia ANONIMIZADA de producción antes de subirla | Todo el público, **incluida la beta** (un grupo de personas) |
+| Dónde corre | Docker en tu máquina | Proyecto Railway `avotalent-development` | Proyecto Railway `avotalent-beta` (se puede renombrar `avotalent-staging`; su entorno de Railway se llama `beta`) | Proyecto Railway `alert-consideration` (hoy; renombrar a `avotalent-production`) |
+| Rama de git | cualquiera | `develop` | `staging` | `master` |
+| `APP_ENV` | `development` | `development` | `staging` | `production` |
+| Base de datos | Postgres en Docker | Postgres propio | Postgres propio (copia anonimizada con `infra/db/anonymize-staging.sql`) | Postgres propio (hoy: Supabase; ver el plan de migración) |
+| Autenticación | GoTrue en Docker | GoTrue propio | GoTrue propio (autoconfirmación, sin correos) | GoTrue propio |
 | Archivos | Azurite (emulador de Azure) | Cuenta de Azure propia | Cuenta de Azure propia | Cuenta de Azure propia |
-| App de personas | `localhost:3002` | Vercel, dirección propia | `beta.avotalent.app` | `avotalent.app` |
-| Panel de telemetría | `localhost:3000` | Vercel, propio | Vercel, propio | `telemetry.avotalent.app` |
-| Datos | Inventados (semillas) | Inventados | **Reales** de sus propias personas | **Reales** |
-| Correos | Buzón local (Mailpit), nunca salen | Apagados | Reales, de su propio remitente y llave | Reales |
-| LinkedIn / push | Apagados | Apagados | Push propio; LinkedIn apagado | Reales |
-| Apps OAuth (LinkedIn, GitHub) | Propias de prueba | Propias de prueba | Propias | Las actuales |
+| App de personas | `localhost:3002` | Vercel, dirección propia | Vercel, dirección propia (privada) | `avotalent.app` (la beta: `beta.avotalent.app` contra la API de producción, con los interruptores) |
+| Datos | Inventados (semillas) | Inventados | **Anonimizados**: sin correos, nombres, fotos, CV, sesiones ni push | **Reales** |
+| Correos / LinkedIn / push / scraper | Apagados | Apagados | **Apagados siempre** (no hay llaves puestas) | Reales |
 
 ## Reglas que no se rompen
 
-1. **Beta tiene datos personales reales**, así que tiene las mismas protecciones que producción: respaldo diario, acceso restringido, aviso de privacidad vigente (el mismo texto legal) y borrado en cascada de una cuenta. Sus personas son **solo las invitadas a la beta**; no se copian cuentas de producción a beta.
+1. **Pre-producción tiene una copia de producción**, así que se anonimiza ANTES de abrirla a nadie (`infra/db/anonymize-staging.sql`: cuentas sin contraseña, sin correos reales, sin sesiones). Nunca recibe llaves de Resend, LinkedIn, Clarity ni VAPID. Los respaldos con datos reales viven fuera del repositorio.
 2. **Nunca se copian secretos de un entorno a otro** ni se duplica un entorno de producción: la copia traería llaves reales y las tareas programadas dispararían correos o publicaciones.
-3. **El entorno decide lo externo** (`backend/config/app-env.ts`). Se toma de `APP_ENV` y, si falta, del nombre del entorno de Railway (cada proyecto tiene su entorno llamado `development`, `beta` o `production`), así que **producción no necesita ninguna variable nueva**. Cualquier otra cosa (tu máquina, un valor mal escrito) es `development`: todo lo externo apagado. Las tareas programadas (scraper, correos, fotos semanales, ocultado del feed, matches) corren en **beta y producción**; en **desarrollo nunca**. La publicación en el LinkedIn del fundador es **solo de producción**.
-4. **Los cambios suben en orden:** `feature/*` → `develop` (despliega a Desarrollo) → `beta` (despliega a Beta, se prueba con las personas invitadas) → `master` (despliega a Producción). Las ramas `beta` y `master` quedan protegidas (solo por solicitud de cambio, con pruebas verdes).
-5. **Cada entorno tiene sus propias llaves** (JWT, Resend, VAPID, OAuth, Azure, Anthropic, Gemini). Se guardan solo en las variables del proyecto de Railway/Vercel o de Azure, nunca en el repositorio ni en el chat.
+3. **El entorno decide lo externo** (`backend/config/app-env.ts`). Se toma de `APP_ENV` y, si falta, del nombre del entorno de Railway (`beta` se lee como `staging`). Cualquier otra cosa es `development`. Las tareas programadas (scraper, correos, fotos semanales, ocultado del feed, matches) y la publicación en el LinkedIn del fundador corren **solo en `production`**.
+4. **Los cambios suben en orden:** `feature/*` → `develop` → `staging` → `master`. Las funciones nuevas llegan a producción **apagadas** y se encienden por pasos (equipo, beta, 1 %, 10 %, 25 %, 50 %, todos). `staging` y `master` quedan protegidas (solo por solicitud de cambio, con pruebas verdes).
+5. **Cada entorno tiene sus propias llaves** (JWT, Resend, VAPID, OAuth, Azure, Anthropic, Gemini), solo en variables de Railway/Vercel/Azure, nunca en el repositorio ni en el chat.
+6. **Despliegue en Railway:** el constructor nuevo (Railpack) no detecta el arranque del monorepo; el servicio del backend lleva `RAILPACK_START_CMD`, `RAILPACK_BUILD_CMD` y `RAILPACK_INSTALL_CMD` como variables (los mismos comandos de `railway.toml`). Hay que copiarlas al mudar producción.
 
 ## Política de variables del backend, por entorno
 
 Lista tomada de producción (28 variables propias). «Apagado» = sin definir o con el valor que desactiva la función.
 
-| Variable | Local | Desarrollo | Beta | Producción |
+| Variable | Local | Desarrollo | Staging | Producción |
 |---|---|---|---|---|
-| `APP_ENV` | development | development | beta | production |
+| `APP_ENV` | development | development | staging | production |
 | `SUPABASE_URL`, `SUPABASE_SERVICE_KEY` (hoy; después las del gateway propio) | locales | propias | propias | propias |
 | `COMMUNITY_APP_URL`, `BACKEND_URL` | localhost | su dirección | su dirección | las actuales |
 | `ANALYTICS_PROXY_SECRET`, `ANALYTICS_SERVICE_KEY`, `EMAIL_LINK_SECRET` | propias | propias | propias | las actuales |
@@ -54,16 +54,17 @@ Una **cuenta de almacenamiento por entorno** (el nombre debe ser único en todo 
 | Entorno | App de personas | Panel | API |
 |---|---|---|---|
 | Desarrollo | `dev.avotalent.app` | `dev-telemetry.avotalent.app` | `dev-api.avotalent.app` |
-| Beta | `beta.avotalent.app` | `beta-telemetry.avotalent.app` | `beta-api.avotalent.app` |
-| Producción | `avotalent.app` | `telemetry.avotalent.app` | la actual de Railway |
+| Staging | `staging.avotalent.app` | `staging-telemetry.avotalent.app` | `staging-api.avotalent.app` |
+| Producción | `avotalent.app` (beta: `beta.avotalent.app`) | `telemetry.avotalent.app` | la actual de Railway |
 
-## Estado
+## Estado (13 de noviembre de 2026)
 
 - [x] Producción: existe (`alert-consideration`).
 - [x] Desarrollo: proyecto Railway `avotalent-development`, entorno `development` (vacío).
-- [x] Beta: proyecto Railway `avotalent-beta`, entorno `beta` (vacío).
-- [x] El entorno `qa` que se había creado dentro del proyecto de producción se borró (estaba vacío).
-- [x] `APP_ENV` en el código (`config/app-env.ts`): tareas programadas solo en beta y producción; LinkedIn solo en producción.
+- [x] Staging (`avotalent-beta`): Postgres 18 con el respaldo exacto de Supabase restaurado y anonimizado (conteos verificados), PostgREST v16.5, GoTrue v2.197.0 (misma versión de migraciones que Supabase), puerta de enlace Caddy y backend con `APP_ENV=staging`. Todo privado (sin dirección pública). Registro e inicio de sesión probados.
+- [x] `APP_ENV` en el código (`config/app-env.ts`): tareas programadas y LinkedIn solo en producción.
+- [x] Interruptores por grupo (`02-interruptores.md`).
+- [ ] App de personas y panel apuntando a staging (Vercel), con dirección privada.
 - [ ] Local: `infra/docker-compose.dev.yml` (borrador, sin probar; falta Azurite y Docker en la máquina).
-- [ ] `APP_ENV` en producción y en el código.
-- [ ] Cuentas de Azure por entorno, dominios, apps OAuth de prueba, ramas `develop` y `beta`.
+- [ ] Cuentas de Azure por entorno, dominios, apps OAuth de prueba, ramas `develop` y `staging`.
+- [ ] Mudanza de producción (ventana corta de mantenimiento, regreso por variables): `00-plan-migracion.md`.
