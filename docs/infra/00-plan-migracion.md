@@ -80,7 +80,7 @@ Decidido el 13 de noviembre de 2026 por el fundador. Este documento es la fuente
 
 ### Fase 4 — Separar el monolito (después de la Fase 2)
 
-**Estado (13-nov-2026), dentro del repo actual:** HECHO `packages/db` (cliente y corredor de migraciones), `workers` (arrendamiento + `backend/workers.ts`) y `packages/core` (servicios, lib y config; ~200 archivos con historial). Falta: dividir las rutas en `api-community` y `api-telemetry`, mover el panel a `apps/telemetry`, y entonces crear los repositorios en la organización.
+**Estado (13-nov-2026), dentro del repo actual:** HECHO `packages/db` (cliente y corredor de migraciones), `workers` (arrendamiento + `backend/workers.ts`) y `packages/core` (servicios, lib y config; ~200 archivos con historial). HECHO también: la API dividida en `api-community` y `api-telemetry` (ambos desplegados y probados en staging; `index.ts` sigue montando todo) y el estudio viejo archivado en `archive/studio-legacy/`, dejando `apps/avocado` como solo el panel. Falta: `agents` (aún no hay código), el cambio de nombre `apps/avocado` → `apps/telemetry` (se hace al cortar su repositorio, para no romper el directorio raíz del proyecto de Vercel) y entonces crear los repositorios en la organización.
 Servicios dentro del mismo repositorio (monorepo con pnpm), cada uno con su despliegue:
 
 | Servicio | Qué contiene hoy en `backend/` | Notas |
