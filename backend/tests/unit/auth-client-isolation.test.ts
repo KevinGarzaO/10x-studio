@@ -8,8 +8,9 @@ const clients = vi.hoisted(() => [] as any[])
 // Lo que responde Supabase al renovar la sesión (cada prueba puede cambiarlo).
 const refreshReply = vi.hoisted(() => ({ value: { data: { user: { id: 'u1' }, session: { access_token: 't2' } }, error: null } as any }))
 
-vi.mock('@supabase/supabase-js', () => ({
-  createClient: vi.fn(() => {
+// El cliente de datos vive en @avotalent/db: se simula ese paquete (antes se simulaba supabase-js, que ahora queda dentro del paquete).
+vi.mock('@avotalent/db', () => {
+  const makeClient = () => {
     const client: any = {
       id: clients.length,
       auth: {
@@ -28,8 +29,11 @@ vi.mock('@supabase/supabase-js', () => ({
     }
     clients.push(client)
     return client
-  }),
-}))
+  }
+  // clients[0] es el cliente principal (se crea al importar); cada createAuthClient() es uno nuevo.
+  const supabase = makeClient()
+  return { supabase, createAuthClient: () => makeClient() }
+})
 
 vi.mock('../../middleware/community-auth.middleware', () => ({
   communityAuthMiddleware: (_req: any, _res: any, next: any) => next(),
@@ -50,7 +54,7 @@ beforeEach(() => {
 })
 
 describe('community auth never signs in on the shared service-role client', () => {
-  // clients[0] es el cliente principal que crea supabase.service al importarse.
+  // clients[0] es el cliente principal que crea @avotalent/db al importarse.
   it('login uses a throwaway client, not the data client', async () => {
     const main = clients[0]
     await request(app()).post('/api/community/auth/login').send({ email: 'a@b.co', password: 'x' }).expect(200)

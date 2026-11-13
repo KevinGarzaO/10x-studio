@@ -1,0 +1,27 @@
+{
+  "name": "@avotalent/db",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Cliente de datos de AvoTalent y corredor de migraciones SQL.",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "bin": { "avotalent-migrate": "dist/cli.js" },
+  "files": ["dist", "migrations", "baseline.json"],
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "test": "vitest run",
+    "migrate": "node dist/cli.js"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "2.49.4",
+    "dotenv": "^16.4.5",
+    "pg": "^8.23.0"
+  },
+  "devDependencies": {
+    "@electric-sql/pglite": "^0.5.13",
+    "@types/node": "^20.11.0",
+    "@types/pg": "^8.11.6",
+    "typescript": "^5.4.5",
+    "vitest": "^1.6.0"
+  }
+}
