@@ -3,7 +3,8 @@ import { CLIENT_COOKIE, CLIENT_COOKIE_MAX_AGE, forwardToBackend } from '@/lib/an
 
 export const dynamic = 'force-dynamic'
 
-const BACKEND_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'
+// La analítica puede vivir en su propio servicio (api-telemetry): ANALYTICS_API_URL (solo servidor). Sin ella, la misma API de siempre.
+const BACKEND_URL = process.env.ANALYTICS_API_URL || process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'
 
 /**
  * Telemetría (flow): reenvía al backend. Reenvía al backend y pone la cookie `_avo_cid`.

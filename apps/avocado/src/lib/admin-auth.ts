@@ -9,6 +9,10 @@ const REFRESH_KEY = 'avo_admin_refresh'
 
 const BACKEND = (process.env.NEXT_PUBLIC_BACKEND_URL || '').replace(/\/api\/?$/, '').replace(/\/+$/, '')
 
+// El inicio de sesión y la renovación son rutas de la API de la COMUNIDAD (/api/community/auth). Si esa API vive en su propio servicio, se indica con
+// NEXT_PUBLIC_COMMUNITY_API_URL; sin ella, la misma dirección de siempre.
+const COMMUNITY_API = (process.env.NEXT_PUBLIC_COMMUNITY_API_URL || process.env.NEXT_PUBLIC_BACKEND_URL || '').replace(/\/api\/?$/, '').replace(/\/+$/, '')
+
 export function backendBase(): string {
   return BACKEND
 }
@@ -50,7 +54,7 @@ export async function refreshSession(): Promise<boolean> {
   if (!refreshToken || !BACKEND) return false
 
   try {
-    const res = await fetch(`${BACKEND}/api/community/auth/refresh`, {
+    const res = await fetch(`${COMMUNITY_API}/api/community/auth/refresh`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ refresh_token: refreshToken }),
@@ -69,11 +73,11 @@ export type LoginResult = { ok: true } | { ok: false; error: string }
 
 /** Inicia sesión y comprueba que la cuenta tenga permiso para el panel. */
 export async function login(email: string, password: string): Promise<LoginResult> {
-  if (!BACKEND) return { ok: false, error: 'Falta configurar la dirección del servidor (NEXT_PUBLIC_BACKEND_URL).' }
+  if (!COMMUNITY_API) return { ok: false, error: 'Falta configurar la dirección del servidor (NEXT_PUBLIC_BACKEND_URL).' }
 
   let res: Response
   try {
-    res = await fetch(`${BACKEND}/api/community/auth/login`, {
+    res = await fetch(`${COMMUNITY_API}/api/community/auth/login`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ email, password }),

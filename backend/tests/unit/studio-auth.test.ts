@@ -99,20 +99,30 @@ describe('which routes stay open', () => {
 })
 
 describe('the server wiring', () => {
-  const index = readFileSync(join(__dirname, '../../index.ts'), 'utf8').replace(/\r\n/g, '\n')
+  // Las rutas del estudio y del panel se montan en src/apps/telemetry.ts; los puntos de entrada (index.ts y api-telemetry.ts) tienen que usarlo.
+  const read = (file: string) => readFileSync(join(__dirname, file), 'utf8').replace(/\r\n/g, '\n')
+  const telemetry = read('../../src/apps/telemetry.ts')
 
   it('no longer uses the placeholder that let everyone through', () => {
-    expect(index).not.toContain('authMiddleware')
+    for (const file of ['../../index.ts', '../../api-telemetry.ts', '../../api-community.ts', '../../src/apps/telemetry.ts', '../../src/apps/community.ts']) {
+      expect(read(file)).not.toContain('authMiddleware')
+    }
   })
 
   it('guards every Studio route group and the analytics panel', () => {
     for (const mount of ["'/api/substack'", "'/api/users'", "'/api/blog'", "'/api/linkedin'", "'/api/admin/analytics'"]) {
-      expect(index).toMatch(new RegExp(`app\\.use\\(${mount.replace(/\//g, '\\/')}, (analyticsAccess\\()?studioAuth\\(`))
+      expect(telemetry).toMatch(new RegExp(`app\\.use\\(${mount.replace(/\//g, '\\/')}, (analyticsAccess\\()?studioAuth\\(`))
     }
-    expect(index.match(/app\.use\('\/api', studioAuth\(\{ onlyFor/g)).toHaveLength(2)
+    expect(telemetry.match(/app\.use\('\/api', studioAuth\(\{ onlyFor/g)).toHaveLength(2)
   })
 
   it('keeps the OAuth callback reachable without a session', () => {
-    expect(index).toMatch(/app\.get\('\/api\/linkedin\/callback', linkedinCallback\)/)
+    expect(telemetry).toMatch(/app\.get\('\/api\/linkedin\/callback', linkedinCallback\)/)
+  })
+
+  it('the entry points that serve the studio and the panel mount the guarded telemetry routes, and the community one does not', () => {
+    expect(read('../../index.ts')).toContain('mountTelemetry(app)')
+    expect(read('../../api-telemetry.ts')).toContain('mountTelemetry(app)')
+    expect(read('../../api-community.ts')).not.toContain('mountTelemetry')
   })
 })
