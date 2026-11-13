@@ -1,3 +1,4 @@
+import { linkedinPublishingAllowed } from '../config/app-env'
 import cron from 'node-cron'
 import { publicationCronExpressions } from './analytics/schedule'
 import { supabase } from './supabase.service'
@@ -99,6 +100,8 @@ export const initCron = () => {
   for (const expression of publicationCronExpressions()) {
     cron.schedule(expression, async () => {
       if (process.env.LINKEDIN_VACANCY_POSTS !== 'on') return
+      // Solo producción publica en el LinkedIn del fundador (config/app-env.ts): beta y desarrollo no, aunque tengan la variable puesta.
+      if (!linkedinPublishingAllowed()) return
       try {
         const { publishVacancyPost } = require('./linkedin/vacancy-publisher')
         const result = await publishVacancyPost()
