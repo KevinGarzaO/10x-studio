@@ -1,6 +1,6 @@
 import { Request, Response, NextFunction } from 'express'
 import { communityAuthMiddleware, AuthRequest } from './community-auth.middleware'
-import { requireSuperadmin } from '../src/middleware/require-superadmin.middleware'
+import { requireSuperadmin } from './require-superadmin.middleware'
 
 /**
  * Acceso a las rutas del Studio (ajustes con el token de LinkedIn, temas, calendario, IA,

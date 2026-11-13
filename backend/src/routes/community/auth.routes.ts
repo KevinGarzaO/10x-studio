@@ -2,7 +2,7 @@ import { Router, Request, Response } from 'express'
 import { supabase, createAuthClient } from '@avotalent/core/services/supabase.service'
 import { sanitizeAttribution } from '@avotalent/core/services/attribution'
 import { isProviderPhoto, mirrorProviderPhoto } from '@avotalent/core/services/avatar'
-import { communityAuthMiddleware, AuthRequest } from '../../../middleware/community-auth.middleware'
+import { communityAuthMiddleware, AuthRequest } from '@avotalent/core/http/middleware/community-auth.middleware'
 
 const router = Router()
 

@@ -4,7 +4,7 @@ import request from 'supertest'
 
 const rpc = vi.hoisted(() => vi.fn())
 vi.mock('@avotalent/core/services/supabase.service', () => ({ supabase: { rpc } }))
-vi.mock('../../middleware/community-auth.middleware', () => ({ communityAuthMiddleware: (_req: any, _res: any, next: any) => next() }))
+vi.mock('@avotalent/core/http/middleware/community-auth.middleware', () => ({ communityAuthMiddleware: (_req: any, _res: any, next: any) => next() }))
 
 import router from '../../src/routes/analytics/collect.routes'
 import {

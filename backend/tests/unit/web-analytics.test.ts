@@ -4,7 +4,7 @@ import request from 'supertest'
 
 const rpc = vi.hoisted(() => vi.fn())
 vi.mock('@avotalent/core/services/supabase.service', () => ({ supabase: { rpc } }))
-vi.mock('../../middleware/community-auth.middleware', () => ({
+vi.mock('@avotalent/core/http/middleware/community-auth.middleware', () => ({
   communityAuthMiddleware: (req: any, res: any, next: any) => {
     if (req.headers.authorization !== 'Bearer ok') return res.status(401).json({ error: 'no' })
     req.userId = 'user-1'

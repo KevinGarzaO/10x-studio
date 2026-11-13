@@ -35,7 +35,7 @@ vi.mock('@avotalent/db', () => {
   return { supabase, createAuthClient: () => makeClient() }
 })
 
-vi.mock('../../middleware/community-auth.middleware', () => ({
+vi.mock('@avotalent/core/http/middleware/community-auth.middleware', () => ({
   communityAuthMiddleware: (_req: any, _res: any, next: any) => next(),
 }))
 

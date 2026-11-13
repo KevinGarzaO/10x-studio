@@ -1,4 +1,4 @@
-import type { Seniority } from '@avocado/schemas'
+import type { Seniority } from '@avotalent/schemas'
 import { classifyRole } from '../scraper/role-rules'
 import { cleanVacancyText, vacancyTitle, vacancyBody, vacancyHeader } from './text'
 import { inferSeniority } from './seniority'

@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import { readFileSync } from 'fs'
 import { join } from 'path'
-import { normalizeSkillKey } from '@avocado/schemas'
+import { normalizeSkillKey } from '@avotalent/schemas'
 
 const sql = (file: string) => readFileSync(join(__dirname, '../../sql', file), 'utf8').replace(/\r\n/g, '\n')
 

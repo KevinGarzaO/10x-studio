@@ -10,7 +10,7 @@ import { fetchWorkable } from "@avotalent/core/services/scraper/sources/workable
 import { fetchGreenhouse } from "@avotalent/core/services/scraper/sources/greenhouse";
 import { postExists, insertPost } from "@avotalent/core/services/scraper/db";
 import { hasContact } from "@avotalent/core/services/scraper/contacts";
-import { adminAuthMiddleware } from "../middleware/admin-auth.middleware";
+import { adminAuthMiddleware } from "@avotalent/core/http/middleware/admin-auth.middleware";
 
 const router = Router();
 

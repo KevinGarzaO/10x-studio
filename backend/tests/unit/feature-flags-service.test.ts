@@ -17,7 +17,7 @@ vi.mock('@avotalent/core/services/supabase.service', () => {
 })
 
 import { flagsFor, isEnabled, clearFlagsCache } from '@avotalent/core/services/flags/flags.service'
-import { requireFlag } from '../../middleware/require-flag.middleware'
+import { requireFlag } from '@avotalent/core/http/middleware/require-flag.middleware'
 import flagsRoutes from '../../src/routes/community/flags.routes'
 
 const flag = (key: string, stage: string) => ({ key, description: 'prueba', stage, retire_by: '2027-01-01', updated_at: '2026-11-13' })

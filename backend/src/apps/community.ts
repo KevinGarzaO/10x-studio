@@ -1,6 +1,6 @@
 import { Express } from 'express'
-import { communityAuthMiddleware } from '../../middleware/community-auth.middleware'
-import { publicCache } from '../../middleware/public-cache.middleware'
+import { communityAuthMiddleware } from '@avotalent/core/http/middleware/community-auth.middleware'
+import { publicCache } from '@avotalent/core/http/middleware/public-cache.middleware'
 import communityAuthRoutes from '../routes/community/auth.routes'
 import communityPostsRoutes from '../routes/community/posts.routes'
 import communityCommentsRoutes from '../routes/community/comments.routes'

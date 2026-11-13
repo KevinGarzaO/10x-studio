@@ -1,7 +1,7 @@
 'use client'
 
 import { Plus, Trash2 } from 'lucide-react'
-import { CV_LANGUAGE_LEVELS, CV_LANGUAGE_LEVEL_LABEL, CV_LIMITS, type Cv } from '@avocado/schemas'
+import { CV_LANGUAGE_LEVELS, CV_LANGUAGE_LEVEL_LABEL, CV_LIMITS, type Cv } from '@avotalent/schemas'
 import { newCertification, newEducation, newExperience, newLanguage, newProject } from '../../lib/cv'
 
 interface CvFormProps {

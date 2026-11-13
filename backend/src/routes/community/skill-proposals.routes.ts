@@ -1,8 +1,8 @@
 import { Router, Response } from 'express'
-import { skillProposalSchema } from '@avocado/schemas'
-import { communityAuthMiddleware, AuthRequest } from '../../../middleware/community-auth.middleware'
-import { requireAccountType } from '../../middleware/require-account-type.middleware'
-import { proposeSkill, proposalsForUser } from '../../services/skill-proposal.service'
+import { skillProposalSchema } from '@avotalent/schemas'
+import { communityAuthMiddleware, AuthRequest } from '@avotalent/core/http/middleware/community-auth.middleware'
+import { requireAccountType } from '@avotalent/core/http/middleware/require-account-type.middleware'
+import { proposeSkill, proposalsForUser } from '@avotalent/core/services/skill-proposal.service'
 
 const router = Router()
 

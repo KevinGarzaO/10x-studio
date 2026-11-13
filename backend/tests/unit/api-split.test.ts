@@ -19,7 +19,7 @@ vi.mock('@avotalent/db', () => {
   return { supabase: client, createAuthClient: () => client }
 })
 
-import { createBaseApp, finishApp, useJsonBody } from '../../src/apps/base'
+import { createBaseApp, finishApp, useJsonBody } from '@avotalent/core/http/base'
 import { mountCommunity } from '../../src/apps/community'
 import { mountTelemetry, mountTelemetryPreBody } from '../../src/apps/telemetry'
 

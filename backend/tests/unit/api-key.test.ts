@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach } from 'vitest'
 import express from 'express'
 import request from 'supertest'
-import { apiKeyGate, apiKeyMode, apiKeyStats, isApiKeyExempt, parseApiKeys, resetApiKeyStats } from '../../middleware/api-key.middleware'
+import { apiKeyGate, apiKeyMode, apiKeyStats, isApiKeyExempt, parseApiKeys, resetApiKeyStats } from '@avotalent/core/http/middleware/api-key.middleware'
 
 const WEB = 'w'.repeat(32)
 const PANEL = 'p'.repeat(32)

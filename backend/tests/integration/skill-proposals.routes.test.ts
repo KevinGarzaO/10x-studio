@@ -1,13 +1,13 @@
 import { describe, expect, it, vi, beforeAll, afterAll, beforeEach } from 'vitest'
 import express from 'express'
 import request from 'supertest'
-import { MAX_PENDING_PROPOSALS } from '@avocado/schemas'
+import { MAX_PENDING_PROPOSALS } from '@avotalent/schemas'
 import { supabase } from '@avotalent/core/services/supabase.service'
 import skillProposalsRouter from '../../src/routes/community/skill-proposals.routes'
 
 // Solo se suplanta "quién es este usuario". El resolvedor, el catálogo, los
 // CHECK y el UNIQUE corren reales contra Supabase.
-vi.mock('../../middleware/community-auth.middleware', () => ({
+vi.mock('@avotalent/core/http/middleware/community-auth.middleware', () => ({
   communityAuthMiddleware: (req: any, res: any, next: any) => {
     const id = req.headers['x-test-user-id']
     if (!id) return res.status(401).json({ error: 'unauthorized' })

@@ -7,7 +7,7 @@ import { removeClaimFiles } from '@avotalent/core/services/claim-documents'
 
 // Solo se suplanta "quién es este usuario". El schema compartido, los índices
 // únicos, los CHECK y el bucket privado corren de verdad.
-vi.mock('../../middleware/community-auth.middleware', () => ({
+vi.mock('@avotalent/core/http/middleware/community-auth.middleware', () => ({
   communityAuthMiddleware: (req: any, _res: any, next: any) => {
     req.userId = req.headers['x-test-user-id']
     next()

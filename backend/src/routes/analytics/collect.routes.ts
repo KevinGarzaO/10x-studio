@@ -1,6 +1,6 @@
 import { Router, Request, Response } from 'express'
 import { timingSafeEqual } from 'crypto'
-import { communityAuthMiddleware, AuthRequest } from '../../../middleware/community-auth.middleware'
+import { communityAuthMiddleware, AuthRequest } from '@avotalent/core/http/middleware/community-auth.middleware'
 import { isBotUserAgent } from '@avotalent/core/services/analytics/bots'
 import { parseCollectPayload, sanitizeClientId } from '@avotalent/core/services/web-analytics/payload'
 import { applyCollect, executeUserStitching, type RequestContext } from '@avotalent/core/services/web-analytics/collect'

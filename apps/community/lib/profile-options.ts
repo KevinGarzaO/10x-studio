@@ -2,10 +2,10 @@
 // stored on `users` (seniority/work_modality) always map to the same labels
 // everywhere they're displayed or edited.
 //
-// Los valores salen de @avocado/schemas, el mismo enum que valida el backend:
+// Los valores salen de @avotalent/schemas, el mismo enum que valida el backend:
 // aquí solo viven sus etiquetas visibles.
 
-import { SENIORITY, ROLE_CATEGORY, ROLE_CATEGORY_LABEL, WORK_MODALITY, type Seniority } from '@avocado/schemas'
+import { SENIORITY, ROLE_CATEGORY, ROLE_CATEGORY_LABEL, WORK_MODALITY, type Seniority } from '@avotalent/schemas'
 
 const SENIORITY_LABEL: Record<Seniority, string> = {
   junior: 'Junior',
@@ -30,7 +30,7 @@ export const SENIORITY_LABELS: Record<string, string> = Object.fromEntries(
 // Mismo listado que usa el clasificador de vacantes (ver
 // backend/sql/role-categories-migration.sql), así lo que elige una persona coincide
 // siempre con cómo se etiquetan las vacantes. Los nombres, en español, vienen de
-// @avocado/schemas: también son el PUESTO de la persona.
+// @avotalent/schemas: también son el PUESTO de la persona.
 export const ROLE_CATEGORY_OPTIONS: { value: string; label: string }[] = ROLE_CATEGORY.map(
   value => ({ value, label: ROLE_CATEGORY_LABEL[value] })
 )

@@ -12,6 +12,6 @@
     "resolveJsonModule": true,
     "declaration": true
   },
-  "include": ["services/**/*.ts", "lib/**/*.ts", "config/**/*.ts"],
+  "include": ["services/**/*.ts", "lib/**/*.ts", "config/**/*.ts", "http/**/*.ts"],
   "exclude": ["node_modules", "dist"]
 }

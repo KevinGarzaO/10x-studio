@@ -1,7 +1,7 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest'
 import type { Response } from 'express'
-import type { AuthRequest } from '../../middleware/community-auth.middleware'
-import { requireSuperadmin } from '../../src/middleware/require-superadmin.middleware'
+import type { AuthRequest } from '@avotalent/core/http/middleware/community-auth.middleware'
+import { requireSuperadmin } from '@avotalent/core/http/middleware/require-superadmin.middleware'
 
 const maybeSingle = vi.fn()
 

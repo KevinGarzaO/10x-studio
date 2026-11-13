@@ -1,7 +1,7 @@
 import { Router, Request, Response } from 'express'
-import { companyClaimSchema, type ClaimDocumentKind } from '@avocado/schemas'
+import { companyClaimSchema, type ClaimDocumentKind } from '@avotalent/schemas'
 import { supabase } from '@avotalent/core/services/supabase.service'
-import { communityAuthMiddleware, AuthRequest } from '../../../middleware/community-auth.middleware'
+import { communityAuthMiddleware, AuthRequest } from '@avotalent/core/http/middleware/community-auth.middleware'
 import { uploadClaimDocument } from '@avotalent/core/services/claim-documents'
 
 const router = Router()

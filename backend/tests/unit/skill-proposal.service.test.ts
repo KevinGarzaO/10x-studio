@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { decideProposalOutcome } from '../../src/services/skill-proposal.service'
+import { decideProposalOutcome } from '@avotalent/core/services/skill-proposal.service'
 
 const base = {
   approvedSkillName: null,

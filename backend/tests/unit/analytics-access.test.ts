@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import express from 'express'
 import request from 'supertest'
-import { analyticsAccess, stripPeople, SERVICE_READABLE } from '../../middleware/analytics-access.middleware'
+import { analyticsAccess, stripPeople, SERVICE_READABLE } from '@avotalent/core/http/middleware/analytics-access.middleware'
 
 const KEY = 'k'.repeat(40)
 

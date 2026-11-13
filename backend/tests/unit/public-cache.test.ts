@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import express from 'express'
 import request from 'supertest'
-import { publicCache } from '../../middleware/public-cache.middleware'
+import { publicCache } from '@avotalent/core/http/middleware/public-cache.middleware'
 
 /** Lo que se guarda unos minutos y, sobre todo, lo que NUNCA se guarda: nada que dependa de la cuenta. */
 function app(options: Parameters<typeof publicCache>[1], status = 200) {

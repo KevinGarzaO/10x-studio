@@ -1,6 +1,4 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import express from 'express'
-import request from 'supertest'
 import { Readable } from 'stream'
 
 const blobs = new Map<string, { data: Buffer; type: string }>()
@@ -38,7 +36,6 @@ vi.mock('@avotalent/core/services/supabase.service', () => ({
 
 import * as azureMock from '@azure/storage-blob'
 import { setAzureSdkForTest, isSafePath, putFile, publicFileUrl, publicFilePrefix, removeFiles, signedFileUrl, storageDriver, resetStorageForTest } from '@avotalent/core/services/storage/index'
-import filesRoutes from '../../src/routes/files.routes'
 
 const useAzure = () => {
   process.env.STORAGE_DRIVER = 'azure'
@@ -99,47 +96,5 @@ describe('azure driver', () => {
     await putFile('images', 'a.png', Buffer.from('x'), { contentType: 'image/png' })
     expect(await removeFiles('images', ['a.png'])).toBe(true)
     expect(blobs.has('images/a.png')).toBe(false)
-  })
-})
-
-describe('GET /api/files', () => {
-  const app = () => { const s = express(); s.use('/api/files', filesRoutes); return s }
-
-  it('serves an image with safe headers and caching', async () => {
-    useAzure()
-    await putFile('avatars', 'a.png', Buffer.from('PNGDATA'), { contentType: 'image/png' })
-    const res = await request(app()).get('/api/files/avatars/a.png')
-    expect(res.status).toBe(200)
-    expect(res.headers['content-type']).toBe('image/png')
-    expect(res.headers['x-content-type-options']).toBe('nosniff')
-    expect(res.headers['cache-control']).toContain('max-age')
-    expect(res.headers['content-security-policy']).toContain('sandbox')
-  })
-
-  it('answers 304 for an unchanged file', async () => {
-    useAzure()
-    await putFile('images', 'community/a.png', Buffer.from('x'), { contentType: 'image/png' })
-    expect((await request(app()).get('/api/files/images/community/a.png').set('If-None-Match', '"e1"')).status).toBe(304)
-  })
-
-  it('never serves company documents, backups, odd paths or missing files', async () => {
-    useAzure()
-    await putFile('company-docs', 'c/1.pdf', Buffer.from('secret'), { contentType: 'application/pdf' })
-    await putFile('backups', 'b.dump', Buffer.from('secret'), { contentType: 'application/octet-stream' })
-    expect((await request(app()).get('/api/files/company-docs/c/1.pdf')).status).toBe(404)
-    expect((await request(app()).get('/api/files/backups/b.dump')).status).toBe(404)
-    expect((await request(app()).get('/api/files/avatars/..%2Fx')).status).toBe(404)
-    expect((await request(app()).get('/api/files/avatars/nope.png')).status).toBe(404)
-  })
-
-  it('hands a non-image back as an opaque download (no sniffing into a page)', async () => {
-    useAzure()
-    await putFile('images', 'x.html', Buffer.from('<script>1</script>'), { contentType: 'text/html' })
-    const res = await request(app()).get('/api/files/images/x.html')
-    expect(res.headers['content-type']).toBe('application/octet-stream')
-  })
-
-  it('with the supabase driver the proxy has nothing to serve', async () => {
-    expect((await request(app()).get('/api/files/avatars/a.png')).status).toBe(404)
   })
 })

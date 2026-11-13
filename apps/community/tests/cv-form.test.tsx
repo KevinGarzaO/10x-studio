@@ -1,7 +1,7 @@
 import { describe, it, expect, vi } from 'vitest'
 import { render, screen, fireEvent } from '@testing-library/react'
 import { useState } from 'react'
-import { emptyCv, CV_LIMITS, cvSchema, type Cv } from '@avocado/schemas'
+import { emptyCv, CV_LIMITS, cvSchema, type Cv } from '@avotalent/schemas'
 import { CvForm } from '@/components/cv/CvForm'
 
 /** Con estado real: así se ejercita lo que ve la persona, no solo las llamadas. */

@@ -19,7 +19,7 @@ vi.mock('@avotalent/core/services/supabase.service', () => ({
   },
 }))
 
-import { studioAuth, isBlogPublic, isLinkedInPublic, STUDIO_ROOT_PATHS } from '../../middleware/studio-auth.middleware'
+import { studioAuth, isBlogPublic, isLinkedInPublic, STUDIO_ROOT_PATHS } from '@avotalent/core/http/middleware/studio-auth.middleware'
 
 const app = (guard: ReturnType<typeof studioAuth>) => {
   const a = express()

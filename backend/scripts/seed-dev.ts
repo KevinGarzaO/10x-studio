@@ -13,7 +13,7 @@
  */
 import 'dotenv/config'
 import { randomUUID } from 'crypto'
-import { ROLE_CATEGORY } from '@avocado/schemas'
+import { ROLE_CATEGORY } from '@avotalent/schemas'
 import { supabase } from '@avotalent/core/services/supabase.service'
 
 const apply = process.argv.includes('--apply')

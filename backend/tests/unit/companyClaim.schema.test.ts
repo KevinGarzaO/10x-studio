@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { companyClaimSchema, RFC_PATTERN, REQUIRED_CLAIM_DOCUMENTS } from '@avocado/schemas'
+import { companyClaimSchema, RFC_PATTERN, REQUIRED_CLAIM_DOCUMENTS } from '@avotalent/schemas'
 
 const doc = (kind: string) => ({ kind, fileName: 'acta.pdf', dataUrl: 'data:application/pdf;base64,AAA' })
 

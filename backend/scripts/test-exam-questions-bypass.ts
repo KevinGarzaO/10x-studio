@@ -24,7 +24,7 @@ import request from 'supertest'
 import { supabase } from '@avotalent/core/services/supabase.service'
 import examQuestionsRouter from '../src/routes/admin/exam-questions.routes'
 
-vi.mock('../middleware/community-auth.middleware', () => ({
+vi.mock('@avotalent/core/http/middleware/community-auth.middleware', () => ({
   communityAuthMiddleware: (req: any, _res: any, next: any) => {
     req.userId = req.headers['x-test-user-id']
     next()

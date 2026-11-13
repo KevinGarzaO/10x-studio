@@ -8,7 +8,7 @@ import {
   type CvLanguage,
   type CvCertification,
   type CvProject,
-} from '@avocado/schemas'
+} from '@avotalent/schemas'
 
 const MONTHS = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic']
 

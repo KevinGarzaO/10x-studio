@@ -7,7 +7,7 @@ import {
   retryAvailableAt,
   expiresAtFrom,
   type SkillLevel,
-} from '../../src/services/skill-exam.service'
+} from '@avotalent/core/services/skill-exam.service'
 
 describe('levelFor', () => {
   it('gives avanzado at 10/10', () => {

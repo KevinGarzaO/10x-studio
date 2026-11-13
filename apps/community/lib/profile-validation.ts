@@ -1,4 +1,4 @@
-import { buildCandidateProfileSchema, type SkillCatalog } from '@avocado/schemas'
+import { buildCandidateProfileSchema, type SkillCatalog } from '@avotalent/schemas'
 
 export interface ProfileValidationError {
   field: string | null

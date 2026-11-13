@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { buildExamQuestionSchema, DIFFICULTY_LEVELS, type DifficultyLevel } from '@avocado/schemas'
+import { buildExamQuestionSchema, DIFFICULTY_LEVELS, type DifficultyLevel } from '@avotalent/schemas'
 import { useSkillCatalog } from '@/lib/skill-catalog'
 import { Button } from '@/components/ui/button'
 

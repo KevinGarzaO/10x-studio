@@ -1,4 +1,4 @@
-import { ROLE_CATEGORY_LABEL, type RoleCategory } from '@avocado/schemas'
+import { ROLE_CATEGORY_LABEL, type RoleCategory } from '@avotalent/schemas'
 import { modalityFromLabel } from '../vacancies/modality'
 import { ROLE_FOCUS } from '../audience/role-focus'
 

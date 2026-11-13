@@ -2,7 +2,7 @@ import { feedVisibilityReady } from '@avotalent/core/services/vacancies/feed-vis
 import { Router, Request, Response } from 'express'
 import { supabase } from '@avotalent/core/services/supabase.service'
 import { loadVacancyStats, rankByPopularity, type VacancyStats } from '@avotalent/core/services/vacancies/popularity'
-import { communityAuthMiddleware, AuthRequest } from '../../../middleware/community-auth.middleware'
+import { communityAuthMiddleware, AuthRequest } from '@avotalent/core/http/middleware/community-auth.middleware'
 import { generateSlug } from '@avotalent/core/services/slug'
 import { companySlug } from '@avotalent/core/services/company'
 import { loadValidatedSkills } from '@avotalent/core/services/matching/validated'

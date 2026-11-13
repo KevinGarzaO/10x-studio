@@ -1,4 +1,4 @@
-import { CV_LANGUAGE_LEVEL_LABEL, type Cv } from '@avocado/schemas'
+import { CV_LANGUAGE_LEVEL_LABEL, type Cv } from '@avotalent/schemas'
 import { formatPeriod, formatYears, newestFirst, studiesNewestFirst, toSafeUrl } from '../../lib/cv'
 
 /** Lo que viene del perfil (no del CV) y que la hoja necesita mostrar. */

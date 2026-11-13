@@ -42,7 +42,7 @@ function builder(table: string) {
 }
 
 vi.mock('@avotalent/core/services/supabase.service', () => ({ supabase: { from: (table: string) => builder(table) } }))
-vi.mock('../../middleware/community-auth.middleware', () => ({
+vi.mock('@avotalent/core/http/middleware/community-auth.middleware', () => ({
   communityAuthMiddleware: (req: any, res: any, next: any) => {
     const user = req.headers['x-user']
     if (!user) return res.status(401).json({ error: 'sin sesión' })

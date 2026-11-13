@@ -34,7 +34,7 @@ Las pruebas dejan de apuntar al código fuente de `core` por un alias: cada repo
 
 ## 3. Cómo se comparten `core` y `db`
 
-- **GitHub Packages (npm privado de la organización).** Los paquetes son `@avotalent/db`, `@avotalent/core` y `@avotalent/schemas`. `@avocado/schemas` se renombra a `@avotalent/schemas` en todo el código.
+- **GitHub Packages (npm privado de la organización).** Los paquetes son `@avotalent/db`, `@avotalent/core` y `@avotalent/schemas`. `@avotalent/schemas` se renombra a `@avotalent/schemas` en todo el código.
 - Versionado semántico por etiqueta (`v0.1.0`). Un cambio que cruza piezas = cambio en el paquete + versión nueva + subir la versión en el consumidor, cada paso por su PR.
 - Cada repositorio consumidor lleva un `.npmrc` con `@avotalent:registry=https://npm.pkg.github.com` y `//npm.pkg.github.com/:_authToken=${NPM_TOKEN}`.
 - **`NPM_TOKEN`:** un token de GitHub **solo de lectura de paquetes**, guardado como variable en Railway, Vercel y en los secretos de Actions. Es una llave más del plan de rotación de 30 días.

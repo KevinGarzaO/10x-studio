@@ -1,6 +1,6 @@
 import { Response, NextFunction } from 'express'
-import { AuthRequest } from '../../middleware/community-auth.middleware'
-import { supabase } from '@avotalent/core/services/supabase.service'
+import { AuthRequest } from './community-auth.middleware'
+import { supabase } from '../../services/supabase.service'
 
 /**
  * Must run after communityAuthMiddleware, which sets req.userId.

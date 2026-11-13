@@ -1,10 +1,10 @@
 import express, { Express } from 'express'
 import cors from 'cors'
-import { captureServerError } from '@avotalent/core/services/web-analytics/telemetry'
-import { recordDeployFromEnv } from '@avotalent/core/services/analytics/changes'
-import { apiTiming, startTimingFlush } from '@avotalent/core/services/performance/api-timing'
-import { startScheduledJobs } from '@avotalent/core/services/workers/scheduled-jobs'
-import { apiKeyGate } from '../../middleware/api-key.middleware'
+import { captureServerError } from '../services/web-analytics/telemetry'
+import { recordDeployFromEnv } from '../services/analytics/changes'
+import { apiTiming, startTimingFlush } from '../services/performance/api-timing'
+import { startScheduledJobs } from '../services/workers/scheduled-jobs'
+import { apiKeyGate } from './middleware/api-key.middleware'
 
 /**
  * Piezas comunes de las tres formas de arrancar la API (todas montan los mismos grupos de rutas, ver community.ts y telemetry.ts):

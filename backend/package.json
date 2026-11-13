@@ -39,7 +39,7 @@
     "para-ti": "tsx scripts/para-ti.ts"
   },
   "dependencies": {
-    "@avocado/schemas": "workspace:*",
+    "@avotalent/schemas": "workspace:*",
     "@avotalent/db": "workspace:*",
     "@azure/storage-blob": "^12.34.0",
     "@google/genai": "^1.48.0",

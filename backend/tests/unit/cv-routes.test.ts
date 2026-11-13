@@ -34,7 +34,7 @@ vi.mock('@avotalent/core/services/supabase.service', () => ({
   },
 }))
 
-vi.mock('../../middleware/community-auth.middleware', () => ({
+vi.mock('@avotalent/core/http/middleware/community-auth.middleware', () => ({
   communityAuthMiddleware: (req: any, res: any, next: any) => {
     if (!req.headers['x-test-user-id']) return res.status(401).json({ error: 'No autorizado' })
     req.userId = req.headers['x-test-user-id']
@@ -42,7 +42,7 @@ vi.mock('../../middleware/community-auth.middleware', () => ({
   },
 }))
 
-vi.mock('../../src/middleware/require-account-type.middleware', () => ({
+vi.mock('@avotalent/core/http/middleware/require-account-type.middleware', () => ({
   requireAccountType: (type: string) => (req: any, res: any, next: any) =>
     req.headers['x-test-account-type'] === type ? next() : res.status(403).json({ error: 'candidates_only' }),
 }))

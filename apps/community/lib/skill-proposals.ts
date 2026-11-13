@@ -1,7 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useState } from 'react'
-import { skillProposalSchema } from '@avocado/schemas'
+import { skillProposalSchema } from '@avotalent/schemas'
 import { getToken } from './session'
 import type { SkillProposal } from '../components/skill-proposals-list'
 

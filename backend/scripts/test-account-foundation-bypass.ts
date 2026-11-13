@@ -15,7 +15,7 @@
  */
 import { it, expect, afterAll } from 'vitest'
 import { supabase } from '@avotalent/core/services/supabase.service'
-import { normalizeSkillKey } from '@avocado/schemas'
+import { normalizeSkillKey } from '@avotalent/schemas'
 
 const createdUserIds: string[] = []
 const createdProposalIds: string[] = []

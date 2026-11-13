@@ -10,7 +10,7 @@ const SKILL = 'react'
 // sesión de Supabase (no tenemos la contraseña de estos usuarios). Todo lo que
 // hay después de "quién es este usuario" corre sin mocks contra la base real:
 // el guard de skill declarado, la selección de preguntas, la calificación.
-vi.mock('../../middleware/community-auth.middleware', () => ({
+vi.mock('@avotalent/core/http/middleware/community-auth.middleware', () => ({
   communityAuthMiddleware: (req: any, _res: any, next: any) => {
     req.userId = req.headers['x-test-user-id']
     next()

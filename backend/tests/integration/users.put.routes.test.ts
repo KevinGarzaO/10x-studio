@@ -9,7 +9,7 @@ const TEST_USERNAME = 'exam-questions-e2e-admin'
 
 // Solo se suplanta "quién es este usuario" (no tenemos su contraseña). Todo lo
 // demás —el catálogo real, el schema compartido, los triggers— corre sin mocks.
-vi.mock('../../middleware/community-auth.middleware', () => ({
+vi.mock('@avotalent/core/http/middleware/community-auth.middleware', () => ({
   communityAuthMiddleware: (req: any, _res: any, next: any) => {
     req.userId = req.headers['x-test-user-id']
     next()

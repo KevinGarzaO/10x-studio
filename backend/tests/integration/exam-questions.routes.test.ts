@@ -13,7 +13,7 @@ const NON_SUPERADMIN_USER_ID = '2ee098fb-48ac-4c45-9574-262ae1148611'
 // communityAuthMiddleware's Supabase Auth token verification (we don't have
 // these test users' passwords) — everything downstream of "who is this
 // user" runs unmocked. userId is supplied via a test-only header.
-vi.mock('../../middleware/community-auth.middleware', () => ({
+vi.mock('@avotalent/core/http/middleware/community-auth.middleware', () => ({
   communityAuthMiddleware: (req: any, res: any, next: any) => {
     req.userId = req.headers['x-test-user-id']
     next()

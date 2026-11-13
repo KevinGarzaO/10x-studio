@@ -33,7 +33,7 @@ function builder(table: string) {
 }
 
 vi.mock('@avotalent/core/services/supabase.service', () => ({ supabase: { from: (table: string) => builder(table) } }))
-vi.mock('../../middleware/community-auth.middleware', () => ({
+vi.mock('@avotalent/core/http/middleware/community-auth.middleware', () => ({
   communityAuthMiddleware: (req: { headers: Record<string, string>; userId?: string }, _res: unknown, next: () => void) => { req.userId = req.headers['x-user'] ?? 'u1'; next() },
 }))
 

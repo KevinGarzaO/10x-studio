@@ -19,7 +19,7 @@ function builder() {
 }
 
 vi.mock('@avotalent/core/services/supabase.service', () => ({ supabase: { from: () => builder() } }))
-vi.mock('../../middleware/community-auth.middleware', () => ({ communityAuthMiddleware: (_req: unknown, _res: unknown, next: () => void) => next() }))
+vi.mock('@avotalent/core/http/middleware/community-auth.middleware', () => ({ communityAuthMiddleware: (_req: unknown, _res: unknown, next: () => void) => next() }))
 
 import postsRoutes from '../../src/routes/community/posts.routes'
 

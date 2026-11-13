@@ -1,4 +1,4 @@
-import type { Seniority } from '@avocado/schemas'
+import type { Seniority } from '@avotalent/schemas'
 
 /**
  * El nivel de una vacante, o `null` si no se puede saber.

@@ -3,7 +3,7 @@
 import { useMemo, useState } from 'react'
 import Link from 'next/link'
 import { ExternalLink, Loader2, Check, Printer, Save } from 'lucide-react'
-import { parseStoredCv, type Cv } from '@avocado/schemas'
+import { parseStoredCv, type Cv } from '@avotalent/schemas'
 import { getToken } from '../../lib/session'
 import { validateCv } from '../../lib/cv'
 import { CvForm } from './CvForm'

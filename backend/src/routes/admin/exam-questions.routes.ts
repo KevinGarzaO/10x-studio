@@ -1,8 +1,8 @@
 import { Router, Response } from 'express'
-import { buildExamQuestionSchema } from '@avocado/schemas'
+import { buildExamQuestionSchema } from '@avotalent/schemas'
 import { supabase } from '@avotalent/core/services/supabase.service'
-import { communityAuthMiddleware, AuthRequest } from '../../../middleware/community-auth.middleware'
-import { requireSuperadmin } from '../../middleware/require-superadmin.middleware'
+import { communityAuthMiddleware, AuthRequest } from '@avotalent/core/http/middleware/community-auth.middleware'
+import { requireSuperadmin } from '@avotalent/core/http/middleware/require-superadmin.middleware'
 
 const router = Router()
 

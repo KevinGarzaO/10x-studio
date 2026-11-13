@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { buildCandidateProfileSchema, firstUnapprovedSkill } from '@avocado/schemas'
+import { buildCandidateProfileSchema, firstUnapprovedSkill } from '@avotalent/schemas'
 
 const approved = ['react', 'nodejs', 'postgresql']
 const schema = buildCandidateProfileSchema(approved)

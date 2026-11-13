@@ -1,5 +1,5 @@
 import dotenv from 'dotenv'
-import { createBaseApp, finishApp, startServer, useJsonBody } from './src/apps/base'
+import { createBaseApp, finishApp, startServer, useJsonBody } from '@avotalent/core/http/base'
 import { mountCommunity } from './src/apps/community'
 
 dotenv.config()

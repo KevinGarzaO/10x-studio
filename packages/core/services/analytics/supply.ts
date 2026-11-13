@@ -1,4 +1,4 @@
-import { ROLE_CATEGORY_LABEL, type RoleCategory } from '@avocado/schemas'
+import { ROLE_CATEGORY_LABEL, type RoleCategory } from '@avotalent/schemas'
 import { ROLE_FOCUS } from '../audience/role-focus'
 import { servesSomeone, type PersonProfile, type VacancyShape } from '../vacancies/serves-someone'
 import { daysUntilNextBatch } from '../scraper/quota'

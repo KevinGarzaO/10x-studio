@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { buildStartSkillExamSchema, submitAnswerSchema } from '@avocado/schemas'
+import { buildStartSkillExamSchema, submitAnswerSchema } from '@avotalent/schemas'
 
 const SKILLS = ['react', 'typescript', 'python']
 

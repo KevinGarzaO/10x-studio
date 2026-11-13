@@ -1,5 +1,5 @@
-import { normalizeSkillKey, MAX_PENDING_PROPOSALS } from '@avocado/schemas'
-import { supabase } from '@avotalent/core/services/supabase.service'
+import { normalizeSkillKey, MAX_PENDING_PROPOSALS } from '@avotalent/schemas'
+import { supabase } from './supabase.service'
 
 export type ProposalStatus = 'pending' | 'approved' | 'merged' | 'rejected'
 

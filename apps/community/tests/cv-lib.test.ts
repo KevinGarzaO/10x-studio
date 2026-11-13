@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { emptyCv, cvSchema, type Cv } from '@avocado/schemas'
+import { emptyCv, cvSchema, type Cv } from '@avotalent/schemas'
 import { formatMonth, formatPeriod, formatYears, newestFirst, studiesNewestFirst, toSafeUrl, validateCv, newExperience } from '@/lib/cv'
 
 const job = (company: string, startDate: string, endDate: string | null) => ({

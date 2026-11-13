@@ -1,7 +1,7 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest'
 import type { Response } from 'express'
-import type { AuthRequest } from '../../middleware/community-auth.middleware'
-import { requireAccountType } from '../../src/middleware/require-account-type.middleware'
+import type { AuthRequest } from '@avotalent/core/http/middleware/community-auth.middleware'
+import { requireAccountType } from '@avotalent/core/http/middleware/require-account-type.middleware'
 
 const maybeSingle = vi.fn()
 

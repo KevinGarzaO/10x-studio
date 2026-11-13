@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { cvSchema, cvPayloadSchema, emptyCv, parseStoredCv, cvHasContent, CV_LIMITS } from '@avocado/schemas'
+import { cvSchema, cvPayloadSchema, emptyCv, parseStoredCv, cvHasContent, CV_LIMITS } from '@avotalent/schemas'
 
 const job = { company: 'Stripe', position: 'Backend Engineer', startDate: '2022-03', endDate: '2024-06' }
 const study = { institution: 'UANL', degree: 'Ingeniería en Sistemas', startYear: '2014', endYear: '2018' }

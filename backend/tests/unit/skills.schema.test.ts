@@ -5,7 +5,7 @@ import {
   skillProposalSchema,
   MAX_SKILL_TEXT_LENGTH,
   type SkillCatalog,
-} from '@avocado/schemas'
+} from '@avotalent/schemas'
 
 const catalog: SkillCatalog = {
   skills: [

@@ -1,4 +1,4 @@
-import { ROLE_CATEGORY, ROLE_CATEGORY_LABEL, type RoleCategory } from '@avocado/schemas'
+import { ROLE_CATEGORY, ROLE_CATEGORY_LABEL, type RoleCategory } from '@avotalent/schemas'
 
 /**
  * Los puestos en las direcciones del sitio: `/puestos/ux-ui` en vez de `/puestos/ux_ui`. Una dirección

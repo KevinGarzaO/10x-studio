@@ -25,7 +25,7 @@ vi.mock('@avotalent/core/services/supabase.service', () => ({
     auth: { getUser: async (token: string) => (state.validTokens.has(token) ? { data: { user: { id: 'u1' } }, error: null } : { data: { user: null }, error: { message: 'invalid' } }) },
   },
 }))
-vi.mock('../../middleware/community-auth.middleware', () => ({ communityAuthMiddleware: (_req: unknown, _res: unknown, next: () => void) => next() }))
+vi.mock('@avotalent/core/http/middleware/community-auth.middleware', () => ({ communityAuthMiddleware: (_req: unknown, _res: unknown, next: () => void) => next() }))
 
 import { headerLinesOf, redactForGuest } from '@avotalent/core/services/community/guest-view'
 import postsRoutes from '../../src/routes/community/posts.routes'

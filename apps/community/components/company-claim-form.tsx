@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { Building, Check, Clock3, FileText, Loader2, X } from 'lucide-react'
-import { COMPANY_SIZES, RFC_PATTERN, type ClaimDocumentKind } from '@avocado/schemas'
+import { COMPANY_SIZES, RFC_PATTERN, type ClaimDocumentKind } from '@avotalent/schemas'
 import {
   searchClaimableCompanies,
   submitCompanyClaim,

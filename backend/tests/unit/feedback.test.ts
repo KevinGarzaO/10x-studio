@@ -28,7 +28,7 @@ vi.mock('@avotalent/core/services/supabase.service', () => ({
     },
   },
 }))
-vi.mock('../../middleware/community-auth.middleware', () => ({
+vi.mock('@avotalent/core/http/middleware/community-auth.middleware', () => ({
   communityAuthMiddleware: (req: any, _res: any, next: any) => { req.userId = 'ana'; next() },
 }))
 

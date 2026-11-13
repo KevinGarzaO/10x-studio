@@ -1,4 +1,4 @@
-import type { SkillCatalog } from '@avocado/schemas'
+import type { SkillCatalog } from '@avotalent/schemas'
 import { unresolvedSkills } from './skill-catalog'
 
 export type ProfileGateReason = 'missing_photo' | 'missing_fields' | 'unresolved_skills'

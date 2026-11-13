@@ -2,7 +2,7 @@
 
 import { useRef, useState, KeyboardEvent } from 'react'
 import { Sparkles, UploadCloud, X } from 'lucide-react'
-import { resolveSkill } from '@avocado/schemas'
+import { resolveSkill } from '@avotalent/schemas'
 import { skillsMissing, skillsRecommendation } from '../lib/skills-recommendation'
 import { useSkillCatalog, skillLabel, unresolvedSkills, skillsForRole, hasRoleData } from '../lib/skill-catalog'
 import { ROLE_CATEGORY_LABELS } from '../lib/profile-options'

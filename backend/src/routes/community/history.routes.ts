@@ -1,6 +1,6 @@
 import { Router, Response } from 'express'
 import { supabase } from '@avotalent/core/services/supabase.service'
-import { communityAuthMiddleware, AuthRequest } from '../../../middleware/community-auth.middleware'
+import { communityAuthMiddleware, AuthRequest } from '@avotalent/core/http/middleware/community-auth.middleware'
 import { clearPopularityCache } from '@avotalent/core/services/vacancies/popularity'
 
 const router = Router()

@@ -1,4 +1,4 @@
-import { ROLE_CATEGORY, SENIORITY } from '@avocado/schemas'
+import { ROLE_CATEGORY, SENIORITY } from '@avotalent/schemas'
 import { modalityFromLabel } from './modality'
 
 /**

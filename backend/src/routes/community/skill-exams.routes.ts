@@ -1,9 +1,9 @@
 import { Router, Response } from 'express'
 import { notify } from '@avotalent/core/services/notifications/notify'
-import { buildStartSkillExamSchema, submitAnswerSchema } from '@avocado/schemas'
+import { buildStartSkillExamSchema, submitAnswerSchema } from '@avotalent/schemas'
 import { supabase } from '@avotalent/core/services/supabase.service'
-import { communityAuthMiddleware, AuthRequest } from '../../../middleware/community-auth.middleware'
-import { requireAccountType } from '../../middleware/require-account-type.middleware'
+import { communityAuthMiddleware, AuthRequest } from '@avotalent/core/http/middleware/community-auth.middleware'
+import { requireAccountType } from '@avotalent/core/http/middleware/require-account-type.middleware'
 import {
   levelFor,
   isBetterLevel,
@@ -14,7 +14,7 @@ import {
   EXAM_QUESTION_COUNT,
   MIN_BANK_SIZE,
   type SkillLevel,
-} from '../../services/skill-exam.service'
+} from '@avotalent/core/services/skill-exam.service'
 
 const router = Router()
 

@@ -16,7 +16,7 @@ import express from 'express'
 import request from 'supertest'
 import { supabase } from '@avotalent/core/services/supabase.service'
 
-vi.mock('../middleware/community-auth.middleware', () => ({
+vi.mock('@avotalent/core/http/middleware/community-auth.middleware', () => ({
   communityAuthMiddleware: (req: any, _res: any, next: any) => {
     req.userId = req.headers['x-test-user-id']
     next()

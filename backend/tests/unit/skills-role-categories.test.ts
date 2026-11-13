@@ -3,7 +3,7 @@ import express from 'express'
 import request from 'supertest'
 import { readFileSync } from 'fs'
 import { join } from 'path'
-import { ROLE_CATEGORY } from '@avocado/schemas'
+import { ROLE_CATEGORY } from '@avotalent/schemas'
 
 const db = vi.hoisted(() => ({ roleColumn: true }))
 

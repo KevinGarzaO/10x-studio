@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import { render, screen, within } from '@testing-library/react'
-import { cvSchema, emptyCv } from '@avocado/schemas'
+import { cvSchema, emptyCv } from '@avotalent/schemas'
 import { CvPreview, type CvPreviewProfile } from '@/components/cv/CvPreview'
 
 const profile: CvPreviewProfile = {

@@ -1,6 +1,6 @@
 import { Request, Response, NextFunction } from 'express'
-import { getOptionalUserId } from '@avotalent/core/services/community/viewer'
-import { isEnabled } from '@avotalent/core/services/flags/flags.service'
+import { getOptionalUserId } from '../../services/community/viewer'
+import { isEnabled } from '../../services/flags/flags.service'
 
 /**
  * Guardia de una ruta nueva: si la persona no tiene la función, la ruta «no existe» (404, igual que cualquier dirección inventada), así quien no

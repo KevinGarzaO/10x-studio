@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { submitAnswerSchema } from '@avocado/schemas'
+import { submitAnswerSchema } from '@avotalent/schemas'
 import { Button } from '@/components/ui/button'
 
 export interface ExamQuestionView {
