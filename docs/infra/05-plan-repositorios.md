@@ -83,3 +83,13 @@ Para cada pieza: **extraer → probar local → subir → probar en desarrollo �
 | Un cambio rompe a varios repositorios | `core` y `db` publican solo con pruebas verdes; los consumidores prueban contra la versión publicada |
 | Token de paquetes filtrado | Solo lectura de paquetes, en variables selladas/sensibles y rotado cada 30 días |
 | Producción tocada antes de tiempo | Orden fijo: desarrollo → pre-producción → producción, por pieza |
+
+## 9. Visibilidad de los repositorios (decisión del dueño, 13 nov 2026)
+
+**Todos los repositorios son privados, excepto `avotalent-community` y `avotalent-telemetry`, que serán públicos** porque se despliegan en Vercel gratis (el plan gratuito necesita poder leer el repositorio). Hoy los diez están privados; esos dos se pasan a públicos solo al final, cuando pasen estos controles:
+
+1. **Búsqueda de secretos en TODO el historial** (no solo en el código actual) antes de publicar. Si aparece algo, se limpia del historial primero.
+2. **Revisión de contenido:** sin documentación de infraestructura, direcciones internas ni credenciales (esa documentación vive en `avotalent-infra`, privado).
+3. **Sin licencia de código abierto** (todos los derechos reservados), con una nota en el README.
+4. Dependencia de un paquete privado (`@avotalent/schemas`): Vercel y Actions lo instalan con `NPM_TOKEN` de solo lectura; quien lea el repositorio no podrá compilarlo solo.
+5. Al ser públicos, en estos dos sí se pueden **proteger ramas** con el plan Free de GitHub: se activa la regla «todo por PR con pruebas verdes».
