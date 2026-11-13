@@ -86,10 +86,14 @@ Para cada pieza: **extraer → probar local → subir → probar en desarrollo �
 
 ## 9. Visibilidad de los repositorios (decisión del dueño, 13 nov 2026)
 
-**Todos los repositorios son privados, excepto `avotalent-community` y `avotalent-telemetry`, que serán públicos** porque se despliegan en Vercel gratis (el plan gratuito necesita poder leer el repositorio). Hoy los diez están privados; esos dos se pasan a públicos solo al final, cuando pasen estos controles:
+**Todos los repositorios son privados**, incluidos `avotalent-community` y `avotalent-telemetry`. (Una primera idea fue hacer públicos esos dos para que Vercel gratis los leyera; se descartó.)
 
-1. **Búsqueda de secretos en TODO el historial** (no solo en el código actual) antes de publicar. Si aparece algo, se limpia del historial primero.
-2. **Revisión de contenido:** sin documentación de infraestructura, direcciones internas ni credenciales (esa documentación vive en `avotalent-infra`, privado).
-3. **Sin licencia de código abierto** (todos los derechos reservados), con una nota en el README.
-4. Dependencia de un paquete privado (`@avotalent/schemas`): Vercel y Actions lo instalan con `NPM_TOKEN` de solo lectura; quien lea el repositorio no podrá compilarlo solo.
-5. Al ser públicos, en estos dos sí se pueden **proteger ramas** con el plan Free de GitHub: se activa la regla «todo por PR con pruebas verdes».
+**Cómo se despliega en Vercel gratis sin hacerlos públicos:** el plan Hobby no despliega repositorios privados de una **organización** con su integración de Git, así que el despliegue va por **GitHub Actions + la CLI de Vercel** (`vercel pull`, `vercel build --prod`, `vercel deploy --prebuilt --prod`). Probado el 13 de nov de 2026 con un repositorio privado desechable de la organización: el flujo funcionó en el plan gratuito.
+
+Condiciones de ese camino:
+- Se necesita un `VERCEL_TOKEN` guardado como secreto de cada repositorio de pantalla (más `VERCEL_ORG_ID` y `VERCEL_PROJECT_ID`). **Lo ideal** es un token creado en el panel de Vercel, limitado al equipo y con caducidad, dentro del plan de rotación de 30 días.
+- **Decisión provisional del dueño (13 nov 2026):** el panel de Vercel no le deja crear tokens porque el correo de verificación no le llega, así que, **hasta que eso funcione**, se usa el token de la sesión de su CLI como secreto de `avotalent-community` y `avotalent-telemetry` (la CLI no puede emitir tokens: 403). Condiciones: solo en esos dos repositorios privados y sin más personas con acceso de escritura; el flujo de producción es **manual** (`workflow_dispatch`), no se dispara en cada subida; se pone al crear esos repositorios; si se cierra la sesión de la CLI el token deja de servir y hay que reemplazarlo; en cuanto el correo funcione se cambia por un token de panel con alcance y caducidad.
+- **Solo el dueño sube a producción** (regla del dueño): por eso el límite de Hobby sobre el autor del commit no estorba. Si algún día otra persona despliega, habrá que volver a probarlo o pasar al plan Pro.
+- Se pierden las vistas previas automáticas por PR de Vercel; si se quieren, se reproducen con otro flujo de Actions.
+- Vercel gratis (Hobby) es para uso **no comercial** según sus términos; si el producto cobra, el plan Pro acepta repositorios privados de organización con su integración normal.
+- Los repositorios privados del plan Free de GitHub no permiten proteger ramas; la regla «todo por PR» se cumple por disciplina.
