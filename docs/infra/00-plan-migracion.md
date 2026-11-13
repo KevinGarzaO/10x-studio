@@ -2,6 +2,18 @@
 
 Decidido el 13 de noviembre de 2026 por el fundador. Este documento es la fuente de verdad: cada fase se marca al terminar.
 
+
+## Avance (se actualiza al terminar cada paso)
+
+**13 nov 2026**
+- Railway: proyecto de AvoTalent = **`alert-consideration`** (repo `KevinGarzaO/10x-studio`). El proyecto `impartial-inspiration` es de otro producto (Cargalo) y **no se toca**; `dazzling-kindness` está vacío.
+- Producción (`production`): servicios `10x-studio` (backend), `daring-success` (agente MCP) y un `Postgres` (Postgres 18) que **hoy no usa nadie** (el backend no tiene `DATABASE_URL`; solo `SUPABASE_URL` y `SUPABASE_SERVICE_KEY`). Ese Postgres será el destino de producción. No tiene acceso desde fuera (sin TCP proxy).
+- El backend de producción **no tiene `APP_ENV`**. El nombre del entorno es `production` (`RAILWAY_ENVIRONMENT_NAME`), que es lo que usará la protección de la fase 1c.
+- **Creado el entorno `qa`, vacío** (no se duplicó producción) con su propia base `Postgres-zXbi` (Postgres 18). Producción no cambió. El CLI de Railway quedó ligado a **qa** a propósito, para que un comando suelto no toque producción.
+- Variables del backend de producción (solo nombres): 28 propias (llaves de Resend, Clarity, Gemini, Claude, LinkedIn, VAPID, interruptores de correos y LinkedIn…). **Ninguna de estas se copia a QA**: cada una se crea a mano con un valor de prueba o se deja sin definir para que lo externo quede apagado.
+
+**Pendiente inmediato (lo bloquea):** herramientas de cliente de PostgreSQL (`pg_dump`/`psql`) en esta máquina, la cadena de conexión de Supabase en una variable de la terminal del fundador, y activar el *TCP Proxy* temporal de la base de QA para poder restaurar desde fuera de Railway.
+
 ## Decisiones tomadas
 
 | # | Decisión | Elegido |
