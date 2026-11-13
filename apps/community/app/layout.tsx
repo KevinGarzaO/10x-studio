@@ -3,6 +3,7 @@ import { AttributionCapture } from '@/components/attribution-capture'
 import { ClarityIntegration } from '@/components/clarity-integration'
 import { ErrorCapture } from '@/components/error-capture'
 import { SessionKeeper } from '@/components/session-keeper'
+import { ApiKeyGate } from '@/components/api-key-gate'
 import { FlagsLoader } from '@/components/flags-loader'
 import { GlobalErrorBoundary } from '@/components/global-error-boundary'
 import { SessionCapture } from '@/components/session-capture'
@@ -55,6 +56,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
         )}
       </head>
       <body className="antialiased">
+        <ApiKeyGate />
         <SessionCapture />
         <AttributionCapture />
         <WebAnalytics />

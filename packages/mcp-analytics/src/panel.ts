@@ -46,13 +46,17 @@ export const PANEL_METRICS = {
 
 export type PanelMetric = keyof typeof PANEL_METRICS
 
-export function createPanelClient(baseUrl: string, key: string, fetchImpl: typeof fetch = fetch): PanelClient {
+/**
+ * `apiKey` es la llave de aplicación que exige la API en todos los entornos (regla de diseño, backend/middleware/api-key.middleware.ts): una llave de
+ * SERVIDOR a servidor, secreta, propia de este conector (no la de la web ni la del panel). Si no se da, no se manda nada.
+ */
+export function createPanelClient(baseUrl: string, key: string, fetchImpl: typeof fetch = fetch, apiKey?: string): PanelClient {
   const root = baseUrl.replace(/\/+$/, '')
   return {
     async get(path, query) {
       const url = new URL(`${root}/api/admin/analytics${path}`)
       for (const [name, value] of Object.entries(query)) url.searchParams.set(name, String(value))
-      const response = await fetchImpl(url, { headers: { 'x-analytics-key': key, accept: 'application/json' }, signal: AbortSignal.timeout(25_000) })
+      const response = await fetchImpl(url, { headers: { 'x-analytics-key': key, accept: 'application/json', ...(apiKey ? { 'x-api-key': apiKey } : {}) }, signal: AbortSignal.timeout(25_000) })
       if (!response.ok) throw new Error(`el panel contestó ${response.status} en ${path}`)
       return response.json()
     },
@@ -62,5 +66,5 @@ export function createPanelClient(baseUrl: string, key: string, fetchImpl: typeo
 export function panelFromEnv(env: NodeJS.ProcessEnv = process.env): PanelClient | undefined {
   const base = env.BACKEND_URL
   const key = env.ANALYTICS_SERVICE_KEY
-  return base && key ? createPanelClient(base, key) : undefined
+  return base && key ? createPanelClient(base, key, fetch, env.BACKEND_API_KEY || undefined) : undefined
 }

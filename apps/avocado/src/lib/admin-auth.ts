@@ -4,6 +4,8 @@
  * guarda la sesión en el navegador y la renueva.
  */
 
+import { apiKeyHeaders } from './api-key'
+
 const TOKEN_KEY = 'avo_admin_token'
 const REFRESH_KEY = 'avo_admin_refresh'
 
@@ -56,7 +58,7 @@ export async function refreshSession(): Promise<boolean> {
   try {
     const res = await fetch(`${COMMUNITY_API}/api/community/auth/refresh`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', ...apiKeyHeaders() },
       body: JSON.stringify({ refresh_token: refreshToken }),
     })
     if (!res.ok) return false
@@ -79,7 +81,7 @@ export async function login(email: string, password: string): Promise<LoginResul
   try {
     res = await fetch(`${COMMUNITY_API}/api/community/auth/login`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', ...apiKeyHeaders() },
       body: JSON.stringify({ email, password }),
     })
   } catch {
@@ -94,7 +96,7 @@ export async function login(email: string, password: string): Promise<LoginResul
   saveSession(data.session.access_token, data.session.refresh_token ?? null)
 
   // Tener cuenta no basta: hay que ser superadmin.
-  const check = await fetch(`${BACKEND}/api/admin/analytics/me`, { headers: { Authorization: `Bearer ${data.session.access_token}` } }).catch(() => null)
+  const check = await fetch(`${BACKEND}/api/admin/analytics/me`, { headers: { ...apiKeyHeaders(), Authorization: `Bearer ${data.session.access_token}` } }).catch(() => null)
   if (!check || !check.ok) {
     clearSession()
     return { ok: false, error: check?.status === 403 ? 'Esta cuenta no tiene permiso para entrar al panel.' : 'No se pudo verificar tu permiso. Intenta de nuevo.' }

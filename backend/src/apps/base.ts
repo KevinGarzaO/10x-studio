@@ -4,6 +4,7 @@ import { captureServerError } from '@avotalent/core/services/web-analytics/telem
 import { recordDeployFromEnv } from '@avotalent/core/services/analytics/changes'
 import { apiTiming, startTimingFlush } from '@avotalent/core/services/performance/api-timing'
 import { startScheduledJobs } from '@avotalent/core/services/workers/scheduled-jobs'
+import { apiKeyGate } from '../../middleware/api-key.middleware'
 
 /**
  * Piezas comunes de las tres formas de arrancar la API (todas montan los mismos grupos de rutas, ver community.ts y telemetry.ts):
@@ -32,6 +33,9 @@ export function createBaseApp(): Express {
     },
     credentials: true,
   }))
+  // Regla de diseño: toda API exige la llave de la aplicación (x-api-key); ver middleware/api-key.middleware.ts. Va después de CORS para que las respuestas
+  // de rechazo también lleven sus cabeceras. Sin API_KEYS no hace nada; con API_KEY_MODE=report solo cuenta y registra (así se ensaya en producción).
+  app.use(apiKeyGate())
   // Mide cuánto tarda cada ruta de /api (resumen por hora; ver services/performance/api-timing.ts)
   app.use(apiTiming())
   return app

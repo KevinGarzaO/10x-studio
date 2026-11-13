@@ -53,3 +53,20 @@ describe('get_panel_metric', () => {
     expect(panelFromEnv({ BACKEND_URL: 'https://x', ANALYTICS_SERVICE_KEY: 'k'.repeat(30) } as never)).toBeDefined()
   })
 })
+
+describe('the application key the API demands', () => {
+  it('sends x-api-key only when one is configured, next to the service key', async () => {
+    const seen: Array<string | null> = []
+    const fake = (async (_url: URL, init: RequestInit) => {
+      seen.push(new Headers(init.headers).get('x-api-key'))
+      return new Response('{}')
+    }) as unknown as typeof fetch
+    await createPanelClient('https://api.test', 'k'.repeat(30), fake).get('/overview', {})
+    await createPanelClient('https://api.test', 'k'.repeat(30), fake, 'a'.repeat(30)).get('/overview', {})
+    expect(seen).toEqual([null, 'a'.repeat(30)])
+  })
+
+  it('reads it from BACKEND_API_KEY', () => {
+    expect(panelFromEnv({ BACKEND_URL: 'https://api.test', ANALYTICS_SERVICE_KEY: 'k'.repeat(30), BACKEND_API_KEY: 'a'.repeat(30) } as never)).toBeDefined()
+  })
+})

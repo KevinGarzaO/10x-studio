@@ -1,4 +1,5 @@
 import { getToken, refreshSession, clearSession } from './admin-auth'
+import { apiKeyHeaders } from './api-key'
 
 const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || ''
 
@@ -27,6 +28,7 @@ export async function api<T>(path: string, options?: RequestInit): Promise<T> {
     // Los encabezados de quien llama se suman a la sesión, no la reemplazan.
     headers: {
       'Content-Type': 'application/json',
+      ...apiKeyHeaders(),
       ...(getToken() ? { Authorization: `Bearer ${getToken()}` } : {}),
       ...((options?.headers as Record<string, string> | undefined) ?? {}),
     },
