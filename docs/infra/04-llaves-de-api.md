@@ -40,7 +40,7 @@ En el backend (Railway), las mismas llaves juntas: `API_KEYS=web:<llave>,panel:<
 
 ## Exentos (no pueden mandar cabeceras o traen su propia firma)
 
-`OPTIONS` (consulta previa del navegador), `/` (chequeo de salud), `/api/files/*` y `/api/community/favicon/*` (se cargan con `<img>`), el inicio de OAuth (redirección del navegador), el regreso de LinkedIn, `/api/webhooks/*` (llevan su firma), el clic de un aviso push (lo manda el service worker), `/sitemap.xml`, `/api-docs` y `/uploads/*`. La lista es exacta y está probada en `backend/tests/unit/api-key.test.ts`; añadir una excepción nueva es una decisión de diseño que se anota aquí.
+`OPTIONS` (consulta previa del navegador), `/` (chequeo de salud), `/api/files/*` y `/api/community/favicon/*` (se cargan con `<img>`), el inicio de OAuth (redirección del navegador), el regreso de LinkedIn, `/api/webhooks/*` (llevan su firma), el clic de un aviso push (lo manda el service worker), `/sitemap.xml` y `/uploads/*`. La documentación `/api-docs` **no** está exenta: describe la API y exige la llave. La lista es exacta y está probada en `backend/tests/unit/api-key.test.ts`; añadir una excepción nueva es una decisión de diseño que se anota aquí.
 
 ## Cómo se pone en producción (sin romper a nadie)
 

@@ -67,7 +67,7 @@ describe('enforce', () => {
 
   it('the exemption list is exact: nearby paths still need the key', () => {
     for (const [method, path] of [['GET', '/api/files/x'], ['GET', '/api/community/favicon/a'], ['GET', '/api/linkedin/callback'], ['POST', '/api/community/push/click'], ['GET', '/sitemap.xml'], ['OPTIONS', '/api/anything']] as const) expect(isApiKeyExempt(method, path), path).toBe(true)
-    for (const [method, path] of [['GET', '/api/community/auth/login'], ['GET', '/api/linkedin/other'], ['POST', '/api/community/push/subscribe'], ['GET', '/api/admin/analytics/overview'], ['GET', '/api/filesx']] as const) expect(isApiKeyExempt(method, path), path).toBe(false)
+    for (const [method, path] of [['GET', '/api/community/auth/login'], ['GET', '/api/linkedin/other'], ['POST', '/api/community/push/subscribe'], ['GET', '/api/admin/analytics/overview'], ['GET', '/api/filesx'], ['GET', '/api-docs/']] as const) expect(isApiKeyExempt(method, path), path).toBe(false)
   })
 })
 

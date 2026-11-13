@@ -22,7 +22,7 @@ import { Request, Response, NextFunction } from 'express'
  *
  * Exentos (no pueden mandar cabeceras o traen su propia firma): OPTIONS (el navegador manda la consulta previa sin cabeceras propias), la raíz `/`
  * (chequeo de salud), `/api/files/*` y `/api/community/favicon/*` (se cargan con <img>), el inicio de OAuth (es una redirección del navegador), el
- * regreso de LinkedIn, el webhook de Resend (lleva su firma), el clic de un aviso push (lo manda el service worker), `/sitemap.xml` y `/api-docs`.
+ * regreso de LinkedIn, el webhook de Resend (lleva su firma), el clic de un aviso push (lo manda el service worker), `/sitemap.xml` y `/uploads/*`. La documentación (`/api-docs`) NO está exenta: describe la API y exige la llave.
  */
 export type ApiKeyMode = 'off' | 'report' | 'enforce'
 export interface ApiKeyEntry { name: string; key: Buffer }
@@ -58,7 +58,6 @@ const EXEMPT = [
   /^\/api\/webhooks\//,
   /^\/api\/community\/push\/click$/,
   /^\/sitemap\.xml$/,
-  /^\/api-docs/,
   /^\/uploads\//,
 ]
 export const isApiKeyExempt = (method: string, path: string): boolean => method === 'OPTIONS' || EXEMPT.some((pattern) => pattern.test(path))
