@@ -1,5 +1,5 @@
 import type { Readable } from 'stream'
-import { BlobServiceClient, BlobSASPermissions, SASProtocol } from '@azure/storage-blob'
+import type { BlobServiceClient, BlobSASPermissions, SASProtocol } from '@azure/storage-blob'
 import { supabase } from '../supabase.service'
 
 /**
@@ -34,11 +34,21 @@ export const isSafePath = (path: string): boolean => path.length > 0 && path.len
 let azureService: BlobServiceClient | null = null
 const ensured = new Set<string>()
 
+// La librería de Azure se carga SOLO cuando el motor es azure: con Supabase (producción hoy) ni se toca.
+export interface AzureSdk { BlobServiceClient: typeof BlobServiceClient; BlobSASPermissions: typeof BlobSASPermissions; SASProtocol: typeof SASProtocol }
+let sdkOverride: AzureSdk | null = null
+const sdk = (): AzureSdk => sdkOverride ?? (require('@azure/storage-blob') as AzureSdk)
+
+/** Solo para pruebas: usa una librería de Azure simulada. */
+export function setAzureSdkForTest(mock: AzureSdk | null) {
+  sdkOverride = mock
+}
+
 function azure(): BlobServiceClient {
   if (!azureService) {
     const connection = process.env.AZURE_STORAGE_CONNECTION_STRING
     if (!connection) throw new Error('Falta AZURE_STORAGE_CONNECTION_STRING')
-    azureService = BlobServiceClient.fromConnectionString(connection)
+    azureService = sdk().BlobServiceClient.fromConnectionString(connection)
   }
   return azureService
 }
@@ -113,7 +123,7 @@ export async function signedFileUrl(container: Container, path: string, seconds 
   if (storageDriver() === 'azure') {
     try {
       const blob = (await azureContainer(container)).getBlobClient(path)
-      return await blob.generateSasUrl({ permissions: BlobSASPermissions.parse('r'), expiresOn: new Date(Date.now() + seconds * 1000), protocol: SASProtocol.Https })
+      return await blob.generateSasUrl({ permissions: sdk().BlobSASPermissions.parse('r'), expiresOn: new Date(Date.now() + seconds * 1000), protocol: sdk().SASProtocol.Https })
     } catch {
       return null
     }

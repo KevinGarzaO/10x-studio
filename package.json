@@ -19,5 +19,11 @@
     "@supabase/supabase-js": "2.49.4",
     "concurrently": "^9.0.0",
     "dotenv": "^16.4.5"
+  },
+  "pnpm": {
+    "overrides": {
+      "@typespec/ts-http-runtime>https-proxy-agent": "7.0.6",
+      "@typespec/ts-http-runtime>http-proxy-agent": "7.0.2"
+    }
   }
 }

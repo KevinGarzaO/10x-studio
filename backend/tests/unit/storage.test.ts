@@ -36,7 +36,8 @@ vi.mock('../../services/supabase.service', () => ({
   supabase: { storage: { from: () => ({ upload: uploadMock, remove: async () => ({ error: null }), getPublicUrl: (p: string) => ({ data: { publicUrl: `https://x.supabase.co/storage/v1/object/public/avatars/${p}` } }), createSignedUrl: async () => ({ data: { signedUrl: 'https://signed' }, error: null }) }) } },
 }))
 
-import { isSafePath, putFile, publicFileUrl, publicFilePrefix, removeFiles, signedFileUrl, storageDriver, resetStorageForTest } from '../../services/storage'
+import * as azureMock from '@azure/storage-blob'
+import { setAzureSdkForTest, isSafePath, putFile, publicFileUrl, publicFilePrefix, removeFiles, signedFileUrl, storageDriver, resetStorageForTest } from '../../services/storage'
 import filesRoutes from '../../src/routes/files.routes'
 
 const useAzure = () => {
@@ -44,6 +45,7 @@ const useAzure = () => {
   process.env.AZURE_STORAGE_CONNECTION_STRING = 'fake'
   process.env.FILES_BASE_URL = 'https://api.example.test/'
   resetStorageForTest()
+  setAzureSdkForTest(azureMock as never)
 }
 
 beforeEach(() => { blobs.clear(); created.length = 0; uploadMock.mockClear() })
