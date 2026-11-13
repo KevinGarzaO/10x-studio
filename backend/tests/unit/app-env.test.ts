@@ -4,9 +4,10 @@ import { appEnv, linkedinPublishingAllowed, scheduledJobsEnabled } from '../../c
 const env = (vars: Record<string, string>) => vars as unknown as NodeJS.ProcessEnv
 
 describe('appEnv', () => {
-  it('uses APP_ENV when it is one of the three known values (any case, with spaces)', () => {
+  it('uses APP_ENV when it is one of the known values (any case, with spaces)', () => {
     expect(appEnv(env({ APP_ENV: 'production' }))).toBe('production')
-    expect(appEnv(env({ APP_ENV: ' Beta ' }))).toBe('beta')
+    expect(appEnv(env({ APP_ENV: ' Staging ' }))).toBe('staging')
+    expect(appEnv(env({ APP_ENV: 'beta' }))).toBe('staging')
     expect(appEnv(env({ APP_ENV: 'development' }))).toBe('development')
   })
 
@@ -16,7 +17,7 @@ describe('appEnv', () => {
 
   it('without APP_ENV it follows the name of the Railway environment, so production needs no new variable', () => {
     expect(appEnv(env({ RAILWAY_ENVIRONMENT_NAME: 'production' }))).toBe('production')
-    expect(appEnv(env({ RAILWAY_ENVIRONMENT_NAME: 'beta' }))).toBe('beta')
+    expect(appEnv(env({ RAILWAY_ENVIRONMENT_NAME: 'beta' }))).toBe('staging')
     expect(appEnv(env({ RAILWAY_ENVIRONMENT_NAME: 'development' }))).toBe('development')
   })
 
@@ -29,15 +30,16 @@ describe('appEnv', () => {
 })
 
 describe('what each environment is allowed to do', () => {
-  it('scheduled jobs run in beta and production, never in development', () => {
+  it('scheduled jobs run only in production', () => {
     expect(scheduledJobsEnabled(env({ APP_ENV: 'production' }))).toBe(true)
-    expect(scheduledJobsEnabled(env({ APP_ENV: 'beta' }))).toBe(true)
+    expect(scheduledJobsEnabled(env({ APP_ENV: 'staging' }))).toBe(false)
+    expect(scheduledJobsEnabled(env({ RAILWAY_ENVIRONMENT_NAME: 'beta' }))).toBe(false)
     expect(scheduledJobsEnabled(env({}))).toBe(false)
   })
 
   it('only production may publish on the founder\'s LinkedIn', () => {
     expect(linkedinPublishingAllowed(env({ APP_ENV: 'production' }))).toBe(true)
-    expect(linkedinPublishingAllowed(env({ APP_ENV: 'beta' }))).toBe(false)
+    expect(linkedinPublishingAllowed(env({ APP_ENV: 'staging' }))).toBe(false)
     expect(linkedinPublishingAllowed(env({}))).toBe(false)
   })
 })
