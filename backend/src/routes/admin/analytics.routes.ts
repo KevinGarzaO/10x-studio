@@ -22,6 +22,7 @@ import { loadFeedbackSummary } from '../../../services/analytics/feedback-summar
 import { parseLinkedInReport } from '../../../services/analytics/linkedin-report'
 import { loadLinkedInReport, saveLinkedInReport } from '../../../services/analytics/linkedin-report-data'
 import { pushTest } from '../../../services/push/push'
+import flagsAdminRoutes from './flags.routes'
 import { loadApplyFunnel } from '../../../services/analytics/apply-funnel'
 import { loadRhythm } from '../../../services/analytics/rhythm'
 import { loadTimingSummary } from '../../../services/performance/api-timing'
@@ -1163,5 +1164,8 @@ router.get('/retention', handle('retención', async (_req, res) => {
     people: activePeople({ activity: rows.filter((row) => counted.has(row.user_id)), people: people.filter(countsAsPerson) }),
   })
 }))
+
+// Interruptores por grupo (equipo, beta, porcentajes): administración del fundador y resumen de conteos para el agente.
+router.use('/flags', flagsAdminRoutes)
 
 export default router

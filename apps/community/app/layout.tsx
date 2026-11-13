@@ -3,6 +3,7 @@ import { AttributionCapture } from '@/components/attribution-capture'
 import { ClarityIntegration } from '@/components/clarity-integration'
 import { ErrorCapture } from '@/components/error-capture'
 import { SessionKeeper } from '@/components/session-keeper'
+import { FlagsLoader } from '@/components/flags-loader'
 import { GlobalErrorBoundary } from '@/components/global-error-boundary'
 import { SessionCapture } from '@/components/session-capture'
 import { WebAnalytics } from '@/components/web-analytics'
@@ -60,6 +61,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
         <ClarityIntegration />
         <SessionKeeper />
         <ErrorCapture />
+        <FlagsLoader />
         <GlobalErrorBoundary area="layout">{children}</GlobalErrorBoundary>
       </body>
     </html>

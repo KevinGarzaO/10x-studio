@@ -41,6 +41,7 @@ import communityCompaniesRoutes from './src/routes/community/companies.routes'
 import communityNotificationsRoutes from './src/routes/community/notifications.routes'
 import communityPushRoutes from './src/routes/community/push.routes'
 import communityFeedbackRoutes from './src/routes/community/feedback.routes'
+import communityFlagsRoutes from './src/routes/community/flags.routes'
 import communityCardsRoutes from './src/routes/community/cards.routes'
 import communityApplicationsRoutes from './src/routes/community/applications.routes'
 // import communityCompanyClaimsRoutes from './src/routes/community/company-claims.routes'
@@ -149,6 +150,7 @@ app.use('/api/community/companies', communityCompaniesRoutes)
 app.use('/api/community/notifications', communityNotificationsRoutes)
 app.use('/api/community/push', communityPushRoutes)
 app.use('/api/community/feedback', communityFeedbackRoutes)
+app.use('/api/community/flags', communityFlagsRoutes)
 app.use('/api/community/cards', communityCardsRoutes)
 // Alta de empresas en pausa: por ahora AvoTalent solo ofrece algo a las personas. Para reactivarla, vuelve a montar
 // communityCompanyClaimsRoutes aquí y a mostrar el flujo en el registro y el onboarding de apps/community.
