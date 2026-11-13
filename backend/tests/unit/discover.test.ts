@@ -1,12 +1,12 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import express from 'express'
 import request from 'supertest'
-import { featuredScore, rankFeaturedUsers, type FeaturedCandidate } from '../../services/community/featured-users'
-import { matchRoles, sanitizeQuery } from '../../services/community/search-text'
+import { featuredScore, rankFeaturedUsers, type FeaturedCandidate } from '@avotalent/core/services/community/featured-users'
+import { matchRoles, sanitizeQuery } from '@avotalent/core/services/community/search-text'
 
 const state = vi.hoisted(() => ({ tables: {} as Record<string, any[]>, filters: [] as string[], user: null as string | null }))
 
-vi.mock('../../services/supabase.service', () => ({
+vi.mock('@avotalent/core/services/supabase.service', () => ({
   supabase: {
     auth: { getUser: async () => (state.user ? { data: { user: { id: state.user } }, error: null } : { data: { user: null }, error: new Error('no') }) },
     from: (table: string) => ({

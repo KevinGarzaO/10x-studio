@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest'
-import { buildAlerts, TRAFFIC_WITHOUT_SIGNUPS, TOKEN_WARNING_DAYS, type AlertInput } from '../../services/analytics/alerts'
-import { expectedPublicationsToday } from '../../services/analytics/schedule'
-import { vacancyEngagement } from '../../services/analytics/metrics'
+import { buildAlerts, TRAFFIC_WITHOUT_SIGNUPS, TOKEN_WARNING_DAYS, type AlertInput } from '@avotalent/core/services/analytics/alerts'
+import { expectedPublicationsToday } from '@avotalent/core/services/analytics/schedule'
+import { vacancyEngagement } from '@avotalent/core/services/analytics/metrics'
 
 /** Un día normal y sano: nada que avisar. */
 const healthy = (patch: Partial<AlertInput> = {}): AlertInput => ({

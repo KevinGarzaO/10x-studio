@@ -2,7 +2,7 @@ import { describe, expect, it, vi, beforeAll, afterAll, beforeEach } from 'vites
 import express from 'express'
 import request from 'supertest'
 import { MAX_PENDING_PROPOSALS } from '@avocado/schemas'
-import { supabase } from '../../services/supabase.service'
+import { supabase } from '@avotalent/core/services/supabase.service'
 import skillProposalsRouter from '../../src/routes/community/skill-proposals.routes'
 
 // Solo se suplanta "quién es este usuario". El resolvedor, el catálogo, los

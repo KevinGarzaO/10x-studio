@@ -3,7 +3,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 const upserts = vi.hoisted(() => [] as { row: Record<string, unknown>; options: Record<string, unknown> }[])
 const behavior = vi.hoisted(() => ({ error: null as unknown, throws: false }))
 
-vi.mock('../../services/supabase.service', () => ({
+vi.mock('@avotalent/core/services/supabase.service', () => ({
   supabase: {
     from: (table: string) => ({
       upsert: (row: Record<string, unknown>, options: Record<string, unknown>) => {
@@ -15,8 +15,8 @@ vi.mock('../../services/supabase.service', () => ({
   },
 }))
 
-import { recordActivity, resetActivityCache } from '../../services/analytics/activity'
-import { nextPublication, publicationCronExpressions, PUBLICATION_SLOTS, PUBLICATION_DAYS } from '../../services/analytics/schedule'
+import { recordActivity, resetActivityCache } from '@avotalent/core/services/analytics/activity'
+import { nextPublication, publicationCronExpressions, PUBLICATION_SLOTS, PUBLICATION_DAYS } from '@avotalent/core/services/analytics/schedule'
 
 const flush = () => new Promise(resolve => setTimeout(resolve, 0))
 

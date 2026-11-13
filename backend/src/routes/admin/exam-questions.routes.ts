@@ -1,6 +1,6 @@
 import { Router, Response } from 'express'
 import { buildExamQuestionSchema } from '@avocado/schemas'
-import { supabase } from '../../../services/supabase.service'
+import { supabase } from '@avotalent/core/services/supabase.service'
 import { communityAuthMiddleware, AuthRequest } from '../../../middleware/community-auth.middleware'
 import { requireSuperadmin } from '../../middleware/require-superadmin.middleware'
 

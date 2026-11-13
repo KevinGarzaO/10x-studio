@@ -2,7 +2,7 @@ import { createClient } from "@supabase/supabase-js";
 // Se importa la del servicio en vez de copiarla: esta copia tenía el mismo bug
 // de colisión (buscaba la empresa por username, así que podía devolver la cuenta
 // de una persona con ese nombre) y tendría que arreglarse dos veces.
-import { getOrCreateCompanyUser, CLAIMED_COMPANY } from "../services/scraper/sync";
+import { getOrCreateCompanyUser, CLAIMED_COMPANY } from "@avotalent/core/services/scraper/sync";
 import path from "path";
 import dotenv from "dotenv";
 

@@ -2,11 +2,11 @@ import { Request, Response } from 'express'
 import fetch from 'node-fetch'
 import fs from 'fs'
 import path from 'path'
-import { buildPrompt, buildSuggestTopicsPrompt, Platform } from '../lib/prompts'
-import { ImageService } from '../services/image.service'
-import { supabase } from '../services/supabase.service'
-import { SearchService } from '../services/search.service'
-import { ContentService } from '../services/content.service'
+import { buildPrompt, buildSuggestTopicsPrompt, Platform } from '@avotalent/core/lib/prompts'
+import { ImageService } from '@avotalent/core/services/image.service'
+import { supabase } from '@avotalent/core/services/supabase.service'
+import { SearchService } from '@avotalent/core/services/search.service'
+import { ContentService } from '@avotalent/core/services/content.service'
 
 /**
  * Helper to parse Claude JSON response with resilience

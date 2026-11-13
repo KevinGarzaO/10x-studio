@@ -24,8 +24,8 @@ function parseClaudeJson(rawText: string) {
 async function loadRefImages(): Promise<{ data: string, mimeType: string }[]> {
   const refImages: { data: string, mimeType: string }[] = []
   const refPaths = [
-    path.join(__dirname, '../assets/references/ref1.jpg'),
-    path.join(__dirname, '../assets/references/ref2.jpg')
+    path.join(process.cwd(), 'assets/references/ref1.jpg'),
+    path.join(process.cwd(), 'assets/references/ref2.jpg')
   ]
   for (const p of refPaths) {
     if (fs.existsSync(p)) {

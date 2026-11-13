@@ -34,7 +34,7 @@ duplicated or redefined per-app.
 
 **Rationale**: This repo has previously suffered from the same normalization logic
 (e.g. `companySlug()`) being duplicated between `apps/community/lib/company.ts` and
-`backend/services/company.ts`, causing grouping/dedup bugs when the two drifted.
+`packages/core/services/company.ts`, causing grouping/dedup bugs when the two drifted.
 A single shared schema source removes this class of bug for validation.
 
 ### III. Explicit Auth on Every Endpoint

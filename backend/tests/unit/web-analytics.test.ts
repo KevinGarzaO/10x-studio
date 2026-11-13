@@ -3,7 +3,7 @@ import express from 'express'
 import request from 'supertest'
 
 const rpc = vi.hoisted(() => vi.fn())
-vi.mock('../../services/supabase.service', () => ({ supabase: { rpc } }))
+vi.mock('@avotalent/core/services/supabase.service', () => ({ supabase: { rpc } }))
 vi.mock('../../middleware/community-auth.middleware', () => ({
   communityAuthMiddleware: (req: any, res: any, next: any) => {
     if (req.headers.authorization !== 'Bearer ok') return res.status(401).json({ error: 'no' })
@@ -13,8 +13,8 @@ vi.mock('../../middleware/community-auth.middleware', () => ({
 }))
 
 import router from '../../src/routes/analytics/collect.routes'
-import { parseUserAgent } from '../../services/web-analytics/user-agent'
-import { parseCollectPayload, CONVERSION_EVENTS } from '../../services/web-analytics/payload'
+import { parseUserAgent } from '@avotalent/core/services/web-analytics/user-agent'
+import { parseCollectPayload, CONVERSION_EVENTS } from '@avotalent/core/services/web-analytics/payload'
 
 const SESSION = '3f1c2a90-5b7e-4d1a-9c0e-1a2b3c4d5e6f'
 const CLIENT = 'b7c1f0de-1111-4222-8333-944455556666'

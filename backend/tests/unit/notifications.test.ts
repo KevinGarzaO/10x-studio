@@ -32,13 +32,13 @@ function builder(table: string) {
   return q
 }
 
-vi.mock('../../services/supabase.service', () => ({ supabase: { from: (table: string) => builder(table) } }))
+vi.mock('@avotalent/core/services/supabase.service', () => ({ supabase: { from: (table: string) => builder(table) } }))
 vi.mock('../../middleware/community-auth.middleware', () => ({
   communityAuthMiddleware: (req: { headers: Record<string, string>; userId?: string }, _res: unknown, next: () => void) => { req.userId = req.headers['x-user'] ?? 'u1'; next() },
 }))
 
 import notificationsRoutes, { withDefaults } from '../../src/routes/community/notifications.routes'
-import { commentMessage, notifyComment } from '../../services/notifications/notify'
+import { commentMessage, notifyComment } from '@avotalent/core/services/notifications/notify'
 
 const app = () => {
   const server = express()

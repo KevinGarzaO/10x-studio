@@ -3,14 +3,14 @@ import express from 'express'
 import request from 'supertest'
 
 const rpc = vi.hoisted(() => vi.fn())
-vi.mock('../../services/supabase.service', () => ({ supabase: { rpc } }))
+vi.mock('@avotalent/core/services/supabase.service', () => ({ supabase: { rpc } }))
 vi.mock('../../middleware/community-auth.middleware', () => ({ communityAuthMiddleware: (_req: any, _res: any, next: any) => next() }))
 
 import router from '../../src/routes/analytics/collect.routes'
 import {
   scrub, pathOnly, parseStack, fingerprintOf, cleanContext, parseErrorPayload, parseFlowPayload, browserInfoOf, captureServerError,
-} from '../../services/web-analytics/telemetry'
-import { stepsByFlow } from '../../services/analytics/flows'
+} from '@avotalent/core/services/web-analytics/telemetry'
+import { stepsByFlow } from '@avotalent/core/services/analytics/flows'
 
 const SESSION = '3f1c2a90-5b7e-4d1a-9c0e-1a2b3c4d5e6f'
 const FLOW = '4a1c2a90-5b7e-4d1a-9c0e-1a2b3c4d5e6f'

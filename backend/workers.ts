@@ -1,6 +1,6 @@
 import http from 'http'
-import { appEnv } from './config/app-env'
-import { startScheduledJobs, workersEnabled } from './services/workers/scheduled-jobs'
+import { appEnv } from '@avotalent/core/config/app-env'
+import { startScheduledJobs, workersEnabled } from '@avotalent/core/services/workers/scheduled-jobs'
 
 /**
  * Servicio de WORKERS: un proceso que solo corre las tareas programadas (scraper, correos, LinkedIn, fotos semanales, matches...) y nada de

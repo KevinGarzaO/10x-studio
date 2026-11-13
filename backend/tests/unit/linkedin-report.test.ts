@@ -4,8 +4,8 @@ import express from 'express'
 import request from 'supertest'
 
 const db = vi.hoisted(() => ({ saved: 0 }))
-vi.mock('../../services/supabase.service', () => ({ supabase: { from: () => ({}) } }))
-vi.mock('../../services/analytics/linkedin-report-data', () => ({
+vi.mock('@avotalent/core/services/supabase.service', () => ({ supabase: { from: () => ({}) } }))
+vi.mock('@avotalent/core/services/analytics/linkedin-report-data', () => ({
   loadLinkedInReport: async () => ({ ready: true, empty: true }),
   saveLinkedInReport: async (parsed: { posts: unknown[]; daily: unknown[] }) => { db.saved += 1; return { ready: true, duplicate: false, uploadId: 'u1', posts: parsed.posts.length, days: parsed.daily.length } },
 }))
@@ -13,7 +13,7 @@ vi.mock('../../services/analytics/linkedin-report-data', () => ({
 import {
   buildLinkedInReport, judgePost, norm, parseDay, parseLinkedInReport, parseNumber, parsePercent, postKeyFromUrl, postKeyFromUrn,
   type ReportInput,
-} from '../../services/analytics/linkedin-report'
+} from '@avotalent/core/services/analytics/linkedin-report'
 import router from '../../src/routes/admin/analytics.routes'
 
 const URL_A = 'https://www.linkedin.com/posts/alguien_staff-engineer-share-7523542032171106304-6f60'

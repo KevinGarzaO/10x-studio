@@ -1,4 +1,4 @@
-import { supabase } from '../services/supabase.service'
+import { supabase } from '@avotalent/core/services/supabase.service'
 
 const BIOS: Record<string, string> = {
   platzi: 'Plataforma educativa en línea líder en Latinoamérica, enfocada en tecnología, programación, datos, negocios y marketing digital. Forma a millones de estudiantes hispanohablantes a través de cursos prácticos y una comunidad activa de profesionales.',

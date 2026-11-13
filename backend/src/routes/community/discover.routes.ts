@@ -1,9 +1,9 @@
 import { Router, Request, Response } from 'express'
-import { supabase } from '../../../services/supabase.service'
-import { rankFeaturedUsers, type FeaturedCandidate } from '../../../services/community/featured-users'
-import { matchRoles, sanitizeQuery } from '../../../services/community/search-text'
-import { PUBLIC_ROLES, roleLabel, roleSlug } from '../../../services/seo/role-slug'
-import { companySlug } from '../../../services/company'
+import { supabase } from '@avotalent/core/services/supabase.service'
+import { rankFeaturedUsers, type FeaturedCandidate } from '@avotalent/core/services/community/featured-users'
+import { matchRoles, sanitizeQuery } from '@avotalent/core/services/community/search-text'
+import { PUBLIC_ROLES, roleLabel, roleSlug } from '@avotalent/core/services/seo/role-slug'
+import { companySlug } from '@avotalent/core/services/company'
 
 const router = Router()
 

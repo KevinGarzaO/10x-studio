@@ -1,6 +1,6 @@
 import { describe, expect, it, beforeAll, afterAll } from 'vitest'
-import { supabase } from '../../services/supabase.service'
-import { getOrCreateCompanyUser, CLAIMED_COMPANY } from '../../services/scraper/sync'
+import { supabase } from '@avotalent/core/services/supabase.service'
+import { getOrCreateCompanyUser, CLAIMED_COMPANY } from '@avotalent/core/services/scraper/sync'
 
 // Una empresa registrada queda fuera del scraper (requerimiento 003, sección F):
 // su dueño la administra, así que el scraper no le actualiza el perfil ni le

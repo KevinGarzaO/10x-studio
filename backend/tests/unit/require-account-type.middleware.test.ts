@@ -5,7 +5,7 @@ import { requireAccountType } from '../../src/middleware/require-account-type.mi
 
 const maybeSingle = vi.fn()
 
-vi.mock('../../services/supabase.service', () => ({
+vi.mock('@avotalent/core/services/supabase.service', () => ({
   supabase: {
     from: () => ({
       select: () => ({

@@ -1,10 +1,10 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 
-vi.mock('../../services/supabase.service', () => ({ supabase: { rpc: vi.fn() } }))
-vi.mock('../../services/cron.service', () => ({ initCron: vi.fn() }))
+vi.mock('@avotalent/core/services/supabase.service', () => ({ supabase: { rpc: vi.fn() } }))
+vi.mock('@avotalent/core/services/cron.service', () => ({ initCron: vi.fn() }))
 
-import { startLeader, type LeaseAnswer, type LeaseApi } from '../../services/workers/leader'
-import { cronsInApi, startScheduledJobs, workersEnabled } from '../../services/workers/scheduled-jobs'
+import { startLeader, type LeaseAnswer, type LeaseApi } from '@avotalent/core/services/workers/leader'
+import { cronsInApi, startScheduledJobs, workersEnabled } from '@avotalent/core/services/workers/scheduled-jobs'
 
 /** Una base falsa con UN arrendamiento: lo que cada proceso recibe depende de quién lo tiene. */
 function fakeDb() {

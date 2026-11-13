@@ -6,7 +6,7 @@ process.env.SUPABASE_URL = 'https://project.supabase.co'
 
 const state = vi.hoisted(() => ({ profileCompleted: true, uploads: [] as { path: string; type: string; size: number }[], uploadError: false, inserted: [] as Record<string, unknown>[], failFirstInsertOnImage: false }))
 
-vi.mock('../../services/supabase.service', () => ({
+vi.mock('@avotalent/core/services/supabase.service', () => ({
   supabase: {
     auth: { getUser: async () => ({ data: { user: null }, error: new Error('no') }) },
     storage: {
@@ -43,7 +43,7 @@ vi.mock('../../middleware/community-auth.middleware', () => ({
 }))
 
 import postsRouter from '../../src/routes/community/posts.routes'
-import { isCommunityImageUrl, parseImageDataUrl, MAX_IMAGE_BYTES } from '../../services/community/post-images'
+import { isCommunityImageUrl, parseImageDataUrl, MAX_IMAGE_BYTES } from '@avotalent/core/services/community/post-images'
 
 const app = () => {
   const a = express()

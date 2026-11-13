@@ -1,5 +1,5 @@
 import { Router, Response } from 'express'
-import { supabase } from '../../../services/supabase.service'
+import { supabase } from '@avotalent/core/services/supabase.service'
 import { communityAuthMiddleware, AuthRequest } from '../../../middleware/community-auth.middleware'
 
 const router = Router()

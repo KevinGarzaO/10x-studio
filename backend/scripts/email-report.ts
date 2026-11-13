@@ -10,8 +10,8 @@
  */
 import 'dotenv/config'
 import { Resend } from 'resend'
-import { supabase } from '../services/supabase.service'
-import { REMINDER_CAMPAIGN, REMINDER_KIND } from '../services/email/profile-reminder'
+import { supabase } from '@avotalent/core/services/supabase.service'
+import { REMINDER_CAMPAIGN, REMINDER_KIND } from '@avotalent/core/services/email/profile-reminder'
 
 interface Sent {
   user_id: string

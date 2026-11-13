@@ -10,9 +10,9 @@
  * Necesita backend/sql/notifications-migration.sql y RESEND_API_KEY.
  */
 import 'dotenv/config'
-import { remainingBudget, RESERVE, sentLast24h, TOTAL_DAILY_BUDGET } from '../services/email/budget'
-import { ALERT_WINDOW_DAYS, loadHistory, loadMatchPeople, loadVacancies, planAlerts, planDigests, runAlertBatch, runDigestBatch } from '../services/email/para-ti-batch'
-import { DIGEST_WINDOW_DAYS } from '../services/email/para-ti'
+import { remainingBudget, RESERVE, sentLast24h, TOTAL_DAILY_BUDGET } from '@avotalent/core/services/email/budget'
+import { ALERT_WINDOW_DAYS, loadHistory, loadMatchPeople, loadVacancies, planAlerts, planDigests, runAlertBatch, runDigestBatch } from '@avotalent/core/services/email/para-ti-batch'
+import { DIGEST_WINDOW_DAYS } from '@avotalent/core/services/email/para-ti'
 
 const arg = (name: string): string | undefined => {
   const index = process.argv.indexOf(name)

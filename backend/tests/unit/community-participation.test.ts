@@ -1,8 +1,8 @@
 import { describe, it, expect, vi } from 'vitest'
 
-vi.mock('../../services/supabase.service', () => ({ supabase: {} }))
+vi.mock('@avotalent/core/services/supabase.service', () => ({ supabase: {} }))
 
-import { buildCommunityParticipation } from '../../services/analytics/community-participation'
+import { buildCommunityParticipation } from '@avotalent/core/services/analytics/community-participation'
 
 // Lunes 9 de noviembre de 2026, mediodía en Monterrey (= 18:00 UTC): la semana en curso empieza ese lunes.
 const NOW = new Date('2026-11-09T18:00:00Z')

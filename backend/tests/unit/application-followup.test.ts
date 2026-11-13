@@ -1,10 +1,10 @@
 import { describe, it, expect, vi } from 'vitest'
 
-vi.mock('../../services/supabase.service', () => ({ supabase: { from: () => ({}) } }))
+vi.mock('@avotalent/core/services/supabase.service', () => ({ supabase: { from: () => ({}) } }))
 
-import { buildFollowupEmail, noticeMessage, planFollowups, runApplicationFollowups, type FollowupDeps, type FollowupPerson } from '../../services/applications/followup'
-import { renderFollowup, FOLLOWUP_SUBJECT } from '../../services/email/templates/followup'
-import type { ApplicationRow } from '../../services/applications/applications'
+import { buildFollowupEmail, noticeMessage, planFollowups, runApplicationFollowups, type FollowupDeps, type FollowupPerson } from '@avotalent/core/services/applications/followup'
+import { renderFollowup, FOLLOWUP_SUBJECT } from '@avotalent/core/services/email/templates/followup'
+import type { ApplicationRow } from '@avotalent/core/services/applications/applications'
 
 const now = new Date('2026-11-10T16:20:00Z')
 const ago = (days: number) => new Date(now.getTime() - days * 86_400_000).toISOString()

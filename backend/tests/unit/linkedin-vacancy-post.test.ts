@@ -14,7 +14,7 @@ import {
   publishScore,
   type LinkedInVacancy,
   type PostedVacancy,
-} from '../../services/linkedin/vacancy-post'
+} from '@avotalent/core/services/linkedin/vacancy-post'
 
 let n = 0
 const vacancy = (patch: Partial<LinkedInVacancy> = {}): LinkedInVacancy => ({

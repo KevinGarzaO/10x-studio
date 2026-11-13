@@ -1,7 +1,7 @@
 import { describe, expect, it, afterAll } from 'vitest'
 import express from 'express'
 import request from 'supertest'
-import { supabase } from '../../services/supabase.service'
+import { supabase } from '@avotalent/core/services/supabase.service'
 import skillsRouter from '../../src/routes/community/skills.routes'
 
 // Integración real contra Supabase: sin mocks. Este endpoint es público, así

@@ -1,8 +1,8 @@
 import { describe, it, expect, vi } from 'vitest'
 
-vi.mock('../../services/supabase.service', () => ({ supabase: {} }))
+vi.mock('@avotalent/core/services/supabase.service', () => ({ supabase: {} }))
 
-import { buildFeedVisible, type FeedRow } from '../../services/analytics/feed-visible'
+import { buildFeedVisible, type FeedRow } from '@avotalent/core/services/analytics/feed-visible'
 
 const row = (role: string | null, hidden: boolean | null, at: string | null = null): FeedRow => ({ role_category: role, hidden_from_feed: hidden, hidden_at: at })
 

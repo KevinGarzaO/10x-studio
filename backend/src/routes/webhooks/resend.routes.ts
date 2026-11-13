@@ -1,5 +1,5 @@
 import { Router, Request, Response } from 'express'
-import { parseEvent, recordEvent, verifySignature } from '../../../services/email/resend-webhook'
+import { parseEvent, recordEvent, verifySignature } from '@avotalent/core/services/email/resend-webhook'
 
 /**
  * POST /api/webhooks/resend: los avisos de Resend sobre los correos (entregado, rebote, queja, clic, apertura).

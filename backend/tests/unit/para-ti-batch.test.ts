@@ -1,13 +1,13 @@
 import { describe, it, expect, vi } from 'vitest'
 
-vi.mock('../../services/supabase.service', () => ({ supabase: {} }))
+vi.mock('@avotalent/core/services/supabase.service', () => ({ supabase: {} }))
 
 import {
   ALERT_EMAILS_PER_RUN, ALERT_MAX_PER_DAY, ALERT_MAX_PER_WEEK, DIGEST_MIN_GAP_DAYS,
   planAlerts, planDigests, runAlertBatch, runDigestBatch,
   type MatchDeps, type MatchHistory, type MatchPerson,
-} from '../../services/email/para-ti-batch'
-import type { MatchableVacancy } from '../../services/email/para-ti'
+} from '@avotalent/core/services/email/para-ti-batch'
+import type { MatchableVacancy } from '@avotalent/core/services/email/para-ti'
 
 const NOW = new Date('2026-11-03T16:00:00Z')
 const ago = (hours: number) => new Date(NOW.getTime() - hours * 3600000).toISOString()

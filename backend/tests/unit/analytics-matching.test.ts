@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
-import { buildMatchingOverview, FEW_OFFERS, GOOD_SCORE, type PanelCandidate, type PanelVacancy } from '../../services/analytics/matching'
-import { MIN_SCORE, scoreMatch } from '../../services/matching/score'
+import { buildMatchingOverview, FEW_OFFERS, GOOD_SCORE, type PanelCandidate, type PanelVacancy } from '@avotalent/core/services/analytics/matching'
+import { MIN_SCORE, scoreMatch } from '@avotalent/core/services/matching/score'
 
 const person = (patch: Partial<PanelCandidate> = {}): PanelCandidate => ({
   id: 'u1', name: 'Ana', photo: null, roleCategory: 'backend', seniority: 'senior', skills: ['python', 'aws', 'docker'], workModality: 'Remoto', validatedSkills: {}, ...patch,

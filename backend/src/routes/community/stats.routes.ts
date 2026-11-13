@@ -1,8 +1,8 @@
-import { feedVisibilityReady } from '../../../services/vacancies/feed-visibility'
+import { feedVisibilityReady } from '@avotalent/core/services/vacancies/feed-visibility'
 import { Router, Request, Response } from 'express'
-import { supabase } from '../../../services/supabase.service'
-import { FOCUS_ROLES } from '../../../services/audience/role-focus'
-import { PUBLIC_ROLES, roleLabel, roleSlug } from '../../../services/seo/role-slug'
+import { supabase } from '@avotalent/core/services/supabase.service'
+import { FOCUS_ROLES } from '@avotalent/core/services/audience/role-focus'
+import { PUBLIC_ROLES, roleLabel, roleSlug } from '@avotalent/core/services/seo/role-slug'
 
 const router = Router()
 

@@ -8,8 +8,8 @@
  * puntúa cada vacante contra cada una con el mismo motor que "Para ti". Muestra
  * usernames, nunca correos.
  */
-import { supabase } from '../services/supabase.service'
-import { buildMatchReport, type ReportCandidate, type ReportVacancy } from '../services/matching/report'
+import { supabase } from '@avotalent/core/services/supabase.service'
+import { buildMatchReport, type ReportCandidate, type ReportVacancy } from '@avotalent/core/services/matching/report'
 
 const asArray = (value: unknown): string[] => (Array.isArray(value) ? value.filter((s): s is string => typeof s === 'string') : [])
 

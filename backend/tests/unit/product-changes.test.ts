@@ -11,7 +11,7 @@ const db = vi.hoisted(() => ({
   error: null as null | string,
 }))
 
-vi.mock('../../services/supabase.service', () => ({
+vi.mock('@avotalent/core/services/supabase.service', () => ({
   supabase: {
     rpc,
     from: () => ({
@@ -23,7 +23,7 @@ vi.mock('../../services/supabase.service', () => ({
   },
 }))
 
-import { confidenceOf, describeImpact, parseCommitSubject, parseExpectedMetric, perDay, recordChange, recordDeployFromEnv, shift, slugArea, type ImpactRow } from '../../services/analytics/changes'
+import { confidenceOf, describeImpact, parseCommitSubject, parseExpectedMetric, perDay, recordChange, recordDeployFromEnv, shift, slugArea, type ImpactRow } from '@avotalent/core/services/analytics/changes'
 import router from '../../src/routes/admin/analytics.routes'
 
 beforeEach(() => {

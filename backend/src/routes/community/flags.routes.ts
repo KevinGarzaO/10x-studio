@@ -1,6 +1,6 @@
 import { Router, Request, Response } from 'express'
-import { getOptionalUserId } from '../../../services/community/viewer'
-import { flagsFor } from '../../../services/flags/flags.service'
+import { getOptionalUserId } from '@avotalent/core/services/community/viewer'
+import { flagsFor } from '@avotalent/core/services/flags/flags.service'
 
 /**
  * Qué funciones ve esta persona. Sesión opcional: sin sesión solo llegan las que están en «Todos». Contesta SOLO las encendidas

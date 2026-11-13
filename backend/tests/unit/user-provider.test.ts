@@ -16,7 +16,7 @@ const db = vi.hoisted(() => ({
   adminUpdates: [] as any[],
 }))
 
-vi.mock('../../services/supabase.service', () => {
+vi.mock('@avotalent/core/services/supabase.service', () => {
   const errorFor = (payload: any) => {
     if (db.providerColumnMissing && payload && 'provider' in payload) {
       return {

@@ -1,9 +1,9 @@
 import { describe, expect, it, vi, beforeAll, afterAll } from 'vitest'
 import express from 'express'
 import request from 'supertest'
-import { supabase } from '../../services/supabase.service'
+import { supabase } from '@avotalent/core/services/supabase.service'
 import claimsRouter from '../../src/routes/community/company-claims.routes'
-import { removeClaimFiles } from '../../services/claim-documents'
+import { removeClaimFiles } from '@avotalent/core/services/claim-documents'
 
 // Solo se suplanta "quién es este usuario". El schema compartido, los índices
 // únicos, los CHECK y el bucket privado corren de verdad.

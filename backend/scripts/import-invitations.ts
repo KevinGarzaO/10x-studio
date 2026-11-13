@@ -11,9 +11,9 @@
  */
 import 'dotenv/config'
 import { readFileSync } from 'fs'
-import { supabase } from '../services/supabase.service'
-import { parseCsv } from '../services/email/csv'
-import { newInviteCode, normalizeContacts } from '../services/email/invitations'
+import { supabase } from '@avotalent/core/services/supabase.service'
+import { parseCsv } from '@avotalent/core/services/email/csv'
+import { newInviteCode, normalizeContacts } from '@avotalent/core/services/email/invitations'
 
 const arg = (name: string): string | undefined => {
   const index = process.argv.indexOf(name)

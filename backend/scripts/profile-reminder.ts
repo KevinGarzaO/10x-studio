@@ -11,7 +11,7 @@
  */
 import 'dotenv/config'
 import { Resend } from 'resend'
-import { sendTracked } from '../services/email/budget'
+import { sendTracked } from '@avotalent/core/services/email/budget'
 import {
   MIN_ACCOUNT_AGE_HOURS,
   REMINDER_KIND,
@@ -22,7 +22,7 @@ import {
   pickPopularVacancy,
   sendReminders,
   type Exclusion,
-} from '../services/email/profile-reminder'
+} from '@avotalent/core/services/email/profile-reminder'
 
 const EXCLUSION_LABEL: Record<Exclusion, string> = {
   completo: 'ya completaron el perfil',

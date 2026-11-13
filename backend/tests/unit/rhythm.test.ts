@@ -5,7 +5,7 @@ import request from 'supertest'
 const rpc = vi.hoisted(() => vi.fn())
 const db = vi.hoisted(() => ({ tables: {} as Record<string, any[]>, missing: new Set<string>() }))
 
-vi.mock('../../services/supabase.service', () => ({
+vi.mock('@avotalent/core/services/supabase.service', () => ({
   supabase: {
     rpc,
     from: (table: string) => {
@@ -18,7 +18,7 @@ vi.mock('../../services/supabase.service', () => ({
   },
 }))
 
-import { heatGrid, judgeDays, median, monterreyDay, expectedLinkedinPosts, type RhythmDayRow } from '../../services/analytics/rhythm'
+import { heatGrid, judgeDays, median, monterreyDay, expectedLinkedinPosts, type RhythmDayRow } from '@avotalent/core/services/analytics/rhythm'
 import router from '../../src/routes/admin/analytics.routes'
 
 /** Días consecutivos desde `start` (AAAA-MM-DD), con las personas activas que se pidan. */

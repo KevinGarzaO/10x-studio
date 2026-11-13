@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { appEnv, linkedinPublishingAllowed, scheduledJobsEnabled } from '../../config/app-env'
+import { appEnv, linkedinPublishingAllowed, scheduledJobsEnabled } from '@avotalent/core/config/app-env'
 
 const env = (vars: Record<string, string>) => vars as unknown as NodeJS.ProcessEnv
 

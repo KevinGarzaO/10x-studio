@@ -10,9 +10,9 @@
  * Necesita RESEND_API_KEY y backend/sql/email-reminders-migration.sql.
  */
 import 'dotenv/config'
-import { maskEmail } from '../services/email/profile-reminder'
-import { remainingBudget } from '../services/email/budget'
-import { WELCOME_CUTOFF, loadWelcomeCandidates, runWelcomeBatch, type WelcomeAudience } from '../services/email/welcome'
+import { maskEmail } from '@avotalent/core/services/email/profile-reminder'
+import { remainingBudget } from '@avotalent/core/services/email/budget'
+import { WELCOME_CUTOFF, loadWelcomeCandidates, runWelcomeBatch, type WelcomeAudience } from '@avotalent/core/services/email/welcome'
 
 const arg = (name: string): string | undefined => {
   const index = process.argv.indexOf(name)

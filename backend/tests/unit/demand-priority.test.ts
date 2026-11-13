@@ -1,8 +1,8 @@
 import { describe, it, expect, vi } from 'vitest'
 
-vi.mock('../../services/supabase.service', () => ({ supabase: {} }))
+vi.mock('@avotalent/core/services/supabase.service', () => ({ supabase: {} }))
 
-import { prioritizeByDemand } from '../../services/scraper/demand-priority'
+import { prioritizeByDemand } from '@avotalent/core/services/scraper/demand-priority'
 
 const post = (title: string, date: string) => ({ text: `${title}\ndescripcion`, postDate: date })
 

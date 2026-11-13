@@ -21,7 +21,7 @@ import {
   type LinkedInPostRow,
   type UserRow,
   type VisitRow,
-} from '../../services/analytics/metrics'
+} from '@avotalent/core/services/analytics/metrics'
 
 // Sábado 24 de octubre de 2026, 12:00 en Monterrey (UTC-6) = 18:00 UTC.
 const NOW = new Date('2026-10-24T18:00:00Z')

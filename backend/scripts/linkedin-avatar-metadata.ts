@@ -9,7 +9,7 @@
  * eso esas cuentas se veían con silueta. La app ya usaba `picture` bien — esto
  * es solo para que la lista de Auth también muestre la cara.
  */
-import { supabase } from '../services/supabase.service'
+import { supabase } from '@avotalent/core/services/supabase.service'
 
 async function main() {
   let page = 1

@@ -4,7 +4,7 @@ import type { Queryable } from './queries'
  * Las consultas de producto del servidor MCP: retención y cohortes, personas nuevas contra recurrentes, de dónde llegan los registros,
  * el ritmo de la semana y la velocidad del servidor. Igual que el resto: SQL fijo con parámetros, solo lectura y agregado (nunca
  * una persona, un correo ni una cuenta). Las reglas de lectura (la base de cada día, los percentiles) repiten las del backend
- * (backend/services/analytics/rhythm.ts y backend/services/performance/api-timing.ts) porque este paquete va aparte.
+ * (packages/core/services/analytics/rhythm.ts y packages/core/services/performance/api-timing.ts) porque este paquete va aparte.
  */
 
 const clamp = (value: number | undefined, min: number, max: number, fallback: number) =>

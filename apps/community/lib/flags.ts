@@ -3,7 +3,7 @@
 import { useSyncExternalStore } from 'react'
 
 /**
- * Funciones nuevas encendidas por grupo (interruptores). El SERVIDOR decide quién ve qué (backend/services/flags); aquí solo se guarda lo
+ * Funciones nuevas encendidas por grupo (interruptores). El SERVIDOR decide quién ve qué (packages/core/services/flags); aquí solo se guarda lo
  * que contestó para mostrar u ocultar pantallas. Esconder algo aquí no es un permiso: la ruta nueva del backend va con `requireFlag`.
  *
  *   const verSeguir = useFlag('seguir_personas')

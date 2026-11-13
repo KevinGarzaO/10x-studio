@@ -1,10 +1,10 @@
 import { describe, it, expect, vi } from 'vitest'
 
-vi.mock('../../services/supabase.service', () => ({ supabase: { from: () => ({}) } }))
+vi.mock('@avotalent/core/services/supabase.service', () => ({ supabase: { from: () => ({}) } }))
 
-import { assignFormat, buildExperiment, slotOf, EXPERIMENT_NAME, MIN_POSTS_PER_FORMAT, type ExperimentPost } from '../../services/linkedin/experiment'
-import { buildPostText, type LinkedInVacancy } from '../../services/linkedin/vacancy-post'
-import { experimentColumns } from '../../services/linkedin/vacancy-publisher'
+import { assignFormat, buildExperiment, slotOf, EXPERIMENT_NAME, MIN_POSTS_PER_FORMAT, type ExperimentPost } from '@avotalent/core/services/linkedin/experiment'
+import { buildPostText, type LinkedInVacancy } from '@avotalent/core/services/linkedin/vacancy-post'
+import { experimentColumns } from '@avotalent/core/services/linkedin/vacancy-publisher'
 
 // Monterrey es UTC-6: 18:30 allá = 00:30 UTC del día siguiente.
 const monterrey = (iso: string) => new Date(`${iso}-06:00`)

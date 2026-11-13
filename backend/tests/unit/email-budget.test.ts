@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 
 // Una base falsa que responde conteos por tabla (o falla si la tabla "no existe").
 const state: { counts: Record<string, number | 'missing'>; inserted: { table: string; row: unknown }[] } = { counts: {}, inserted: [] }
-vi.mock('../../services/supabase.service', () => ({
+vi.mock('@avotalent/core/services/supabase.service', () => ({
   supabase: {
     from: (table: string) => ({
       select: () => ({ gte: () => Promise.resolve(state.counts[table] === 'missing' || state.counts[table] === undefined ? { count: null, error: { message: 'no existe' } } : { count: state.counts[table], error: null }) }),
@@ -11,7 +11,7 @@ vi.mock('../../services/supabase.service', () => ({
   },
 }))
 
-import { RESERVE, TOTAL_DAILY_BUDGET, isQuotaError, remainingBudget, sendTracked, sentLast24h } from '../../services/email/budget'
+import { RESERVE, TOTAL_DAILY_BUDGET, isQuotaError, remainingBudget, sendTracked, sentLast24h } from '@avotalent/core/services/email/budget'
 
 beforeEach(() => { state.counts = {}; state.inserted = [] })
 

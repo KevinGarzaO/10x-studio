@@ -9,10 +9,10 @@
  */
 import 'dotenv/config'
 import { Resend } from 'resend'
-import { sendTracked } from '../services/email/budget'
-import { DEFAULT_FROM, DEFAULT_REPLY_TO, pickTopVacancies } from '../services/email/profile-reminder'
-import { trackedLink } from '../services/email/links'
-import { renderFounders, renderWelcome } from '../services/email/templates/welcome'
+import { sendTracked } from '@avotalent/core/services/email/budget'
+import { DEFAULT_FROM, DEFAULT_REPLY_TO, pickTopVacancies } from '@avotalent/core/services/email/profile-reminder'
+import { trackedLink } from '@avotalent/core/services/email/links'
+import { renderFounders, renderWelcome } from '@avotalent/core/services/email/templates/welcome'
 
 async function main() {
   const to = process.argv[2]

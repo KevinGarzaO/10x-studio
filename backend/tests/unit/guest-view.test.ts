@@ -19,7 +19,7 @@ function builder(table: string) {
   return q
 }
 
-vi.mock('../../services/supabase.service', () => ({
+vi.mock('@avotalent/core/services/supabase.service', () => ({
   supabase: {
     from: (table: string) => builder(table),
     auth: { getUser: async (token: string) => (state.validTokens.has(token) ? { data: { user: { id: 'u1' } }, error: null } : { data: { user: null }, error: { message: 'invalid' } }) },
@@ -27,7 +27,7 @@ vi.mock('../../services/supabase.service', () => ({
 }))
 vi.mock('../../middleware/community-auth.middleware', () => ({ communityAuthMiddleware: (_req: unknown, _res: unknown, next: () => void) => next() }))
 
-import { headerLinesOf, redactForGuest } from '../../services/community/guest-view'
+import { headerLinesOf, redactForGuest } from '@avotalent/core/services/community/guest-view'
 import postsRoutes from '../../src/routes/community/posts.routes'
 import usersRoutes from '../../src/routes/community/users.routes'
 import companiesRoutes from '../../src/routes/community/companies.routes'

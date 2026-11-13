@@ -5,7 +5,7 @@ import request from 'supertest'
 const inserted = vi.hoisted(() => [] as Record<string, unknown>[])
 const state = vi.hoisted(() => ({ recentContent: undefined as string | null | undefined }))
 
-vi.mock('../../services/supabase.service', () => ({
+vi.mock('@avotalent/core/services/supabase.service', () => ({
   supabase: {
     from: () => ({
       select: () => {
@@ -29,7 +29,7 @@ vi.mock('../../services/supabase.service', () => ({
   },
 }))
 
-import { sanitizeAttribution, sanitizeVisitorId } from '../../services/attribution'
+import { sanitizeAttribution, sanitizeVisitorId } from '@avotalent/core/services/attribution'
 import attributionRouter from '../../src/routes/community/attribution.routes'
 
 const app = () => {

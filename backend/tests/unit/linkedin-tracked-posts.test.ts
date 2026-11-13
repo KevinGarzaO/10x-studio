@@ -10,7 +10,7 @@ import {
   labelFromText,
   firstSiteUrl,
   monterreyWeekStart,
-} from '../../services/linkedin/tracked-posts'
+} from '@avotalent/core/services/linkedin/tracked-posts'
 
 // El controller llama a supabase por dentro; el mock registra lo que entra y
 // responde según la cola de escenarios de cada test.
@@ -28,7 +28,7 @@ const state = vi.hoisted(() => ({
   weeklySignups: [] as any[],
 }))
 
-vi.mock('../../services/supabase.service', () => ({
+vi.mock('@avotalent/core/services/supabase.service', () => ({
   supabase: {
     from: (table: string) => {
       const q: any = { table, _op: 'select', _id: null }

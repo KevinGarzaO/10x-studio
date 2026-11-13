@@ -1,6 +1,6 @@
 import { Request, Response, NextFunction } from 'express'
-import { supabase } from '../services/supabase.service'
-import { recordActivity } from '../services/analytics/activity'
+import { supabase } from '@avotalent/core/services/supabase.service'
+import { recordActivity } from '@avotalent/core/services/analytics/activity'
 
 export interface AuthRequest extends Request {
   userId?: string

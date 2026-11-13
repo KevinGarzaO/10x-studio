@@ -1,10 +1,10 @@
 import { Router, Response } from 'express'
-import { supabase } from '../../../services/supabase.service'
+import { supabase } from '@avotalent/core/services/supabase.service'
 import { communityAuthMiddleware, AuthRequest } from '../../../middleware/community-auth.middleware'
-import { syncVacancyToCommunity } from '../../../services/scraper/sync'
-import { scoreForUser, type MatchedItem } from '../../../services/matching/compute'
-import { readStoredMatches, storeMatches, TOP_MATCHES } from '../../../services/matching/refresh'
-import { loadVacancyStats } from '../../../services/vacancies/popularity'
+import { syncVacancyToCommunity } from '@avotalent/core/services/scraper/sync'
+import { scoreForUser, type MatchedItem } from '@avotalent/core/services/matching/compute'
+import { readStoredMatches, storeMatches, TOP_MATCHES } from '@avotalent/core/services/matching/refresh'
+import { loadVacancyStats } from '@avotalent/core/services/vacancies/popularity'
 
 const router = Router()
 

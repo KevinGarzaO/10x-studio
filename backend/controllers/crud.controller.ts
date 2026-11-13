@@ -1,5 +1,5 @@
 import { Request, Response } from 'express'
-import { CrudService } from '../services/crud.service'
+import { CrudService } from '@avotalent/core/services/crud.service'
 
 export const getCollection = (table: string) => async (req: Request, res: Response) => {
   try {

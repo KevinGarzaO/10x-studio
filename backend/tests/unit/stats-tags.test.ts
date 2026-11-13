@@ -9,7 +9,7 @@ const state = vi.hoisted(() => ({
 }))
 const filters = vi.hoisted(() => [] as string[])
 
-vi.mock('../../services/supabase.service', () => ({
+vi.mock('@avotalent/core/services/supabase.service', () => ({
   supabase: {
     from: (table: string) => ({
       select: () => {

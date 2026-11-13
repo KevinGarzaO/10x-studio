@@ -2,7 +2,7 @@ import { describe, it, expect, beforeAll, vi } from 'vitest'
 import express from 'express'
 import request from 'supertest'
 
-vi.mock('../../services/supabase.service', () => ({
+vi.mock('@avotalent/core/services/supabase.service', () => ({
   supabase: { auth: { getUser: async () => ({ data: { user: null }, error: null }) }, from: () => ({}) },
   createAuthClient: () => ({}),
 }))

@@ -1,8 +1,8 @@
 import { describe, it, expect, vi } from 'vitest'
 
-vi.mock('../../services/supabase.service', () => ({ supabase: {} }))
+vi.mock('@avotalent/core/services/supabase.service', () => ({ supabase: {} }))
 
-import { servesSomeone, type PersonProfile } from '../../services/vacancies/serves-someone'
+import { servesSomeone, type PersonProfile } from '@avotalent/core/services/vacancies/serves-someone'
 
 const ana: PersonProfile = { roleCategory: 'backend', seniority: 'senior', skills: ['python', 'docker'], workModality: 'Remoto' }
 const vacancy = (patch = {}) => ({ role_category: 'backend', seniority_level: 'senior', skills: ['Python', 'sql'], work_modality: 'Remoto', ...patch })

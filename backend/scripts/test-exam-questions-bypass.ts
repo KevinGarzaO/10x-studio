@@ -21,7 +21,7 @@
 import { it, expect, vi } from 'vitest'
 import express from 'express'
 import request from 'supertest'
-import { supabase } from '../services/supabase.service'
+import { supabase } from '@avotalent/core/services/supabase.service'
 import examQuestionsRouter from '../src/routes/admin/exam-questions.routes'
 
 vi.mock('../middleware/community-auth.middleware', () => ({

@@ -1,8 +1,8 @@
 import { describe, it, expect } from 'vitest'
 
-import { renderProfileReminder } from '../../services/email/templates/profile-reminder'
-import { DAILY_LIMIT, exclusionFor, firstName, maskEmail, MIN_ACCOUNT_AGE_HOURS, runProfileReminderBatch, type AudienceUser } from '../../services/email/profile-reminder'
-import { trackedLink } from '../../services/email/links'
+import { renderProfileReminder } from '@avotalent/core/services/email/templates/profile-reminder'
+import { DAILY_LIMIT, exclusionFor, firstName, maskEmail, MIN_ACCOUNT_AGE_HOURS, runProfileReminderBatch, type AudienceUser } from '@avotalent/core/services/email/profile-reminder'
+import { trackedLink } from '@avotalent/core/services/email/links'
 
 const NOW = new Date('2026-10-27T18:00:00Z')
 const hoursAgo = (h: number) => new Date(NOW.getTime() - h * 3600000).toISOString()

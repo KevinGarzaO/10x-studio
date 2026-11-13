@@ -7,10 +7,10 @@
  */
 import 'dotenv/config'
 import { Resend } from 'resend'
-import { sendTracked } from '../services/email/budget'
-import { DEFAULT_FROM, DEFAULT_REPLY_TO, pickTopVacancies } from '../services/email/profile-reminder'
-import { trackedLink } from '../services/email/links'
-import { renderInvitation1, renderInvitation2 } from '../services/email/templates/invitation'
+import { sendTracked } from '@avotalent/core/services/email/budget'
+import { DEFAULT_FROM, DEFAULT_REPLY_TO, pickTopVacancies } from '@avotalent/core/services/email/profile-reminder'
+import { trackedLink } from '@avotalent/core/services/email/links'
+import { renderInvitation1, renderInvitation2 } from '@avotalent/core/services/email/templates/invitation'
 
 async function main() {
   const to = process.argv[2]

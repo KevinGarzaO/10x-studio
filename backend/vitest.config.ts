@@ -1,6 +1,12 @@
+import path from 'path'
 import { defineConfig } from 'vitest/config'
 
 export default defineConfig({
+  // Las pruebas usan el CÓDIGO FUENTE de @avotalent/core (no su carpeta compilada): así vi.mock intercepta también las importaciones internas
+  // del paquete, igual que cuando ese código vivía dentro del backend. En producción se usa el paquete compilado (dist).
+  resolve: {
+    alias: [{ find: /^@avotalent\/core\/(.*)$/, replacement: path.resolve(__dirname, '../packages/core') + '/$1' }],
+  },
   test: {
     environment: 'node',
     // Default glob (**/*.{test,spec}.ts) covers tests/unit and

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { ANONYMOUS, STAGES, bucketOf, evaluate, isStage, percentOf, type Stage, type Subject } from '../../services/flags/evaluate'
+import { ANONYMOUS, STAGES, bucketOf, evaluate, isStage, percentOf, type Stage, type Subject } from '@avotalent/core/services/flags/evaluate'
 
 const person = (id: string, over: Partial<Subject> = {}): Subject => ({ userId: id, isTeam: false, groups: new Set(), ...over })
 const team = person('team-1', { isTeam: true })

@@ -1,8 +1,8 @@
 import { Router, Request, Response } from 'express'
-import { supabase } from '../../../services/supabase.service'
+import { supabase } from '@avotalent/core/services/supabase.service'
 import { loadPublicProfile, PROFILE_POSTS_SELECT } from './users.routes'
-import { getOptionalUserId } from '../../../services/community/viewer'
-import { redactProfileForGuest } from '../../../services/community/guest-view'
+import { getOptionalUserId } from '@avotalent/core/services/community/viewer'
+import { redactProfileForGuest } from '@avotalent/core/services/community/guest-view'
 
 const router = Router()
 

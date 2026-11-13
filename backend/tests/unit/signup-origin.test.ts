@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { pickSignupOrigin, type OriginSession } from '../../services/analytics/signup-origin'
+import { pickSignupOrigin, type OriginSession } from '@avotalent/core/services/analytics/signup-origin'
 
 const session = (patch: Partial<OriginSession> & { created_at: string }): OriginSession => ({
   utm_source: null, utm_medium: null, utm_campaign: null, utm_content: null, referrer_host: null, entry_path: '/', ...patch,

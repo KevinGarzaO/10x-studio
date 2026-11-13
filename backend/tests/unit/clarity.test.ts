@@ -2,7 +2,7 @@ import { describe, it, expect, vi } from 'vitest'
 import fs from 'fs'
 import path from 'path'
 import { PGlite } from '@electric-sql/pglite'
-import { normalizePath, parseClarityExport, syncClarity, fetchClarityExport, ClarityApiError } from '../../services/analytics/clarity'
+import { normalizePath, parseClarityExport, syncClarity, fetchClarityExport, ClarityApiError } from '@avotalent/core/services/analytics/clarity'
 
 const sample = [
   { metricName: 'Traffic', information: [{ totalSessionCount: '900', OS: 'Android' }] },

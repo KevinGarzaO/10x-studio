@@ -57,7 +57,8 @@
     "resend": "^6.35.0",
     "swagger-jsdoc": "^6.2.8",
     "swagger-ui-express": "^5.0.0",
-    "web-push": "^3.6.7"
+    "web-push": "^3.6.7",
+    "@avotalent/core": "workspace:*"
   },
   "devDependencies": {
     "@electric-sql/pglite": "^0.5.13",

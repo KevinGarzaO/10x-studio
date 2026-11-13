@@ -6,7 +6,7 @@ const rpc = vi.hoisted(() => vi.fn())
 const rpcState = vi.hoisted(() => ({ impl: null as null | unknown }))
 const db = vi.hoisted(() => ({ tables: {} as Record<string, any>, filters: [] as string[], errors: {} as Record<string, string> }))
 
-vi.mock('../../services/supabase.service', () => ({
+vi.mock('@avotalent/core/services/supabase.service', () => ({
   supabase: {
     rpc,
     from: (table: string) => {

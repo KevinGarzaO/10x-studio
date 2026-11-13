@@ -14,7 +14,7 @@ const catalog = [
 const posts = vi.hoisted(() => ({ rows: [] as Record<string, unknown>[] }))
 const seen = vi.hoisted(() => ({ selects: [] as string[], filters: [] as string[] }))
 
-vi.mock('../../services/supabase.service', () => ({
+vi.mock('@avotalent/core/services/supabase.service', () => ({
   supabase: {
     from: (table: string) => ({
       select: (fields: string) => {
@@ -41,7 +41,7 @@ vi.mock('../../services/supabase.service', () => ({
 }))
 
 import router, { clearSeoCache } from '../../src/routes/community/seo.routes'
-import { seoDescription } from '../../services/seo/vacancy-description'
+import { seoDescription } from '@avotalent/core/services/seo/vacancy-description'
 
 const app = () => {
   const a = express()

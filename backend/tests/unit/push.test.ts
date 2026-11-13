@@ -4,7 +4,7 @@ import request from 'supertest'
 
 const state = vi.hoisted(() => ({ tables: {} as Record<string, any[]>, inserted: [] as { table: string; row: any }[], upserted: [] as any[], updated: [] as any[] }))
 
-vi.mock('../../services/supabase.service', () => ({
+vi.mock('@avotalent/core/services/supabase.service', () => ({
   supabase: {
     from: (table: string) => {
       const q: any = {}
@@ -24,8 +24,8 @@ vi.mock('../../middleware/community-auth.middleware', () => ({
 }))
 
 import pushRoutes from '../../src/routes/community/push.routes'
-import { buildPayload, canPush, pushConfig, pushEnabled, pushToUser, pushWelcome, pushTest, MAX_PUSHES_PER_DAY, type PushDeps } from '../../services/push/push'
-import { buildPushSummary } from '../../services/analytics/push'
+import { buildPayload, canPush, pushConfig, pushEnabled, pushToUser, pushWelcome, pushTest, MAX_PUSHES_PER_DAY, type PushDeps } from '@avotalent/core/services/push/push'
+import { buildPushSummary } from '@avotalent/core/services/analytics/push'
 
 const config = { publicKey: 'pub', privateKey: 'priv', subject: 'mailto:a@b.c' }
 const SUB = { id: 's1', endpoint: 'https://push.example/abc', p256dh: 'p', auth: 'a' }

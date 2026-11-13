@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { isRangeNotSatisfiable } from '../../services/community/pagination'
+import { isRangeNotSatisfiable } from '@avotalent/core/services/community/pagination'
 
 describe('isRangeNotSatisfiable', () => {
   it('recognizes the PostgREST error for a page past the end, by code or by message', () => {

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { sameSkills } from '../../lib/same-skills'
+import { sameSkills } from '@avotalent/core/lib/same-skills'
 
 describe('sameSkills', () => {
   it('is true for the same skills in the same order', () => {

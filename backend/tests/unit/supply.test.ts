@@ -1,9 +1,9 @@
 import { describe, it, expect, vi } from 'vitest'
 
-vi.mock('../../services/supabase.service', () => ({ supabase: { from: () => ({}) } }))
+vi.mock('@avotalent/core/services/supabase.service', () => ({ supabase: { from: () => ({}) } }))
 
-import { buildSupply, LINKEDIN_PER_DAY, type OpenVacancy, type QueuedVacancy } from '../../services/analytics/supply'
-import type { PersonProfile } from '../../services/vacancies/serves-someone'
+import { buildSupply, LINKEDIN_PER_DAY, type OpenVacancy, type QueuedVacancy } from '@avotalent/core/services/analytics/supply'
+import type { PersonProfile } from '@avotalent/core/services/vacancies/serves-someone'
 
 const person = (roleCategory: string, skills: string[], seniority = 'senior'): PersonProfile => ({ roleCategory, seniority, skills, workModality: 'remote' })
 const open = (id: string, role: string | null, skills: string[], extra: Partial<OpenVacancy> = {}): OpenVacancy => ({

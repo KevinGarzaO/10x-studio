@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import { readFileSync } from 'fs'
 import { join } from 'path'
-import { SKILL_TERMS } from '../../services/vacancies/skill-terms'
+import { SKILL_TERMS } from '@avotalent/core/services/vacancies/skill-terms'
 
 const read = (file: string) => readFileSync(join(__dirname, '../../sql', file), 'utf8').replace(/\r\n/g, '\n')
 const names = (sql: string) => [...sql.matchAll(/^\s*\('([a-z0-9-]+)',\s*'/gm)].map(m => m[1])

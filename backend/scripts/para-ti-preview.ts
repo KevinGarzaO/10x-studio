@@ -9,12 +9,12 @@
  */
 import 'dotenv/config'
 import { Resend } from 'resend'
-import { sendTracked } from '../services/email/budget'
-import { supabase } from '../services/supabase.service'
-import { trackedLink } from '../services/email/links'
-import { DEFAULT_FROM, DEFAULT_REPLY_TO, firstName } from '../services/email/profile-reminder'
-import { ALERT_MIN_SCORE, DIGEST_MIN_SCORE, metaOf, rankMatches, type MatchableVacancy, type RankedMatch } from '../services/email/para-ti'
-import { renderAlert, renderDigest, type MatchItem } from '../services/email/templates/para-ti'
+import { sendTracked } from '@avotalent/core/services/email/budget'
+import { supabase } from '@avotalent/core/services/supabase.service'
+import { trackedLink } from '@avotalent/core/services/email/links'
+import { DEFAULT_FROM, DEFAULT_REPLY_TO, firstName } from '@avotalent/core/services/email/profile-reminder'
+import { ALERT_MIN_SCORE, DIGEST_MIN_SCORE, metaOf, rankMatches, type MatchableVacancy, type RankedMatch } from '@avotalent/core/services/email/para-ti'
+import { renderAlert, renderDigest, type MatchItem } from '@avotalent/core/services/email/templates/para-ti'
 
 const arg = (name: string): string | undefined => {
   const index = process.argv.indexOf(name)

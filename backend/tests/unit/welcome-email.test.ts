@@ -1,12 +1,12 @@
 import { describe, it, expect, vi } from 'vitest'
 
-vi.mock('../../services/supabase.service', () => ({ supabase: {} }))
+vi.mock('@avotalent/core/services/supabase.service', () => ({ supabase: {} }))
 
 import {
   FOUNDERS_KIND, WELCOME_CUTOFF, WELCOME_KIND, WELCOME_MAX_AGE_DAYS, WELCOME_MIN_AGE_MINUTES, WELCOME_RUN_LIMIT,
   buildWelcome, runWelcomeBatch, welcomeAudienceOf, type WelcomeDeps,
-} from '../../services/email/welcome'
-import type { AudienceUser } from '../../services/email/profile-reminder'
+} from '@avotalent/core/services/email/welcome'
+import type { AudienceUser } from '@avotalent/core/services/email/profile-reminder'
 
 const minutes = (value: number) => value * 60000
 const AFTER = new Date(WELCOME_CUTOFF.getTime() + 3 * 86400000)

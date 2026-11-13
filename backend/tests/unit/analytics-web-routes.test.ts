@@ -3,7 +3,7 @@ import express from 'express'
 import request from 'supertest'
 
 const rpc = vi.hoisted(() => vi.fn())
-vi.mock('../../services/supabase.service', () => ({ supabase: { rpc, from: () => { throw new Error('no se usa') } } }))
+vi.mock('@avotalent/core/services/supabase.service', () => ({ supabase: { rpc, from: () => { throw new Error('no se usa') } } }))
 
 import router from '../../src/routes/admin/analytics.routes'
 

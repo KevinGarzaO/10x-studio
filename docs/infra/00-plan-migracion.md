@@ -71,14 +71,16 @@ Decidido el 13 de noviembre de 2026 por el fundador. Este documento es la fuente
 
 ### Fase 3 — Archivos a Azure Blob
 
-**Estado (13-nov-2026):** pasos 1 a 4 hechos en STAGING (`avotalentstaging`): modulo `backend/services/storage/` con dos motores (`STORAGE_DRIVER=supabase|azure`; produccion sigue en `supabase` hasta la mudanza), proxy publico `GET /api/files/...` para avatars/images/company-logos, documentos con enlace firmado, copia verificada con SHA-256 (236 de 236 archivos; las fotos de perfil reales NO se copian a staging), reescritura de direcciones (`infra/db/rewrite-file-urls.sql`) y pruebas contra Azure real (escribir, no pisar, enlace firmado, rechazo sin firma). Falta: cuenta de produccion en Azure, copia completa (362 archivos), reescritura en produccion y encender el motor. Rollback: volver `STORAGE_DRIVER` a `supabase`.
+**Estado (13-nov-2026):** pasos 1 a 4 hechos en STAGING (`avotalentstaging`): modulo `packages/core/services/storage/` con dos motores (`STORAGE_DRIVER=supabase|azure`; produccion sigue en `supabase` hasta la mudanza), proxy publico `GET /api/files/...` para avatars/images/company-logos, documentos con enlace firmado, copia verificada con SHA-256 (236 de 236 archivos; las fotos de perfil reales NO se copian a staging), reescritura de direcciones (`infra/db/rewrite-file-urls.sql`) y pruebas contra Azure real (escribir, no pisar, enlace firmado, rechazo sin firma). Falta: cuenta de produccion en Azure, copia completa (362 archivos), reescritura en produccion y encender el motor. Rollback: volver `STORAGE_DRIVER` a `supabase`.
 1. Cuenta de almacenamiento en Azure con **acceso público desactivado**, contenedores `avatars`, `images`, `company-logos`, `company-docs`, `backups`; cifrado en reposo (por defecto) y TLS obligatorio.
 2. Acceso del backend por **identidad administrada** (si el backend corre en Azure) o por cadena de conexión/SAS **en variables de entorno de Railway** con permisos mínimos; nunca en el código.
-3. Un módulo único `backend/services/storage/` (subir, borrar, enlace firmado, leer) reemplaza las llamadas a `supabase.storage` (HECHO). Los avatares, imágenes y logos que se muestran públicamente salen por el proxy del backend (`/api/files/...`), no por Azure; los documentos solo con enlace firmado de unos minutos.
+3. Un módulo único `packages/core/services/storage/` (subir, borrar, enlace firmado, leer) reemplaza las llamadas a `supabase.storage` (HECHO). Los avatares, imágenes y logos que se muestran públicamente salen por el proxy del backend (`/api/files/...`), no por Azure; los documentos solo con enlace firmado de unos minutos.
 4. Copia de los archivos existentes (312 MB) con verificación de huella SHA-256 contra el respaldo, y **reescritura de las URLs** guardadas en la base (`photo_url`, `company_logo`, `image_url`).
 5. Mantener Supabase Storage una semana de respaldo.
 
 ### Fase 4 — Separar el monolito (después de la Fase 2)
+
+**Estado (13-nov-2026), dentro del repo actual:** HECHO `packages/db` (cliente y corredor de migraciones), `workers` (arrendamiento + `backend/workers.ts`) y `packages/core` (servicios, lib y config; ~200 archivos con historial). Falta: dividir las rutas en `api-community` y `api-telemetry`, mover el panel a `apps/telemetry`, y entonces crear los repositorios en la organización.
 Servicios dentro del mismo repositorio (monorepo con pnpm), cada uno con su despliegue:
 
 | Servicio | Qué contiene hoy en `backend/` | Notas |

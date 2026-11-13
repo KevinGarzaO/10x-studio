@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest'
 import { readFileSync } from 'fs'
 import { join } from 'path'
 import { ROLE_CATEGORY } from '@avocado/schemas'
-import { ROLE_RULES, classifyRole, titleOf } from '../../services/scraper/role-rules'
+import { ROLE_RULES, classifyRole, titleOf } from '@avotalent/core/services/scraper/role-rules'
 
 const post = (title: string, body = '') => `## ${title}\n\n${body}`
 

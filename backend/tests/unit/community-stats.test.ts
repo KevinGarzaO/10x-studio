@@ -7,8 +7,8 @@ import request from 'supertest'
 const calls = vi.hoisted(() => [] as { table: string; filters: string[] }[])
 const scenario = vi.hoisted(() => ({ legacyOnly: false, noProfileCompleted: false }))
 
-vi.mock('../../services/vacancies/feed-visibility', () => ({ feedVisibilityReady: async () => false }))
-vi.mock('../../services/supabase.service', () => ({
+vi.mock('@avotalent/core/services/vacancies/feed-visibility', () => ({ feedVisibilityReady: async () => false }))
+vi.mock('@avotalent/core/services/supabase.service', () => ({
   supabase: {
     from: (table: string) => ({
       select: () => {

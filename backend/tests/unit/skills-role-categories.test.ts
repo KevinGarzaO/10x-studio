@@ -7,7 +7,7 @@ import { ROLE_CATEGORY } from '@avocado/schemas'
 
 const db = vi.hoisted(() => ({ roleColumn: true }))
 
-vi.mock('../../services/supabase.service', () => ({
+vi.mock('@avotalent/core/services/supabase.service', () => ({
   supabase: {
     from: (table: string) => ({
       select: (columns: string) => {

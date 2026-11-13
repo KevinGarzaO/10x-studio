@@ -1,10 +1,10 @@
 import { Router, Response } from 'express'
-import { supabase } from '../../../services/supabase.service'
+import { supabase } from '@avotalent/core/services/supabase.service'
 import { communityAuthMiddleware, AuthRequest } from '../../../middleware/community-auth.middleware'
 import {
   ANSWERS, PERSON_STATUSES, answerPatch, isUuid, pendingFor, publicApplication, recordClick, statusPatch,
   type Answer, type ApplicationRow, type ApplicationStatus,
-} from '../../../services/applications/applications'
+} from '@avotalent/core/services/applications/applications'
 
 /**
  * Mis postulaciones. Todo es de la persona con sesión (nadie ve las de otra) y nada de esto rompe el resto del sitio: si falta la tabla

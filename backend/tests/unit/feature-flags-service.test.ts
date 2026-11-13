@@ -4,7 +4,7 @@ import request from 'supertest'
 
 // Base falsa: cada tabla devuelve lo que se le ponga en `db`.
 const db: Record<string, { data: unknown; error: { message: string } | null }> = {}
-vi.mock('../../services/supabase.service', () => {
+vi.mock('@avotalent/core/services/supabase.service', () => {
   const chain = (table: string) => {
     const result = () => db[table] ?? { data: [], error: null }
     const q: Record<string, unknown> = {}
@@ -16,7 +16,7 @@ vi.mock('../../services/supabase.service', () => {
   return { supabase: { from: (table: string) => chain(table), auth: { getUser: async (token: string) => (token === 'good' ? { data: { user: { id: 'u1' } }, error: null } : { data: { user: null }, error: { message: 'bad' } }) } } }
 })
 
-import { flagsFor, isEnabled, clearFlagsCache } from '../../services/flags/flags.service'
+import { flagsFor, isEnabled, clearFlagsCache } from '@avotalent/core/services/flags/flags.service'
 import { requireFlag } from '../../middleware/require-flag.middleware'
 import flagsRoutes from '../../src/routes/community/flags.routes'
 

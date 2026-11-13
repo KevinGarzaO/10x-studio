@@ -11,7 +11,7 @@ const db = vi.hoisted(() => ({
   noActivityTable: false,
 }))
 
-vi.mock('../../services/supabase.service', () => ({
+vi.mock('@avotalent/core/services/supabase.service', () => ({
   supabase: {
     from: (table: string) => {
       const q: any = {}
@@ -33,8 +33,8 @@ vi.mock('../../middleware/community-auth.middleware', () => ({
 }))
 
 import feedbackRoutes from '../../src/routes/community/feedback.routes'
-import { activeDaysAfterSignup, cleanCategory, cleanPage, cleanText, deviceOf, isEligible, signupWeek, MAX_TEXT } from '../../services/feedback/feedback'
-import { buildFeedbackSummary, type EntryRow } from '../../services/analytics/feedback-summary'
+import { activeDaysAfterSignup, cleanCategory, cleanPage, cleanText, deviceOf, isEligible, signupWeek, MAX_TEXT } from '@avotalent/core/services/feedback/feedback'
+import { buildFeedbackSummary, type EntryRow } from '@avotalent/core/services/analytics/feedback-summary'
 
 describe('who sees the button', () => {
   it('counts distinct days AFTER the signup day, in Monterrey time (the signup day itself never counts)', () => {

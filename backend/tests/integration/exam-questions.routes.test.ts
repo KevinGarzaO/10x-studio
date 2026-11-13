@@ -1,7 +1,7 @@
 import { describe, expect, it, vi, beforeAll, afterAll } from 'vitest'
 import express from 'express'
 import request from 'supertest'
-import { supabase } from '../../services/supabase.service'
+import { supabase } from '@avotalent/core/services/supabase.service'
 import examQuestionsRouter from '../../src/routes/admin/exam-questions.routes'
 
 const ADMIN_USER_ID = 'e7c86261-578a-42cb-9eb8-c26f19917079'

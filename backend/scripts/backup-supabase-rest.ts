@@ -15,7 +15,7 @@ import 'dotenv/config'
 import fs from 'fs'
 import path from 'path'
 import crypto from 'crypto'
-import { supabase } from '../services/supabase.service'
+import { supabase } from '@avotalent/core/services/supabase.service'
 
 const PAGE = 1000
 const arg = (name: string) => { const i = process.argv.indexOf(`--${name}`); return i > -1 ? process.argv[i + 1] : undefined }

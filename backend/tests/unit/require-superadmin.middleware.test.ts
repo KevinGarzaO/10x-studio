@@ -7,7 +7,7 @@ const maybeSingle = vi.fn()
 
 // vi.mock calls are hoisted above imports by vitest's transform, so the
 // middleware picks up this mocked client regardless of import order above.
-vi.mock('../../services/supabase.service', () => ({
+vi.mock('@avotalent/core/services/supabase.service', () => ({
   supabase: {
     from: () => ({
       select: () => ({

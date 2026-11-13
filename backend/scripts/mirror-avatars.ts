@@ -10,8 +10,8 @@
  * ya venció no se puede recuperar: esa cuenta se queda como está y la persona recupera la foto al volver a
  * entrar con su red social (el registro la copia en cada entrada) o al subir una.
  */
-import { supabase } from '../services/supabase.service'
-import { isProviderPhoto, mirrorProviderPhoto } from '../services/avatar'
+import { supabase } from '@avotalent/core/services/supabase.service'
+import { isProviderPhoto, mirrorProviderPhoto } from '@avotalent/core/services/avatar'
 
 async function main() {
   const apply = process.argv.includes('--apply')

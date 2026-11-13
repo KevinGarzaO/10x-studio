@@ -14,7 +14,7 @@
 import { it, expect, vi } from 'vitest'
 import express from 'express'
 import request from 'supertest'
-import { supabase } from '../services/supabase.service'
+import { supabase } from '@avotalent/core/services/supabase.service'
 
 vi.mock('../middleware/community-auth.middleware', () => ({
   communityAuthMiddleware: (req: any, _res: any, next: any) => {

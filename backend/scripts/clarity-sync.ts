@@ -1,5 +1,5 @@
 import 'dotenv/config'
-import { syncClarity } from '../services/analytics/clarity'
+import { syncClarity } from '@avotalent/core/services/analytics/clarity'
 
 /**
  * Trae de Clarity las métricas de frustración de las últimas 24 h y las guarda (gasta 1 de las 10 llamadas diarias).

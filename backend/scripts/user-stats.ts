@@ -8,7 +8,7 @@
  * que `user-classification-migration.sql` y `profile-completion-migration.sql`
  * ya estén aplicadas.
  */
-import { supabase } from '../services/supabase.service'
+import { supabase } from '@avotalent/core/services/supabase.service'
 
 const KINDS = ['user', 'company', 'superadmin'] as const
 type Kind = (typeof KINDS)[number]

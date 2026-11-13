@@ -1,7 +1,7 @@
 import { Response, NextFunction } from 'express'
 import type { AccountType } from '@avocado/schemas'
 import { AuthRequest } from '../../middleware/community-auth.middleware'
-import { supabase } from '../../services/supabase.service'
+import { supabase } from '@avotalent/core/services/supabase.service'
 
 const MESSAGES: Record<AccountType, string> = {
   candidate: 'Esta sección es solo para candidatos',

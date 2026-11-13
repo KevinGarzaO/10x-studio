@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { dailyQuota, daysUntilNextBatch, nextBatchFrom, MIN_PER_DAY, MAX_PER_DAY } from '../../services/scraper/quota'
+import { dailyQuota, daysUntilNextBatch, nextBatchFrom, MIN_PER_DAY, MAX_PER_DAY } from '@avotalent/core/services/scraper/quota'
 
 const at = (iso: string) => new Date(iso)
 

@@ -11,7 +11,7 @@ import linkedinRoutes from './routes/linkedin'
 import blogRoutes from './routes/blog'
 import sitemapRoutes from './routes/sitemap'
 import { linkedinCallback } from './controllers/linkedin.controller'
-import { startScheduledJobs } from './services/workers/scheduled-jobs'
+import { startScheduledJobs } from '@avotalent/core/services/workers/scheduled-jobs'
 import { studioAuth, STUDIO_ROOT_PATHS, isLinkedInPublic, isBlogPublic } from './middleware/studio-auth.middleware'
 import adminAnalyticsRoutes from './src/routes/admin/analytics.routes'
 import { analyticsAccess } from './middleware/analytics-access.middleware'
@@ -53,9 +53,9 @@ import adminExamQuestionsRoutes from './src/routes/admin/exam-questions.routes'
 import scraperRoutes from './routes/scraper'
 
 import path from 'path'
-import { captureServerError } from './services/web-analytics/telemetry'
-import { recordDeployFromEnv } from './services/analytics/changes'
-import { apiTiming, startTimingFlush } from './services/performance/api-timing'
+import { captureServerError } from '@avotalent/core/services/web-analytics/telemetry'
+import { recordDeployFromEnv } from '@avotalent/core/services/analytics/changes'
+import { apiTiming, startTimingFlush } from '@avotalent/core/services/performance/api-timing'
 
 dotenv.config()
 

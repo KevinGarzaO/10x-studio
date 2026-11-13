@@ -18,7 +18,7 @@ function builder(table: string) {
   return q
 }
 
-vi.mock('../../services/supabase.service', () => ({
+vi.mock('@avotalent/core/services/supabase.service', () => ({
   supabase: {
     from: (table: string) => builder(table),
     auth: { getUser: async (token: string) => (state.validTokens.has(token) ? { data: { user: { id: 'u1' } }, error: null } : { data: { user: null }, error: { message: 'invalid' } }) },

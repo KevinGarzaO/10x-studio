@@ -1,7 +1,7 @@
 import { Router, Response } from 'express'
-import { notify } from '../../../services/notifications/notify'
+import { notify } from '@avotalent/core/services/notifications/notify'
 import { buildStartSkillExamSchema, submitAnswerSchema } from '@avocado/schemas'
-import { supabase } from '../../../services/supabase.service'
+import { supabase } from '@avotalent/core/services/supabase.service'
 import { communityAuthMiddleware, AuthRequest } from '../../../middleware/community-auth.middleware'
 import { requireAccountType } from '../../middleware/require-account-type.middleware'
 import {

@@ -1,9 +1,9 @@
 import { describe, expect, it, beforeAll, afterAll } from 'vitest'
 import express from 'express'
 import request from 'supertest'
-import { supabase } from '../../services/supabase.service'
+import { supabase } from '@avotalent/core/services/supabase.service'
 import companiesRouter from '../../src/routes/community/companies.routes'
-import { getOrCreateCompanyUser, findFreeCompanyUsername } from '../../services/scraper/sync'
+import { getOrCreateCompanyUser, findFreeCompanyUsername } from '@avotalent/core/services/scraper/sync'
 
 // Endpoint público: no hay auth que suplantar. Todo corre real contra Supabase.
 function buildApp() {

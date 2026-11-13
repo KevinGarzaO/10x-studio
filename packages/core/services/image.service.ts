@@ -99,7 +99,7 @@ export class ImageService {
   static async saveLocal(base64: string, userId: string): Promise<string | null> {
     try {
       const fileName = `art-${userId}-${Date.now()}.png`;
-      const uploadDir = path.join(__dirname, '../uploads');
+      const uploadDir = path.join(process.cwd(), 'uploads');
       
       if (!fs.existsSync(uploadDir)) {
         fs.mkdirSync(uploadDir, { recursive: true });

@@ -2,10 +2,10 @@ import { Request, Response } from 'express'
 import fetch from 'node-fetch'
 import fs from 'fs'
 import path from 'path'
-import { buildPrompt } from '../lib/prompts'
-import { ImageService } from '../services/image.service'
-import { ContentService } from '../services/content.service'
-import { supabase } from '../services/supabase.service'
+import { buildPrompt } from '@avotalent/core/lib/prompts'
+import { ImageService } from '@avotalent/core/services/image.service'
+import { ContentService } from '@avotalent/core/services/content.service'
+import { supabase } from '@avotalent/core/services/supabase.service'
 
 /**
  * Helper to parse Claude JSON response

@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 
 const db = vi.hoisted(() => ({ recent: [] as unknown[], queries: [] as string[] }))
 
-vi.mock('../../services/supabase.service', () => ({
+vi.mock('@avotalent/core/services/supabase.service', () => ({
   supabase: {
     from: (table: string) => {
       const q: any = {}
@@ -21,9 +21,9 @@ vi.mock('../../services/supabase.service', () => ({
     },
   },
 }))
-vi.mock('../../services/linkedin.service', () => ({ LinkedInService: { publish: vi.fn() } }))
+vi.mock('@avotalent/core/services/linkedin.service', () => ({ LinkedInService: { publish: vi.fn() } }))
 
-import { publishVacancyPost } from '../../services/linkedin/vacancy-publisher'
+import { publishVacancyPost } from '@avotalent/core/services/linkedin/vacancy-publisher'
 
 beforeEach(() => {
   db.recent = []

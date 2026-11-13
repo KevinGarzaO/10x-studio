@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
-import { PUBLIC_ROLES, roleFromSlug, roleSlug } from '../../services/seo/role-slug'
-import { FOCUS_ROLES } from '../../services/audience/role-focus'
+import { PUBLIC_ROLES, roleFromSlug, roleSlug } from '@avotalent/core/services/seo/role-slug'
+import { FOCUS_ROLES } from '@avotalent/core/services/audience/role-focus'
 
 describe('role slugs', () => {
   it('turns the underscore of a role into a dash for the address', () => {

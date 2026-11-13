@@ -8,10 +8,10 @@ import {
   makeUtmContent,
   monterreyWeekStart,
   trackedUrl,
-} from '../services/linkedin/tracked-posts'
-import { supabase } from '../services/supabase.service'
-import { vacancyUrl } from '../services/linkedin/vacancy-post'
-import { siteUrl } from '../services/linkedin/vacancy-publisher'
+} from '@avotalent/core/services/linkedin/tracked-posts'
+import { supabase } from '@avotalent/core/services/supabase.service'
+import { vacancyUrl } from '@avotalent/core/services/linkedin/vacancy-post'
+import { siteUrl } from '@avotalent/core/services/linkedin/vacancy-publisher'
 
 const CLIENT_ID     = process.env.LINKEDIN_CLIENT_ID!
 const CLIENT_SECRET = process.env.LINKEDIN_CLIENT_SECRET!
@@ -255,7 +255,7 @@ export const linkedinPost = async (req: Request, res: Response) => {
       ? cleanText.replace(destination, trackedUrl(destination, STUDIO_CAMPAIGN, utmContent))
       : cleanText
 
-    const { LinkedInService } = require('../services/linkedin.service')
+    const { LinkedInService } = require('@avotalent/core/services/linkedin.service')
     const postId = await LinkedInService.publish({
       token: authToken,
       urn: authorUrn,

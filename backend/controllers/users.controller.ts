@@ -1,5 +1,5 @@
 import { Request, Response } from 'express'
-import { supabase } from '../services/supabase.service'
+import { supabase } from '@avotalent/core/services/supabase.service'
 
 export const getMe = async (req: Request, res: Response) => {
   try {

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { isBotUserAgent } from '../../services/analytics/bots'
+import { isBotUserAgent } from '@avotalent/core/services/analytics/bots'
 
 describe('isBotUserAgent', () => {
   it('lets real browsers through', () => {

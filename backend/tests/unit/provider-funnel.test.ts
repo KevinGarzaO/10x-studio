@@ -3,9 +3,9 @@ import fs from 'fs'
 import path from 'path'
 import { PGlite } from '@electric-sql/pglite'
 
-vi.mock('../../services/supabase.service', () => ({ supabase: {} }))
+vi.mock('@avotalent/core/services/supabase.service', () => ({ supabase: {} }))
 
-import { buildProviderFunnel, type ProviderRow } from '../../services/analytics/provider-funnel'
+import { buildProviderFunnel, type ProviderRow } from '@avotalent/core/services/analytics/provider-funnel'
 
 const read = (name: string) => fs.readFileSync(path.join(__dirname, '../../sql', name), 'utf8')
 const uuid = (n: number) => `00000000-0000-4000-8000-${String(n).padStart(12, '0')}`

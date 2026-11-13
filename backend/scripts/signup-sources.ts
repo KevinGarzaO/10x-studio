@@ -7,7 +7,7 @@
  * Un "visitante" es un navegador distinto; un "registro" es una cuenta real (sin las de
  * prueba). La conversión es registros entre visitantes.
  */
-import { supabase } from '../services/supabase.service'
+import { supabase } from '@avotalent/core/services/supabase.service'
 
 async function main() {
   const { data, error } = await supabase.from('acquisition_by_source').select('*')

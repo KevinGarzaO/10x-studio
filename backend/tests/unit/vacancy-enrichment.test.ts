@@ -1,10 +1,10 @@
 import { describe, it, expect } from 'vitest'
-import { cleanVacancyText, vacancyTitle, vacancyBody, vacancyHeader } from '../../services/vacancies/text'
-import { inferSeniority } from '../../services/vacancies/seniority'
-import { inferModality, modalityFromLabel, MODALITY_LABEL } from '../../services/vacancies/modality'
-import { buildSkillMatchers, detectSkills, termsFor } from '../../services/vacancies/skill-detect'
-import { SKILL_TERMS } from '../../services/vacancies/skill-terms'
-import { enrichVacancy } from '../../services/vacancies/enrich'
+import { cleanVacancyText, vacancyTitle, vacancyBody, vacancyHeader } from '@avotalent/core/services/vacancies/text'
+import { inferSeniority } from '@avotalent/core/services/vacancies/seniority'
+import { inferModality, modalityFromLabel, MODALITY_LABEL } from '@avotalent/core/services/vacancies/modality'
+import { buildSkillMatchers, detectSkills, termsFor } from '@avotalent/core/services/vacancies/skill-detect'
+import { SKILL_TERMS } from '@avotalent/core/services/vacancies/skill-terms'
+import { enrichVacancy } from '@avotalent/core/services/vacancies/enrich'
 
 const skills = (list: [string, string, string[]?, string[]?][]) =>
   buildSkillMatchers(list.map(([name, label, terms, roles]) => ({ name, label, detect_terms: terms, role_categories: roles })))

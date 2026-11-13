@@ -2,7 +2,7 @@ import type { Post } from "./types";
 import path from "path";
 import fs from "fs";
 
-const DATA_DIR = path.join(__dirname, "..", "..", "..", "data");
+const DATA_DIR = process.env.SCRAPER_DATA_DIR || path.join(process.cwd(), "data");
 const SEEN_FILE = path.join(DATA_DIR, "seen.json");
 
 export function postKey(post: Post): string {

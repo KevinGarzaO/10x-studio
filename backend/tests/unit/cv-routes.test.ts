@@ -10,7 +10,7 @@ const state = vi.hoisted(() => ({
   updateError: null as any,
 }))
 
-vi.mock('../../services/supabase.service', () => ({
+vi.mock('@avotalent/core/services/supabase.service', () => ({
   supabase: {
     auth: {
       getUser: async (token: string) =>

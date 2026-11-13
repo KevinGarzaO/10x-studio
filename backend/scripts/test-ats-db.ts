@@ -1,7 +1,7 @@
 import "dotenv/config";
 import { createClient } from "@supabase/supabase-js";
-import { fetchWorkable } from "../services/scraper/sources/workable";
-import { fetchGreenhouse } from "../services/scraper/sources/greenhouse";
+import { fetchWorkable } from "@avotalent/core/services/scraper/sources/workable";
+import { fetchGreenhouse } from "@avotalent/core/services/scraper/sources/greenhouse";
 
 const supabaseUrl = process.env.SUPABASE_URL!;
 const supabaseKey = process.env.SUPABASE_SERVICE_KEY!;

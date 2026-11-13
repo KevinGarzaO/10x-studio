@@ -14,7 +14,7 @@
  *   npx vitest run scripts/test-account-foundation-bypass.ts
  */
 import { it, expect, afterAll } from 'vitest'
-import { supabase } from '../services/supabase.service'
+import { supabase } from '@avotalent/core/services/supabase.service'
 import { normalizeSkillKey } from '@avocado/schemas'
 
 const createdUserIds: string[] = []

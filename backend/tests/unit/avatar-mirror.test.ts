@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 
 const storage = vi.hoisted(() => ({ uploads: [] as { path: string; type: string; size: number }[], failUpload: false }))
 
-vi.mock('../../services/supabase.service', () => ({
+vi.mock('@avotalent/core/services/supabase.service', () => ({
   supabase: {
     storage: {
       from: () => ({
@@ -17,7 +17,7 @@ vi.mock('../../services/supabase.service', () => ({
   },
 }))
 
-import { isProviderPhoto, mirrorProviderPhoto } from '../../services/avatar'
+import { isProviderPhoto, mirrorProviderPhoto } from '@avotalent/core/services/avatar'
 
 const LINKEDIN = 'https://media.licdn.com/dms/image/v2/abc/profile-displayphoto-shrink_200_200/0/1?e=1762300800&v=beta&t=xyz'
 

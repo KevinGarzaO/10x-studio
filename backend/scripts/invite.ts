@@ -8,8 +8,8 @@
  * Necesita backend/sql/invitations-migration.sql y RESEND_API_KEY.
  */
 import 'dotenv/config'
-import { activeDaysBefore, dailyCap, loadState, pickDue, runInvitationBatch } from '../services/email/invitations'
-import { RESERVE, remainingBudget, sentLast24h, TOTAL_DAILY_BUDGET } from '../services/email/budget'
+import { activeDaysBefore, dailyCap, loadState, pickDue, runInvitationBatch } from '@avotalent/core/services/email/invitations'
+import { RESERVE, remainingBudget, sentLast24h, TOTAL_DAILY_BUDGET } from '@avotalent/core/services/email/budget'
 
 const arg = (name: string): string | undefined => {
   const index = process.argv.indexOf(name)

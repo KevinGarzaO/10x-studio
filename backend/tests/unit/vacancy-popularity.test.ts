@@ -4,8 +4,8 @@ import request from 'supertest'
 
 const tables = vi.hoisted(() => ({ data: {} as Record<string, any[]> }))
 
-vi.mock('../../services/vacancies/feed-visibility', () => ({ feedVisibilityReady: async () => false }))
-vi.mock('../../services/supabase.service', () => ({
+vi.mock('@avotalent/core/services/vacancies/feed-visibility', () => ({ feedVisibilityReady: async () => false }))
+vi.mock('@avotalent/core/services/supabase.service', () => ({
   supabase: {
     auth: { getUser: async () => ({ data: { user: null }, error: new Error('no') }) },
     from: (table: string) => {
@@ -27,7 +27,7 @@ vi.mock('../../middleware/community-auth.middleware', () => ({
 }))
 
 import postsRouter from '../../src/routes/community/posts.routes'
-import { clearPopularityCache, popularityScore, rankByPopularity } from '../../services/vacancies/popularity'
+import { clearPopularityCache, popularityScore, rankByPopularity } from '@avotalent/core/services/vacancies/popularity'
 
 const app = () => {
   const a = express()

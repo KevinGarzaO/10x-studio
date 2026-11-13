@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { pickDailyVacancies, roleCaps, type VacancyCandidate } from '../../services/scraper/daily-selection'
+import { pickDailyVacancies, roleCaps, type VacancyCandidate } from '@avotalent/core/services/scraper/daily-selection'
 
 let counter = 0
 const job = (company: string | null, role: string | null = null, level: string | null = null): VacancyCandidate => ({

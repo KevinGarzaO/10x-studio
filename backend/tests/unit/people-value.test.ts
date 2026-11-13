@@ -1,8 +1,8 @@
 import { describe, it, expect, vi } from 'vitest'
 
-vi.mock('../../services/supabase.service', () => ({ supabase: {} }))
+vi.mock('@avotalent/core/services/supabase.service', () => ({ supabase: {} }))
 
-import { ACTIVE_DAY_POINTS, ENGAGEMENT_DAYS, MAX_PER_ACTION, TEMPERATURE, VALUE_POINTS, buildPeopleValue, displayNameOf, reasonOf, summarize, temperatureOf, type DatedAction, type PersonInput } from '../../services/analytics/people-value'
+import { ACTIVE_DAY_POINTS, ENGAGEMENT_DAYS, MAX_PER_ACTION, TEMPERATURE, VALUE_POINTS, buildPeopleValue, displayNameOf, reasonOf, summarize, temperatureOf, type DatedAction, type PersonInput } from '@avotalent/core/services/analytics/people-value'
 
 // Sábado 7 de noviembre de 2026, mediodía en Monterrey.
 const NOW = new Date('2026-11-07T18:00:00Z')

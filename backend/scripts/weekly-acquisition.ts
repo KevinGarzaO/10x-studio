@@ -8,8 +8,8 @@
  * conversión (registros entre visitantes distintos) y marca si cada código
  * está registrado en Medición (label) o es automático (vacante publicada sola).
  */
-import { supabase } from '../services/supabase.service'
-import { monterreyWeekStart } from '../services/linkedin/tracked-posts'
+import { supabase } from '@avotalent/core/services/supabase.service'
+import { monterreyWeekStart } from '@avotalent/core/services/linkedin/tracked-posts'
 
 async function main() {
   const desde = monterreyWeekStart()

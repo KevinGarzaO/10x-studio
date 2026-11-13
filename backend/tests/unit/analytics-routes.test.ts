@@ -11,7 +11,7 @@ const data = vi.hoisted(() => ({
 const seen = vi.hoisted(() => ({ filters: [] as string[] }))
 const rpcState = vi.hoisted(() => ({ impl: null as null | ((name: string, args: any) => Promise<{ data: any; error: any }>) }))
 
-vi.mock('../../services/supabase.service', () => ({
+vi.mock('@avotalent/core/services/supabase.service', () => ({
   supabase: {
     // La analítica web propia (funciones SQL) no existe en estas pruebas: el resumen debe seguir respondiendo sin ella.
     // `.range` existe porque las lecturas largas de funciones se piden por páginas.

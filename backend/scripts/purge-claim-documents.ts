@@ -11,8 +11,8 @@
  * Es seguro correrlo cuantas veces haga falta: solo toca documentos de
  * reclamos aprobados o rechazados que todavía tengan archivo.
  */
-import { supabase } from '../services/supabase.service'
-import { removeClaimFiles } from '../services/claim-documents'
+import { supabase } from '@avotalent/core/services/supabase.service'
+import { removeClaimFiles } from '@avotalent/core/services/claim-documents'
 
 async function main() {
   const { data, error } = await supabase

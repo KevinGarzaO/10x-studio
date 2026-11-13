@@ -6,7 +6,7 @@ import { join } from 'path'
 
 const session = vi.hoisted(() => ({ user: null as { id: string; email: string } | null, superadmin: false }))
 
-vi.mock('../../services/supabase.service', () => ({
+vi.mock('@avotalent/core/services/supabase.service', () => ({
   supabase: {
     auth: {
       getUser: async (token: string) =>

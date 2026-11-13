@@ -13,7 +13,7 @@ import { TagPicker } from './tag-picker'
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'
 
-// Los mismos límites que el servidor (backend/services/community/post-rules.ts): si cambian allá, cambian aquí.
+// Los mismos límites que el servidor (packages/core/services/community/post-rules.ts): si cambian allá, cambian aquí.
 export const TITLE_MIN = 8
 export const TITLE_MAX = 140
 export const CONTENT_MIN = 20
@@ -21,7 +21,7 @@ export const CONTENT_MAX = 10000
 export const TAGS_MAX = 5
 export const MAX_IMAGE_BYTES = 5 * 1024 * 1024
 
-// Por ahora solo hay discusiones; los proyectos están en pausa (ver backend/services/community/post-rules.ts).
+// Por ahora solo hay discusiones; los proyectos están en pausa (ver packages/core/services/community/post-rules.ts).
 const TYPE = 'discussion' as const
 
 export const DRAFT_KEY = 'avo_post_draft'

@@ -1,8 +1,8 @@
 import { Router, Request, Response } from 'express'
-import { supabase } from '../../../services/supabase.service'
-import { recordChange } from '../../../services/analytics/changes'
-import { STAGES, STAGE_LABEL, isStage, type Stage } from '../../../services/flags/evaluate'
-import { clearFlagsCache, computeExposure, loadFlagRows, type FlagRow } from '../../../services/flags/flags.service'
+import { supabase } from '@avotalent/core/services/supabase.service'
+import { recordChange } from '@avotalent/core/services/analytics/changes'
+import { STAGES, STAGE_LABEL, isStage, type Stage } from '@avotalent/core/services/flags/evaluate'
+import { clearFlagsCache, computeExposure, loadFlagRows, type FlagRow } from '@avotalent/core/services/flags/flags.service'
 
 /**
  * Administración de los interruptores (solo el fundador: va detrás de la sesión de superadmin; ver index.ts). Se monta dentro de

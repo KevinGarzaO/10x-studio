@@ -1,7 +1,7 @@
 import { Request, Response } from 'express'
-import { supabase } from '../services/supabase.service'
-import { SubstackService } from '../services/substack.service'
-import { syncSubstackData } from '../services/cron.service'
+import { supabase } from '@avotalent/core/services/supabase.service'
+import { SubstackService } from '@avotalent/core/services/substack.service'
+import { syncSubstackData } from '@avotalent/core/services/cron.service'
 
 export const getProfile = async (req: Request, res: Response) => {
   try {

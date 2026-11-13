@@ -1,8 +1,8 @@
 import { describe, it, expect, vi, afterEach } from 'vitest'
 import express from 'express'
 import request from 'supertest'
-import { readAll } from '../../services/analytics/read'
-import { ttlCache } from '../../services/analytics/cache'
+import { readAll } from '@avotalent/core/services/analytics/read'
+import { ttlCache } from '@avotalent/core/services/analytics/cache'
 
 describe('readAll', () => {
   it('reads every page, in order, even when pages are requested at the same time', async () => {

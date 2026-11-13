@@ -1,15 +1,15 @@
 import { Router, Request, Response } from "express";
-import { getActiveSources, getAllSources, getScraperStats } from "../services/scraper/db";
-import { runDiscovery, runDiscoveryAll } from "../services/scraper/discovery";
-import { runProduction } from "../services/scraper/producer";
-import { syncAllPending } from "../services/scraper/sync";
-import { enrichVacancyWithAI, buildEnrichedContent } from "../services/scraper/enrich";
-import { SEARCH_PROFILES } from "../services/scraper/profiles";
-import { supabase } from "../services/supabase.service";
-import { fetchWorkable } from "../services/scraper/sources/workable";
-import { fetchGreenhouse } from "../services/scraper/sources/greenhouse";
-import { postExists, insertPost } from "../services/scraper/db";
-import { hasContact } from "../services/scraper/contacts";
+import { getActiveSources, getAllSources, getScraperStats } from "@avotalent/core/services/scraper/db";
+import { runDiscovery, runDiscoveryAll } from "@avotalent/core/services/scraper/discovery";
+import { runProduction } from "@avotalent/core/services/scraper/producer";
+import { syncAllPending } from "@avotalent/core/services/scraper/sync";
+import { enrichVacancyWithAI, buildEnrichedContent } from "@avotalent/core/services/scraper/enrich";
+import { SEARCH_PROFILES } from "@avotalent/core/services/scraper/profiles";
+import { supabase } from "@avotalent/core/services/supabase.service";
+import { fetchWorkable } from "@avotalent/core/services/scraper/sources/workable";
+import { fetchGreenhouse } from "@avotalent/core/services/scraper/sources/greenhouse";
+import { postExists, insertPost } from "@avotalent/core/services/scraper/db";
+import { hasContact } from "@avotalent/core/services/scraper/contacts";
 import { adminAuthMiddleware } from "../middleware/admin-auth.middleware";
 
 const router = Router();

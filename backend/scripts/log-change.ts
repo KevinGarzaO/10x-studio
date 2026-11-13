@@ -1,5 +1,5 @@
 import 'dotenv/config'
-import { CHANGE_KINDS, recordChange, type ChangeKind } from '../services/analytics/changes'
+import { CHANGE_KINDS, recordChange, type ChangeKind } from '@avotalent/core/services/analytics/changes'
 
 /**
  * Anota a mano un cambio que NO es un commit: un interruptor que se prendió en Railway, un cambio de horario, un texto nuevo...

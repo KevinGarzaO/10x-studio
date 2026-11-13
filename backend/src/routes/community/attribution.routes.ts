@@ -1,8 +1,8 @@
 import { Router, Request, Response } from 'express'
-import { supabase } from '../../../services/supabase.service'
-import { sanitizeAttribution, sanitizeVisitorId } from '../../../services/attribution'
-import { isBotUserAgent } from '../../../services/analytics/bots'
-import { clearPopularityCache } from '../../../services/vacancies/popularity'
+import { supabase } from '@avotalent/core/services/supabase.service'
+import { sanitizeAttribution, sanitizeVisitorId } from '@avotalent/core/services/attribution'
+import { isBotUserAgent } from '@avotalent/core/services/analytics/bots'
+import { clearPopularityCache } from '@avotalent/core/services/vacancies/popularity'
 
 const router = Router()
 

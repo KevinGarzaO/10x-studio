@@ -16,7 +16,7 @@ Cada paso **incluye a los anteriores**: en «Beta» la ven el equipo y las perso
 | 1 / 10 / 25 / 50 % | Lo anterior + ese porcentaje del resto de cuentas con sesión. |
 | Todos | Todo el mundo, también quien no ha iniciado sesión. |
 
-Reglas finas (están en `backend/services/flags/evaluate.ts` y probadas):
+Reglas finas (están en `packages/core/services/flags/evaluate.ts` y probadas):
 
 - **Sin sesión** solo se ve en «Todos». Un porcentaje necesita una persona.
 - **El número de cada persona es fijo** (hash de `nombre_del_interruptor:id`): quien entra al 1 % sigue dentro al subir al 10 %. Nadie entra y sale al azar. Y cada interruptor reparte distinto: estar en el 1 % de uno no te pone en el 1 % de todos.
@@ -50,7 +50,7 @@ Cada cambio de paso guarda quién, cuándo, de dónde a dónde y una nota (`feat
 ## Piezas
 
 - SQL: `backend/sql/feature-flags-migration.sql` (4 tablas, RLS cerrada, borrado en cascada con la cuenta). Hay que correrla en cada entorno.
-- Regla: `backend/services/flags/evaluate.ts` (pura). Carga y caché: `flags.service.ts` (15 s las funciones, 30 s la persona; ante cualquier fallo, **todo apagado**, nunca lanza).
+- Regla: `packages/core/services/flags/evaluate.ts` (pura). Carga y caché: `flags.service.ts` (15 s las funciones, 30 s la persona; ante cualquier fallo, **todo apagado**, nunca lanza).
 - Rutas: `GET /api/community/flags` (solo las encendidas, `no-store`); administración en `/api/admin/analytics/flags/*` (fundador). El agente lee solo conteos: métrica `feature_flags`.
 - Pantalla: `FlagsLoader` pide las funciones al abrir, al volver a la pestaña y al entrar o salir una sesión (evento `avo:session-changed`).
 

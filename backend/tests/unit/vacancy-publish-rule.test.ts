@@ -9,8 +9,8 @@ import {
   describeRejections,
   VACANCY_ROLES,
   type VacancyCandidate,
-} from '../../services/vacancies/publish-rule'
-import { planCleanup, type PublishedVacancy } from '../../services/vacancies/cleanup'
+} from '@avotalent/core/services/vacancies/publish-rule'
+import { planCleanup, type PublishedVacancy } from '@avotalent/core/services/vacancies/cleanup'
 
 const catalog = new Set(['react', 'python', 'sql'])
 

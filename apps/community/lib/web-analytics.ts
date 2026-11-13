@@ -1,6 +1,6 @@
 /**
  * Analítica web propia de AvoTalent (reglas de GA4). Esto es el lado del navegador; el servidor está en
- * backend/services/web-analytics y las tablas en backend/sql/web-analytics-migration.sql.
+ * packages/core/services/web-analytics y las tablas en backend/sql/web-analytics-migration.sql.
  *
  * Qué mide:
  *   - una SESIÓN por visita (nueva tras 30 minutos sin actividad), con de dónde llegó (UTM y sitio de referencia);

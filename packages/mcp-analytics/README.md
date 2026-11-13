@@ -47,7 +47,7 @@ Límites que conviene saber:
 - **No todas las sesiones tienen video**: Clarity muestrea, **conserva las grabaciones unos 30 días** (más si las marcas como favoritas) y no graba a quien bloquea su script o las cookies. En esos casos el panel muestra "—".
 - Si pasan más de 30 minutos de inactividad, Clarity y nuestra analítica abren sesión nueva por separado; se queda ligada la última grabación vista.
 
-Las métricas de frustración sí vienen por API: un cron diario (`backend/services/analytics/clarity.ts`) guarda en `analytics_clarity_metrics`
+Las métricas de frustración sí vienen por API: un cron diario (`packages/core/services/analytics/clarity.ts`) guarda en `analytics_clarity_metrics`
 las de las últimas 24 h por página (la API solo da 1 a 3 días, 10 llamadas al día y 1000 filas, por eso se guarda el historial propio).
 
 ## Configuración

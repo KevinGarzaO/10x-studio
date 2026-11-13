@@ -1,6 +1,6 @@
 import 'dotenv/config'
-import { supabase } from '../services/supabase.service'
-import { pickSignupOrigin, type OriginSession } from '../services/analytics/signup-origin'
+import { supabase } from '@avotalent/core/services/supabase.service'
+import { pickSignupOrigin, type OriginSession } from '@avotalent/core/services/analytics/signup-origin'
 
 /**
  * Recupera el origen de registro de las cuentas que lo perdieron al volver del inicio de sesión con LinkedIn o GitHub.

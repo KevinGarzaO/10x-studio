@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { buildMatchReport, type ReportCandidate, type ReportVacancy } from '../../services/matching/report'
+import { buildMatchReport, type ReportCandidate, type ReportVacancy } from '@avotalent/core/services/matching/report'
 
 const NOW = new Date('2026-10-04T12:00:00Z')
 const daysAgo = (n: number) => new Date(NOW.getTime() - n * 86_400_000).toISOString()

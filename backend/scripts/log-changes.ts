@@ -1,6 +1,6 @@
 import 'dotenv/config'
 import { execFileSync } from 'child_process'
-import { parseCommitSubject, parseExpectedMetric, recordChange } from '../services/analytics/changes'
+import { parseCommitSubject, parseExpectedMetric, recordChange } from '@avotalent/core/services/analytics/changes'
 
 /**
  * Trae de git a la bitácora de cambios lo que se subió (solo feat / fix / perf, con la hora del commit).

@@ -1,13 +1,13 @@
 import { describe, it, expect, vi } from 'vitest'
 
-vi.mock('../../services/supabase.service', () => ({ supabase: {} }))
+vi.mock('@avotalent/core/services/supabase.service', () => ({ supabase: {} }))
 
-import { monterreyDayStart } from '../../services/email/budget'
-import { parseCsv } from '../../services/email/csv'
+import { monterreyDayStart } from '@avotalent/core/services/email/budget'
+import { parseCsv } from '@avotalent/core/services/email/csv'
 import {
   FULL_DAILY, GAP_DAYS, WARMUP, activeDaysBefore, buildInvitation, dailyCap, firstNameOf, normalizeContacts, pickDue, runInvitationBatch,
   type InviteDeps, type Invitation, type InviteSend,
-} from '../../services/email/invitations'
+} from '@avotalent/core/services/email/invitations'
 
 const NOW = new Date('2026-10-30T17:00:00Z')
 const daysAgo = (days: number) => new Date(NOW.getTime() - days * 86400000).toISOString()

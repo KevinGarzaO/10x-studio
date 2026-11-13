@@ -1,11 +1,11 @@
 import { Router, Request, Response } from 'express'
 import { timingSafeEqual } from 'crypto'
 import { communityAuthMiddleware, AuthRequest } from '../../../middleware/community-auth.middleware'
-import { isBotUserAgent } from '../../../services/analytics/bots'
-import { parseCollectPayload, sanitizeClientId } from '../../../services/web-analytics/payload'
-import { applyCollect, executeUserStitching, type RequestContext } from '../../../services/web-analytics/collect'
-import { saveClarityLink } from '../../../services/web-analytics/clarity-link'
-import { parseErrorPayload, parseFlowPayload, recordError, recordFlowStep } from '../../../services/web-analytics/telemetry'
+import { isBotUserAgent } from '@avotalent/core/services/analytics/bots'
+import { parseCollectPayload, sanitizeClientId } from '@avotalent/core/services/web-analytics/payload'
+import { applyCollect, executeUserStitching, type RequestContext } from '@avotalent/core/services/web-analytics/collect'
+import { saveClarityLink } from '@avotalent/core/services/web-analytics/clarity-link'
+import { parseErrorPayload, parseFlowPayload, recordError, recordFlowStep } from '@avotalent/core/services/web-analytics/telemetry'
 
 const router = Router()
 

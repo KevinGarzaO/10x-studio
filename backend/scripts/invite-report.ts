@@ -8,8 +8,8 @@
  * que se le mandó la primera invitación; quien ya tenía cuenta antes no cuenta como logro de las invitaciones.
  */
 import 'dotenv/config'
-import { supabase } from '../services/supabase.service'
-import { loadState } from '../services/email/invitations'
+import { supabase } from '@avotalent/core/services/supabase.service'
+import { loadState } from '@avotalent/core/services/email/invitations'
 
 const pct = (part: number, whole: number): string => (whole ? `${Math.round((part / whole) * 100)} %` : '—')
 

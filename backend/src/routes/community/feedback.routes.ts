@@ -1,7 +1,7 @@
 import { Router, Response } from 'express'
-import { supabase } from '../../../services/supabase.service'
+import { supabase } from '@avotalent/core/services/supabase.service'
 import { communityAuthMiddleware, AuthRequest } from '../../../middleware/community-auth.middleware'
-import { MAX_PER_DAY, QUESTION_VERSION, cleanCategory, cleanPage, cleanText, deviceOf, loadEligibility, signupWeek, type FeedbackContext } from '../../../services/feedback/feedback'
+import { MAX_PER_DAY, QUESTION_VERSION, cleanCategory, cleanPage, cleanText, deviceOf, loadEligibility, signupWeek, type FeedbackContext } from '@avotalent/core/services/feedback/feedback'
 
 /**
  * Feedback dentro de la app: el botón «¿Qué te faltó?». Todo con sesión; quien no es elegible (cuenta real con 2 o más días de uso después de

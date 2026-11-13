@@ -6,9 +6,9 @@ import request from 'supertest'
 import { PGlite } from '@electric-sql/pglite'
 
 const rpc = vi.hoisted(() => vi.fn())
-vi.mock('../../services/supabase.service', () => ({ supabase: { rpc } }))
+vi.mock('@avotalent/core/services/supabase.service', () => ({ supabase: { rpc } }))
 
-import { TimingAggregator, apiTiming, bucketOf, flushTimings, percentileMs, summarizeTimings, loadTimingSummary, routeOf, type TimingItem, type TimingRow } from '../../services/performance/api-timing'
+import { TimingAggregator, apiTiming, bucketOf, flushTimings, percentileMs, summarizeTimings, loadTimingSummary, routeOf, type TimingItem, type TimingRow } from '@avotalent/core/services/performance/api-timing'
 
 const sql = fs.readFileSync(path.join(__dirname, '../../sql/api-timing-migration.sql'), 'utf8')
 

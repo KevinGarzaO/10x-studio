@@ -9,8 +9,8 @@
  * Sirve para revisar cómo se ven los textos antes de activar la publicación automática
  * (LINKEDIN_VACANCY_POSTS=on en Railway).
  */
-import { loadPool, publishVacancyPost, siteUrl } from '../services/linkedin/vacancy-publisher'
-import { buildPostText, pickVacancy, vacancyUrl, completeness, type PostedVacancy } from '../services/linkedin/vacancy-post'
+import { loadPool, publishVacancyPost, siteUrl } from '@avotalent/core/services/linkedin/vacancy-publisher'
+import { buildPostText, pickVacancy, vacancyUrl, completeness, type PostedVacancy } from '@avotalent/core/services/linkedin/vacancy-post'
 
 const countFlag = process.argv.indexOf('--count')
 const count = countFlag >= 0 ? Math.max(1, Number(process.argv[countFlag + 1]) || 4) : 4

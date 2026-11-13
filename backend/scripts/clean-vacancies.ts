@@ -10,11 +10,11 @@
  * Las publicadas con comentarios o guardados NO se eliminan (se llevarían la conversación
  * de personas reales): se dejan y se listan.
  */
-import { supabase } from '../services/supabase.service'
-import { loadSkillMatchers } from '../services/vacancies/catalog'
-import { planCleanup, type PublishedVacancy } from '../services/vacancies/cleanup'
-import { describeRejections, evaluateVacancy, locationFromText, tallyRejections } from '../services/vacancies/publish-rule'
-import { vacancyTitle } from '../services/vacancies/text'
+import { supabase } from '@avotalent/core/services/supabase.service'
+import { loadSkillMatchers } from '@avotalent/core/services/vacancies/catalog'
+import { planCleanup, type PublishedVacancy } from '@avotalent/core/services/vacancies/cleanup'
+import { describeRejections, evaluateVacancy, locationFromText, tallyRejections } from '@avotalent/core/services/vacancies/publish-rule'
+import { vacancyTitle } from '@avotalent/core/services/vacancies/text'
 
 const apply = process.argv.includes('--apply')
 const keepInvalid = process.argv.includes('--keep-invalid')

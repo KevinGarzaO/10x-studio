@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import express from 'express'
 import request from 'supertest'
-import { normalizeTag, normalizeTags, validateMemberPost, POSTS_PER_DAY } from '../../services/community/post-rules'
+import { normalizeTag, normalizeTags, validateMemberPost, POSTS_PER_DAY } from '@avotalent/core/services/community/post-rules'
 
 const state = vi.hoisted(() => ({
   user: { profile_completed: true, is_superadmin: false } as { profile_completed: boolean; is_superadmin: boolean },
@@ -14,7 +14,7 @@ const state = vi.hoisted(() => ({
   deleted: [] as string[],
 }))
 
-vi.mock('../../services/supabase.service', () => ({
+vi.mock('@avotalent/core/services/supabase.service', () => ({
   supabase: {
     auth: { getUser: async () => ({ data: { user: null }, error: new Error('no') }) },
     from: (table: string) => {

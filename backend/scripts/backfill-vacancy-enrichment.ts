@@ -12,11 +12,11 @@
  * scraper no vuelve a tocar. Con el texto guardado (recortado) se gana poco en skills; con
  * --refetch se analiza la descripción completa.
  */
-import { supabase } from '../services/supabase.service'
-import { enrichVacancy, type VacancyEnrichment } from '../services/vacancies/enrich'
-import { loadSkillMatchers } from '../services/vacancies/catalog'
-import { MODALITY_LABEL } from '../services/vacancies/modality'
-import { cleanVacancyText } from '../services/vacancies/text'
+import { supabase } from '@avotalent/core/services/supabase.service'
+import { enrichVacancy, type VacancyEnrichment } from '@avotalent/core/services/vacancies/enrich'
+import { loadSkillMatchers } from '@avotalent/core/services/vacancies/catalog'
+import { MODALITY_LABEL } from '@avotalent/core/services/vacancies/modality'
+import { cleanVacancyText } from '@avotalent/core/services/vacancies/text'
 
 const apply = process.argv.includes('--apply')
 const refetch = process.argv.includes('--refetch')

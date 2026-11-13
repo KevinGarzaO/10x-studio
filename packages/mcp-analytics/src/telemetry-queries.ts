@@ -194,7 +194,7 @@ export interface ChangeLog {
 }
 
 const numeric = (value: unknown) => (value === null || value === undefined ? 0 : Number(value))
-/** Total entre días; null si no hay días con qué dividir (igual que backend/services/analytics/changes.ts). */
+/** Total entre días; null si no hay días con qué dividir (igual que packages/core/services/analytics/changes.ts). */
 const perDay = (total: number, days: number) => (days >= 0.25 ? round(total / days, 2) : null)
 const shiftOf = (before: number | null, after: number | null): ChangeLogShift => ({
   before,

@@ -1,9 +1,9 @@
 import { describe, it, expect, vi } from 'vitest'
 
-vi.mock('../../services/supabase.service', () => ({ supabase: {} }))
+vi.mock('@avotalent/core/services/supabase.service', () => ({ supabase: {} }))
 
-import { planVisibility, type OpenVacancy } from '../../services/vacancies/feed-visibility'
-import type { PersonProfile } from '../../services/vacancies/serves-someone'
+import { planVisibility, type OpenVacancy } from '@avotalent/core/services/vacancies/feed-visibility'
+import type { PersonProfile } from '@avotalent/core/services/vacancies/serves-someone'
 
 const ana: PersonProfile = { roleCategory: 'desarrollo_backend', seniority: 'mid', skills: ['node', 'sql'], workModality: 'remoto' }
 let n = 0

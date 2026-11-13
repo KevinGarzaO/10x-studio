@@ -1,5 +1,5 @@
 import { Router, Request, Response } from 'express'
-import { isPublicContainer, isSafePath, readFile } from '../../services/storage'
+import { isPublicContainer, isSafePath, readFile } from '@avotalent/core/services/storage/index'
 
 /**
  * Sirve las imágenes públicas (fotos, imágenes de publicaciones, logos) desde los contenedores PRIVADOS de Azure: el navegador nunca habla con

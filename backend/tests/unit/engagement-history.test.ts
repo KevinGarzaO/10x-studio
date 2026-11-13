@@ -1,11 +1,11 @@
 import { describe, it, expect, vi } from 'vitest'
 
-vi.mock('../../services/supabase.service', () => ({ supabase: {} }))
+vi.mock('@avotalent/core/services/supabase.service', () => ({ supabase: {} }))
 
 import {
   ENGAGEMENT_STATES, buildHistorySummary, cutOf, engagementState, indexHistory, lastCompletedWeekStart, mondayOf, readHorizon, snapshotRow, weekCounts,
   type HistoryData, type HistoryRow, type WeekPoint,
-} from '../../services/analytics/engagement-history'
+} from '@avotalent/core/services/analytics/engagement-history'
 
 describe('weeks (Monday to Sunday, Monterrey)', () => {
   it('finds the Monday of any day and the week that just ended', () => {

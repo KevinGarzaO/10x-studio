@@ -1,7 +1,7 @@
 import { Router, Request, Response } from 'express'
-import { supabase } from '../../../services/supabase.service'
+import { supabase } from '@avotalent/core/services/supabase.service'
 import { communityAuthMiddleware, AuthRequest } from '../../../middleware/community-auth.middleware'
-import { pushConfig, pushEnabled, pushWelcome } from '../../../services/push/push'
+import { pushConfig, pushEnabled, pushWelcome } from '@avotalent/core/services/push/push'
 
 /**
  * Avisos push: la llave pública, alta y baja de un dispositivo, y los eventos de la invitación (se mostró, lo negó, no quiso).

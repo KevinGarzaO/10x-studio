@@ -1,5 +1,5 @@
 import type { NextFunction, Request, Response } from 'express'
-import { ttlCache } from '../services/analytics/cache'
+import { ttlCache } from '@avotalent/core/services/analytics/cache'
 
 /**
  * Guarda unos minutos en memoria lo que el servidor contesta IGUAL para todo el mundo, para no recalcularlo en cada visita al feed

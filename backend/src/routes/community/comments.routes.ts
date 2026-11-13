@@ -1,7 +1,7 @@
 import { Router, Request, Response } from 'express'
-import { supabase } from '../../../services/supabase.service'
+import { supabase } from '@avotalent/core/services/supabase.service'
 import { communityAuthMiddleware, AuthRequest } from '../../../middleware/community-auth.middleware'
-import { notifyComment } from '../../../services/notifications/notify'
+import { notifyComment } from '@avotalent/core/services/notifications/notify'
 
 const router = Router()
 

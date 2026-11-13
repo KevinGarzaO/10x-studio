@@ -20,7 +20,7 @@ function builder(table: string) {
   return q
 }
 
-vi.mock('../../services/supabase.service', () => ({ supabase: { from: (table: string) => builder(table) } }))
+vi.mock('@avotalent/core/services/supabase.service', () => ({ supabase: { from: (table: string) => builder(table) } }))
 
 import cardsRoutes from '../../src/routes/community/cards.routes'
 

@@ -1,4 +1,4 @@
-import { supabase } from '../services/supabase.service'
+import { supabase } from '@avotalent/core/services/supabase.service'
 
 // Cleans up job postings that got inserted more than once for the same
 // source_url — almost certainly caused by two scraper cron instances briefly

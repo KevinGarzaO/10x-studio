@@ -5,7 +5,7 @@ const db = vi.hoisted(() => ({
   calls: [] as string[],
 }))
 
-vi.mock('../../services/supabase.service', () => ({
+vi.mock('@avotalent/core/services/supabase.service', () => ({
   supabase: {
     from: (table: string) => {
       const c: any = {}
@@ -20,8 +20,8 @@ vi.mock('../../services/supabase.service', () => ({
   },
 }))
 
-import { readStoredMatches, storeMatches, refreshAllMatches } from '../../services/matching/refresh'
-import { scoreAgainstPool, type PoolItem } from '../../services/matching/compute'
+import { readStoredMatches, storeMatches, refreshAllMatches } from '@avotalent/core/services/matching/refresh'
+import { scoreAgainstPool, type PoolItem } from '@avotalent/core/services/matching/compute'
 
 const vacancy = (id: string, patch: Partial<PoolItem> = {}): PoolItem => ({
   sourceType: 'community', id, title: `Vacante ${id}`, company: 'Acme', companyLogo: null, roleCategory: 'backend',

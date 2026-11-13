@@ -16,13 +16,13 @@ function chain(table: string) {
   return c
 }
 
-vi.mock('../../services/supabase.service', () => ({
+vi.mock('@avotalent/core/services/supabase.service', () => ({
   supabase: { from: (table: string) => chain(table) },
 }))
 vi.mock('../../middleware/community-auth.middleware', () => ({
   communityAuthMiddleware: (req: any, _res: any, next: any) => { req.userId = 'user-1'; next() },
 }))
-vi.mock('../../services/scraper/sync', () => ({ syncVacancyToCommunity: syncMock }))
+vi.mock('@avotalent/core/services/scraper/sync', () => ({ syncVacancyToCommunity: syncMock }))
 
 import feedRouter from '../../src/routes/community/feed.routes'
 

@@ -41,7 +41,7 @@ function builder(table: string) {
   return q
 }
 
-vi.mock('../../services/supabase.service', () => ({ supabase: { from: (table: string) => builder(table) } }))
+vi.mock('@avotalent/core/services/supabase.service', () => ({ supabase: { from: (table: string) => builder(table) } }))
 vi.mock('../../middleware/community-auth.middleware', () => ({
   communityAuthMiddleware: (req: any, res: any, next: any) => {
     const user = req.headers['x-user']
@@ -51,7 +51,7 @@ vi.mock('../../middleware/community-auth.middleware', () => ({
   },
 }))
 
-import { ANSWERS, answerPatch, followupKind, hostOf, isPromptDue, statusMap, statusPatch, LATER_HOURS } from '../../services/applications/applications'
+import { ANSWERS, answerPatch, followupKind, hostOf, isPromptDue, statusMap, statusPatch, LATER_HOURS } from '@avotalent/core/services/applications/applications'
 import applicationsRoutes from '../../src/routes/community/applications.routes'
 
 const ANA = '00000000-0000-4000-8000-00000000a0a0'

@@ -7,7 +7,7 @@
  *
  * Sin opción no hace nada y muestra esta ayuda.
  */
-import { backfillHistory, takeBaseline, takeWeeklySnapshot } from '../services/analytics/engagement-history'
+import { backfillHistory, takeBaseline, takeWeeklySnapshot } from '@avotalent/core/services/analytics/engagement-history'
 
 async function main() {
   const args = process.argv.slice(2)

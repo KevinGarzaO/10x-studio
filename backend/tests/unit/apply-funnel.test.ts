@@ -2,7 +2,7 @@ import { describe, it, expect, beforeAll, afterAll } from 'vitest'
 import fs from 'fs'
 import path from 'path'
 import { PGlite } from '@electric-sql/pglite'
-import { buildApplyFunnel } from '../../services/analytics/apply-funnel'
+import { buildApplyFunnel } from '@avotalent/core/services/analytics/apply-funnel'
 
 const read = (name: string) => fs.readFileSync(path.join(__dirname, '../../sql', name), 'utf8')
 const uuid = (n: number) => `00000000-0000-4000-8000-${String(n).padStart(12, '0')}`

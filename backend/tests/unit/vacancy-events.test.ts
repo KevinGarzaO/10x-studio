@@ -6,7 +6,7 @@ const inserted = vi.hoisted(() => [] as Record<string, unknown>[])
 const state = vi.hoisted(() => ({ recent: false, userId: null as string | null, insertError: null as string | null, account: null as { user_kind: string; is_test_account: boolean } | null }))
 const filters = vi.hoisted(() => [] as string[])
 
-vi.mock('../../services/supabase.service', () => ({
+vi.mock('@avotalent/core/services/supabase.service', () => ({
   supabase: {
     auth: {
       getUser: async (token: string) => (token === 'sesion-buena' && state.userId ? { data: { user: { id: state.userId } }, error: null } : { data: { user: null }, error: { message: 'invalid' } }),

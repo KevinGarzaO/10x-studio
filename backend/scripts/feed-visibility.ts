@@ -4,7 +4,7 @@
  *   npm run feed-visibility             prueba: cuenta qué se ocultaría y qué se volvería a mostrar; no cambia nada
  *   npm run feed-visibility -- --apply  lo aplica (reversible: se vuelve a mostrar sola cuando llega alguien a quien le sirva)
  */
-import { refreshFeedVisibility } from '../services/vacancies/feed-visibility'
+import { refreshFeedVisibility } from '@avotalent/core/services/vacancies/feed-visibility'
 
 async function main() {
   const apply = process.argv.includes('--apply')

@@ -3,9 +3,9 @@ import express from 'express'
 import request from 'supertest'
 import { createHmac } from 'crypto'
 
-vi.mock('../../services/supabase.service', () => ({ supabase: {} }))
+vi.mock('@avotalent/core/services/supabase.service', () => ({ supabase: {} }))
 
-import { cleanLink, parseEvent, recordEvent, verifySignature, type WebhookDeps } from '../../services/email/resend-webhook'
+import { cleanLink, parseEvent, recordEvent, verifySignature, type WebhookDeps } from '@avotalent/core/services/email/resend-webhook'
 import resendRoutes from '../../src/routes/webhooks/resend.routes'
 
 const SECRET_BYTES = Buffer.from('una-llave-de-prueba-de-32-bytes!!')

@@ -1,6 +1,6 @@
-import { supabase } from '../services/supabase.service'
-import { getOrCreateCompanyUser, CLAIMED_COMPANY } from '../services/scraper/sync'
-import { companySlug } from '../services/company'
+import { supabase } from '@avotalent/core/services/supabase.service'
+import { getOrCreateCompanyUser, CLAIMED_COMPANY } from '@avotalent/core/services/scraper/sync'
+import { companySlug } from '@avotalent/core/services/company'
 
 const SCRAPER_BOT_ID = '00000000-0000-0000-0000-000000000001'
 

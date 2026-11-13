@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { scoreMatch, WEIGHTS, MIN_SCORE, type MatchCandidate, type MatchVacancy } from '../../services/matching/score'
+import { scoreMatch, WEIGHTS, MIN_SCORE, type MatchCandidate, type MatchVacancy } from '@avotalent/core/services/matching/score'
 
 const person: MatchCandidate = {
   roleCategory: 'backend',

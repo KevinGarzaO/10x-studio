@@ -1,7 +1,7 @@
 import { Router, Request, Response } from 'express'
-import { supabase } from '../../../services/supabase.service'
-import { seoDescription } from '../../../services/seo/vacancy-description'
-import { PUBLIC_ROLES, roleFromSlug, roleLabel, roleSlug } from '../../../services/seo/role-slug'
+import { supabase } from '@avotalent/core/services/supabase.service'
+import { seoDescription } from '@avotalent/core/services/seo/vacancy-description'
+import { PUBLIC_ROLES, roleFromSlug, roleLabel, roleSlug } from '@avotalent/core/services/seo/role-slug'
 
 const router = Router()
 

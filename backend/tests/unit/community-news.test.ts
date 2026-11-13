@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { wantsCommunityNews } from '../../services/email/community-news'
+import { wantsCommunityNews } from '@avotalent/core/services/email/community-news'
 
 describe('wantsCommunityNews', () => {
   it('is on by default, also for people who never touched their preferences', () => {

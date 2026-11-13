@@ -1,7 +1,7 @@
 import { describe, expect, it, afterAll } from 'vitest'
 import { readFileSync, readdirSync, statSync } from 'fs'
 import { join } from 'path'
-import { supabase } from '../../services/supabase.service'
+import { supabase } from '@avotalent/core/services/supabase.service'
 
 /**
  * FR-004 y FR-005: el tipo de cuenta y el permiso de superadmin NO se cambian
@@ -13,7 +13,10 @@ import { supabase } from '../../services/supabase.service'
  * mención de las funciones privilegiadas o de las columnas protegidas.
  */
 const ROOT = join(__dirname, '..', '..')
-const SOURCE_DIRS = ['src', 'services', 'routes', 'controllers']
+// El código compartido (services, lib, config) vive ahora en packages/core: se escanea igual que el del backend.
+const CORE_ROOT = join(ROOT, '..', 'packages', 'core')
+const SOURCE_DIRS = ['src', 'routes', 'controllers', 'middleware']
+const CORE_DIRS = ['services', 'lib', 'config']
 const IGNORED_DIRS = new Set(['node_modules', 'dist', 'tests', 'scripts'])
 
 function collectSources(dir: string): string[] {
@@ -37,7 +40,10 @@ function collectSources(dir: string): string[] {
   return found
 }
 
-const sources = SOURCE_DIRS.flatMap((dir) => collectSources(join(ROOT, dir)))
+const sources = [
+  ...SOURCE_DIRS.flatMap((dir) => collectSources(join(ROOT, dir))),
+  ...CORE_DIRS.flatMap((dir) => collectSources(join(CORE_ROOT, dir))),
+]
 
 describe('privileged changes stay out of the application (T038)', () => {
   it('finds backend sources to scan', () => {
@@ -70,7 +76,7 @@ describe('privileged changes stay out of the application (T038)', () => {
     )
 
     const relative = insertsCompany.map(
-      (file) => file.replace(/\\/g, '/').split('/backend/')[1],
+      (file) => file.replace(/\\/g, '/').split('/packages/core/')[1],
     )
     expect(relative).toEqual(['services/scraper/sync.ts'])
 
