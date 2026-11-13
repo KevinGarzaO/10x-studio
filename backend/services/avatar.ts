@@ -1,4 +1,4 @@
-import { supabase } from './supabase.service'
+import { putFile, publicFileUrl } from './storage'
 
 const MIME_EXT: Record<string, string> = {
   'image/png': 'png',
@@ -11,17 +11,13 @@ async function uploadBuffer(buffer: Buffer, mimeType: string, userId: string): P
   const ext = MIME_EXT[mimeType] || 'png'
   const filePath = `${userId}-${Date.now()}.${ext}`
 
-  const { error: uploadErr } = await supabase.storage
-    .from('avatars')
-    .upload(filePath, buffer, { contentType: mimeType, upsert: false })
-
-  if (uploadErr) {
-    console.error('[Avatar] Error uploading to Supabase Storage:', uploadErr.message)
+  const uploaded = await putFile('avatars', filePath, buffer, { contentType: mimeType, upsert: false })
+  if (!uploaded.ok) {
+    console.error('[Avatar] Error uploading to storage:', uploaded.error)
     return null
   }
 
-  const { data: urlData } = supabase.storage.from('avatars').getPublicUrl(filePath)
-  return urlData.publicUrl
+  return publicFileUrl('avatars', filePath)
 }
 
 /**

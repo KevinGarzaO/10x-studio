@@ -1,4 +1,5 @@
 import { supabase } from '../supabase.service'
+import { putFile, publicFileUrl, publicFilePrefix } from '../storage'
 
 /**
  * Imágenes de las publicaciones de los miembros (la portada y las que van dentro del texto). Se suben al almacenamiento
@@ -13,7 +14,7 @@ const MIME_EXT: Record<string, string> = {
 }
 
 export const MAX_IMAGE_BYTES = 5 * 1024 * 1024
-const BUCKET = 'images'
+const BUCKET = 'images' as const
 
 export type ParsedImage = { ok: true; mime: string; buffer: Buffer } | { ok: false; error: string }
 
@@ -29,7 +30,7 @@ export function parseImageDataUrl(dataUrl: unknown): ParsedImage {
 }
 
 /** Lo que toda imagen de una publicación debe tener al principio de su dirección. */
-export const communityImagePrefix = (): string => `${(process.env.SUPABASE_URL || '').replace(/\/+$/, '')}/storage/v1/object/public/${BUCKET}/community/`
+export const communityImagePrefix = (): string => `${publicFilePrefix(BUCKET)}community/`
 
 export function isCommunityImageUrl(url: unknown): url is string {
   const prefix = communityImagePrefix()
@@ -41,10 +42,10 @@ export async function uploadPostImage(dataUrl: unknown, userId: string): Promise
   if (!parsed.ok) return parsed
 
   const path = `community/${userId}-${Date.now()}.${MIME_EXT[parsed.mime]}`
-  const { error } = await supabase.storage.from(BUCKET).upload(path, parsed.buffer, { contentType: parsed.mime, upsert: false })
-  if (error) {
-    console.error('[PostImage] No se pudo subir la imagen:', error.message)
+  const uploaded = await putFile(BUCKET, path, parsed.buffer, { contentType: parsed.mime, upsert: false })
+  if (!uploaded.ok) {
+    console.error('[PostImage] No se pudo subir la imagen:', uploaded.error)
     return { ok: false, error: 'No se pudo subir la imagen. Intenta de nuevo.' }
   }
-  return { ok: true, url: supabase.storage.from(BUCKET).getPublicUrl(path).data.publicUrl }
+  return { ok: true, url: publicFileUrl(BUCKET, path) }
 }

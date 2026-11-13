@@ -52,13 +52,13 @@ Decidido el 13 de noviembre de 2026 por el fundador. Este documento es la fuente
 
 ### Fase 0 — Respaldo (hoy)
 - [x] 0a. Respaldo REST de solo lectura y verificado (`backend/scripts/backup-supabase-rest.ts`).
-- [ ] 0b. Respaldo exacto con `pg_dump` (esquemas `public` y `auth`, funciones, disparadores, RLS). **Necesita:** la cadena de conexión de la base (Supabase → Project Settings → Database → Connection string, modo *Session/Direct*) puesta en una variable de entorno **en tu terminal**, nunca en el chat; y las herramientas de cliente de PostgreSQL (`pg_dump`, `psql`) instaladas.
+- [x] 0b. (HECHO 13-nov-2026, `pg_dump` 18 formato custom de `public`, `auth` y `storage`, 3.6 MB, guardado fuera del repo; restaurado y verificado en staging.) Respaldo exacto con `pg_dump` (esquemas `public` y `auth`, funciones, disparadores, RLS). **Necesita:** la cadena de conexión de la base (Supabase → Project Settings → Database → Connection string, modo *Session/Direct*) puesta en una variable de entorno **en tu terminal**, nunca en el chat; y las herramientas de cliente de PostgreSQL (`pg_dump`, `psql`) instaladas.
 - [ ] 0c. Copia del respaldo a un lugar seguro y privado (Azure Blob, contenedor `backups`, cifrado).
 
 ### Fase 1 — Entornos (hoy y mañana)
 - [ ] 1a. **dev (local):** `infra/docker-compose.dev.yml` levanta Postgres + PostgREST + GoTrue + gateway + Mailpit. Necesita **Docker Desktop** (no está instalado en esta máquina).
-- [ ] 1b. **qa (Railway):** entorno nuevo con **su propia** base, **vacío** al inicio y luego con datos anonimizados del respaldo. **Nunca** duplicar producción tal cual: copiaría las variables y el QA dispararía crons, correos y publicaciones de LinkedIn contra datos reales.
-- [ ] 1c. **Protección por entorno:** variable `APP_ENV` (`development` | `qa` | `production`). Fuera de `production`: sin crons, sin correos, sin LinkedIn, sin push. Se implementa **después** de confirmar el nombre real del entorno de producción en Railway (`RAILWAY_ENVIRONMENT_NAME`), para que producción no se quede sin crons por accidente.
+- [x] 1b. (HECHO: el proyecto `avotalent-beta` es la pre-produccion `staging`: copia anonimizada, PostgREST + GoTrue + gateway + backend, todo privado.) **qa (Railway):** entorno nuevo con **su propia** base, **vacío** al inicio y luego con datos anonimizados del respaldo. **Nunca** duplicar producción tal cual: copiaría las variables y el QA dispararía crons, correos y publicaciones de LinkedIn contra datos reales.
+- [x] 1c. (HECHO: `APP_ENV` = `development | staging | production`; solo produccion corre crons y LinkedIn.) **Protección por entorno:** variable `APP_ENV` (`development` | `qa` | `production`). Fuera de `production`: sin crons, sin correos, sin LinkedIn, sin push. Se implementa **después** de confirmar el nombre real del entorno de producción en Railway (`RAILWAY_ENVIRONMENT_NAME`), para que producción no se quede sin crons por accidente.
 - [ ] 1d. **Vercel:** las vistas previas por rama ya existen; apuntarlas al backend de QA, no al de producción.
 - [ ] 1e. Flujo: `feature/*` → PR → pruebas automáticas → despliegue a QA → revisión → `master` (producción). Protección de la rama `master`.
 
@@ -70,9 +70,11 @@ Decidido el 13 de noviembre de 2026 por el fundador. Este documento es la fuente
 5. **Producción:** ventana de mantenimiento corta (la base es chica: minutos), mismo procedimiento ya ensayado, `SUPABASE_URL`/llaves cambian a la dirección nueva, comprobación y, **si algo falla, vuelta atrás cambiando las variables a Supabase** (que se queda intacto y encendido durante una semana como red de seguridad).
 
 ### Fase 3 — Archivos a Azure Blob
+
+**Estado (13-nov-2026):** pasos 1 a 4 hechos en STAGING (`avotalentstaging`): modulo `backend/services/storage/` con dos motores (`STORAGE_DRIVER=supabase|azure`; produccion sigue en `supabase` hasta la mudanza), proxy publico `GET /api/files/...` para avatars/images/company-logos, documentos con enlace firmado, copia verificada con SHA-256 (236 de 236 archivos; las fotos de perfil reales NO se copian a staging), reescritura de direcciones (`infra/db/rewrite-file-urls.sql`) y pruebas contra Azure real (escribir, no pisar, enlace firmado, rechazo sin firma). Falta: cuenta de produccion en Azure, copia completa (362 archivos), reescritura en produccion y encender el motor. Rollback: volver `STORAGE_DRIVER` a `supabase`.
 1. Cuenta de almacenamiento en Azure con **acceso público desactivado**, contenedores `avatars`, `images`, `company-logos`, `company-docs`, `backups`; cifrado en reposo (por defecto) y TLS obligatorio.
 2. Acceso del backend por **identidad administrada** (si el backend corre en Azure) o por cadena de conexión/SAS **en variables de entorno de Railway** con permisos mínimos; nunca en el código.
-3. Un módulo único `backend/services/storage/` (interfaz: subir, bajar, enlace firmado, borrar) reemplaza las 9 llamadas a `supabase.storage`. Los avatares y logos que se muestran públicamente salen por enlaces firmados de vida corta o por un CDN con firma.
+3. Un módulo único `backend/services/storage/` (subir, borrar, enlace firmado, leer) reemplaza las llamadas a `supabase.storage` (HECHO). Los avatares, imágenes y logos que se muestran públicamente salen por el proxy del backend (`/api/files/...`), no por Azure; los documentos solo con enlace firmado de unos minutos.
 4. Copia de los archivos existentes (312 MB) con verificación de huella SHA-256 contra el respaldo, y **reescritura de las URLs** guardadas en la base (`photo_url`, `company_logo`, `image_url`).
 5. Mantener Supabase Storage una semana de respaldo.
 
