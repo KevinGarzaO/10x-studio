@@ -2,6 +2,7 @@
 import fs from 'fs';
 import path from 'path';
 import { supabase } from './supabase.service';
+import { putFile, publicFileUrl } from './storage';
 
 export class ImageService {
   private static client: any = null;
@@ -77,21 +78,15 @@ export class ImageService {
       
       const buffer = Buffer.from(base64, 'base64');
       
-      const { error: uploadErr } = await supabase.storage
-        .from('images')
-        .upload(filePath, buffer, { 
-          contentType: 'image/png',
-          upsert: false
-        });
+      const uploaded = await putFile('images', filePath, buffer, { contentType: 'image/png', upsert: false });
 
-      if (uploadErr) {
-        console.error("[ImageService] Error uploading to Supabase Storage:", uploadErr.message);
+      if (!uploaded.ok) {
+        console.error("[ImageService] Error uploading to storage:", uploaded.error);
         return null;
       }
 
-      const { data: urlData } = supabase.storage.from('images').getPublicUrl(filePath);
-      console.log(`[ImageService] Imagen subida a Supabase Storage: ${filePath}`);
-      return urlData.publicUrl;
+      console.log(`[ImageService] Imagen subida al almacenamiento: ${filePath}`);
+      return publicFileUrl('images', filePath);
     } catch (error) {
       console.error("[ImageService] Error in uploadToSupabase:", error);
       return null;

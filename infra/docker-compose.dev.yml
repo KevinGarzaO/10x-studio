@@ -1,0 +1,55 @@
+# BORRADOR SIN PROBAR: en la máquina donde se escribió no había Docker. Probarlo el primer día en una máquina con Docker Desktop y corregir.
+# Fijar las versiones de las imágenes a las MISMAS que usa Supabase hoy (GoTrue se lee de auth.schema_migrations) antes de usarlo para ensayar la migración.
+name: avotalent-dev
+services:
+  db:
+    image: postgres:16
+    environment: { POSTGRES_PASSWORD: "${POSTGRES_PASSWORD}", POSTGRES_DB: avotalent }
+    ports: ["54322:5432"]
+    volumes: ["dbdata:/var/lib/postgresql/data", "./db/00-roles.sql:/docker-entrypoint-initdb.d/00-roles.sql:ro"]
+    healthcheck: { test: ["CMD-SHELL", "pg_isready -U postgres -d avotalent"], interval: 5s, retries: 20 }
+
+  postgrest:
+    image: postgrest/postgrest:latest          # FIJAR versión
+    depends_on: { db: { condition: service_healthy } }
+    environment:
+      PGRST_DB_URI: "postgres://authenticator:${AUTHENTICATOR_PASSWORD}@db:5432/avotalent"
+      PGRST_DB_SCHEMAS: public
+      PGRST_DB_ANON_ROLE: anon
+      PGRST_JWT_SECRET: "${JWT_SECRET}"
+      PGRST_DB_MAX_ROWS: "1000"                # igual que Supabase: el backend pagina de a 1000
+
+  gotrue:
+    image: supabase/gotrue:latest              # FIJAR versión (la de Supabase hoy)
+    depends_on: { db: { condition: service_healthy } }
+    environment:
+      GOTRUE_API_HOST: 0.0.0.0
+      GOTRUE_API_PORT: "9999"
+      API_EXTERNAL_URL: http://localhost:8000
+      GOTRUE_DB_DRIVER: postgres
+      GOTRUE_DB_DATABASE_URL: "postgres://postgres:${POSTGRES_PASSWORD}@db:5432/avotalent?search_path=auth"
+      GOTRUE_SITE_URL: http://localhost:3002
+      GOTRUE_JWT_SECRET: "${JWT_SECRET}"
+      GOTRUE_JWT_EXP: "3600"                   # igual que hoy: access token de 1 hora
+      GOTRUE_JWT_DEFAULT_GROUP_NAME: authenticated
+      GOTRUE_DISABLE_SIGNUP: "false"
+      GOTRUE_MAILER_AUTOCONFIRM: "true"        # en dev no se piden correos de confirmación
+      GOTRUE_SMTP_HOST: mailpit
+      GOTRUE_SMTP_PORT: "1025"
+      GOTRUE_SMTP_ADMIN_EMAIL: dev@avotalent.local
+      # LinkedIn / GitHub: en dev se usan apps OAuth de PRUEBA propias, nunca las de producción:
+      #   GOTRUE_EXTERNAL_GITHUB_ENABLED / _CLIENT_ID / _SECRET / _REDIRECT_URI   (VERIFICAR nombres exactos de cada proveedor en la documentación de GoTrue)
+
+  gateway:
+    image: caddy:2
+    depends_on: [postgrest, gotrue]
+    environment: { PORT: "8000", POSTGREST_HOST: "postgrest:3000", GOTRUE_HOST: "gotrue:9999" }
+    ports: ["8000:8000"]
+    volumes: ["./gateway/Caddyfile:/etc/caddy/Caddyfile:ro"]
+
+  mailpit:                                      # buzón local: ningún correo sale de tu máquina
+    image: axllent/mailpit
+    ports: ["8025:8025"]
+
+volumes: { dbdata: {} }
+# Backend en dev: SUPABASE_URL=http://localhost:8000  SUPABASE_SERVICE_KEY=<llave service_role de dev>  APP_ENV=development

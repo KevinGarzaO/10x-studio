@@ -1,6 +1,7 @@
 import { supabase } from './supabase.service'
+import { putFile, removeFiles, signedFileUrl } from './storage'
 
-const BUCKET = 'company-docs'
+const BUCKET = 'company-docs' as const
 
 const MIME_EXT: Record<string, string> = {
   'application/pdf': 'pdf',
@@ -42,12 +43,10 @@ export async function uploadClaimDocument(
   if (buffer.byteLength > MAX_DOCUMENT_BYTES) return { error: 'file_too_large' }
 
   const storagePath = `${claimId}/${kind}-${Date.now()}.${ext}`
-  const { error } = await supabase.storage
-    .from(BUCKET)
-    .upload(storagePath, buffer, { contentType: mimeType, upsert: false })
+  const uploaded = await putFile(BUCKET, storagePath, buffer, { contentType: mimeType, upsert: false })
 
-  if (error) {
-    console.error('[ClaimDocs] Error subiendo documento:', error.message)
+  if (!uploaded.ok) {
+    console.error('[ClaimDocs] Error subiendo documento:', uploaded.error)
     return { error: 'upload_failed' }
   }
 
@@ -57,12 +56,9 @@ export async function uploadClaimDocument(
 /** Borra los archivos de un reclamo del bucket. No toca las filas. */
 export async function removeClaimFiles(storagePaths: string[]): Promise<boolean> {
   if (storagePaths.length === 0) return true
-  const { error } = await supabase.storage.from(BUCKET).remove(storagePaths)
-  if (error) {
-    console.error('[ClaimDocs] Error borrando documentos:', error.message)
-    return false
-  }
-  return true
+  const removed = await removeFiles(BUCKET, storagePaths)
+  if (!removed) console.error('[ClaimDocs] Error borrando documentos')
+  return removed
 }
 
 /**
@@ -70,10 +66,7 @@ export async function removeClaimFiles(storagePaths: string[]): Promise<boolean>
  * propósito: estos archivos no deben poder compartirse.
  */
 export async function signedDocumentUrl(storagePath: string, seconds = 300): Promise<string | null> {
-  const { data, error } = await supabase.storage.from(BUCKET).createSignedUrl(storagePath, seconds)
-  if (error) {
-    console.error('[ClaimDocs] Error firmando documento:', error.message)
-    return null
-  }
-  return data?.signedUrl ?? null
+  const url = await signedFileUrl(BUCKET, storagePath, seconds)
+  if (!url) console.error('[ClaimDocs] Error firmando documento')
+  return url
 }

@@ -7,11 +7,21 @@ export interface Session {
   refresh_token: string
 }
 
+/** Avisa al resto de la página que la sesión cambió (entró o salió alguien): por ejemplo, las funciones nuevas se vuelven a pedir. */
+function announceSessionChange() {
+  try {
+    if (typeof window !== 'undefined') window.dispatchEvent(new Event('avo:session-changed'))
+  } catch {
+    // avisar nunca debe estorbar
+  }
+}
+
 export function saveSession(session: Session, user: unknown) {
   localStorage.setItem('avocado_token', session.access_token)
   localStorage.setItem('avocado_refresh_token', session.refresh_token)
   localStorage.setItem('avocado_user', JSON.stringify(user))
   markSessionKnown()
+  announceSessionChange()
 }
 
 // Supabase's own confirmation link redirects the browser to
@@ -45,6 +55,7 @@ export function clearSession(options: { explicit?: boolean } = {}) {
   localStorage.removeItem('avocado_refresh_token')
   localStorage.removeItem('avocado_user')
   if (options.explicit) forgetSessionMarker()
+  announceSessionChange()
 }
 
 export function getToken(): string | null {

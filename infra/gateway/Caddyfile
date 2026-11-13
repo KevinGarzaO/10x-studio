@@ -1,0 +1,16 @@
+# Una sola dirección para el cliente de Supabase: /rest/v1 -> PostgREST, /auth/v1 -> GoTrue.
+# (supabase-js construye las dos rutas a partir de SUPABASE_URL; en Supabase las enruta Kong.)
+:{$PORT:8000} {
+	handle_path /rest/v1/* {
+		reverse_proxy {$POSTGREST_HOST}
+	}
+	handle_path /auth/v1/* {
+		reverse_proxy {$GOTRUE_HOST}
+	}
+	handle /health {
+		respond "ok" 200
+	}
+	handle {
+		respond "no encontrado" 404
+	}
+}

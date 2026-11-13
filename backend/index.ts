@@ -12,6 +12,7 @@ import blogRoutes from './routes/blog'
 import sitemapRoutes from './routes/sitemap'
 import { linkedinCallback } from './controllers/linkedin.controller'
 import { initCron } from './services/cron.service'
+import { appEnv, scheduledJobsEnabled } from './config/app-env'
 import { studioAuth, STUDIO_ROOT_PATHS, isLinkedInPublic, isBlogPublic } from './middleware/studio-auth.middleware'
 import adminAnalyticsRoutes from './src/routes/admin/analytics.routes'
 import { analyticsAccess } from './middleware/analytics-access.middleware'
@@ -40,6 +41,8 @@ import communityCompaniesRoutes from './src/routes/community/companies.routes'
 import communityNotificationsRoutes from './src/routes/community/notifications.routes'
 import communityPushRoutes from './src/routes/community/push.routes'
 import communityFeedbackRoutes from './src/routes/community/feedback.routes'
+import communityFlagsRoutes from './src/routes/community/flags.routes'
+import filesRoutes from './src/routes/files.routes'
 import communityCardsRoutes from './src/routes/community/cards.routes'
 import communityApplicationsRoutes from './src/routes/community/applications.routes'
 // import communityCompanyClaimsRoutes from './src/routes/community/company-claims.routes'
@@ -148,6 +151,9 @@ app.use('/api/community/companies', communityCompaniesRoutes)
 app.use('/api/community/notifications', communityNotificationsRoutes)
 app.use('/api/community/push', communityPushRoutes)
 app.use('/api/community/feedback', communityFeedbackRoutes)
+app.use('/api/community/flags', communityFlagsRoutes)
+// Imágenes públicas desde el almacenamiento privado (solo con STORAGE_DRIVER=azure; con Supabase contesta 404).
+app.use('/api/files', filesRoutes)
 app.use('/api/community/cards', communityCardsRoutes)
 // Alta de empresas en pausa: por ahora AvoTalent solo ofrece algo a las personas. Para reactivarla, vuelve a montar
 // communityCompanyClaimsRoutes aquí y a mostrar el flujo en el registro y el onboarding de apps/community.
@@ -172,8 +178,10 @@ app.use((err: unknown, req: express.Request, _res: express.Response, next: expre
   next(err)
 })
 
-// Start Cron
-initCron()
+// Tareas programadas (scraper, correos, LinkedIn, fotos semanales...): solo en beta y producción, cada una con su base y sus llaves.
+// Un entorno de desarrollo (tu máquina o el proyecto de Desarrollo) nunca las arranca, aunque tenga llaves puestas (config/app-env.ts).
+if (scheduledJobsEnabled()) initCron()
+else console.log(`[Entorno] ${appEnv()}: tareas programadas apagadas`)
 startTimingFlush()
 
 // Anota el despliegue en la bitácora de cambios (solo en Railway, una vez por commit; nunca estorba al arranque)

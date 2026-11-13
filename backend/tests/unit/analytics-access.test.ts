@@ -54,6 +54,8 @@ describe('analyticsAccess', () => {
 
   it('the list of people with emails is never readable by the key, only the counts are', () => {
     expect(SERVICE_READABLE.has('/people-value')).toBe(false)
+    expect(SERVICE_READABLE.has('/flags')).toBe(false)
+    expect(SERVICE_READABLE.has('/flags/summary')).toBe(true)
     expect(SERVICE_READABLE.has('/people-value/summary')).toBe(true)
     // El historial de UNA persona y marcar una invitación son del fundador; al agente solo le llegan los conteos del historial.
     expect(SERVICE_READABLE.has('/people-value/:id/history')).toBe(false)
