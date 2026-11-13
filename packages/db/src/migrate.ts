@@ -118,5 +118,8 @@ export async function runMigrations(db: Db, files: MigrationFile[], baseline: st
       done.push(file.name)
     })
   }
+  // PostgREST (la API de datos) guarda en memoria las tablas y funciones: se le avisa que recargue. En Supabase es inofensivo; en una base propia es lo que
+  // evita que lo recién creado responda 404 hasta reiniciar. Nunca debe hacer fallar una migración ya aplicada.
+  if (done.length > 0) await db.query("NOTIFY pgrst, 'reload schema'").catch(() => undefined)
   return { applied: done, dryRun: false }
 }

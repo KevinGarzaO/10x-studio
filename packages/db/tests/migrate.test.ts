@@ -72,6 +72,16 @@ describe('runMigrations (real Postgres via PGlite)', () => {
     expect((await runMigrations(db, [A, B], [])).applied).toEqual([])
   })
 
+  it('tells PostgREST to reload its schema after applying something, and not on a no-op', async () => {
+    const seen: string[] = []
+    const watching = { ...db, query: (async (text: string, params?: unknown[]) => { seen.push(text); return db.query(text, params) }) as Db['query'] }
+    await runMigrations(watching, [A], [])
+    expect(seen.some((text) => /NOTIFY pgrst/i.test(text))).toBe(true)
+    seen.length = 0
+    await runMigrations(watching, [A], [])
+    expect(seen.some((text) => /NOTIFY pgrst/i.test(text))).toBe(false)
+  })
+
   it('dry run lists but changes nothing', async () => {
     const result = await runMigrations(db, [A], [], { dryRun: true })
     expect(result).toEqual({ applied: [A.name], dryRun: true })

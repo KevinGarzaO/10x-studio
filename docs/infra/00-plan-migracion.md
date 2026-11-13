@@ -115,3 +115,11 @@ Orden: primero extraer `packages/db` y el corredor de migraciones; luego `worker
 3. Poner la cadena de conexión de Supabase en una variable de tu terminal (te doy el comando exacto; no la pegues en el chat).
 4. Crear la cuenta de almacenamiento de Azure (te doy los valores exactos) y pasarme **solo el nombre** de la cuenta, no las claves.
 5. Decidir la ventana de mantenimiento de producción (propuesta: madrugada de un domingo, de 20 a 40 minutos).
+
+## Hallazgos del ensayo en staging (para el día de la mudanza de producción)
+
+1. **PostgREST necesita aviso de cambios de esquema.** Supabase se lo da solo; una base Postgres propia no. En cada base nueva se corre una vez `infra/db/01-postgrest-reload.sql` (dispara `NOTIFY pgrst, 'reload schema'` en cualquier CREATE/ALTER/DROP) y el corredor de migraciones además avisa al terminar. Sin esto, tablas o funciones nuevas responden 404 por la API hasta reiniciar PostgREST.
+2. **Orden de una base nueva:** `infra/db/00-roles.sql` → restaurar el respaldo → `infra/db/01-postgrest-reload.sql` → contraseña del rol `authenticator` → migraciones (`migrate baseline --apply` una vez, luego `migrate up --apply`).
+3. **La librería de Azure no carga en Node 20.14** sin fijar `https-proxy-agent`/`http-proxy-agent` (ya resuelto con `pnpm.overrides`); verificar la versión de Node del servicio antes de encender `STORAGE_DRIVER=azure`.
+4. **Railpack no detecta el arranque del monorepo:** el servicio lleva `RAILPACK_START_CMD`, `RAILPACK_BUILD_CMD` y `RAILPACK_INSTALL_CMD` como variables.
+5. **Comprobado en staging tras separar `core`:** el backend se construye en Railway, arranca, responde lecturas, sirve archivos desde Azure y el candado de los workers funciona por PostgREST.
